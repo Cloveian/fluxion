@@ -1,0 +1,90 @@
+site_name: Fluxion
+site_description: A CAS for the TI-84 Plus CE - design notes
+site_author: Cloveian
+site_url: https://cloveian.github.io/fluxion/
+
+repo_name: Cloveian/fluxion
+repo_url: https://github.com/Cloveian/fluxion/
+
+theme:
+  name: material
+  font: false
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.indexes
+    - navigation.top
+    - navigation.instant
+    - toc.follow
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+  palette:
+    - scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+    - scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.superfences
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - admonition
+  - pymdownx.details
+  - pymdownx.tilde
+  - attr_list
+  - md_in_html
+  - tables
+  - footnotes
+  # GitHub/Obsidian-compatible slugs, same as Voided Oblivion, so cross-links
+  # written in Obsidian keep working on the site.
+  - toc:
+      permalink: true
+      toc_depth: 4
+      slugify: !!python/object/apply:pymdownx.slugs.slugify {kwds: {case: lower}}
+  # Math is ON here (unlike Voided Oblivion): these docs are full of $...$
+  # expressions (simplify-cases, change form). The only $ outside math is
+  # inside code spans (`${workspaceFolder}`), which arithmatex leaves alone.
+  - pymdownx.arithmatex:
+      generic: true
+
+extra_javascript:
+  - javascripts/mathjax.js
+  - https://cdn.jsdelivr.net/npm/mathjax@3.2.2/es5/tex-mml-chtml.js
+
+plugins:
+  - search
+
+exclude_docs: |
+  *.edtz
+  *.canvas
+
+# Hand-written reading path, same as Voided Oblivion: the order decisions were made.
+nav:
+  - Home:
+      - index.md
+      - Goals & constraints: goals.md
+      - Overview: overview.md
+  - Design choices:
+      - design-choices/index.md
+      - Platform: design-choices/platform.md
+      - Rendering: design-choices/rendering.md
+      - Input: design-choices/input.md
+      - Screens & operations: design-choices/ui.md
+      - Simplify cases: simplify-cases.md
+  - Code:
+      - code/index.md
+      - Structure: code/structure.md
+      - Log: code/log.md
+  - Shipping checklist: shipping-checklist.md

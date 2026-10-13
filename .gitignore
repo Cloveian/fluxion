@@ -6,3 +6,7 @@ src/gfx/*.8xv
 .DS_Store
 convimg.yaml.lst
 *.rom
+.obsidian
+/.venv/
+/site/
+*.edtz

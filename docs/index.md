@@ -8,10 +8,19 @@ Cuz i think it would be fun, and the current 'solutions' for this are... not gre
 Meth.
 Not rely on the calculator OS at all, just arTIfiCE
 
-## Whatce
+## What
 mostly from scratch math rendering, maybe latex style (unless that is too heavy) 
 mostly from scratch input.
 hopefully use some sort of library to do the actual CAS operations and this will hopefully just be a wrapper.
-in C, cuz arTIfiCE... unless there is someway to do rust i havent heard about.
+
 gay.
+
 rawr.
+
+UwU.
+
+---
+
+start at [goals](goals.md), the [design choices](design-choices/index.md) are in the order i made them. the [log](code/log.md) is where i'm at right now
+
+TODO: make this look better
