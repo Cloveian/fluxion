@@ -71,5 +71,8 @@ what i'm actually used to (nspire CX II CAS). Somewhere between A and B:
 | Need to invent (10 = copy it)  |   5    |        7         |          9          |        8        |
 | **Weighted total**             |  400   |       298        |         277         |     **318**     |
 
+### Decision
+C - Nspire style, adapted for the difference in keys
+
 ---
 Back to [design choices](index.md) · [rendering](rendering.md) · [screens & operations](ui.md)

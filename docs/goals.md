@@ -26,8 +26,8 @@ listed roughly from hardest constraints down to less necessary stuff:
 
 - [Platform](design-choices/platform.md) - C (CEdev) + Hybrid (Modified pineappleCAS) engine
 - [Rendering](design-choices/rendering.md) - Box thing (steal LaTeX spacing)
-- [Input](design-choices/input.md) -
-- [Screens & operations](design-choices/ui.md) -
+- [Input](design-choices/input.md) - Nspire style, adapted for the TI's keys
+- [Screens & operations](design-choices/ui.md) - Nspire style (enter = simplify, soft-key folders, change form)
 
 ## Building it
 - [Code](code/index.md) - layout, testing, dated log

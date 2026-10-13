@@ -10,3 +10,6 @@ convimg.yaml.lst
 /.venv/
 /site/
 *.edtz
+/build-pc/
+/PineappleCAS/
+/.claude/settings.local.json

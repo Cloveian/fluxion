@@ -5,9 +5,10 @@
 NAME = FLUXION
 ICON = icon.png
 DESCRIPTION = "Fluxion CAS"
-COMPRESSED = NO
+COMPRESSED = YES
 
-CFLAGS = -Wall -Wextra -Oz
+CFLAGS = -Wall -Wextra -Wno-missing-field-initializers -Oz
+# CFLAGS += -g    # uncomment when debugging, makes the binary way bigger
 CXXFLAGS = -Wall -Wextra -Oz
 
 # ----------------------------
