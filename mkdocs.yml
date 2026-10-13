@@ -47,15 +47,12 @@ markdown_extensions:
   - md_in_html
   - tables
   - footnotes
-  # GitHub/Obsidian-compatible slugs, same as Voided Oblivion, so cross-links
-  # written in Obsidian keep working on the site.
+  # same heading links as obsidian
   - toc:
       permalink: true
       toc_depth: 4
       slugify: !!python/object/apply:pymdownx.slugs.slugify {kwds: {case: lower}}
-  # Math is ON here (unlike Voided Oblivion): these docs are full of $...$
-  # expressions (simplify-cases, change form). The only $ outside math is
-  # inside code spans (`${workspaceFolder}`), which arithmatex leaves alone.
+  # $math$
   - pymdownx.arithmatex:
       generic: true
 
@@ -70,7 +67,7 @@ exclude_docs: |
   *.edtz
   *.canvas
 
-# Hand-written reading path, same as Voided Oblivion: the order decisions were made.
+# in the order i made the decisions
 nav:
   - Home:
       - index.md

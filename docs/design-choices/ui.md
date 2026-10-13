@@ -85,15 +85,19 @@ Forms (`*` = needs engine work, `?` = haven't checked if PineappleCAS can):
 
 ## Select
 
-| Criteria                       | Weight | A: Soft keys | B: Menu list | C: Command line | D: Nspire-style |
-| ------------------------------ | :----: | :----------: | :----------: | :-------------: | :-------------: |
+| Criteria                        | Weight | A: Soft keys | B: Menu list | C: Command line | D: Nspire-style |
+| ------------------------------- | :----: | :----------: | :----------: | :-------------: | :-------------: |
 | Intuitive / nothing to memorise |   10   |      9       |      7       |        3        |        9        |
-| Feels like the nspire          |   7    |      7       |      7       |        6        |       10        |
-| Time to build (10 = fast)      |   8    |      7       |      8       |        7        |        5        |
-| Room for more operations       |   4    |      8       |      9       |       10        |        9        |
-| Fewest key presses             |   5    |      8       |      5       |        6        |        8        |
-| Need to invent (10 = copy it)  |   5    |      7       |      8       |        8        |        9        |
-| **Weighted total**             |  390   |     302      |     284      |       238       |     **321**     |
+| Feels like the nspire           |   7    |      7       |      7       |        6        |       10        |
+| Time to build (10 = fast)       |   8    |      7       |      8       |        7        |        5        |
+| Room for more operations        |   4    |      8       |      9       |       10        |        9        |
+| Fewest key presses              |   5    |      8       |      5       |        6        |        8        |
+| Need to invent (10 = copy it)   |   5    |      7       |      8       |        8        |        9        |
+| **Weighted total**              |  390   |     302      |     284      |       238       |     **321**     |
+
+### Decision
+D - Nspire style. I am used to it, and its a pretty good system that i don't have to design the mechanism from scratch.
+
 
 ---
 Back to [design choices](index.md) · [rendering](rendering.md) · [input](input.md)

@@ -1,0 +1,349 @@
+
+#IMPORTANT: The parser parses - as a negate operator and _ as the subtract operator. Think of the difference on the ti calculator.
+#For example; 3-5 will evaluate to 3 * -5 = -15 (Try this on your calculator; it works)
+#3_5 will evaluate to -2
+
+#Shoutout to wolfram alpha for helping evaluate these lmao
+
+#Evaluate constants
+
+simplify; 1923847 + 129384 + 39872 + 92873; 2185976
+simplify; 8932 _ 29382398 _ 2983892 _ 2983298 _ 9238 _ 298; -35350192
+simplify; 23 + 2982398 _ 098473 + 92832 _ 9823 + 92382; 3059339
+
+simplify; 2398759281 * 128974109 * 1290831 * -29382; -11733834149364160952211672018
+simplify; 9087123 / 92813749081 / 981 / 91283; 3029041/2770447808557021821
+simplify; 238932918457 * 098234 / 2982398 * 09238 / 2398 / 92838923; 54207051211882554311/165991129657273723
+
+simplify; 3 + 3/2; 9/2
+simplify; 3 + 3/2 + 5/4; 23/4
+simplify; 13/3 + 432/23 + 23/4534 _ 24/455; 3283650931/142344930
+
+simplify; 2308923 ^ 23; 228253448800248422382839314862503628377253091439771292143944853074575569935094601836903968561973397828129853500717494518706509240578306118071046867
+simplify; 10!; 3628800
+
+simplify; abs(-5); 5
+simplify; abs(-23.2); 23.2
+simplify; abs(324); 324
+
+simplify; int(2.2); 2
+simplify; int(-2.2); -3
+
+simplify; abs(int(-2.2)); 3
+simplify; int(int(int(int(-2.3)))); -3
+
+simplify; 8540 + 283 * 9283 / 21893 ^ (2 + 3) _ 43 + -3 * 2 * abs(-1) * abs(1) / int(-2.2); 42745875306876473429924896/5029518214716610592693
+
+#Already simplified
+simplify; A+B+C; A+B+C
+simplify; sin(ln(ln(ln(X)+1)+1)+1)+1; sin(ln(ln(ln(X)+1)+1)+1)+1
+simplify; A*B+C_D; A*B+C_D
+
+#Like terms
+
+simplify; 2X + X; 3X
+simplify; X + X + X; 3X
+simplify; X^2 + X^3; X^2 + X^3
+simplify; 4X^2 + 6X^2; 10X^2
+simplify; sin(X^3 _ cos(X)) + 3sin(-cos(X) + X^3); 4sin(X^3 _ cos(X))
+
+simplify; XXX; X^3
+simplify; X^3 * 2X^49; 2X^52
+simplify; 1sin(XX)^3 * 5sin(X^2) + sin(X^2); 5sin(X^2)^4 + sin(X^2)
+simplify; A_A; 0
+simplify; A + B _ (A + B); 0
+simplify; A + B _ 2(A _ B); 3B _ A
+
+#Identities; definition
+simplify; A^logb(B,A; B
+simplify; logb(A^B,A; B
+simplify; logb(A,A; 1
+
+simplify; logb(X,B)+logb(Y,B; logb(XY,B
+simplify; logb(X,B)_logb(Y,B; logb(X/Y,B
+simplify; logb(X^D,B; Dlogb(X,B
+
+simplify; (ArootB)^A; B
+simplify; Aroot(B^A); B
+
+simplify; sin(asin(X; X
+simplify; asin(sin(X; X
+simplify; cos(acos(X; X
+simplify; acos(cos(X; X
+simplify; tan(atan(X; X
+simplify; atan(tan(X; X
+
+simplify; cos(asin(X; sqrt(1_X^2
+simplify; cos(atan(X; 1/sqrt(1+X^2
+simplify; sin(acos(X; sqrt(1_X^2
+simplify; sin(atan(X; X/sqrt(1+X^2
+simplify; tan(acos(X; sqrt(1_X^2)/X
+simplify; tan(asin(X; X/(sqrt(1_X^2
+
+simplify; sinh(asinh(X; X
+simplify; asinh(sinh(X; X
+simplify; cosh(acosh(X; X
+simplify; tanh(atanh(X; X
+simplify; atanh(tanh(X; X
+
+simplify; sin(X)/cos(X; tan(X
+simplify; 5sin(X)/(3cos(X)); 5tan(X)/3
+simplify; cos(X)/sin(X; 1/tan(X
+simplify; 3cos(X)/(Bsin(X)); 3/(Btan(X))
+
+simplify; Atan(X)cos(X; Asin(X
+simplify; Asin(X)/(Btan(X; Acos(X)/B
+
+simplify; sin(pi/2_X; cos(X
+simplify; cos(pi/2_X; sin(X
+
+simplify; sin(X+16pi; sin(X
+simplify; sin(X+2pi; sin(X
+simplify; cos(X+22pi; cos(X
+simplify; cos(X+2pi; cos(X
+simplify; tan(X+4pi; tan(X
+simplify; tan(X+pi; tan(X
+
+simplify; sin(-X; -sin(X
+simplify; cos(-X; cos(X
+simplify; tan(-X; -tan(X
+
+simplify; 2sin(X)cos(X; sin(2X
+simplify; cos(X)^2_sin(X)^2; cos(2X
+simplify; 2cos(X)^2_1; cos(2X
+simplify; 1_2sin(X)^2; cos(2X
+
+simplify; sin(X)^2+cos(X)^2; 1
+
+#Identities trig constants
+
+simplify; sin(0; 0
+simplify; sin(pi/6; 1/2
+simplify; sin(pi/4; sqrt(2)/2
+simplify; sin(pi/3; sqrt(3)/2
+simplify; sin(pi/2; 1
+simplify; sin(2pi/3; sqrt(3)/2
+simplify; sin(3pi/4; sqrt(2)/2
+simplify; sin(5pi/6; 1/2
+simplify; sin(pi; 0
+simplify; sin(7pi/6; -1/2
+simplify; sin(5pi/4; -sqrt(2)/2
+simplify; sin(4pi/3; -sqrt(3)/2
+simplify; sin(3pi/2; -1
+simplify; sin(5pi/3; -sqrt(3)/2
+simplify; sin(7pi/4; -sqrt(2)/2
+simplify; sin(11pi/6; -1/2
+
+simplify; cos(0; 1
+simplify; cos(pi/6; sqrt(3)/2
+simplify; cos(pi/4; sqrt(2)/2
+simplify; cos(pi/3; 1/2
+simplify; cos(pi/2; 0
+simplify; cos(2pi/3; -1/2
+simplify; cos(3pi/4; -sqrt(2)/2
+simplify; cos(5pi/6; -sqrt(3)/2
+simplify; cos(pi; -1
+simplify; cos(7pi/6; -sqrt(3)/2
+simplify; cos(5pi/4; -sqrt(2)/2
+simplify; cos(4pi/3; -1/2
+simplify; cos(3pi/2; 0
+simplify; cos(5pi/3; 1/2
+simplify; cos(7pi/4; sqrt(2)/2
+simplify; cos(11pi/6; sqrt(3)/2
+
+simplify; tan(0; 0
+simplify; tan(pi/6; sqrt(3)/3
+simplify; tan(pi/4; 1
+simplify; tan(pi/3; sqrt(3)
+
+simplify; tan(2pi/3; -sqrt(3
+simplify; tan(3pi/4; -1
+simplify; tan(5pi/6; -sqrt(3)/3
+simplify; tan(pi; 0
+simplify; tan(7pi/6; sqrt(3)/3
+simplify; tan(5pi/4; 1
+simplify; tan(4pi/3; sqrt(3
+
+simplify; tan(5pi/3; -sqrt(3
+simplify; tan(7pi/4; -1
+simplify; tan(11pi/6; -sqrt(3)/3
+
+#Periodic tests
+simplify; sin(9pi/4); sqrt(2)/2
+simplify; cos(59pi/6); sqrt(3)/2
+simplify; tan(73pi/6); sqrt(3)/3
+
+#Trig inverse tests
+simplify; asin(-1; -pi/2
+simplify; asin(-sqrt(3)/2; -pi/3
+simplify; asin(-sqrt(2)/2; -pi/4
+simplify; asin(-1/2; -pi/6
+simplify; asin(0; 0
+simplify; asin(1/2; pi/6
+simplify; asin(sqrt(2)/2; pi/4
+simplify; asin(sqrt(3)/2; pi/3
+simplify; asin(1; pi/2
+
+simplify; acos(-1; pi
+simplify; acos(-sqrt(3)/2; 5pi/6
+simplify; acos(-sqrt(2)/2; 3pi/4
+simplify; acos(-1/2; 2pi/3
+simplify; acos(0; pi/2
+simplify; acos(1/2; pi/3
+simplify; acos(sqrt(2)/2; pi/4
+simplify; acos(sqrt(3)/2; pi/6
+simplify; acos(1; 0
+
+simplify; atan(-sqrt(3; -pi/3
+simplify; atan(-1; -pi/4
+simplify; atan(-1/sqrt(3; -pi/6
+simplify; atan(0; 0
+simplify; atan(1/sqrt(3; pi/6
+simplify; atan(1; pi/4
+simplify; atan(sqrt(3; pi/3
+
+#Identities, comprehensive
+simplify; sin(ln(X))^2 + cos(ln(X))^2 + 1 _ 2sin(X/2)^2 _ 1; cos(X)
+simplify; sin(ln(X) + 1)^2 + cos(ln(X))^2; sin(ln(X) + 1)^2 + cos(ln(X))^2
+simplify; 1 _ 2sin(X)^2 + 2cos(X)^2_1 + 2sin(1)cos(sin(X)^2+cos(X)^2); 2cos(2X) + sin(2)
+simplify; 2sin(sqrt(3))^2 + 2cos(sqrt(3))^2; 2
+
+simplify; ln(2sin(pi/3)) + ln(cos(pi/3)); ln(sqrt(3)/2
+simplify; ln(ln(e^ln(2))); ln(ln(2))
+simplify; ln(e); 1
+simplify; e^(5ln(X); X^5
+simplify; ln(e^5); 5
+simplify; ln(5^9); 9ln(5)
+
+simplify; sin(X + 4pi + 5); sin(X + 5)
+simplify; sin(X _ 2pi + 3pi); sin(X + pi)
+simplify; sin(X _ 8pi); sin(X)
+
+#Hyperbolic tests
+simplify; sinh(X)/cosh(X; tanh(X
+simplify; cosh(X)^2_sinh(X)^2; 1
+
+#Imaginary tests
+simplify; abs(I+Ji; sqrt(I^2+J^2
+simplify; abs(Ji; J
+simplify; abs(i; 1
+
+simplify; ln(i; ipi/2
+
+simplify; sin(I+Ji; sin(I)cosh(J)+icos(I)sinh(J
+simplify; sin(Ji; isinh(J
+simplify; sin(i; isinh(1
+
+simplify; cos(I+Ji; cos(I)cosh(J)_isin(I)sinh(J)
+simplify; cos(Ji; cosh(J)
+simplify; cos(i; cosh(1
+
+simplify; e^(iX; cos(X)+isin(X
+
+#These identities are simplified twice
+simplify; (I+Ji)^X; cos(Xatan(J/I))(I^2+J^2)^(X/2)+(I^2+J^2)^(X/2)isin(Xatan(J/I))
+simplify; X^(I+Ji; cos(ln(X)J)X^I+X^Iisin(ln(X)J)
+
+#HOW I cannot believe these actually work
+simplify; i^i; 1/e^(pi/2)
+simplify; e^(ipi); -1
+simplify; 1/i^(2i/pi; e
+
+simplify; sin(5i + A + B); sin(A+B)cosh(5)+icos(A+B)sinh(5)
+
+simplify; sin(5A + B^2 + C + DEFi); sin(5A+B^2+C)cosh(DEF)+icos(5A+B^2+C)sinh(DEF)
+
+simplify; i^0; 1
+simplify; i^1; i
+simplify; i^2; -1
+simplify; i^3; -i
+simplify; i^4; 1
+simplify; i^5; i
+simplify; i^6; -1
+simplify; i^7; -i
+
+simplify; 1/i; -i
+
+simplify; sqrt(2+i); (4root5)cos(atan(1/2)/2)+i(4root5)sin(atan(1/2)/2)
+simplify e^(ipi/2); i
+
+simplify; sin(X) + deriv(X^2, X, X); sin(X) + 2X
+simplify; Xderiv(sin(X),X,pi); -X
+
+#Factoring tests
+
+factor; sin(abs(X^2 _ 1) _ 1) + 3sin(abs(X^2 _ 1) _ 1)^4; sin(abs(X^2 _ 1) _ 1)(1 + 3sin(abs(X^2 _ 1) _ 1)^3)
+factor; 3X^2 + 6X + 1; 3X(X + 2) + 1
+factor; 14(AX)^2 + 2X; 2X(7A^2X + 1)
+factor; AA+AB; A(A+B)
+factor; A+B+C+D+E+F+G; A+B+C+D+E+F+G
+factor; 2A+2; 2(A + 1)
+factor; A/2 + B/2; (A+B)/2
+
+#GCD tests
+gcd; X^3; X; X
+gcd; sin(X)^2; sin(X); sin(X)
+gcd; 345abs(5)X; 12X; 3X
+gcd; 12; 18; 6
+gcd; (X+3)(X_5); X+3; X+3
+gcd; (2sin(cos(X^3))^4) * 14sin(cos(X^3)); 2sin(cos(X^3)); 2sin(cos(X^3))
+gcd; (10XA)^3; 144A; 8A
+gcd; X(X+3); (AX)^2; X
+gcd; sin(X)ln(X) + 1; sin(X); 1
+gcd; pi/4; 2pi; pi
+gcd; A/2; B/2; 1/2
+
+#Expand tests
+expand; (X+3)^5; 243 + 405 X + 270 X^2 + 90 X^3 + 15 X^4 + X^5
+expand; (X+1)^8; X^8 + 8X^7 + 28X^6 + 56X^5 +70X^4 + 56X^3 + 28X^2 + 8X + 1
+expand; (AX)^5; A^5 * X^5
+expand ((A + B)^5 + 1)^4; 1+2 A^4+A^8+8 A^3 B+8 A^7 B+12 A^2 B^2+28 A^6 B^2+8 A B^3+56 A^5 B^3+2 B^4+70 A^4 B^4+56 A^3 B^5+28 A^2 B^6+8 A B^7+B^8
+expand; AB(X+1); ABX + AB
+expand; (A + B)(B + C); AB + AC + B^2 + BC
+expand; (ABC)^6; A^6B^6C^6
+expand; (A+B)(C+B)^2; AC^2+AB^2+BC^2+2ABC+2CB^2+B^3
+expand; (A+B)^3(B+1)^3; 3AB^5+3A^2B^4+9A^2B^3+9AB^4+3A^3B^2+B^6+3BA^3+3BA^2+3B^5+9AB^3+3B^4+3AB^2+9A^2B^2+A^3+B^3+A^3B^3
+
+#Derivative tests
+deriv; X; X; 1
+deriv; sin(X)/ln(X); X; (-sin(X))/(Xln(X)^2)+cos(X)/ln(X)
+deriv; e^(5X); X; 5e^(5X);
+deriv; X^X; X; X^X+ln(X)X^X
+deriv; ln(X); X; 1/X
+
+#log base 3 of X
+deriv; logb(X,3); X; 1/(Xln(3))
+#log base X of 3
+deriv; logb(3,X); X; -ln(3)/(Xln(X)^2)
+
+deriv; sin(X); X; cos(X)
+deriv; cos(X); X; -sin(X)
+deriv; tan(X); X; 1/cos(X)^2
+deriv; asin(X); X; 1/sqrt(1_X^2)
+deriv; acos(X); X; -1/sqrt(1_X^2)
+deriv; atan(X); X; 1/(1+X^2)
+
+deriv; sinh(X); X; cosh(X)
+deriv; cosh(X); X; sinh(X)
+deriv; tanh(X); X; 1/cosh(X)^2
+deriv; asinh(X); X; 1/sqrt(X^2+1)
+deriv; acosh(X); X; 1/sqrt(X^2_1)
+deriv; atanh(X); X; 1/(1_X^2)
+
+deriv; X^5; X; 5X^4
+deriv; sin(X); A; 0
+deriv; 5X; X; 5
+deriv; sin(X)ln(X); X; sin(X)/X+ln(X)cos(X)
+deriv; sin(X)cos(X); X; cos(2X)
+deriv; sin(X) + cos(X) + ln(X); X; 1/X_sin(X)+cos(X)
+
+deriv; sin(sin(sin(X))); X; cos(X)cos(sin(X))cos(sin(sin(X)))
+
+deriv; deriv(X, X, X); X; 0
+deriv; 5X + deriv(X^2, X, X); X; 7
+
+#Thanks Hamza.S on TI-Planet
+deriv; 18X/9 _ 8/2; X; 2
+
+deriv; (20 * 2)/X * 3*5X; X; 0
+deriv; 5 + 3X + X^2 _ 13/2X/X + sin(X)*3; X; 3 + 2X + 3cos(X)
