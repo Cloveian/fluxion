@@ -1,0 +1,17 @@
+{
+    "configurations": [
+        {
+            "name": "TI-84 Plus CE",
+            "includePath": [
+                "${workspaceFolder}/src",
+                "${env:HOME}/CEdev/include"
+            ],
+            "defines": ["__TICE__=1", "NDEBUG=1"],
+            "compilerPath": "",
+            "cStandard": "c17",
+            "cppStandard": "c++17",
+            "intelliSenseMode": "linux-clang-x64"
+        }
+    ],
+    "version": 4
+}

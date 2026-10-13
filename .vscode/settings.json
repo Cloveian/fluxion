@@ -1,0 +1,18 @@
+{
+    "makefile.makefilePath": "makefile",
+    "makefile.configurations": [
+        { "name": "default", "makeArgs": [] }
+    ],
+    "makefile.launchConfigurations": [
+        {
+            "name": "CEmu",
+            "cwd": "${workspaceFolder}",
+            "binaryPath": "${env:HOME}/.local/bin/ti-cemu",
+            "binaryArgs": ["-s", "${workspaceFolder}/bin/FLUXION.8xp", "--launch", "FLUXION"]
+        }
+    ],
+    "C_Cpp.default.configurationProvider": null,
+    "files.associations": {
+        "*.h": "c"
+    }
+}

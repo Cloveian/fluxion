@@ -1,0 +1,26 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Build",
+            "type": "shell",
+            "command": "make",
+            "group": { "kind": "build", "isDefault": true },
+            "problemMatcher": "$gcc"
+        },
+        {
+            "label": "Run in CEmu",
+            "type": "shell",
+            "command": "${env:HOME}/.local/bin/ti-cemu -s ${workspaceFolder}/bin/FLUXION.8xp --launch FLUXION",
+            "dependsOn": "Build",
+            "isBackground": true,
+            "problemMatcher": []
+        },
+        {
+            "label": "Clean",
+            "type": "shell",
+            "command": "make clean",
+            "problemMatcher": []
+        }
+    ]
+}
