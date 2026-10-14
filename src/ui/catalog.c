@@ -88,7 +88,7 @@ ITEM(it_subst,    "substitute", ITEM_COMMAND, NULL, "subst($,$,$)", HAVE_PARTLY,
 ITEM(it_evaluate, "evaluate", ITEM_COMMAND, NULL, "eval($)", HAVE_PARTLY,
      "exact only (big powers, factorials); no decimal approximation yet")
 ITEM(it_factor,   "factor", ITEM_COMMAND, NULL, "factor($)", HAVE_PARTLY,
-     "only common factors (2x+4x^2 -> 2x(1+2x)); FAC_POLYNOMIAL is defined but never used")
+     "one variable over the rationals; not x^2-y^2, not irrational roots (factor(x^2-2,x))")
 ITEM(it_solve,    "solve",  ITEM_COMMAND, NULL, "solve($,$)", HAVE_NO,
      "needs =, then: linear first, polynomial via factor")
 

@@ -64,8 +64,9 @@ build-pc/fluxion-app: src/main_pc.c $(FLUX_OBJECTS) $(ENGINE_OBJECTS)
 build-pc/editor-test: test/editor_test.c $(FLUX_OBJECTS) $(ENGINE_OBJECTS)
 	$(CC) $(FLUX_CFLAGS) $^ $(LDLIBS) $(SDL_LIBS) -o $@
 
-test: $(TARGET) build-pc/identity-masks build-pc/layout-dump build-pc/view build-pc/editor-test
+test: $(TARGET) build-pc/identity-masks build-pc/layout-dump build-pc/view build-pc/editor-test build-pc/fluxion-app
 	./$(TARGET) test test/pcas-tests.txt
+	./$(TARGET) test test/fluxion-tests.txt
 	./build-pc/identity-masks
 
 clean:

@@ -1,0 +1,28 @@
+#Fluxion's own engine tests, same format as pcas-tests.txt (PineappleCAS's, left as they are).
+#_ is subtract, - is negate.
+
+#Polynomial factoring over the rationals (FAC_POLYNOMIAL)
+#ACT Q37, Q5
+factor; X^3+X^2_8X_12; (X_3)(X+2)^2
+factor; X^2_X_30; (X_6)(X+5)
+
+#Not monic, repeated roots
+factor; 2X^2+X_1; (2X_1)(X+1)
+factor; 6X^2_5X+1; (2X_1)(3X_1)
+factor; 4X^2_12X+9; (2X_3)^2
+factor; X^3_3X^2+3X_1; (X_1)^3
+
+#The number in front, powers of the variable, the sign
+factor; 2X^2+4X; 2X(X+2)
+factor; X^2/2_1/2; (X_1)(X+1)/2
+factor; X^5_X^3; X^3(X_1)(X+1)
+factor; -X_1; -(X+1)
+factor; Y^2_9; (Y_3)(Y+3)
+
+#No rational roots: left as it is, like the Nspire
+factor; X^2_2; X^2_2
+factor; X^2+1; X^2+1
+factor; X^4_1; (X_1)(X+1)(X^2+1)
+
+#Polynomials inside a product
+factor; sin(X)(X^2_1); (X_1)(X+1)sin(X)
