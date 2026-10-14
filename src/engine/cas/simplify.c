@@ -65,6 +65,16 @@ void replace_node(pcas_ast_t *a, pcas_ast_t *b) {
     free(b);
 }
 
+/*Fluxion: see cas.h*/
+bool (*pcas_poll)(void) = NULL;
+bool pcas_cancelled = false;
+
+bool pcas_check(void) {
+    if(!pcas_cancelled && pcas_poll != NULL && pcas_poll())
+        pcas_cancelled = true;
+    return pcas_cancelled;
+}
+
 /*Executes the SIMP_RATIONAL flag*/
 bool simplify_rational(pcas_ast_t *e) {
     unsigned i;
@@ -380,6 +390,9 @@ bool simplify_canonical_form(pcas_ast_t *e, unsigned char flags) {
     bool changed = false, intermediate_change;
     unsigned i;
 
+    if(pcas_cancelled)
+        return false;
+
     do {
         intermediate_change = false;
 
@@ -430,7 +443,7 @@ bool simplify_canonical_form(pcas_ast_t *e, unsigned char flags) {
                         break;
                 }
 
-            } while(inner_intermediate);
+            } while(inner_intermediate && !pcas_check());
 
         }
 
@@ -545,7 +558,7 @@ bool simplify_canonical_form(pcas_ast_t *e, unsigned char flags) {
             changed |= intermediate_change;
         }
 
-    } while(intermediate_change);
+    } while(intermediate_change && !pcas_check());
 
     return changed;
 }
@@ -756,11 +769,11 @@ bool simplify_identities(pcas_ast_t *e, unsigned short flags) {
         changed |= id_ExecuteTable(e, id_general, ID_NUM_GENERAL, true);
 
     if(flags & SIMP_ID_COMPLEX)
-        while(id_ExecuteTable(e, id_complex, ID_NUM_COMPLEX, true))
+        while(!pcas_check() && id_ExecuteTable(e, id_complex, ID_NUM_COMPLEX, true))
             changed = true;
 
     if(flags & SIMP_ID_TRIG) {
-        while(simplify_periodic(e))
+        while(!pcas_check() && simplify_periodic(e))
             changed = true;
         changed |= id_ExecuteTable(e, id_trig_identities, ID_NUM_TRIG_IDENTITIES, true);
     }
@@ -787,18 +800,22 @@ bool simplify_identities(pcas_ast_t *e, unsigned short flags) {
 bool simplify(pcas_ast_t *e, unsigned short flags) {
     bool did_change = false, intermediate_change, expand_changed;
 
+    /*Fluxion: every simplify inside a cancelled one returns at once*/
+    if(pcas_cancelled)
+        return false;
+
     do {
         intermediate_change = false;
         expand_changed = false;
 
         if(flags & SIMP_NORMALIZE)
-            while(simplify_normalize(e))    intermediate_change = did_change = true;
+            while(!pcas_check() && simplify_normalize(e))    intermediate_change = did_change = true;
         if(flags & SIMP_COMMUTATIVE)
-            while(simplify_commutative(e))  intermediate_change = did_change = true;
+            while(!pcas_check() && simplify_commutative(e))  intermediate_change = did_change = true;
         if(flags & SIMP_RATIONAL)
-            while(simplify_rational(e))     intermediate_change = did_change = true;
+            while(!pcas_check() && simplify_rational(e))     intermediate_change = did_change = true;
         if(flags & SIMP_EVAL)
-            while(eval(e, EVAL_EASY))       intermediate_change = did_change = true;
+            while(!pcas_check() && eval(e, EVAL_EASY))       intermediate_change = did_change = true;
         
         if(flags & SIMP_DERIV) {
             intermediate_change |= eval_derivative_nodes(e);
@@ -835,14 +852,14 @@ bool simplify(pcas_ast_t *e, unsigned short flags) {
         /*Simplify like terms*/
         if(flags & SIMP_LIKE_TERMS) {
             /*First fix 2A+B _ (A+B) to 2A+B_A_B */
-            while(expand(e, EXP_DISTRIB_NUMBERS | EXP_DISTRIB_POWERS)) intermediate_change = did_change = true;
+            while(!pcas_check() && expand(e, EXP_DISTRIB_NUMBERS | EXP_DISTRIB_POWERS)) intermediate_change = did_change = true;
             /*Then fix 2A+B_A_B to A(2+-1)+B(1+-1)*/
-            while(factor(e, FAC_SIMPLE_ADDITION_EVALUATEABLE))               intermediate_change = did_change = true;
+            while(!pcas_check() && factor(e, FAC_SIMPLE_ADDITION_EVALUATEABLE))               intermediate_change = did_change = true;
             /*This would fix AA to A^2 if it exists*/
-            while(simplify_like_terms_multiplication(e))                     intermediate_change = did_change = true;
+            while(!pcas_check() && simplify_like_terms_multiplication(e))                     intermediate_change = did_change = true;
         }
 
-    } while(intermediate_change);
+    } while(intermediate_change && !pcas_check());
 
     return did_change;
 }

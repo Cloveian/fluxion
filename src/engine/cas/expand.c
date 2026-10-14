@@ -157,7 +157,7 @@ static bool _expand(pcas_ast_t *e, unsigned char flags) {
                     val = &power->op.num->num;
                     replacement = ast_MakeOperator(OP_MULT);
 
-                    while(mp_int_compare_zero(val) > 0) {
+                    while(mp_int_compare_zero(val) > 0 && !pcas_check()) {
 
                         ast_ChildAppend(replacement, ast_Copy(base));
 
@@ -173,7 +173,7 @@ static bool _expand(pcas_ast_t *e, unsigned char flags) {
             }
         }
 
-    } while(intermediate_change);
+    } while(intermediate_change && !pcas_check());
 
     simplify(e, SIMP_NORMALIZE | SIMP_COMMUTATIVE);
 
@@ -182,6 +182,9 @@ static bool _expand(pcas_ast_t *e, unsigned char flags) {
 
 bool expand(pcas_ast_t *e, unsigned char flags) {
     bool changed = false;
+
+    if(pcas_cancelled)
+        return false;
     /*Expand powers first to make things faster*/
     if(flags & EXP_EXPAND_POWERS)
         changed |= _expand(e, EXP_EXPAND_POWERS);

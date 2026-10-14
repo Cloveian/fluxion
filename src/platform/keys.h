@@ -47,6 +47,10 @@ void keys_end(void);
 /* waits for the next press. arrows, clear and del repeat while held. */
 keypress_t keys_wait(void);
 
+/* doesn't wait. the key down right now (K_NONE if none) and [on], for checking
+   while the engine works; that key won't come back from keys_wait() as a press. */
+keypress_t keys_peek(void);
+
 #ifndef __TICE__
 /* PC only, for tests. presses come from this list instead of the keyboard, then
    quit. each is a key name (enter, clear, y=, x^2, 2nd, ...) or one character to

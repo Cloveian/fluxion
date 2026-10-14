@@ -114,7 +114,7 @@ bool eval_derivative_nodes(pcas_ast_t *e) {
         changed |= id_Execute(e, &id_deriv_power_rule, false);
     } else {
         /*While is necessary because of power rules.*/
-        while(id_ExecuteTable(e, id_derivative, ID_NUM_DERIV, false))
+        while(!pcas_check() && id_ExecuteTable(e, id_derivative, ID_NUM_DERIV, false))
             changed = true;
     }
 
@@ -139,7 +139,7 @@ void derivative(pcas_ast_t *e, pcas_ast_t *respect_to, pcas_ast_t *eval_at) {
     ast_ChildAppend(deriv_node, ast_Copy(respect_to));  /*variable in respect to*/
     ast_ChildAppend(deriv_node, ast_Copy(eval_at));     /*evaluate at*/
 
-    while(eval_derivative_nodes(deriv_node));
+    while(!pcas_check() && eval_derivative_nodes(deriv_node));
     
     replace_node(e, deriv_node);
 }

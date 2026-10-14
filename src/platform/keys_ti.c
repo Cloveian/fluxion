@@ -99,6 +99,15 @@ keypress_t keys_wait(void) {
     return press;
 }
 
+keypress_t keys_peek(void) {
+    keypress_t press;
+
+    /* held from here on, so keys_wait() dosen't take it as a new press after */
+    press.key = held = scan();
+    press.on = kb_On;
+    return press;
+}
+
 #else
 typedef int keys_ti_unused; /* nothing here on the PC */
 #endif

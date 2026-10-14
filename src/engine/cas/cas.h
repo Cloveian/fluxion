@@ -91,6 +91,17 @@
 
 #define SIMP_ALL                        (0xFFFFu)
 
+/*
+    Fluxion: cancelling. while it works, the engine calls pcas_poll (if not NULL)
+    now and then; the caller can draw a busy sign there, and returns true to stop.
+    then pcas_cancelled is set, every loop and entry point returns early, and the
+    tree is left valid but unfinished: throw the answer away. the caller clears
+    pcas_cancelled before the next run. pcas_check() polls and says whether to stop.
+*/
+extern bool (*pcas_poll)(void);
+extern bool pcas_cancelled;
+bool pcas_check(void);
+
 /*Simplifies ast. Returns true if changed*/
 bool simplify(pcas_ast_t *e, unsigned short flags);
 
