@@ -1,5 +1,8 @@
 #include "cas.h"
 
+/*Fluxion: (A+B)^n is only multiplied out up to this n*/
+#define EXPAND_MAX_POWER 64
+
 pcas_ast_t *combine(pcas_ast_t *add, pcas_ast_t *b) {
     unsigned i, j;
     pcas_ast_t *expanded = ast_MakeOperator(OP_ADD);
@@ -105,7 +108,7 @@ static bool _expand(pcas_ast_t *e, unsigned char flags) {
             continue;
         }
 
-        if(optype(e) == OP_POW) {
+        if(isoptype(e, OP_POW)) {
             pcas_ast_t *base, *power;
 
             base = ast_ChildGet(e, 0);
@@ -153,7 +156,11 @@ static bool _expand(pcas_ast_t *e, unsigned char flags) {
                 mp_int val;
                 pcas_ast_t *replacement;
 
-                if(isoptype(base, OP_ADD) && mp_rat_is_integer(power->op.num)) {
+                /*Fluxion: the power has to be a number before it's read as one
+                (sqrt(2+i) crashed here), and a huge one isn't multiplied out:
+                (X+1)^(10^9) would be 10^9 copies*/
+                if(isoptype(base, OP_ADD) && power->type == NODE_NUMBER && mp_rat_is_integer(power->op.num)
+                   && mp_rat_compare_value(power->op.num, EXPAND_MAX_POWER, 1) <= 0) {
                     val = &power->op.num->num;
                     replacement = ast_MakeOperator(OP_MULT);
 

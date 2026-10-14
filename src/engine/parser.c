@@ -459,6 +459,12 @@ bool collapse_all(pcas_stack_t *operators, pcas_stack_t *expressions) {
     stack_Cleanup(&operators);                              \
     stack_Cleanup(&expressions);                            \
                                                             \
+    /*Fluxion: numbers after token i aren't in the tree yet,\
+    so they still own their value (1,2 leaked the 2)*/      \
+    for(i++; i < tokenizer.amount; i++)                     \
+        if(tokenizer.tokens[i].type == TOK_NUMBER)          \
+            num_Cleanup(tokenizer.tokens[i].op.num);        \
+                                                            \
     free(tokenizer.tokens);                                 \
                                                             \
     *e = err;                                               \
@@ -542,10 +548,12 @@ pcas_ast_t *parse(const uint8_t *equation, unsigned length, struct Identifier *l
 
     parse_assert(collapse_all(&operators, &expressions), E_PARSE_BAD_OPERATOR);
 
-    root = stack_Pop(&expressions);
-
+    /*Fluxion: checked before root comes off the stack, so a failed check frees
+    it with the rest (1,2 and logb(X,2,3) leaked it)*/
     parse_assert(operators.top == 0, E_GENERIC);
-    parse_assert(expressions.top == 0, E_GENERIC);
+    parse_assert(expressions.top <= 1, E_GENERIC);
+
+    root = stack_Pop(&expressions);
 
     stack_Cleanup(&operators);
     stack_Cleanup(&expressions);
