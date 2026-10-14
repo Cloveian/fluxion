@@ -19,6 +19,9 @@ typedef enum {
     TEST_DERIV,
     TEST_SOLVE,     /*Fluxion: solve; equation; var; roots (a,b,...) or true / false / unknown*/
     TEST_CANCEL,    /*Fluxion: cancel; expression; expected. cancel_fractions(), then simplify like the app*/
+    TEST_COMDENOM,  /*Fluxion: comdenom; expression; expected. simplify, then comdenom() expanded*/
+    TEST_COMDENOMF, /*Fluxion: comdenomf; expression; expected. the same, factored*/
+    TEST_DECIMAL,   /*Fluxion: decimal; expression; text. approx(), then approx_format() to 6 digits*/
 
     TEST_INVALID
 } TestType;

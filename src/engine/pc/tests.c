@@ -40,6 +40,9 @@ TestType resolve_type(char *type) {
     if(!strcmp(type, "deriv"))      return TEST_DERIV;
     if(!strcmp(type, "solve"))      return TEST_SOLVE;
     if(!strcmp(type, "cancel"))     return TEST_CANCEL;
+    if(!strcmp(type, "comdenom"))   return TEST_COMDENOM;
+    if(!strcmp(type, "comdenomf"))  return TEST_COMDENOMF;
+    if(!strcmp(type, "decimal"))    return TEST_DECIMAL;
 
     return TEST_INVALID;
 }
@@ -236,6 +239,44 @@ static bool test_solve(test_t *t) {
     return passed;
 }
 
+/*Fluxion: decimal; expression without variables; what approx_format() should print*/
+static bool test_decimal(test_t *t) {
+    pcas_error_t err;
+    pcas_ast_t *e = parse((uint8_t*)t->arg1, strlen(t->arg1), str_table, &err);
+    char out[32];
+    bool passed;
+
+    if(err != E_SUCCESS || e == NULL) {
+        printf("Test failed on line %u. Unable to parse %s\n", t->line, t->arg1);
+        return false;
+    }
+
+    simplify(e, SIMP_ALL);
+    approx(e);
+    simplify(e, SIMP_NORMALIZE | SIMP_COMMUTATIVE | SIMP_RATIONAL | SIMP_EVAL);
+
+    /*simplify keeps a fraction as a/b over whole numbers*/
+    if(isoptype(e, OP_DIV) && ast_ChildGet(e, 0)->type == NODE_NUMBER && ast_ChildGet(e, 1)->type == NODE_NUMBER) {
+        mp_rat q = num_Copy(ast_ChildGet(e, 0)->op.num);
+
+        mp_rat_div(q, ast_ChildGet(e, 1)->op.num, q);
+        replace_node(e, ast_MakeNumber(q));
+    }
+
+    passed = e->type == NODE_NUMBER;
+    if(passed) {
+        approx_format(e->op.num, 6, out);
+        passed = strcmp(out, t->arg2) == 0;
+    } else {
+        strcpy(out, "not a number");
+    }
+    if(!passed)
+        printf("Test failed on line %u. Expected %s but got %s\n", t->line, t->arg2, out);
+
+    ast_Cleanup(e);
+    return passed;
+}
+
 bool test_Run(test_t *t) {
     pcas_ast_t *a = NULL, *b = NULL, *c = NULL, *expected, *actual;
     pcas_error_t err;
@@ -244,6 +285,8 @@ bool test_Run(test_t *t) {
     /*Fluxion: its arguments aren't all expressions*/
     if(t->type == TEST_SOLVE)
         return test_solve(t);
+    if(t->type == TEST_DECIMAL)
+        return test_decimal(t);
 
     a = parse((uint8_t*)t->arg1, strlen(t->arg1), str_table, &err);
     if(err != E_SUCCESS) {
@@ -291,6 +334,17 @@ bool test_Run(test_t *t) {
 
         cancel_fractions(actual);
         simplify(actual, SIMP_ALL);
+        simplify(expected, SIMP_NORMALIZE | SIMP_COMMUTATIVE | SIMP_RATIONAL | SIMP_EVAL);
+
+        passed = check(t, actual, expected);
+        break;
+    case TEST_COMDENOM:
+    case TEST_COMDENOMF:
+        expected = b;
+        actual = a;
+
+        simplify(actual, SIMP_ALL);
+        comdenom(actual, t->type == TEST_COMDENOMF);
         simplify(expected, SIMP_NORMALIZE | SIMP_COMMUTATIVE | SIMP_RATIONAL | SIMP_EVAL);
 
         passed = check(t, actual, expected);

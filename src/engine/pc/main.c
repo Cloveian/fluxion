@@ -224,7 +224,11 @@ uint8_t *trimmed;
 
         printf("Factoring...\n\n");
 
-        factor(e, FAC_ALL);
+        /*Fluxion: comdenom / comdenomf share this*/
+        if(!strncmp(argv[1], "comdenom", 8))
+            comdenom(e, argv[1][8] == 'f');
+        else
+            factor(e, FAC_ALL);
 
         /*simplify(e, SIMP_ALL);*/
         simplify_canonical_form(e, CANONICAL_ALL);
@@ -459,6 +463,7 @@ int main(int argc, char **argv) {
         else if(!strcmp(argv[1], "simplify"))   ret = run_simplify(argc, argv);
         else if(!strcmp(argv[1], "gcd"))        ret = run_gcd(argc, argv);
         else if(!strcmp(argv[1], "factor"))     ret = run_factor(argc, argv);
+        else if(!strncmp(argv[1], "comdenom", 8)) ret = run_factor(argc, argv);
         else if(!strcmp(argv[1], "expand"))     ret = run_expand(argc, argv);
         else if(!strcmp(argv[1], "derivative")) ret = run_derivative(argc, argv);
         else {

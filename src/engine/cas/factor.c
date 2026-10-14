@@ -757,6 +757,151 @@ bool cancel_fractions(pcas_ast_t *e) {
     return changed;
 }
 
+/*Fluxion: the factor in prod with f's base (the number, if f is one), or NULL*/
+/*number? i hardly know 'er bwaahaweha*/
+/*he..he...*/
+static pcas_ast_t *find_factor(pcas_ast_t *prod, pcas_ast_t *f) {
+    mp_small n;
+    pcas_ast_t *g, *b = power_base(f, &n);
+
+    for(g = ast_ChildGet(prod, 0); g != NULL; g = g->next) {
+        if(b->type == NODE_NUMBER ? g->type == NODE_NUMBER : ast_Compare(power_base(g, &n), b))
+            return g;
+    }
+    return NULL;
+}
+
+/*Fluxion: a term's denominator as a product of factors, NULL if it has none*/
+static pcas_ast_t *term_den(pcas_ast_t *t) {
+    pcas_ast_t *den;
+
+    if(!isoptype(t, OP_DIV))
+        return NULL;
+    den = ast_Copy(ast_ChildGet(t, 1));
+    simplify(den, SIMP_NORMALIZE | SIMP_COMMUTATIVE | SIMP_RATIONAL | SIMP_EVAL);
+    factor_polynomial(den);
+    return as_product(den);
+}
+
+/*Fluxion: lcm takes in den: each base at the larger power, the numbers' lcm*/
+/*UwU*/
+static void lcm_merge(pcas_ast_t *lcm, pcas_ast_t *den) {
+    pcas_ast_t *f;
+
+    for(f = ast_ChildGet(den, 0); f != NULL; f = f->next) {
+        pcas_ast_t *g = find_factor(lcm, f);
+        mp_small nf, ng;
+
+        if(g == NULL) {
+            ast_ChildAppend(lcm, ast_Copy(f));
+        } else if(f->type == NODE_NUMBER) {
+            mp_int_lcm(mp_rat_numer_ref(g->op.num), mp_rat_numer_ref(f->op.num), mp_rat_numer_ref(g->op.num));
+        } else {
+            pcas_ast_t *base = ast_Copy(power_base(f, &nf));
+
+            power_base(g, &ng);
+            if(nf > ng)
+                set_power(g, base, nf);
+            ast_Cleanup(base);
+        }
+    }
+}
+
+/*Fluxion: mult (a copy of the lcm) becomes lcm / den. every factor of den is in it*/
+static void lcm_divide(pcas_ast_t *mult, pcas_ast_t *den) {
+    pcas_ast_t *f;
+
+    for(f = ast_ChildGet(den, 0); f != NULL; f = f->next) {
+        pcas_ast_t *g = find_factor(mult, f);
+        mp_small nf, ng;
+
+        if(f->type == NODE_NUMBER) {
+            mp_int_div(mp_rat_numer_ref(g->op.num), mp_rat_numer_ref(f->op.num), mp_rat_numer_ref(g->op.num), NULL);
+        } else {
+            pcas_ast_t *base = ast_Copy(power_base(f, &nf));
+
+            power_base(g, &ng);
+            set_power(g, base, ng - nf);
+            ast_Cleanup(base);
+        }
+    }
+}
+
+/*Fluxion: one sum with fractions in it becomes one fraction*/
+static void comdenom_sum(pcas_ast_t *e, bool factored) {
+    pcas_ast_t *t, *den, *num, *lcm = ast_MakeOperator(OP_MULT), *frac;
+
+    for(t = ast_ChildGet(e, 0); t != NULL; t = t->next) {
+        if((den = term_den(t)) != NULL) {
+            lcm_merge(lcm, den);
+            ast_Cleanup(den);
+        }
+    }
+
+    /*each term's top times what its bottom is missing from the lcm*/
+    num = ast_MakeOperator(OP_ADD);
+    for(t = ast_ChildGet(e, 0); t != NULL; t = t->next) {
+        pcas_ast_t *mult = ast_Copy(lcm);
+
+        if((den = term_den(t)) != NULL) {
+            lcm_divide(mult, den);
+            ast_Cleanup(den);
+            ast_ChildAppend(mult, ast_Copy(ast_ChildGet(t, 0)));
+        } else {
+            ast_ChildAppend(mult, ast_Copy(t));
+        }
+        ast_ChildAppend(num, mult);
+    }
+
+    expand(num, EXP_ALL);
+    simplify(num, SIMP_NORMALIZE | SIMP_COMMUTATIVE | SIMP_RATIONAL | SIMP_EVAL | SIMP_LIKE_TERMS);
+    simplify(lcm, SIMP_COMMUTATIVE | SIMP_EVAL);
+
+    frac = ast_MakeBinary(OP_DIV, num, lcm);
+    cancel_fraction(frac);
+    num = ast_ChildGet(frac, 0);
+    den = ast_ChildGet(frac, 1);
+
+    /*like the nspire: comDenom expands the top and bottom, factor factors them*/
+    if(factored) {
+        factor(num, FAC_ALL);
+        simplify(num, SIMP_COMMUTATIVE | SIMP_EVAL);
+    } else {
+        expand(num, EXP_ALL);
+        simplify(num, SIMP_NORMALIZE | SIMP_COMMUTATIVE | SIMP_EVAL | SIMP_LIKE_TERMS);
+        expand(den, EXP_ALL);
+        simplify(den, SIMP_NORMALIZE | SIMP_COMMUTATIVE | SIMP_EVAL | SIMP_LIKE_TERMS);
+    }
+    replace_node(e, frac);
+}
+
+bool comdenom(pcas_ast_t *e, bool factored) {
+    pcas_ast_t *child;
+    bool changed = false;
+
+    if(e->type != NODE_OPERATOR)
+        return false;
+
+    /*inner sums first, so a sum sees its fractions as fractions*/
+    for(child = ast_ChildGet(e, 0); child != NULL; child = child->next)
+        changed |= comdenom(child, factored);
+
+    if(isoptype(e, OP_ADD)) {
+        for(child = ast_ChildGet(e, 0); child != NULL; child = child->next) {
+            if(isoptype(child, OP_DIV)) {
+                comdenom_sum(e, factored);
+                changed = true;
+                break;
+            }
+        }
+    }
+
+    /*X(Y+1/Y) is now X((Y^2+1)/Y): one fraction*/
+    if(changed)
+        simplify(e, SIMP_COMMUTATIVE | SIMP_RATIONAL);
+    return changed;
+}
+
 bool factor(pcas_ast_t *e, unsigned char flags) {
     bool changed = false;
 

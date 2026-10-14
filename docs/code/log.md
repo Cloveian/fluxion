@@ -1,5 +1,15 @@
 # Log
 
+## 2026-10-14 - engine for the forms
+
+- **Forms are a mode** (decision in [ui](../design-choices/ui.md)): the key changes the mode, the last answer is redrawn in it, and answers after it come out that way. Engine first. The key and the order of the modes are still open, so nothing is wired to the app yet.
+- **Common denominator** (`comdenom()`): every sum with a fraction becomes one fraction over the lcm of the denominators, then cancelled. `1/x+1` → `(x+1)/x`, `1/(x−1)+1/(x²−1)` → `(x+2)/(x²−1)`. Expanded top and bottom like the nspire's `comDenom`, or factored like its `factor`: ACT Q26 `√(2d/a − 2c/a)` → `√(2(d−c)/a)`.
+- **Decimal** (`approx()` + `approx_format()`): π, e, roots, logs, trig (radians) become numbers, shown to 6 significant digits like the nspire's Float 6. Q11 → `100.9`, Q45 → `1.25`, Q23 → `2.28831E7`. Plain from 0.001 to 999999, scientific outside that (the TI-84's lower bound; haven't checked the nspire's).
+- **float, not long double**: the CE's 64-bit `long double` maths is +13 KB compressed, more than is left. `float` is about 7 digits, so the 6th can be off by one after a lot of cancelling (`e^15 − 3269017`). Only the irrational parts are floats, sums and products stay exact. The PC uses float too, so the tests see what the CE will do.
+- **Size, once wired**: +3.7 KB (comdenom 0.65, decimal 3.0) → 58.6 KB of 64. Not linked until the app calls them, so `FLUXION.8xp` is still 54.9 KB.
+- **Not timed in CEmu.**
+- **Found**: `∛(−8)` simplifies to `1+i√3`, the principal complex root. The nspire in Real mode says −2. `√2/2+1/x` comes out `(x+√2)√2/(2x)` in common denominator: rationalizing again (case 1).
+
 ## 2026-10-14 - cancelling in fractions
 
 - enter cancels common factors now: $\frac{x^2-1}{x-1} \to x+1$, ACT Q37 gives $(x+2)^2$
