@@ -1,5 +1,12 @@
 # Log
 
+## 2026-10-14 - no more freezes, cancelling
+
+- found the freeze: $\frac{1}{2x}+\frac{1}{x^2}$ (and anything with a plain number fraction in a sum) looped forever. PineappleCAS's eval turned $\frac{1}{2}$ into a number and said nothing changed, then normalize turned it back, forever. upstream bug. those cases are in `fluxion.tests` now
+- there's a `working...` thing with moving dots while the engine runs so it doesn't look frozen
+- the engine can be cancelled now, it checks a poll function in all the long loops and bails out. no key for it yet
+- haven't checked how often the poll runs on the actual calculator
+
 ## 2026-10-14 - more engine tests
 
 - `fluxion.tests` went from 68 to 256 tests, every feature + edge cases

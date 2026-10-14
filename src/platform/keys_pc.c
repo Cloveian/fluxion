@@ -106,6 +106,30 @@ static key_t from_key(SDL_Keycode k) {
     }
 }
 
+keypress_t keys_peek(void) {
+    keypress_t press = { K_NONE, false };
+    const bool *down;
+    int sc;
+
+    if(script != NULL)
+        return press;
+
+    SDL_PumpEvents();
+    down = SDL_GetKeyboardState(NULL);
+    press.on = (SDL_GetModState() & SDL_KMOD_CTRL) != 0;
+
+    /* only the keys that aren't typed text (enter, arrows, F1-F5, ...) */
+    for(sc = 0; sc < SDL_SCANCODE_COUNT && press.key == K_NONE; sc++) {
+        if(down[sc])
+            press.key = from_key(SDL_GetKeyFromScancode((SDL_Scancode)sc, SDL_KMOD_NONE, false));
+    }
+
+    /* its key-down is queued too, don't let keys_wait() see it as a new press */
+    if(press.key != K_NONE || press.on)
+        SDL_FlushEvents(SDL_EVENT_KEY_DOWN, SDL_EVENT_TEXT_INPUT);
+    return press;
+}
+
 keypress_t keys_wait(void) {
     keypress_t press = { K_NONE, false };
 

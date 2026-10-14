@@ -619,7 +619,7 @@ bool id_ExecuteTable(pcas_ast_t *e, pcas_id_t *table, unsigned table_len, bool r
     simplify(e, SIMP_COMMUTATIVE | SIMP_EVAL);
     have = func_mask(e);
 
-    for(i = 0; i < table_len; i++) {
+    for(i = 0; i < table_len && !pcas_check(); i++) {
         if(!table[i].funcs_known) {
             table[i].funcs = text_func_mask(table[i].from_text);
             table[i].funcs_known = true;

@@ -174,7 +174,9 @@ static void run_solve(char *src, box_t *in) {
     ms = (unsigned long)((clock() - start) * 1000 / CLOCKS_PER_SEC);
     ast_Cleanup(e);
 
-    if(n == SOLVE_UNKNOWN)
+    if(pcas_cancelled)
+        push(in, NULL, "cancelled", ms);
+    else if(n == SOLVE_UNKNOWN)
         push(in, NULL, "can't solve this one yet", ms);
     else if(n == SOLVE_ALL)
         push(in, word_box("true"), NULL, ms);
@@ -255,7 +257,8 @@ static void evaluate(void) {
     }
     simplify_canonical_form(e, canon_flags);
 
-    push(in, layout_build(e, &draw_font), NULL,
+    /* cancelled: the tree is half simplified, nobody wants to see that lol */
+    push(in, pcas_cancelled ? NULL : layout_build(e, &draw_font), pcas_cancelled ? "cancelled" : NULL,
          (unsigned long)((clock() - start) * 1000 / CLOCKS_PER_SEC));
     ast_Cleanup(e);
     ed_clear(&ed);
@@ -785,16 +788,42 @@ static void draw_screen(void) {
     screen_show();
 }
 
-/* "working..." while the engine runs, so a slow simplify doesn't look like a hang */
+/* The key that stops a slow answer. K_NONE: not picked yet, nothing stops it */
+#define CANCEL_KEY K_NONE
+
+static clock_t busy_next;
+static unsigned busy_frame;
+
+/* "working" and dots that keep counting while the engine runs, so a slow
+   simplify doesn't look like a hang */
 static void draw_working(void) {
+    static const char *const frames[] = { "working   ", "working.  ", "working.. ", "working..." };
     const font_t *small = draw_label_font();
-    const char *text = "working...";
+    const char *text = frames[busy_frame % 4];
 
     screen_color(COL_BG);
     screen_fill(SCREEN_W - MARGIN - 70, SCREEN_H - BAR_H - 40, 70, 16);
     screen_color(COL_ACCENT);
-    draw_text(SCREEN_W - MARGIN - draw_text_width(text, small), SCREEN_H - BAR_H - 38, text, small);
+    draw_text(SCREEN_W - MARGIN - draw_text_width(frames[3], small), SCREEN_H - BAR_H - 38, text, small);
     screen_show();
+}
+
+/* pcas_poll: the engine calls it all the time, so the clock decides when to
+   draw the next frame and look at the keys (~6 times a second) */
+static bool busy_poll(void) {
+    if(clock() < busy_next)
+        return false;
+    busy_next = clock() + CLOCKS_PER_SEC / 6;
+    busy_frame++;
+    draw_working();
+    return CANCEL_KEY != K_NONE && keys_peek().key == CANCEL_KEY;
+}
+
+static void busy_start(void) {
+    pcas_cancelled = false;
+    busy_frame = 0;
+    busy_next = clock() + CLOCKS_PER_SEC / 6;
+    draw_working();
 }
 
 /* main loop */
@@ -806,12 +835,13 @@ void app_run(void) {
     screen_begin();
     keys_begin();
     draw_screen();
+    pcas_poll = busy_poll;
 
     for(;;) {
         keypress_t p = keys_wait();
 
         if(p.key == K_ENTER && menu < 0 && !second && !alpha && !ed_is_empty(&ed))
-            draw_working();
+            busy_start();
         if(!handle(p))
             break;
         draw_screen();

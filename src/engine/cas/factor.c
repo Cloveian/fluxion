@@ -153,7 +153,9 @@ bool factor_addition(pcas_ast_t *e, unsigned char flags) {
     pcas_ast_t *child;
     bool changed = false;
 
-    if(e->type != NODE_OPERATOR)
+    /*Fluxion: cancelled, the simplifies below do nothing, and pairing up terms
+    that aren't simplified any more grows them (took longer than finishing)*/
+    if(e->type != NODE_OPERATOR || pcas_cancelled)
         return false;
 
     for(child = ast_ChildGet(e, 0); child != NULL; child = child->next)
@@ -163,10 +165,10 @@ bool factor_addition(pcas_ast_t *e, unsigned char flags) {
         unsigned i, j;
         pcas_ast_t *g;
 
-        for(i = 0; i < ast_ChildLength(e); i++) {
+        for(i = 0; i < ast_ChildLength(e) && !pcas_check(); i++) {
             pcas_ast_t *a = ast_ChildGet(e, i);
 
-            for(j = i + 1; j < ast_ChildLength(e); j++) {
+            for(j = i + 1; j < ast_ChildLength(e) && !pcas_check(); j++) {
                 pcas_ast_t *b = ast_ChildGet(e, j);
 
                 g = gcd(a, b);
@@ -904,6 +906,9 @@ bool comdenom(pcas_ast_t *e, bool factored) {
 
 bool factor(pcas_ast_t *e, unsigned char flags) {
     bool changed = false;
+
+    if(pcas_cancelled)
+        return false;
 
     /*Fluxion: polynomials first. pairing up terms by their gcd would split
     X^3+X^2_8X_12 into a worse sum, so it only gets what isn't a polynomial.*/

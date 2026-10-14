@@ -658,7 +658,7 @@ static bool eval_factorial(pcas_ast_t *e, unsigned short flags) {
                 i = mp_int_alloc();
                 mp_int_init_copy(i, &a->op.num->num);
 
-                while(mp_int_compare_zero(i) != 0) {
+                while(mp_int_compare_zero(i) != 0 && !pcas_check()) {
                     mp_rat_mul_int(accumulator, i, accumulator);
                     mp_int_sub_value(i, 1, i);
                 }
