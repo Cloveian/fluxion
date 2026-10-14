@@ -1,5 +1,35 @@
 # Log
 
+## 2026-10-13 - fonts + layout pass
+
+- three font sizes now like TeX (normal / script / scriptscript), from the X11 misc-fixed fonts, `tools/bdf2c.py` converts them. replaced the 8\*8 graphx font
+- variables are lowercase like the nspire. $e$ and $i$ are bold so you can tell the constants apart from variables named e and i
+- nested fractions get smaller, roots and brackets got some spacing fixes, brackets curve so tall ones stay round
+- terms are sorted highest degree first
+- `--raw` in the viewer draws exactly what you typed, for layout stuff
+- **Stray keystrokes**: the review hook pulls focus to the editor, so typing in the chat panel lands in files (`y`, `a`, `a da` so far). Compilers caught all of them.
+
+## 2026-10-13 - drawing, PC screen
+
+- `src/platform/screen.h` is the only thing that touches the screen. graphx on the calculator, a framebuffer + SDL3 window on the PC
+- own 8\*8 font so the PC and calculator draw the exact same pixels (checked, CEmu matches)
+- `./build-pc/view 'X^2/2'` opens a window, `--png` saves a picture
+- the calculator needs `clibs.8xg` (added to the shipping checklist)
+- tried building as an app (.8ek), it builds but you need an installer to put it on, even in CEmu
+- nested fractions look bad, same width bars. need the small font
+
+next: the editor
+
+## 2026-10-13 - box layout
+
+- `src/render/layout.c` turns the engine tree into boxes (width, height above/below the line, position). fractions, exponents, roots, brackets that grow, log bases, etc. no graphx in it so it runs on the PC
+- spacing stolen from TeX
+- the font is a parameter so swapping fonts later doesn't touch the layout
+- `./build-pc/layout-dump` prints the box tree
+- the engine splits $\frac{x^2-1}{(x+1)^2}$ into two fractions, same form problem as Q26
+
+next: actually drawing it
+
 ## 2026-10-13 - PineappleCAS engine in
 
 - copied PineappleCAS's engine into `src/engine/` (everything but its UI). what i change goes in `src/engine/README.md`

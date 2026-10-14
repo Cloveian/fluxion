@@ -1,5 +1,7 @@
 obj/
 bin/
+obj-app/
+bin-app/
 src/gfx/*.c
 src/gfx/*.h
 src/gfx/*.8xv
@@ -12,4 +14,4 @@ convimg.yaml.lst
 *.edtz
 /build-pc/
 /PineappleCAS/
-/.claude/settings.local.json
+/.claude

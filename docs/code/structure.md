@@ -13,11 +13,14 @@ fluxion/
 │   │   ├── cas/   simplify, expand, factor, derivative, identities
 │   │   ├── imath/  big-number + rational maths
 │   │   └── pc/  PC-only command line + test runner (empty on the calculator)
-│   ├── render.c    expression tree → 2D math on screen
+│   ├── render/
+│   │   └── layout.c    expression tree -> boxes with sizes + positions (no drawing, runs on PC)
 │   ├── editor.c    input: cursor, templates, keys
 │   └── screens.c  menus, history, settings
 ├── test/
-│   └── pcas-tests.txt    PineappleCAS's 256 engine tests
+│   ├── pcas-tests.txt    PineappleCAS's 256 engine tests
+│   ├── identity_masks.c   checks the identity skip is safe
+│   └── layout_dump.c   prints the box tree: ./build-pc/layout-dump '(X+1)^2/X'
 └── docs/
 ```
 
