@@ -1,5 +1,11 @@
 # Log
 
+## 2026-10-14 - cancelling in fractions
+
+- enter cancels common factors now: $\frac{x^2-1}{x-1} \to x+1$, ACT Q37 gives $(x+2)^2$
+- the ACT wants $x^2+4x+4$ for that but $(x+2)^2$ is smaller so it stays, expanded will be a form
+- stuff that doesn't cancel still gets split into one fraction per term, that's the common denominator form problem agian
+
 ## 2026-10-13 - square factors out of roots
 
 - $\sqrt{35\cdot108} \to 6\sqrt{105}$ (ACT Q8), $\sqrt{72} \to 6\sqrt{2}$, etc

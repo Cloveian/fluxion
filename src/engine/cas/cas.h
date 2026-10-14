@@ -131,6 +131,11 @@ resulting multiplication can be evauated numerically*/
 
 bool factor(pcas_ast_t *e, unsigned char flags);
 
+/*Fluxion: in every fraction, factors the top and bottom (FAC_POLYNOMIAL) and
+cancels what they share: (X^2_1)/(X_1) = (X+1). call before simplify(), which
+splits fractions apart.*/
+bool cancel_fractions(pcas_ast_t *e);
+
 /*EVAL_DISTRIBUTE_NUMBERS, EVAL_DISTRIBUTE_MULTIPLICATION, EVAL_DISTRIBUTE_ADDITION, EVAL_EXPAND_POWERS*/
 
 /*Expand 2(A+B) to 2A + 2B or -(A+B) to -1*A + -1*B*/
