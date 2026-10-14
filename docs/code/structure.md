@@ -25,8 +25,8 @@ fluxion/
 │       ├── app.c    history, input line, soft-key folders, running the engine
 │       └── catalog.c  everything you can type or pick, and what the engine can do
 ├── test/
-│   ├── pcas-tests.txt    PineappleCAS's 256 engine tests
-│   ├── fluxion-tests.txt    Fluxion's engine tests (factor, solve, cancel, roots)
+│   ├── pcas.tests   PineappleCAS's 256 engine tests
+│   ├── fluxion.tests   Fluxion's engine tests (factor, solve, cancel, roots, forms)
 │   ├── identity_masks.c   checks the identity skip is safe
 │   ├── layout_dump.c   prints the box tree: ./build-pc/layout-dump '(X+1)^2/X'
 │   ├── view.c  draws expressions: ./build-pc/view --png out.png 'X^2/2'

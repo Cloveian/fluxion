@@ -1,4 +1,4 @@
-#Fluxion's own engine tests, same format as pcas-tests.txt (PineappleCAS's, left as they are).
+#Fluxion's own engine tests, same format as pcas.tests (PineappleCAS's, left as they are).
 #_ is subtract, - is negate.
 
 #Polynomial factoring over the rationals (FAC_POLYNOMIAL)
