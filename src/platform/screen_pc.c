@@ -25,6 +25,12 @@ void screen_begin(void) { screen_clear(); }
 void screen_end(void) {}
 void screen_show(void) { window_present(); }   /* does nothing unless a window is open */
 
+/* just the one framebuffer here, so drawing is always "direct", only needs showing */
+void screen_direct(bool on) {
+    if(!on)
+        window_present();
+}
+
 void screen_clear(void) { memset(fb, COL_BG, sizeof fb); }
 void screen_color(unsigned char color) { current = color; }
 

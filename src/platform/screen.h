@@ -8,6 +8,8 @@
     above this layer (layout, drawing, editor, screens) the code is the same on both.
 */
 
+#include <stdbool.h>
+
 #define SCREEN_W 320
 #define SCREEN_H 240
 
@@ -33,6 +35,11 @@ void screen_line(int x0, int y0, int x1, int y1);
 /* (text is drawn by render/draw.c with these, so any font size works on both) */
 
 void screen_show(void);                         /* show what's been drawn */
+
+/* true draws straight onto what's showing, for a small change between frames
+   (the busy sign). screen_show() would bring back the frame before, it's double
+   buffered. false: back to drawing the next frame */
+void screen_direct(bool on);
 
 #ifndef __TICE__
 /* PC only */

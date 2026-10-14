@@ -39,6 +39,13 @@ void screen_show(void) {
     gfx_SwapDraw();
 }
 
+void screen_direct(bool on) {
+    if(on)
+        gfx_SetDrawScreen();
+    else
+        gfx_SetDrawBuffer();
+}
+
 #else
 typedef int screen_ti_unused; /* nothing here on the PC */
 #endif

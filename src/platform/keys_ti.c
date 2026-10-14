@@ -8,8 +8,9 @@
 #include <keypadc.h>
 #include <time.h>
 
-#define FIRST_REPEAT (CLOCKS_PER_SEC * 2 / 5)   /* 400 ms before repeating */
-#define NEXT_REPEAT  (CLOCKS_PER_SEC / 16)      /* then every ~60 ms */
+#define FIRST_REPEAT (CLOCKS_PER_SEC / 4)       /* held 250 ms before it repeats */
+#define NEXT_REPEAT  (CLOCKS_PER_SEC / 35)      /* then 35 a second */
+#define SETTLE       (CLOCKS_PER_SEC / 50)      /* 20 ms after a press, see keys_wait(). might need to bump this, some keys still double once in a while */
 
 typedef struct {
     unsigned char group, bit;
@@ -41,11 +42,12 @@ static const map_t map[] = {
 
 static key_t held = K_NONE;
 static clock_t next_repeat;
+static unsigned char old_mode, old_int;
 
+/* the keypad scans continuously (keys_begin), so kb_Data is always current */
 static key_t scan(void) {
     unsigned i;
 
-    kb_Scan();
     for(i = 0; i < sizeof map / sizeof map[0]; i++)
         if(kb_Data[map[i].group] & map[i].bit)
             return map[i].key;
@@ -63,28 +65,68 @@ void keys_begin(void) {
     kb_DisableOnLatch();
     kb_ClearOnLatch();
 
+    /* continuous scanning latches KB_DATA_CHANGED on every press and release,
+       even while the app is busy drawing. the OS's keypad interrupt would
+       clear it first, so that's off until keys_end() */
+    old_mode = kb_GetMode();
+    old_int = kb_EnableInt;
+    kb_EnableInt = 0;
+    kb_SetMode(MODE_3_CONTINUOUS);
+
     /* don't take the key that started the program as the first press */
     while(scan() != K_NONE);
+    kb_IntAcknowledge = KB_DATA_CHANGED;
 }
 
 void keys_end(void) {
+    kb_SetMode(old_mode);
+    kb_EnableInt = old_int;
     kb_ClearOnLatch();
 }
 
 keypress_t keys_wait(void) {
+    static bool on_down, on_used;  /* whether [on] is held, and a key hit with it */
     keypress_t press;
 
     for(;;) {
-        key_t k = scan();
+        bool changed = (kb_IntStatus & KB_DATA_CHANGED) != 0;
+        key_t k;
+
+        kb_IntAcknowledge = KB_DATA_CHANGED;
+        k = scan();
+
+        /* [on] isn't in the key matrix. down then up with no key in
+           between is a tap of its own, K_ON */
+        if(kb_On && !on_down) {
+            on_down = true;
+            on_used = false;
+        } else if(!kb_On && on_down) {
+            on_down = false;
+            if(!on_used) {
+                press.key = K_ON;
+                press.on = false;
+                return press;
+            }
+        }
 
         if(k == K_NONE) {
             held = K_NONE;
             continue;
         }
 
-        if(k != held) {
+        /* same key still down but the keypad changed, so it got let go and pressed
+           again while we were busy drawing. a new press, not a hold (this was the
+           double tap that kept getting eaten) */
+        if(k != held || changed) {
+            clock_t pressed = clock();
+
             held = k;
-            next_repeat = clock() + FIRST_REPEAT;
+            next_repeat = pressed + FIRST_REPEAT;
+
+            /* this press's own change (it can land just after the scan) and
+               the contacts bouncing would look like another press next time */
+            while(clock() - pressed < SETTLE)
+                kb_IntAcknowledge = KB_DATA_CHANGED;
             break;
         }
 
@@ -94,6 +136,7 @@ keypress_t keys_wait(void) {
         }
     }
 
+    on_used |= on_down;
     press.key = held;
     press.on = kb_On;
     return press;
