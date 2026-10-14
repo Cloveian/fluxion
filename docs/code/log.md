@@ -1,5 +1,16 @@
 # Log
 
+## 2026-10-14 - Fluxion runs as a Flash App
+
+- **Keypad** (calculator): repeat after 250 ms, then 35 a second. A quick second tap of the same number is no longer lost while the screen redraws (the keypad scans continuously and latches changes; 20 ms settle after each press for bounce).
+- **Sticky modifiers**: 2nd, alpha and `[on]` (shown as `ctl`) stay on for the next key. A quick double tap locks one, a tap unlocks, [2nd][alpha] is alpha lock. A key in between breaks a double tap.
+- **Status bar** along the top: the modifiers (a padlock when locked), a spinning dot while the engine works, the battery (0-4 bars, from the OS, read every 10 s). The busy sign draws straight onto the screen: swapping buffers made the cursor flash.
+- **PC keys** like the calculator: Shift = alpha, Alt = 2nd, Ctrl = `[on]` when tapped alone; Alt+key = 2nd then the key; `=` types [2nd][math]; numpad works.
+- **Flash App**: `make installer` builds Fluxion as an app (`bin-app/Fluxion.8ek`, 147 KB) and CEaShell-Installer (git submodule, configured by make variables, no patch) into `bin-installer/`: `FLUXINST.8xp` + `FLUXAPP0-2` appvars. Runs from flash, the heap is 57 KB.
+- **Found, the hard way**: an app with ~16 KB of initialized `.data` crashes on launch, before `main` (1.8 KB is fine). The identity tables were 16 KB of `.data`, mostly the padding of 50-character text buffers; they're `const char *` now, 2.9 KB. Found by installing test apps in CEmu: size, 3 appvars and 5000 relocations were all fine.
+- **Licence**: CEaShell-Installer has no licence (CEaShell itself is GPL-3.0). Fine to build and test, not to ship until RoccoLox gives permission.
+- **Not timed**: flash vs RAM speed in CEmu.
+
 ## 2026-10-14 - no more freezes, cancelling
 
 - found the freeze: $\frac{1}{2x}+\frac{1}{x^2}$ (and anything with a plain number fraction in a sum) looped forever. PineappleCAS's eval turned $\frac{1}{2}$ into a number and said nothing changed, then normalize turned it back, forever. upstream bug. those cases are in `fluxion.tests` now
