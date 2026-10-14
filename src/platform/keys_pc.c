@@ -3,11 +3,20 @@
 /*
     PC version of keys.h: the SDL window's keyboard, mapped to TI keys.
 
-      typing        digits, letters, + - * / ^ ( ) , .   (~ is (-), negate)
+      typing        digits, letters (either case), + - * / ^ ( ) , .
+      ~             [(-)], negate    =         [2nd][math]
+      numpad        digits . + - * / enter, with NumLock on or off
       Backspace     [clear]          Delete    [del]
       Enter         [enter]          arrows    arrows
-      Ctrl          [on]             Tab       [2nd]
+      Shift alone   [alpha]          Alt alone [2nd]
+      Alt+key       [2nd], then the key
+      Ctrl alone    [on]             Ctrl+key  the key, with [on] held
+      Tab           [2nd]
       F1-F5         the soft keys    Esc       [2nd][mode], quit
+
+    Shift, Alt and Ctrl count as "alone" when they go down and up with no other
+    key or character in between; they send their key on the release. Shift with
+    another key just types the shifted character (Shift+= is +, Shift+9 is ().
 */
 
 #include "keys.h"
@@ -40,6 +49,7 @@ static keypress_t scripted(void) {
         { "y=", K_YEQU }, { "window", K_WINDOW }, { "zoom", K_ZOOM }, { "trace", K_TRACE }, { "graph", K_GRAPH },
         { "x^2", K_SQUARE }, { "x^-1", K_RECIP }, { "sin", K_SIN }, { "cos", K_COS }, { "tan", K_TAN },
         { "ln", K_LN }, { "log", K_LOG }, { "neg", K_NEG }, { "xt", K_XT }, { "sto", K_STO }, { "math", K_MATH },
+        { "on", K_ON },
     };
     keypress_t press = { K_QUIT, false };
     const char *s;
@@ -106,6 +116,139 @@ static key_t from_key(SDL_Keycode k) {
     }
 }
 
+/* numpad keys, by where they are (the scancode), so NumLock doesn't matter */
+static key_t from_keypad(SDL_Scancode sc, SDL_Keycode k) {
+    switch(sc) {
+    case SDL_SCANCODE_KP_0:        return K_0;
+    case SDL_SCANCODE_KP_1:        return K_1;
+    case SDL_SCANCODE_KP_2:        return K_2;
+    case SDL_SCANCODE_KP_3:        return K_3;
+    case SDL_SCANCODE_KP_4:        return K_4;
+    case SDL_SCANCODE_KP_5:        return K_5;
+    case SDL_SCANCODE_KP_6:        return K_6;
+    case SDL_SCANCODE_KP_7:        return K_7;
+    case SDL_SCANCODE_KP_8:        return K_8;
+    case SDL_SCANCODE_KP_9:        return K_9;
+    case SDL_SCANCODE_KP_PERIOD:   return K_DOT;
+    case SDL_SCANCODE_KP_PLUS:     return K_ADD;
+    case SDL_SCANCODE_KP_MINUS:    return K_SUB;
+    case SDL_SCANCODE_KP_MULTIPLY: return K_MUL;
+    case SDL_SCANCODE_KP_DIVIDE:   return K_DIV;
+    case SDL_SCANCODE_KP_ENTER:    return K_ENTER;
+    default: break;
+    }
+    switch(k) {
+    case SDLK_KP_0:        return K_0;
+    case SDLK_KP_1:        return K_1;
+    case SDLK_KP_2:        return K_2;
+    case SDLK_KP_3:        return K_3;
+    case SDLK_KP_4:        return K_4;
+    case SDLK_KP_5:        return K_5;
+    case SDLK_KP_6:        return K_6;
+    case SDLK_KP_7:        return K_7;
+    case SDLK_KP_8:        return K_8;
+    case SDLK_KP_9:        return K_9;
+    case SDLK_KP_PERIOD:   return K_DOT;
+    case SDLK_KP_PLUS:     return K_ADD;
+    case SDLK_KP_MINUS:    return K_SUB;
+    case SDLK_KP_MULTIPLY: return K_MUL;
+    case SDLK_KP_DIVIDE:   return K_DIV;
+    case SDLK_KP_ENTER:    return K_ENTER;
+    default:               return K_NONE;
+    }
+}
+
+/* presses still to hand out, one per keys_wait() (Alt+key, =) */
+#define PENDING_MAX 4
+static keypress_t pending[PENDING_MAX];
+static int pending_first, pending_count;
+
+static void push(key_t key, bool on) {
+    if(key == K_NONE || pending_count >= PENDING_MAX)
+        return;
+    pending[(pending_first + pending_count) % PENDING_MAX].key = key;
+    pending[(pending_first + pending_count) % PENDING_MAX].on = on;
+    pending_count++;
+}
+
+/* a typed character: = is [2nd][math], like on the TI */
+static void push_char(char c, bool on) {
+    if(c == '=') {
+        push(K_2ND, on);
+        push(K_MATH, on);
+    } else {
+        push(from_text(c), on);
+    }
+}
+
+static bool shift_alone;    /* Shift down, nothing else since */
+static bool alt_alone;      /* Alt down, nothing else since */
+static bool ctrl_alone;     /* Ctrl down, nothing else since */
+static bool skip_text;      /* keystroke already handled at key-down, so drop its text */
+
+static bool is_shift(SDL_Keycode k) { return k == SDLK_LSHIFT || k == SDLK_RSHIFT; }
+static bool is_alt(SDL_Keycode k)   { return k == SDLK_LALT || k == SDLK_RALT; }
+static bool is_ctrl(SDL_Keycode k)  { return k == SDLK_LCTRL || k == SDLK_RCTRL; }
+
+static bool is_modifier(SDL_Keycode k) {
+    return is_shift(k) || is_alt(k) || is_ctrl(k)
+        || k == SDLK_LGUI || k == SDLK_RGUI || k == SDLK_MODE
+        || k == SDLK_CAPSLOCK || k == SDLK_NUMLOCKCLEAR;
+}
+
+/* a key went down, queue its presses if it has any */
+static void key_down(const SDL_KeyboardEvent *ev) {
+    bool on = (ev->mod & SDL_KMOD_CTRL) != 0;
+    bool alt = (ev->mod & SDL_KMOD_ALT) != 0;
+    key_t key;
+
+    /* new keystroke, so whatever text comes next belongs to it */
+    skip_text = false;
+
+    if(ev->repeat && (is_shift(ev->key) || is_alt(ev->key) || is_ctrl(ev->key)))
+        return;  /* still the same tap */
+
+    shift_alone = is_shift(ev->key);
+    alt_alone = is_alt(ev->key);
+    ctrl_alone = is_ctrl(ev->key);
+    if(is_modifier(ev->key))
+        return;     /* nothing's sent until it's released */
+
+    if(ev->key == SDLK_ESCAPE) {
+        push(K_QUIT, on);
+        return;
+    }
+
+    key = from_keypad(ev->scancode, ev->key);
+    if(key != K_NONE) {
+        skip_text = true;   /* NumLock on, the digit comes through as text too */
+        if(alt)
+            push(K_2ND, on);
+        push(key, on);
+        return;
+    }
+
+    key = from_key(ev->key);
+    if(key != K_NONE) {
+        if(alt)
+            push(K_2ND, on);
+        push(key, on);
+        return;
+    }
+
+    /* Alt + a typed key, grab its charachter here and not its text */
+    /* charachter? i hardly know 'er bwahahahwaa */
+    if(alt) {
+        skip_text = true;
+        if(ev->key == '=') {
+            push_char('=', on);     /* that's already [2nd][math] */
+        } else if(ev->key < 0x80 && from_text((char)ev->key) != K_NONE) {
+            push(K_2ND, on);
+            push(from_text((char)ev->key), on);
+        }
+    }
+}
+
 keypress_t keys_peek(void) {
     keypress_t press = { K_NONE, false };
     const bool *down;
@@ -125,8 +268,10 @@ keypress_t keys_peek(void) {
     }
 
     /* its key-down is queued too, don't let keys_wait() see it as a new press */
-    if(press.key != K_NONE || press.on)
+    if(press.key != K_NONE || press.on) {
         SDL_FlushEvents(SDL_EVENT_KEY_DOWN, SDL_EVENT_TEXT_INPUT);
+        shift_alone = alt_alone = ctrl_alone = false;  /* their key-ups might be gone */
+    }
     return press;
 }
 
@@ -136,35 +281,55 @@ keypress_t keys_wait(void) {
     if(script != NULL)
         return scripted();
 
-    while(press.key == K_NONE) {
+    while(pending_count == 0) {
         SDL_Event ev;
 
         if(!SDL_WaitEvent(&ev)) {
-            press.key = K_QUIT;
+            push(K_QUIT, false);
             break;
         }
 
         switch(ev.type) {
         case SDL_EVENT_QUIT:
-            press.key = K_QUIT;
+            push(K_QUIT, false);
             break;
 
         case SDL_EVENT_WINDOW_EXPOSED:
             window_present();
             break;
 
+        case SDL_EVENT_WINDOW_FOCUS_LOST:
+            /* like Alt+Tab to another window, that Alt wasn't meant for us */
+            shift_alone = false;
+            alt_alone = false;
+            ctrl_alone = false;
+            break;
+
         case SDL_EVENT_KEY_DOWN:
-            press.on = (ev.key.mod & SDL_KMOD_CTRL) != 0;
-            if(ev.key.key == SDLK_ESCAPE)
-                press.key = K_QUIT;
-            else
-                press.key = from_key(ev.key.key);
+            key_down(&ev.key);
+            break;
+
+        case SDL_EVENT_KEY_UP:
+            if(is_shift(ev.key.key) && shift_alone) {
+                shift_alone = false;
+                push(K_ALPHA, (ev.key.mod & SDL_KMOD_CTRL) != 0);
+            } else if(is_alt(ev.key.key) && alt_alone) {
+                alt_alone = false;
+                push(K_2ND, (ev.key.mod & SDL_KMOD_CTRL) != 0);
+            } else if(is_ctrl(ev.key.key) && ctrl_alone) {
+                ctrl_alone = false;
+                push(K_ON, false);
+            }
             break;
 
         case SDL_EVENT_TEXT_INPUT:
             /* printable characters come here (with shift and layout applied) */
-            press.key = from_text(ev.text.text[0]);
-            press.on = (SDL_GetModState() & SDL_KMOD_CTRL) != 0;
+            shift_alone = false;
+            alt_alone = false;
+            ctrl_alone = false;
+            if(skip_text)
+                break;
+            push_char(ev.text.text[0], (SDL_GetModState() & SDL_KMOD_CTRL) != 0);
             break;
 
         default:
@@ -172,6 +337,9 @@ keypress_t keys_wait(void) {
         }
     }
 
+    press = pending[pending_first];
+    pending_first = (pending_first + 1) % PENDING_MAX;
+    pending_count--;
     return press;
 }
 

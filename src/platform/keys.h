@@ -30,6 +30,9 @@ typedef enum {
 
     K_UP, K_DOWN, K_LEFT, K_RIGHT,
 
+    /* [on] tapped on its own (held together with a key it's .on instead) */
+    K_ON,
+
     /* PC only - letters come straight off the keyboard, no alpha needed */
     K_LETTER_A, K_LETTER_Z = K_LETTER_A + 25,
 

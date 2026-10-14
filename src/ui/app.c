@@ -13,6 +13,7 @@
 #include "render/draw.h"
 #include "platform/screen.h"
 #include "platform/keys.h"
+#include "platform/power.h"
 #include "ui/catalog.h"
 
 /*
@@ -40,6 +41,8 @@ static int history_len;
 
 static editor_t ed;
 static bool second, alpha;      /* [2nd] / [alpha] pressed, for the next key */
+static bool second_lock, alpha_lock;    /* stay on after a key */
+static bool ctl, ctl_lock;      /* [on] tapped, so the next key becomes [on]+key (Ctrl) */
 static const char *status;      /* one-line message above the input, or NULL */
 
 static int menu = -1;           /* open folder, -1 = none */
@@ -567,6 +570,53 @@ static bool key_plain(keypress_t p) {
     return true;
 }
 
+/* two taps of [2nd] or [alpha] this close together lock it */
+#define DOUBLE_TAP (CLOCKS_PER_SEC * 2 / 5)
+
+/* [2nd] / [alpha] / [on]: on for the next key, a double tap or [2nd][alpha]
+   locks (alpha lock, like the TI), one more tap unlocks. [on] goes with either */
+/* one modifier tapped. a quick second tap locks it whatever the first one did
+   (it may have just turned it off), a tap while locked unlocks */
+static void tap(bool *on, bool *lock, bool again) {
+    if(again)
+        *on = *lock = true;
+    else if(*lock)
+        *on = *lock = false;
+    else
+        *on = !*on;
+}
+
+/* the last modifier tapped, K_NONE after any other key. a double tap is two
+   taps with nothing in between (alpha a alpha b isn't one) */
+static key_t last;
+static clock_t last_time;
+
+static void modifier(key_t k) {
+    /* modifier? i hardly know 'er bahahwahaa */
+    bool again = k == last && clock() - last_time < DOUBLE_TAP;
+
+    last = k;
+    last_time = clock();
+
+    if(k == K_ON) {
+        tap(&ctl, &ctl_lock, again);
+    } else if(k == K_ALPHA && second && !second_lock) {
+        second = false;
+        alpha = alpha_lock = true;
+        again = true;
+    } else if(k == K_2ND) {
+        tap(&second, &second_lock, again);
+        alpha = alpha_lock = false;
+    } else {
+        tap(&alpha, &alpha_lock, again);
+        second = second_lock = false;
+    }
+
+    /* locking ate the double tap, so a third quick tap starts a fresh one */
+    if(again)
+        last = K_NONE;
+}
+
 static bool handle(keypress_t p) {
     status = NULL;
 
@@ -578,26 +628,25 @@ static bool handle(keypress_t p) {
         return true;
     }
 
-    if(p.key == K_2ND) {
-        second = !second;
-        alpha = false;
+    if(p.key == K_2ND || p.key == K_ALPHA || p.key == K_ON) {
+        modifier(p.key);
         return true;
     }
-    if(p.key == K_ALPHA) {
-        alpha = !alpha;
-        second = false;
-        return true;
+    last = K_NONE;
+    if(ctl) {
+        p.on = true;
+        ctl = ctl_lock;
     }
 
     if(second) {
-        second = false;
+        second = second_lock;
         return key_2nd(p);
     }
 
     if(alpha) {
         char c = alpha_letter(p.key);
 
-        alpha = false;
+        alpha = alpha_lock;
         if(p.key == K_YEQU) {   /* [alpha][y=] is n/d, like the TI */
             ed_insert(&ed, ED_FRAC, NULL);
             return true;
@@ -708,6 +757,77 @@ static void draw_menu(void) {
     }
 }
 
+/* the status bar */
+
+/* along the top: 2nd / alpha (with a padlock when locked), the working dots,
+   the battery */
+
+#define BATTERY_W   13
+#define BATTERY_READ (CLOCKS_PER_SEC * 10)     /* the level is read this often (reading every frame was slow) */
+
+static int battery = -1;
+static clock_t battery_next;
+
+static int top_h(void) {
+    const font_t *small = draw_label_font();
+
+    return small->ascent + small->descent + 3;
+}
+
+/* 7 x 8, top left at x, y */
+static void draw_lock(int x, int y) {
+    screen_hline(x + 2, y, 3);
+    screen_vline(x + 1, y + 1, 3);
+    screen_vline(x + 5, y + 1, 3);
+    screen_fill(x, y + 3, 7, 5);
+}
+
+/* BATTERY_W x 7, top left at x, y, two columns of fill per bar (0-4) */
+static void draw_battery(int x, int y, int level) {
+    screen_hline(x, y, 12);
+    screen_hline(x, y + 6, 12);
+    screen_vline(x, y, 7);
+    screen_vline(x + 11, y, 7);
+    screen_vline(x + 12, y + 2, 3);
+    if(level > 0)
+        screen_fill(x + 2, y + 2, level * 2, 3);
+}
+
+/* a modifier's name at x, after a padlock if it's locked. returns where the next goes */
+static int draw_modifier(int x, const char *name, bool locked) {
+    const font_t *small = draw_label_font();
+
+    if(locked) {
+        draw_lock(x, (top_h() - 1 - 8) / 2);
+        x += 10;
+    }
+    draw_text(x, 1, name, small);
+    return x + draw_text_width(name, small) + 8;
+}
+
+static void draw_top_bar(void) {
+    int h = top_h(), x = MARGIN;
+
+    if(battery < 0 || clock() >= battery_next) {
+        battery = power_battery();
+        battery_next = clock() + BATTERY_READ;
+    }
+
+    screen_color(COL_BG);
+    screen_fill(0, 0, SCREEN_W, h);
+    screen_color(COL_DIM);
+    screen_hline(MARGIN, h - 1, SCREEN_W - 2 * MARGIN);
+    draw_battery(SCREEN_W - MARGIN - BATTERY_W, (h - 1 - 7) / 2, battery);
+
+    screen_color(COL_ACCENT);
+    if(ctl)
+        x = draw_modifier(x, "ctl", ctl_lock);
+    if(second)
+        draw_modifier(x, "2nd", second_lock);
+    else if(alpha)
+        draw_modifier(x, "alpha", alpha_lock);
+}
+
 static void draw_screen(void) {
     const font_t *small = draw_label_font();
     box_t *in = ed_layout(&ed, &draw_font, true);
@@ -739,18 +859,17 @@ static void draw_screen(void) {
     screen_color(COL_DIM);
     screen_hline(MARGIN, line_y, SCREEN_W - 2 * MARGIN);
 
-    /* 2nd / alpha, and messages, at the right of the line */
-    if(second || alpha || status != NULL) {
-        const char *text = status != NULL ? status : second ? "2nd" : "alpha";
-
-        screen_color(status != NULL ? COL_DIM : COL_ACCENT);
-        draw_text(SCREEN_W - MARGIN - draw_text_width(text, small),
-                  line_y - small->ascent - small->descent - 1, text, small);
+    /* messages at the right of the line */
+    if(status != NULL) {
+        screen_color(COL_DIM);
+        draw_text(SCREEN_W - MARGIN - draw_text_width(status, small),
+                  line_y - small->ascent - small->descent - 1, status, small);
     }
 
-    /* History, newest at the bottom, going up until the screen is full */
+    /* history, newest at the bottom, going up to the status bar (drawn over
+       the top of the last one) */
     y = line_y - GAP;
-    for(i = history_len - 1; i >= 0 && y > 0; i--) {
+    for(i = history_len - 1; i >= 0 && y > top_h(); i--) {
         entry_t *h = &history[i];
 
         if(h->out != NULL) {
@@ -783,6 +902,7 @@ static void draw_screen(void) {
         screen_hline(MARGIN + 20, y + 1, SCREEN_W - 2 * MARGIN - 40);
         y -= GAP;
     }
+    draw_top_bar();
 
     if(menu >= 0)
         draw_menu();
@@ -796,26 +916,34 @@ static void draw_screen(void) {
 static clock_t busy_next;
 static unsigned busy_frame;
 
-/* "working" and dots that keep counting while the engine runs, so a slow
-   simplify doesn't look like a hang */
+/* a dot going round in the status bar (left of the battery) while the engine
+   runs, so a slow simplify doesn't look frozen. drawn straight onto the screen,
+   swapping buffers made the cursor flash */
 static void draw_working(void) {
-    static const char *const frames[] = { "working   ", "working.  ", "working.. ", "working..." };
-    const font_t *small = draw_label_font();
-    const char *text = frames[busy_frame % 4];
+    /* 2x2 dots round an 8x8 box, clockwise from the top */
+    static const unsigned char dots[8][2] = {
+        { 3, 0 }, { 5, 1 }, { 6, 3 }, { 5, 5 }, { 3, 6 }, { 1, 5 }, { 0, 3 }, { 1, 1 }
+    };
+    int x = SCREEN_W - MARGIN - BATTERY_W - 6 - 8, y = (top_h() - 1 - 8) / 2;
+    unsigned i;
 
-    screen_color(COL_BG);
-    screen_fill(SCREEN_W - MARGIN - 70, SCREEN_H - BAR_H - 40, 70, 16);
-    screen_color(COL_ACCENT);
-    draw_text(SCREEN_W - MARGIN - draw_text_width(frames[3], small), SCREEN_H - BAR_H - 38, text, small);
-    screen_show();
+    /* a head and two dimmer dots behind it, going round */
+    screen_direct(true);
+    for(i = 0; i < 8; i++) {
+        unsigned behind = (busy_frame - i) % 8;
+
+        screen_color(behind == 0 ? COL_ACCENT : behind <= 2 ? COL_DIM : COL_BG);
+        screen_fill(x + dots[i][0], y + dots[i][1], 2, 2);
+    }
+    screen_direct(false);
 }
 
-/* pcas_poll: the engine calls it all the time, so the clock decides when to
-   draw the next frame and look at the keys (~6 times a second) */
+/* pcas_poll, the engine calls this constantly, so check the clock and only
+   draw a frame / read the keys 10 times a second */
 static bool busy_poll(void) {
     if(clock() < busy_next)
         return false;
-    busy_next = clock() + CLOCKS_PER_SEC / 6;
+    busy_next = clock() + CLOCKS_PER_SEC / 10;
     busy_frame++;
     draw_working();
     return CANCEL_KEY != K_NONE && keys_peek().key == CANCEL_KEY;
@@ -824,7 +952,7 @@ static bool busy_poll(void) {
 static void busy_start(void) {
     pcas_cancelled = false;
     busy_frame = 0;
-    busy_next = clock() + CLOCKS_PER_SEC / 6;
+    busy_next = clock() + CLOCKS_PER_SEC / 10;
     draw_working();
 }
 
@@ -842,7 +970,7 @@ void app_run(void) {
     for(;;) {
         keypress_t p = keys_wait();
 
-        if(p.key == K_ENTER && menu < 0 && !second && !alpha && !ed_is_empty(&ed))
+        if(p.key == K_ENTER && menu < 0 && !second && !ed_is_empty(&ed))
             busy_start();
         if(!handle(p))
             break;
