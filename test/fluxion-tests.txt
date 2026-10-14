@@ -51,3 +51,9 @@ solve; X^3_2=0; X; unknown
 solve; sin(X)=0; X; unknown
 solve; X^2_2X_1=0; X; 1_sqrt(2),1+sqrt(2)
 solve; 2X^2+4X+2=0; X; -1
+
+#k-th powers out of roots. ACT Q8. (2^(3/2) -> 2sqrt(2) is the canonical form's job, not tested here)
+simplify; sqrt(35*108); 6sqrt(105)
+simplify; sqrt(72); 6sqrt(2)
+simplify; 54^(1/3); 3*2^(1/3)
+simplify; sqrt(12)/2; sqrt(3)

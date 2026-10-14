@@ -358,6 +358,24 @@ int compare(pcas_ast_t *a, pcas_ast_t *b, bool add) {
 
     Sorting for addition and multiplication is O(n^2) by insertion sort
 */
+/*Fluxion: an exponent p/q (a number, or a number over a number), small enough to use*/
+static bool small_fraction(pcas_ast_t *power, mp_small *p, mp_small *q) {
+    if(power->type == NODE_NUMBER) {
+        if(mp_rat_to_ints(power->op.num, p, q) != MP_OK)
+            return false;
+    } else if(isoptype(power, OP_DIV)) {
+        pcas_ast_t *top = ast_ChildGet(power, 0), *bottom = ast_ChildGet(power, 1);
+
+        if(top->type != NODE_NUMBER || bottom->type != NODE_NUMBER
+           || !mp_rat_is_integer(top->op.num) || !mp_rat_is_integer(bottom->op.num)
+           || mp_int_to_int(&top->op.num->num, p) != MP_OK || mp_int_to_int(&bottom->op.num->num, q) != MP_OK)
+            return false;
+    } else {
+        return false;
+    }
+    return *p > 0 && *q > 0 && *p <= 64 && *q <= 64;
+}
+
 bool simplify_canonical_form(pcas_ast_t *e, unsigned char flags) {
     bool changed = false, intermediate_change;
     unsigned i;
@@ -418,13 +436,29 @@ bool simplify_canonical_form(pcas_ast_t *e, unsigned char flags) {
 
         if((flags & CANONICAL_POWERS_TO_ROOTS) && isoptype(e, OP_POW)) {
             pcas_ast_t *base, *power;
+            mp_small p, q;
 
             /*Change powers to roots*/
 
             base = ast_ChildGet(e, 0);
             power = ast_ChildGet(e, 1);
 
-            if(isoptype(power, OP_DIV) && is_ast_int(ast_ChildGet(power, 0), 1)) {
+            /*Fluxion: a whole number to a power over 1 comes apart first, 2^(3/2) = 2sqrt(2).
+            only here: simplify() puts them back together as like terms.*/
+            if(base->type == NODE_NUMBER && mp_rat_is_integer(base->op.num)
+               && mp_rat_compare_value(base->op.num, 1, 1) > 0
+               && small_fraction(power, &p, &q) && q > 1 && p > q) {
+                mp_rat whole = num_FromInt(1), part = num_FromInt(1);
+
+                mp_int_expt(&base->op.num->num, p / q, &whole->num);
+                mp_int_expt(&base->op.num->num, p % q, &part->num);
+                replace_node(e, ast_MakeBinary(OP_MULT,
+                                    ast_MakeNumber(whole),
+                                    ast_MakeBinary(OP_POW,
+                                        ast_MakeNumber(part),
+                                        ast_MakeBinary(OP_DIV, ast_MakeNumber(num_FromInt(1)), ast_MakeNumber(num_FromInt(q))))));
+                intermediate_change = changed = true;
+            } else if(isoptype(power, OP_DIV) && is_ast_int(ast_ChildGet(power, 0), 1)) {
                 replace_node(e, ast_MakeBinary(OP_ROOT,
                                     ast_Copy(ast_ChildGet(power, 1)),
                                     ast_Copy(base)));
