@@ -71,6 +71,13 @@ void ed_delete(editor_t *ed);
    (an empty slot, nothing typed). caller frees. */
 char *ed_to_engine(const editor_t *ed);
 
+/* If the whole line is one command (expand, factor, eval): its name, else NULL.
+   The app runs those itself; the engine's parser doesn't know them. */
+const char *ed_command(const editor_t *ed);
+
+/* ...and what's inside the command, in engine syntax (NULL if unfinished). caller frees. */
+char *ed_command_arg(const editor_t *ed);
+
 /* boxes for drawing, measured with font. the cursor is drawn if cursor is true. */
 box_t *ed_layout(const editor_t *ed, const layout_font_t *font, bool cursor);
 

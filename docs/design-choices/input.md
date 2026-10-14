@@ -74,5 +74,30 @@ what i'm actually used to (nspire CX II CAS). Somewhere between A and B:
 ### Decision
 C - Nspire style, adapted for the difference in keys
 
+## Keys
+
+basically like typing on a computer, the cursor is a line and `[on]` is Ctrl. the other keys mean what they mean on the TI-84 (everything is in [`catalog.c`](https://github.com/Cloveian/fluxion/blob/main/src/ui/catalog.c))
+
+### Editing
+
+| Key | Does | Computer equivalent |
+| --- | ---- | ------------------- |
+| `[clear]` | delete left of the cursor (a template on the left: step into it; an empty template: remove it) | Backspace |
+| `[del]` | delete right of the cursor (a whole template if it's one) | Delete |
+| `[on]` + `[clear]` | clear the whole line | Ctrl+Backspace |
+| `←` `→` | move, into and out of templates slot by slot | arrows |
+| `↑` `↓` | top / bottom of a fraction, in / out of an exponent | |
+| `[enter]` | simplify | |
+| `[on]` + others | select, copy, paste, undo: later | Ctrl+... |
+
+### Menus
+
+The five keys under the screen (`y=` `window` `zoom` `trace` `graph`) open the folders: Algebra, Calculus, Functions, Templates, Tools.
+
+- `↑` `↓` move, `←` `→` switch folders, `[enter]` or `1`-`9` picks, same key again closes it
+- picking something just types it at the cursor (a character, a template, `sin(▯)`, `expand(▯)`, etc)
+- Tools stuff toggles (✓)
+- stuff the engine can't do yet is greyed out with a `*`
+
 ---
 Back to [design choices](index.md) · [rendering](rendering.md) · [screens & operations](ui.md)
