@@ -17,3 +17,4 @@ convimg.yaml.lst
 /build-pc/
 /PineappleCAS/
 /.claude
+__pycache__/

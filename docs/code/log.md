@@ -1,15 +1,32 @@
 # Log
 
-## 2026-10-14 - Fluxion runs as a Flash App
+## 2026-10-14 - sweep fixes, ready to push
 
-- **Keypad** (calculator): repeat after 250 ms, then 35 a second. A quick second tap of the same number is no longer lost while the screen redraws (the keypad scans continuously and latches changes; 20 ms settle after each press for bounce).
-- **Sticky modifiers**: 2nd, alpha and `[on]` (shown as `ctl`) stay on for the next key. A quick double tap locks one, a tap unlocks, [2nd][alpha] is alpha lock. A key in between breaks a double tap.
-- **Status bar** along the top: the modifiers (a padlock when locked), a spinning dot while the engine works, the battery (0-4 bars, from the OS, read every 10 s). The busy sign draws straight onto the screen: swapping buffers made the cursor flash.
-- **PC keys** like the calculator: Shift = alpha, Alt = 2nd, Ctrl = `[on]` when tapped alone; Alt+key = 2nd then the key; `=` types [2nd][math]; numpad works.
-- **Flash App**: `make installer` builds Fluxion as an app (`bin-app/Fluxion.8ek`, 147 KB) and CEaShell-Installer (git submodule, configured by make variables, no patch) into `bin-installer/`: `FLUXINST.8xp` + `FLUXAPP0-2` appvars. Runs from flash, the heap is 57 KB.
-- **Found, the hard way**: an app with ~16 KB of initialized `.data` crashes on launch, before `main` (1.8 KB is fine). The identity tables were 16 KB of `.data`, mostly the padding of 50-character text buffers; they're `const char *` now, 2.9 KB. Found by installing test apps in CEmu: size, 3 appvars and 5000 relocations were all fine.
-- **Licence**: CEaShell-Installer has no licence (CEaShell itself is GPL-3.0). Fine to build and test, not to ship until RoccoLox gives permission.
-- **Not timed**: flash vs RAM speed in CEmu.
+- solve now writes the roots like i wanted in case 3 ٩(•̀ᗜ•́)و : $x = \frac{-3-2\sqrt{6}}{5}, \frac{-3+2\sqrt{6}}{5}$. one $x =$, commas, each root one fraction. $\pm$ version will be a form later
+- cancel is `[on]`+`[mode]` (Ctrl+Esc on the PC)
+- did a nasty input sweep, basically threw ~300 cursed inputs at every command with ASan on and the heap capped like the calculator's. fixed:
+	- layout was exponential in nesting depth because a `MAX` macro called a recursive function twice. 16 nested `sin(` froze it, even just typing them
+	- expand segfaulted on stuff like `sqrt(2+i)`
+	- parse errors leaked memory
+	- the decimal formatter overflowed on huge numbers
+- still broken from the sweep (not fixing these yet):
+	- running out of memory anywhere crashes, the engine never checks malloc
+	- $(x+1)^n$ expands into $2^n$ terms before combining, $(x+1)^7$ already fills the heap
+	- solve expands factored equations first, so $(x-1)(x-2)\cdots(x-20)=0$ never finishes
+	- sorting is $O(n^2)$ with a gcd every compare, so big sums are slow
+	- nested derivatives blow up fast
+- README, LICENSE and screenshots for making the repo public
+- noticed: functions print first in products ($\cos(x)\,x^2$), and derivatives of roots rationalize when they shouldn't (case 1 again)
+
+## 2026-10-14 - flash app
+
+- keypad on the calculator: key repeat, and a quick double tap of the same number doesn't get eaten while it redraws anymore
+- sticky 2nd / alpha / `[on]` (shows as `ctl`): tap once for the next key, double tap to lock, tap again to unlock. [2nd][alpha] is alpha lock
+- status bar on top with the modifiers, a spinning dot when it's thinking, and battery
+- PC keys work like the calculator now (Shift = alpha, Alt = 2nd, Ctrl = `[on]`)
+- `make installer` builds it as a Flash App + CEaShell-Installer (submodule, no changes to it). it runs from flash now so there's way more heap
+- took forever to figure out: the app crashed on launch before `main` even ran. turns out a Flash App copies its `.data` into RAM at launch and the identity tables were ~16 KB of it, mostly empty padding in fixed size strings. made them `const char *` and it's fine (╯‵□′)╯︵┴─┴
+- CEaShell-Installer doesn't have a licence file, CEaShell is GPL-3.0. ok to build and test with, need to ask RoccoLox before actually shipping it
 
 ## 2026-10-14 - no more freezes, cancelling
 
