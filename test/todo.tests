@@ -2,27 +2,10 @@
 #The expected value is the right answer; the comment above each case says what it gives now.
 #Move a case to fluxion.tests once it passes. (2026-10-14)
 
-#HANG: simplify(NORMALIZE|COMMUTATIVE|RATIONAL|EVAL), i.e. without LIKE_TERMS, never ends on a
-#numeric fraction plus or minus another term (X/2_1/2, 3/2_sqrt(5), 3/2+sqrt(5)/2, X^2/2_1/2):
-#simplify_rational and eval undo each other, ~10000 passes each in 4 s, eval_pow never called.
-#simplify(SIMP_ALL) on the same text is fine. That flag set is used by the test runner on every
-#expected value, by cancel_fraction() and comdenom on the top and bottom, by factor_addition()
-#(NORMALIZE|RATIONAL|EVAL) and by the app's factor( command (SIMP_BASIC|SIMP_EVAL).
-#gives: hang, in cancel_fraction's simplify of the top
+#Cancel: the top isn't factored when it has fraction coefficients (cancel_fraction's light simplify
+#leaves X^2/2 as a fraction node, which factor_polynomial doesn't read). Plain simplify is no better.
+#gives: 2/(2X_2)^2+(2X^3)/(2X_2)^2_(2X^2)/(2X_2)^2_(2X)/(2X_2)^2 (right, but awful)
 cancel; (X^2/2_1/2)/(X_1); (X+1)/2
-#gives: the right roots (3/2_sqrt(5)/2, 3/2+sqrt(5)/2), but the runner hangs on the expected text so they can't be tested
-solve; X^2_3X+1=0; X; 3/2_sqrt(5)/2,3/2+sqrt(5)/2
-solve; X^2_X_1=0; X; 1/2_sqrt(5)/2,1/2+sqrt(5)/2
-
-#HANG: simplify(SIMP_ALL) itself, on two fractions over the same variable whose numbers don't
-#divide each other (1/(2X)+1/(2X^2), 1/X+1/(2X^2), 1/(2X)+1/(4X^2) are fine). rational and eval
-#alternate forever (~30000 passes each in 5 s) inside the simplify that factor_addition() calls
-#from simplify's identities step. No Fluxion code in the loop, so maybe upstream's too.
-#gives: hang, so enter hangs the calculator
-simplify; 1/(2X)+1/X^2; 1/(2X)+1/X^2
-simplify; 1/(2X)+1/(3X^2); 1/(2X)+1/(3X^2)
-#gives: hang (in the simplify before comdenom)
-comdenom; 1/(4X)+1/(6X^2); (3X+2)/(12X^2)
 
 #Solve: a fraction coefficient makes the polynomial "not numeric": simplify keeps 1/4 as the
 #fraction node 1/4, not a number, so read_term() sets numeric = false and a quadratic is unknown

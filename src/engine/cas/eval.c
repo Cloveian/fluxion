@@ -9,6 +9,26 @@ static bool eval_commutative(pcas_ast_t *e, unsigned short flags) {
     if(!(flags & EVAL_COMMUTATIVE))
         return false;
 
+    /*Fluxion: a sum whose only constant is one a/b is left alone. folding it made
+    it the number a/b and returned false, normalize made that a/b again and returned
+    true, forever and ever: X/2_1/2 hung simplify without SIMP_LIKE_TERMS*/
+    /*:P*/
+    if(optype(e) == OP_ADD) {
+        pcas_ast_t *child, *only = NULL;
+        unsigned constants = 0;
+
+        for(child = opbase(e); child != NULL; child = child->next) {
+            if(child->type == NODE_NUMBER
+               || (isoptype(child, OP_DIV) && ast_ChildGet(child, 0)->type == NODE_NUMBER
+                   && ast_ChildGet(child, 1)->type == NODE_NUMBER)) {
+                constants++;
+                only = child;
+            }
+        }
+        if(constants == 1 && only->type == NODE_OPERATOR)
+            return false;
+    }
+
     accumulator = num_FromInt(optype(e) == OP_MULT ? 1 : 0);
 
     for(i = 0; i < ast_ChildLength(e); i++) {

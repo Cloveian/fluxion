@@ -327,3 +327,10 @@ decimal; 1/3000; 3.33333E-4
 decimal; 10^-20; 1E-20
 decimal; 1[E]6; 1E6
 decimal; 1.5[E]-3; 0.0015
+
+#Used to hang (eval and normalize undid each other on a lone a/b in a sum)
+simplify; 1/(2X)+1/X^2; 1/(2X)+1/X^2
+simplify; 1/(2X)+1/(3X^2); 1/(2X)+1/(3X^2)
+comdenom; 1/(4X)+1/(6X^2); (3X+2)/(12X^2)
+solve; X^2_3X+1=0; X; 3/2_sqrt(5)/2,3/2+sqrt(5)/2
+solve; X^2_X_1=0; X; 1/2_sqrt(5)/2,1/2+sqrt(5)/2
