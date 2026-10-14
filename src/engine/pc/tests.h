@@ -18,6 +18,7 @@ typedef enum {
     TEST_EXPAND,
     TEST_DERIV,
     TEST_SOLVE,     /*Fluxion: solve; equation; var; roots (a,b,...) or true / false / unknown*/
+    TEST_CANCEL,    /*Fluxion: cancel; expression; expected. cancel_fractions(), then simplify like the app*/
 
     TEST_INVALID
 } TestType;

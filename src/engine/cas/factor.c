@@ -662,6 +662,101 @@ static bool factor_polynomial(pcas_ast_t *e) {
     return changed;
 }
 
+/*Fluxion: X^n as (X, n) for a whole number n, anything else as (it, 1)*/
+static pcas_ast_t *power_base(pcas_ast_t *e, mp_small *n) {
+    mp_small den;
+
+    if(isoptype(e, OP_POW) && ast_ChildGet(e, 1)->type == NODE_NUMBER
+       && mp_rat_to_ints(ast_ChildGet(e, 1)->op.num, n, &den) == MP_OK && den == 1 && *n > 0)
+        return ast_ChildGet(e, 0);
+    *n = 1;
+    return e;
+}
+
+/*Fluxion: f becomes base^n (1 if n is 0)*/
+static void set_power(pcas_ast_t *f, pcas_ast_t *base, mp_small n) {
+    pcas_ast_t *b = ast_Copy(base);
+
+    replace_node(f, n == 0 ? ast_MakeNumber(num_FromInt(1)) : power_or_self(b, (int)n));
+    if(n == 0)
+        ast_Cleanup(b);
+}
+
+static pcas_ast_t *as_product(pcas_ast_t *e) {
+    pcas_ast_t *m;
+
+    if(isoptype(e, OP_MULT))
+        return e;
+    m = ast_MakeOperator(OP_MULT);
+    ast_ChildAppend(m, e);
+    return m;
+}
+
+/*Fluxion: one fraction: factor the top and bottom, take out what they share. finally works*/
+static bool cancel_fraction(pcas_ast_t *e) {
+    pcas_ast_t *num = ast_Copy(ast_ChildGet(e, 0)), *den = ast_Copy(ast_ChildGet(e, 1));
+    pcas_ast_t *df, *nf;
+    bool changed = false;
+
+    /*same shape as factor_polynomial()'s factors, so they compare: X_3 parses as X+-1*3*/
+    simplify(num, SIMP_NORMALIZE | SIMP_COMMUTATIVE | SIMP_RATIONAL | SIMP_EVAL);
+    simplify(den, SIMP_NORMALIZE | SIMP_COMMUTATIVE | SIMP_RATIONAL | SIMP_EVAL);
+    factor_polynomial(num);
+    factor_polynomial(den);
+    num = as_product(num);
+    den = as_product(den);
+
+    for(df = ast_ChildGet(den, 0); df != NULL; df = df->next) {
+        mp_small nd, nn;
+        pcas_ast_t *bd = power_base(df, &nd);
+
+        if(bd->type == NODE_NUMBER || isoptype(bd, OP_DIV))
+            continue;
+
+        for(nf = ast_ChildGet(num, 0); nf != NULL; nf = nf->next) {
+            pcas_ast_t *bn = power_base(nf, &nn);
+
+            if(ast_Compare(bn, bd)) {
+                mp_small k = nn < nd ? nn : nd;
+
+                /*bd goes away with df, so copy it first*/
+                pcas_ast_t *base = ast_Copy(bd);
+
+                set_power(nf, base, nn - k);
+                set_power(df, base, nd - k);
+                ast_Cleanup(base);
+                changed = true;
+                break;
+            }
+        }
+    }
+
+    if(changed) {
+        replace_node(ast_ChildGet(e, 0), num);
+        replace_node(ast_ChildGet(e, 1), den);
+        simplify(e, SIMP_COMMUTATIVE | SIMP_EVAL);
+    } else {
+        ast_Cleanup(num);
+        ast_Cleanup(den);
+    }
+    return changed;
+}
+
+bool cancel_fractions(pcas_ast_t *e) {
+    pcas_ast_t *child;
+    bool changed = false;
+
+    if(e->type != NODE_OPERATOR)
+        return false;
+
+    for(child = ast_ChildGet(e, 0); child != NULL; child = child->next)
+        changed |= cancel_fractions(child);
+
+    if(isoptype(e, OP_DIV))
+        changed |= cancel_fraction(e);
+    return changed;
+}
+
 bool factor(pcas_ast_t *e, unsigned char flags) {
     bool changed = false;
 

@@ -57,3 +57,9 @@ simplify; sqrt(35*108); 6sqrt(105)
 simplify; sqrt(72); 6sqrt(2)
 simplify; 54^(1/3); 3*2^(1/3)
 simplify; sqrt(12)/2; sqrt(3)
+
+#Cancel common factors in a fraction, then simplify (what enter does). ACT Q37
+cancel; (X^3+X^2_8X_12)/(X_3); (X+2)^2
+cancel; (X^2_1)/(X_1); X+1
+cancel; (X^2_1)/(X^2+2X+1); X/(X+1)_1/(X+1)
+cancel; (2X+2)/(X+1); 2

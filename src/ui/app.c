@@ -249,6 +249,8 @@ static void evaluate(void) {
         eval(e, EVAL_ALL);
         simplify(e, SIMP_BASIC | SIMP_EVAL | SIMP_LIKE_TERMS);
     } else {
+        /* before simplify splits the fractions apart */
+        cancel_fractions(e);
         simplify(e, simp_flags);
     }
     simplify_canonical_form(e, canon_flags);
