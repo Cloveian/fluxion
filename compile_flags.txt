@@ -1,0 +1,6 @@
+-std=c99
+-Isrc
+-Isrc/engine
+-DCOMPILE_PC
+-Wall
+-Wextra

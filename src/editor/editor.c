@@ -440,7 +440,12 @@ static void put_node(out_t *o, const ed_node_t *n, bool first) {
         put(o, "abs("); put_row(o, n->slot[0]); put(o, ")");
         break;
     case ED_FUNC:
-        put(o, n->name); put(o, "("); put_row(o, n->slot[0]); put(o, ")");
+        if(strcmp(n->name, "deriv") == 0) {
+            /* d/dx, with respect to x, evaluated at x */
+            put(o, "deriv("); put_row(o, n->slot[0]); put(o, ",X,X)");
+        } else {
+            put(o, n->name); put(o, "("); put_row(o, n->slot[0]); put(o, ")");
+        }
         break;
     case ED_LOGB:
         put(o, "logb("); put_row(o, n->slot[1]); put(o, ","); put_row(o, n->slot[0]); put(o, ")");
@@ -461,6 +466,56 @@ char *ed_to_engine(const editor_t *ed) {
     out_t o = { NULL, 0, 0, false };
 
     put_row(&o, ed->root);
+    if(o.bad) {
+        free(o.s);
+        return NULL;
+    }
+    return o.s;
+}
+
+static const char *const commands[] = { "expand", "factor", "eval" };
+
+const char *ed_command(const editor_t *ed) {
+    const ed_node_t *n;
+    unsigned i;
+
+    if(ed->root->len != 1 || ed->root->items[0]->kind != ED_FUNC)
+        return NULL;
+
+    n = ed->root->items[0];
+    for(i = 0; i < sizeof commands / sizeof commands[0]; i++)
+        if(strcmp(n->name, commands[i]) == 0)
+            return commands[i];
+    return NULL;
+}
+
+bool ed_is_command(const char *name) {
+    unsigned i;
+
+    for(i = 0; i < sizeof commands / sizeof commands[0]; i++)
+        if(strcmp(name, commands[i]) == 0)
+            return true;
+    return false;
+}
+
+bool ed_has_command(const char *s) {
+    const char *p;
+    unsigned i;
+
+    for(i = 0; i < sizeof commands / sizeof commands[0]; i++)
+        for(p = strstr(s, commands[i]); p != NULL; p = strstr(p + 1, commands[i]))
+            if(p[strlen(commands[i])] == '(')
+                return true;
+    return false;
+}
+
+char *ed_command_arg(const editor_t *ed) {
+    out_t o = { NULL, 0, 0, false };
+
+    if(ed_command(ed) == NULL)
+        return NULL;
+
+    put_row(&o, ed->root->items[0]->slot[0]);
     if(o.bad) {
         free(o.s);
         return NULL;
@@ -529,6 +584,12 @@ static box_t *lay_func(lay_t *l, const ed_node_t *n, unsigned char level) {
     static const char *const inverses[] = { "asin", "acos", "atan", "asinh", "acosh", "atanh" };
     box_t *row = layout_box(BOX_ROW, level), *head;
     unsigned i;
+
+    if(strcmp(n->name, "deriv") == 0) {
+        layout_add(row, pair(BOX_FRAC, layout_text("d", level), layout_text("dx", level), level));
+        layout_add(row, pair(BOX_PARENS, lay_row(l, n->slot[0], level), NULL, level));
+        return row;
+    }
 
     /* asin -> sin^-1 */
     head = layout_text(n->name, level);

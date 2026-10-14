@@ -56,6 +56,10 @@ build-pc/layout-dump: test/layout_dump.c build-pc/obj-flux/render/layout.o $(ENG
 build-pc/view: test/view.c $(FLUX_OBJECTS) $(ENGINE_OBJECTS)
 	$(CC) $(FLUX_CFLAGS) $^ $(LDLIBS) $(SDL_LIBS) -o $@
 
+# the whole app in a window, keyboard as the keypad: ./build-pc/fluxion-app
+build-pc/fluxion-app: src/main_pc.c $(FLUX_OBJECTS) $(ENGINE_OBJECTS)
+	$(CC) $(FLUX_CFLAGS) $^ $(LDLIBS) $(SDL_LIBS) -o $@
+
 # editor steps -> picture: ./build-pc/editor-test --png out.png t:2 frac t:1 D t:x
 build-pc/editor-test: test/editor_test.c $(FLUX_OBJECTS) $(ENGINE_OBJECTS)
 	$(CC) $(FLUX_CFLAGS) $^ $(LDLIBS) $(SDL_LIBS) -o $@

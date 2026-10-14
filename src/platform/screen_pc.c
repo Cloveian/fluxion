@@ -4,6 +4,7 @@
    which the SDL window shows or screen_save_png() writes out. */
 
 #include "screen.h"
+#include "window_pc.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -22,7 +23,7 @@ static const unsigned char palette[COL_COUNT][3] = {
 
 void screen_begin(void) { screen_clear(); }
 void screen_end(void) {}
-void screen_show(void) {}
+void screen_show(void) { window_present(); }   /* does nothing unless a window is open */
 
 void screen_clear(void) { memset(fb, COL_BG, sizeof fb); }
 void screen_color(unsigned char color) { current = color; }

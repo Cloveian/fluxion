@@ -6,7 +6,7 @@
     nspire style (docs/design-choices/input.md): mostly plain typing, templates
     for the 2D things (fraction, exponent, roots, |x|, functions).
 
-    this file knows nothing about keys. the key handling (later) calls these.
+    this file knows nothing about keys. the key handling in app.c calls these.
 
     a row is a list of items. an item is a character or a template; templates have
     slots, and each slot is a row. the cursor is a position in one row.
@@ -70,6 +70,18 @@ void ed_delete(editor_t *ed);
 /* the engine's string syntax (see catalog.c), or NULL if something's unfinished
    (an empty slot, nothing typed). caller frees. */
 char *ed_to_engine(const editor_t *ed);
+
+/* If the whole line is one command (expand, factor, eval): its name, else NULL.
+   The app runs those itself; the engine's parser doesn't know them. */
+const char *ed_command(const editor_t *ed);
+
+/* the list ed_command goes by, so there's one place to add a command. is name
+   one, and does s (engine syntax) have one( anywhere in it */
+bool ed_is_command(const char *name);
+bool ed_has_command(const char *s);
+
+/* ...and what's inside the command, in engine syntax (NULL if unfinished). caller frees. */
+char *ed_command_arg(const editor_t *ed);
 
 /* boxes for drawing, measured with font. the cursor is drawn if cursor is true. */
 box_t *ed_layout(const editor_t *ed, const layout_font_t *font, bool cursor);

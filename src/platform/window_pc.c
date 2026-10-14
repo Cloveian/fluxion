@@ -9,54 +9,82 @@
 
 #define SCALE 3
 
-int window_show(const char *title) {
-    SDL_Window *window;
-    SDL_Renderer *renderer;
-    SDL_Texture *texture;
-    static unsigned char rgb[SCREEN_H * SCREEN_W * 3];
-    const unsigned char *px = screen_pixels();
-    bool running = true;
-    int i;
+static SDL_Window *window;
+static SDL_Renderer *renderer;
+static SDL_Texture *texture;
+
+bool window_open(const char *title) {
+    if(window != NULL)
+        return true;
 
     if(!SDL_Init(SDL_INIT_VIDEO)) {
         SDL_Log("SDL_Init: %s", SDL_GetError());
-        return -1;
+        return false;
     }
 
     if(!SDL_CreateWindowAndRenderer(title, SCREEN_W * SCALE, SCREEN_H * SCALE, 0, &window, &renderer)) {
         SDL_Log("window: %s", SDL_GetError());
         SDL_Quit();
-        return -1;
+        return false;
     }
 
     texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGB24, SDL_TEXTUREACCESS_STREAMING,
                                 SCREEN_W, SCREEN_H);
     SDL_SetTextureScaleMode(texture, SDL_SCALEMODE_NEAREST);
+    SDL_StartTextInput(window);
+    return true;
+}
+
+void window_present(void) {
+    static unsigned char rgb[SCREEN_H * SCREEN_W * 3];
+    const unsigned char *px = screen_pixels();
+    int i;
+
+    if(window == NULL)
+        return;
 
     for(i = 0; i < SCREEN_W * SCREEN_H; i++)
         screen_rgb(px[i], &rgb[i * 3]);
     SDL_UpdateTexture(texture, NULL, rgb, SCREEN_W * 3);
 
-    while(running) {
-        SDL_Event ev;
+    SDL_RenderClear(renderer);
+    SDL_RenderTexture(renderer, texture, NULL, NULL);
+    SDL_RenderPresent(renderer);
+}
 
-        while(SDL_PollEvent(&ev)) {
-            if(ev.type == SDL_EVENT_QUIT)
-                running = false;
-            else if(ev.type == SDL_EVENT_KEY_DOWN && ev.key.key == SDLK_ESCAPE)
-                running = false;
-        }
+void window_close(void) {
+    if(window == NULL)
+        return;
 
-        SDL_RenderClear(renderer);
-        SDL_RenderTexture(renderer, texture, NULL, NULL);
-        SDL_RenderPresent(renderer);
-        SDL_Delay(16);
-    }
-
+    SDL_StopTextInput(window);
     SDL_DestroyTexture(texture);
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
     SDL_Quit();
+    window = NULL;
+}
+
+int window_show(const char *title) {
+    bool running = true;
+
+    if(!window_open(title))
+        return -1;
+    window_present();
+
+    while(running) {
+        SDL_Event ev;
+
+        if(!SDL_WaitEvent(&ev))
+            break;
+        if(ev.type == SDL_EVENT_QUIT)
+            running = false;
+        else if(ev.type == SDL_EVENT_KEY_DOWN && ev.key.key == SDLK_ESCAPE)
+            running = false;
+        else if(ev.type == SDL_EVENT_WINDOW_EXPOSED)
+            window_present();
+    }
+
+    window_close();
     return 0;
 }
 
