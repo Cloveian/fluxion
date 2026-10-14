@@ -30,7 +30,7 @@ ITEM(it_divide,   "/",     ITEM_CHAR, "[/]",      "/",     HAVE_YES, "typed inli
 ITEM(it_open,     "(",     ITEM_CHAR, "[(]",      "(",     HAVE_YES, NULL)
 ITEM(it_close,    ")",     ITEM_CHAR, "[)]",      ")",     HAVE_YES, NULL)
 ITEM(it_comma,    ",",     ITEM_CHAR, "[,]",      ",",     HAVE_YES, "between arguments: logb(x,2)")
-ITEM(it_equals,   "=",     ITEM_CHAR, "[2nd][math] =", "=", HAVE_NO, "the engine has no equations; needed for solve")
+ITEM(it_equals,   "=",     ITEM_CHAR, "[2nd][math]", "=", HAVE_PARTLY, "only in solve(: the engine has no equations, the app splits the line")
 
 /* variables and constants */
 ITEM(it_x,        "x",     ITEM_CHAR, "[x,t,theta,n]", "X", HAVE_YES, "shown lowercase")
@@ -89,8 +89,8 @@ ITEM(it_evaluate, "evaluate", ITEM_COMMAND, NULL, "eval($)", HAVE_PARTLY,
      "exact only (big powers, factorials); no decimal approximation yet")
 ITEM(it_factor,   "factor", ITEM_COMMAND, NULL, "factor($)", HAVE_PARTLY,
      "one variable over the rationals; not x^2-y^2, not irrational roots (factor(x^2-2,x))")
-ITEM(it_solve,    "solve",  ITEM_COMMAND, NULL, "solve($,$)", HAVE_NO,
-     "needs =, then: linear first, polynomial via factor")
+ITEM(it_solve,    "solve",  ITEM_COMMAND, NULL, "solve($)", HAVE_PARTLY,
+     "solve(eq,x): linear (any coefficients), polynomials via factor + the quadratic formula; no systems")
 
 /* Calculus */
 ITEM(it_deriv,    "d/dx",   ITEM_TEMPLATE, NULL, "deriv($,X,X)", HAVE_YES, "derivative with respect to x")

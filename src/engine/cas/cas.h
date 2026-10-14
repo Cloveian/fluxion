@@ -175,6 +175,17 @@ bool expand(pcas_ast_t *e, unsigned char flags);
 such as 1A = A, A + 0 = A. Returns true if the ast was changed.*/
 bool eval(pcas_ast_t *e, unsigned short flags);
 
+/*
+    Fluxion: solves e = 0 for var, over the reals (cas/solve.c).
+    out is SOLVE_MAX pointers, all NULL. returns how many solutions it put there
+    (0 = none), SOLVE_ALL if every value is one, or SOLVE_UNKNOWN if it can't solve
+    it. caller frees the solutions.
+*/
+#define SOLVE_MAX       32
+#define SOLVE_ALL       (-1)
+#define SOLVE_UNKNOWN   (-2)
+int solve(pcas_ast_t *e, Symbol var, pcas_ast_t **out);
+
 /*Replaces all instances of from ast to to ast in e*/
 bool substitute(pcas_ast_t *e, pcas_ast_t *from, pcas_ast_t *to);
 

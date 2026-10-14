@@ -77,6 +77,116 @@ static void clear_history(void) {
 
 #define SIMP_BASIC (SIMP_NORMALIZE | SIMP_COMMUTATIVE | SIMP_RATIONAL)
 
+/* a word as a result, like true / false */
+static box_t *word_box(const char *text) {
+    box_t *b = layout_text(text, 0);
+
+    if(b != NULL)
+        layout_finish(b, &draw_font);
+    return b;
+}
+
+/* x = -5 or x = 6, like the Nspire */
+static box_t *solutions_box(char var, pcas_ast_t **roots, int n) {
+    char name[2] = { var, '\0' };
+    box_t *row = layout_box(BOX_ROW, 0);
+    int i;
+
+    for(i = 0; i < n; i++) {
+        if(i > 0) {
+            layout_add(row, layout_space(2 * SPACE_BINARY));
+            layout_add(row, layout_text("or", 0));
+            layout_add(row, layout_space(2 * SPACE_BINARY));
+        }
+        layout_add(row, layout_text(name, 0));
+        layout_add(row, layout_space(LAYOUT_SPACE(0)));
+        layout_add(row, layout_text("=", 0));
+        layout_add(row, layout_space(LAYOUT_SPACE(0)));
+
+        simplify_canonical_form(roots[i], canon_flags);
+        layout_add(row, layout_build(roots[i], &draw_font));
+    }
+
+    layout_finish(row, &draw_font);
+    return row;
+}
+
+/*
+    solve(equation, variable). the engine's parser has no =, so the line is split
+    here: at the = and the last comma outside brackets. no variable: x.
+    takes src apart (mutates src! careful), in is the input line's boxes for the history.
+*/
+static void run_solve(char *src, box_t *in) {
+    pcas_ast_t *roots[SOLVE_MAX] = { NULL }, *e, *rhs = NULL;
+    char *eq = NULL, *comma = NULL, *s, shown = 'x';
+    Symbol var = SYM_X;
+    pcas_error_t err;
+    clock_t start;
+    unsigned long ms;
+    int depth = 0, n, i;
+
+    for(s = src; *s != '\0'; s++) {
+        if(*s == '(')
+            depth++;
+        else if(*s == ')')
+            depth--;
+        else if(depth == 0 && *s == '=' && eq == NULL)
+            eq = s;
+        else if(depth == 0 && *s == ',')
+            comma = s;
+    }
+
+    if(comma != NULL) {
+        *comma = '\0';
+        if(strcmp(comma + 1, "theta") == 0) {
+            var = SYM_THETA;
+            shown = CH_THETA;
+        } else if(comma[1] >= 'A' && comma[1] <= 'Z' && comma[2] == '\0') {
+            var = (Symbol)comma[1];
+            shown = (char)(comma[1] - 'A' + 'a');
+        } else {
+            push(in, NULL, "solve(equation, variable)", 0);
+            return;
+        }
+    }
+
+    if(eq != NULL)
+        *eq = '\0';
+    e = parse((const uint8_t *)src, strlen(src), str_table, &err);
+    if(err == E_SUCCESS && eq != NULL)
+        rhs = parse((const uint8_t *)eq + 1, strlen(eq + 1), str_table, &err);
+
+    if(err != E_SUCCESS || e == NULL || (eq != NULL && rhs == NULL)) {
+        if(e != NULL)
+            ast_Cleanup(e);
+        if(rhs != NULL)
+            ast_Cleanup(rhs);
+        push(in, NULL, err != E_SUCCESS ? error_text[err] : "solve(equation, variable)", 0);
+        return;
+    }
+
+    /* a = b  ->  a - b = 0 */
+    if(rhs != NULL)
+        e = ast_MakeBinary(OP_ADD, e, ast_MakeBinary(OP_MULT, ast_MakeNumber(num_FromInt(-1)), rhs));
+
+    start = clock();
+    n = solve(e, var, roots);
+    ms = (unsigned long)((clock() - start) * 1000 / CLOCKS_PER_SEC);
+    ast_Cleanup(e);
+
+    if(n == SOLVE_UNKNOWN)
+        push(in, NULL, "can't solve this one yet", ms);
+    else if(n == SOLVE_ALL)
+        push(in, word_box("true"), NULL, ms);
+    else if(n == 0)
+        push(in, word_box("false"), NULL, ms);
+    else
+        push(in, solutions_box(shown, roots, n), NULL, ms);
+
+    for(i = 0; i < n; i++)
+        ast_Cleanup(roots[i]);
+}
+
 static void evaluate(void) {
     const char *cmd = ed_command(&ed);
     char *src;
@@ -95,9 +205,21 @@ static void evaluate(void) {
     }
 
     /* no nesting commands yet, expand(...) has to be the whole line (todo, ugh) */
-    if(strstr(src, "expand(") || strstr(src, "factor(") || strstr(src, "eval(")) {
+    if(strstr(src, "expand(") || strstr(src, "factor(") || strstr(src, "eval(") || strstr(src, "solve(")) {
         free(src);
         status = "commands have to be the whole line (for now)";
+        return;
+    }
+
+    if(cmd != NULL && strcmp(cmd, "solve") == 0) {
+        run_solve(src, ed_layout(&ed, &draw_font, false));
+        free(src);
+        ed_clear(&ed);
+        return;
+    }
+    if(strchr(src, '=') != NULL) {
+        free(src);
+        status = "= only works in solve( for now";
         return;
     }
 
@@ -279,7 +401,7 @@ static bool pick(const item_t *it, bool dry) {
         if(n == 0 || n >= sizeof name || strcmp(paren, "($)") != 0)
             return false;
         if(it->kind == ITEM_COMMAND && strcmp(s, "expand($)") != 0 &&
-           strcmp(s, "factor($)") != 0 && strcmp(s, "eval($)") != 0)
+           strcmp(s, "factor($)") != 0 && strcmp(s, "eval($)") != 0 && strcmp(s, "solve($)") != 0)
             return false;
         if(!dry) {
             memcpy(name, s, n);
@@ -372,6 +494,7 @@ static bool key_2nd(keypress_t p) {
     case K_SIN:    ed_insert(&ed, ED_FUNC, "asin"); break;
     case K_COS:    ed_insert(&ed, ED_FUNC, "acos"); break;
     case K_TAN:    ed_insert(&ed, ED_FUNC, "atan"); break;
+    case K_MATH:   ed_insert_char(&ed, '='); break; /* TI's [2nd][math] is TEST, = is first */
     case K_LN:     ed_insert_char(&ed, CH_EULER); ed_insert(&ed, ED_POW, NULL); break;
     case K_LOG:    ed_insert_char(&ed, '1'); ed_insert_char(&ed, '0'); ed_insert(&ed, ED_POW, NULL); break;
     default:       break;

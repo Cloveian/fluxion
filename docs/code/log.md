@@ -1,5 +1,12 @@
 # Log
 
+## 2026-10-13 - solve
+
+- `solve(2x+3=7,x)` from the Algebra folder, `=` is `[2nd][math]` (TEST on the TI, `=` is the first thing in it). if you leave out the variable it uses x
+- does linear (any coefficients) and polynomials with number coefficients: factor it, then each factor is linear or a quadratic. if there's a cubic left it says it can't solve it instead of giving half an answer
+- the parser doesn't know `=`, so the app splits the line itself
+- not yet: systems (Q14), inequalities, $ax^2+bx+c$ with letters
+
 ## 2026-10-13 - polynomial factoring
 
 - `factor(` works on one variable polynomials like the nspire, pulls out every rational root. ACT Q37 -> $(x+2)^2(x-3)$, Q5 -> $(x+5)(x-6)$

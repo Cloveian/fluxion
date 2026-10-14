@@ -26,3 +26,28 @@ factor; X^4_1; (X_1)(X+1)(X^2+1)
 
 #Polynomials inside a product
 factor; sin(X)(X^2_1); (X_1)(X+1)sin(X)
+
+#Solve over the reals (solve; equation; variable; roots smallest first, or true / false / unknown)
+#ACT Q1, Q9, Q33
+solve; (100+60+80+30+X)/5=72; X; 90
+solve; 6Y=5X_1; X; (6Y+1)/5
+solve; 2(3X+5)+2(X+3)=360; X; 43
+
+#Linear
+solve; 2X+3=7; X; 2
+solve; AX+B=0; X; -B/A
+solve; X+1=X+1; X; true
+solve; X+1=X+2; X; false
+
+#Polynomials: rational roots, then quadratics by the formula
+solve; X^2_X_30=0; X; -5,6
+solve; X^3+X^2_8X_12; X; -2,3
+solve; X^3_X; X; -1,0,1
+solve; X^2=2; X; -sqrt(2),sqrt(2)
+solve; X^2+1=0; X; false
+
+#Can't yet: no rational roots above degree 2, not polynomials
+solve; X^3_2=0; X; unknown
+solve; sin(X)=0; X; unknown
+solve; X^2_2X_1=0; X; 1_sqrt(2),1+sqrt(2)
+solve; 2X^2+4X+2=0; X; -1
