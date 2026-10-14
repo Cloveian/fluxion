@@ -17,6 +17,7 @@ typedef enum {
     TEST_FACTOR,
     TEST_EXPAND,
     TEST_DERIV,
+    TEST_SOLVE,     /*Fluxion: solve; equation; var; roots (a,b,...) or true / false / unknown*/
 
     TEST_INVALID
 } TestType;

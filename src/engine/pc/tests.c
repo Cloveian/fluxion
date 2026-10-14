@@ -38,6 +38,7 @@ TestType resolve_type(char *type) {
     if(!strcmp(type, "factor"))     return TEST_FACTOR;
     if(!strcmp(type, "expand"))     return TEST_EXPAND;
     if(!strcmp(type, "deriv"))      return TEST_DERIV;
+    if(!strcmp(type, "solve"))      return TEST_SOLVE;
 
     return TEST_INVALID;
 }
@@ -153,10 +154,95 @@ bool check(test_t *t, pcas_ast_t *actual, pcas_ast_t *expected) {
     return true;
 }
 
+/*Fluxion: solve; equation; var; expected. the equation is A=B, or A for A=0.
+expected is the roots smallest first (A,B,...), or true / false / unknown.*/
+static bool test_solve(test_t *t) {
+    pcas_ast_t *roots[SOLVE_MAX] = {0}, *e, *rhs = NULL;
+    char *eq = strchr(t->arg1, '='), *s, *start;
+    pcas_error_t err;
+    int n, i = 0, depth = 0;
+    bool passed = true;
+
+    if(eq != NULL)
+        *eq = '\0';
+    e = parse((uint8_t*)t->arg1, strlen(t->arg1), str_table, &err);
+    if(err == E_SUCCESS && eq != NULL)
+        rhs = parse((uint8_t*)eq + 1, strlen(eq + 1), str_table, &err);
+    if(err != E_SUCCESS || e == NULL || (eq != NULL && rhs == NULL)) {
+        printf("Test failed on line %u. Unable to parse the equation\n", t->line);
+        return false;
+    }
+    if(rhs != NULL)
+        e = ast_MakeBinary(OP_ADD, e, ast_MakeBinary(OP_MULT, ast_MakeNumber(num_FromInt(-1)), rhs));
+
+    n = solve(e, (Symbol)t->arg2[0], roots);
+
+    if(!strcmp(t->arg3, "true"))
+        passed = n == SOLVE_ALL;
+    else if(!strcmp(t->arg3, "false"))
+        passed = n == 0;
+    else if(!strcmp(t->arg3, "unknown"))
+        passed = n == SOLVE_UNKNOWN;
+    else {
+        /*each expected root in turn, split at the commas outside brackets*/
+        for(start = s = t->arg3; passed; s++) {
+            if(*s == '(') {
+                depth++;
+            } else if(*s == ')') {
+                depth--;
+            } else if((*s == ',' && depth == 0) || *s == '\0') {
+                bool last = *s == '\0';
+                pcas_ast_t *expected;
+
+                *s = '\0';
+                expected = parse((uint8_t*)start, strlen(start), str_table, &err);
+                if(err != E_SUCCESS || expected == NULL) {
+                    printf("Test failed on line %u. Unable to parse root %s\n", t->line, start);
+                    passed = false;
+                } else {
+                    simplify(expected, SIMP_NORMALIZE | SIMP_COMMUTATIVE | SIMP_RATIONAL | SIMP_EVAL);
+                    passed = i < n && check(t, roots[i], expected);
+                }
+                if(expected != NULL)
+                    ast_Cleanup(expected);
+                i++;
+
+                if(last)
+                    break;
+                start = s + 1;
+            }
+        }
+        passed = passed && i == n;
+    }
+
+    if(!passed) {
+        printf("Test failed on line %u. solve() gave %d root(s)", t->line, n);
+        for(i = 0; i < n; i++) {
+            unsigned len;
+            char *out = (char*)export_to_binary(roots[i], &len, str_table, &err);
+
+            if(out != NULL) {
+                printf("%s %.*s", i == 0 ? ":" : ",", len, out);
+                free(out);
+            }
+        }
+        printf("\n");
+    }
+
+    for(i = 0; i < n; i++)
+        ast_Cleanup(roots[i]);
+    ast_Cleanup(e);
+    return passed;
+}
+
 bool test_Run(test_t *t) {
     pcas_ast_t *a = NULL, *b = NULL, *c = NULL, *expected, *actual;
     pcas_error_t err;
     bool passed = false;
+
+    /*Fluxion: its arguments aren't all expressions*/
+    if(t->type == TEST_SOLVE)
+        return test_solve(t);
 
     a = parse((uint8_t*)t->arg1, strlen(t->arg1), str_table, &err);
     if(err != E_SUCCESS) {

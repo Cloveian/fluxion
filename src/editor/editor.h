@@ -71,8 +71,8 @@ void ed_delete(editor_t *ed);
    (an empty slot, nothing typed). caller frees. */
 char *ed_to_engine(const editor_t *ed);
 
-/* If the whole line is one command (expand, factor, eval): its name, else NULL.
-   The app runs those itself; the engine's parser doesn't know them. */
+/* when the whole line is a single command (expand, factor, eval, solve), its name. else NULL.
+   the app runs those itself; the engine's parser doesn't know them. */
 const char *ed_command(const editor_t *ed);
 
 /* the list ed_command goes by, so there's one place to add a command. is name
