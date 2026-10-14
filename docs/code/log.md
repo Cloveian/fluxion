@@ -1,5 +1,13 @@
 # Log
 
+## 2026-10-13 - polynomial factoring
+
+- `factor(` works on one variable polynomials like the nspire, pulls out every rational root. ACT Q37 -> $(x+2)^2(x-3)$, Q5 -> $(x+5)(x-6)$
+- it was a TODO in PineappleCAS. their gcd factoring actually made Q37 worse so mine runs first ᕦ(¬‿¬)ᕤ
+- first version was +10 KB because of big local arrays (the eZ80 is really bad at big stack frames), moved them to the heap and it's ~3 KB
+- tests in `test/fluxion-tests.txt` (now `fluxion.tests`)
+- $x^2\sin(x)+2x\sin(x)+\sin(x)$ still comes out half factored
+
 ## 2026-10-13 - fonts + layout pass
 
 - three font sizes now like TeX (normal / script / scriptscript), from the X11 misc-fixed fonts, `tools/bdf2c.py` converts them. replaced the 8\*8 graphx font
@@ -7,7 +15,6 @@
 - nested fractions get smaller, roots and brackets got some spacing fixes, brackets curve so tall ones stay round
 - terms are sorted highest degree first
 - `--raw` in the viewer draws exactly what you typed, for layout stuff
-- **Stray keystrokes**: the review hook pulls focus to the editor, so typing in the chat panel lands in files (`y`, `a`, `a da` so far). Compilers caught all of them.
 
 ## 2026-10-13 - drawing, PC screen
 

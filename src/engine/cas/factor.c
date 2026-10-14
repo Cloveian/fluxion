@@ -230,11 +230,452 @@ bool factor_addition(pcas_ast_t *e, unsigned char flags) {
     return changed;
 }
 
+/*
+    Fluxion: polynomial factoring (FAC_POLYNOMIAL).
+
+    a polynomial in one variable with rational coefficients is factored over the
+    rationals, like the nspire's factor(): the number in front, the lowest power
+    of the variable, then (qX - p) for every rational root p/q (rational root
+    theorem). a part with no rational roots (X^2 + 1, X^2 - 2) is left as it is.
+*/
+
+#define POLY_MAX_DEGREE 32
+
+/*roots are only searched for when the lowest and highest coefficients are at
+most this, so listing their divisors stays quick on the calculator*/
+#define POLY_MAX_ROOT_SEARCH 1000000L
+#define POLY_MAX_DIVISORS 240   /*the most any number up to 1000000 has*/
+
+/*all of the working state, on the heap: on the eZ80, a stack frame over 127
+bytes makes every access to it several instructions long (this was 10 KB of
+code with the arrays as locals)*/
+typedef struct {
+    Symbol var;
+    int deg;
+    mp_int c[POLY_MAX_DEGREE + 1];      /*c[i] is the coefficient of var^i*/
+    mp_rat rc[POLY_MAX_DEGREE + 1];     /*while reading: the same, as fractions*/
+    mp_rat scale;                       /*the number in front*/
+    int low;                            /*the power of var taken out*/
+
+    int found;                          /*roots p/q found, and how many times each*/
+    mp_small fp[POLY_MAX_DEGREE], fq[POLY_MAX_DEGREE];
+    int mult[POLY_MAX_DEGREE];
+
+    mp_small dp[POLY_MAX_DIVISORS], dq[POLY_MAX_DIVISORS];
+    mp_int tmp[3];
+} poly_t;
+
+static void poly_free(poly_t *p);
+
+static poly_t *poly_new(void) {
+    poly_t *p = calloc(1, sizeof(poly_t));
+    int i;
+
+    if(p == NULL)
+        return NULL;
+
+    p->scale = mp_rat_alloc();
+    for(i = 0; i < 3; i++)
+        p->tmp[i] = mp_int_alloc();
+    if(p->scale != NULL && p->tmp[0] != NULL && p->tmp[1] != NULL && p->tmp[2] != NULL)
+        return p;
+
+    poly_free(p);
+    return NULL;
+}
+
+static void poly_free(poly_t *p) {
+    int i;
+
+    for(i = 0; i <= POLY_MAX_DEGREE; i++) {
+        if(p->c[i] != NULL)
+            mp_int_free(p->c[i]);
+        if(p->rc[i] != NULL)
+            mp_rat_free(p->rc[i]);
+    }
+    for(i = 0; i < 3; i++)
+        if(p->tmp[i] != NULL)
+            mp_int_free(p->tmp[i]);
+    if(p->scale != NULL)
+        mp_rat_free(p->scale);
+    free(p);
+}
+
+/*reads one term, a number times var^k. coef is multiplied by its number and
+*k increased by its power. *var is the variable so far, SYM_INVALID if none yet.*/
+static bool poly_term(pcas_ast_t *e, Symbol *var, mp_rat coef, int *k) {
+    pcas_ast_t *child;
+
+    switch(e->type) {
+    case NODE_NUMBER:
+        return mp_rat_mul(coef, e->op.num, coef) == MP_OK;
+    case NODE_SYMBOL:
+        if(e->op.symbol == SYM_PI || e->op.symbol == SYM_EULER || e->op.symbol == SYM_IMAG)
+            return false;
+        if(*var != SYM_INVALID && *var != e->op.symbol)
+            return false;
+        *var = e->op.symbol;
+        (*k)++;
+        return true;
+    case NODE_OPERATOR:
+        break;
+    }
+
+    switch(optype(e)) {
+    case OP_MULT:
+        for(child = ast_ChildGet(e, 0); child != NULL; child = child->next)
+            if(!poly_term(child, var, coef, k))
+                return false;
+        return true;
+
+    case OP_DIV: {
+        pcas_ast_t *den = ast_ChildGet(e, 1);
+
+        if(den->type != NODE_NUMBER || mp_rat_compare_zero(den->op.num) == 0)
+            return false;
+        if(!poly_term(ast_ChildGet(e, 0), var, coef, k))
+            return false;
+        return mp_rat_div(coef, den->op.num, coef) == MP_OK;
+    }
+
+    case OP_POW: {
+        pcas_ast_t *base = ast_ChildGet(e, 0), *exp = ast_ChildGet(e, 1);
+        mp_small num, den;
+
+        if(base->type != NODE_SYMBOL || exp->type != NODE_NUMBER)
+            return false;
+        if(mp_rat_to_ints(exp->op.num, &num, &den) != MP_OK || den != 1 || num < 1 || num > POLY_MAX_DEGREE)
+            return false;
+        if(!poly_term(base, var, coef, k))
+            return false;
+        *k += (int)num - 1;
+        return true;
+    }
+
+    default:
+        return false;
+    }
+}
+
+/*reads a sum of terms into integer coefficients: e = scale * (c[0] + c[1]X + ...).
+false if e isn't a polynomial of degree 1 or more in one variable.*/
+static bool poly_read(pcas_ast_t *e, poly_t *p) {
+    mp_rat coef = p->scale;     /*free until the end*/
+    mp_int lcm;
+    pcas_ast_t *term;
+    bool ok = isoptype(e, OP_ADD);
+    int i;
+
+    p->var = SYM_INVALID;
+    p->deg = -1;
+
+    for(term = ok ? ast_ChildGet(e, 0) : NULL; ok && term != NULL; term = term->next) {
+        int k = 0;
+
+        mp_rat_set_value(coef, 1, 1);
+        ok = poly_term(term, &p->var, coef, &k) && k <= POLY_MAX_DEGREE;
+        if(ok && p->rc[k] == NULL)
+            ok = (p->rc[k] = mp_rat_alloc()) != NULL;
+        if(ok)
+            ok = mp_rat_add(p->rc[k], coef, p->rc[k]) == MP_OK;
+    }
+
+    for(i = 0; ok && i <= POLY_MAX_DEGREE; i++)
+        if(p->rc[i] != NULL && mp_rat_compare_zero(p->rc[i]) != 0)
+            p->deg = i;
+    if(!ok || p->var == SYM_INVALID || p->deg < 1)
+        return false;
+
+    /*clear the denominators: times their lcm, which scale takes back out*/
+    /*fart3-(slowed+reverb).flac*/
+    lcm = mp_rat_denom_ref(p->scale);
+    mp_int_set_value(mp_rat_numer_ref(p->scale), 1);
+    mp_int_set_value(lcm, 1);
+    for(i = 0; i <= p->deg; i++)
+        if(p->rc[i] != NULL)
+            mp_int_lcm(lcm, mp_rat_denom_ref(p->rc[i]), lcm);
+
+    for(i = 0; i <= p->deg; i++) {
+        if((p->c[i] = mp_int_alloc()) == NULL)
+            return false;
+        if(p->rc[i] != NULL) {
+            mp_int_div(lcm, mp_rat_denom_ref(p->rc[i]), p->c[i], NULL);
+            mp_int_mul(p->c[i], mp_rat_numer_ref(p->rc[i]), p->c[i]);
+        }
+    }
+    return true;
+}
+
+/*moves the gcd of the coefficients (with the leading one's sign) into scale, and
+the lowest power of the variable into low. p is then primitive, with c[0] != 0.*/
+static void poly_primitive(poly_t *p) {
+    mp_int g = p->tmp[0];
+    int i;
+
+    mp_int_zero(g);
+    for(i = 0; i <= p->deg; i++)
+        if(mp_int_compare_zero(p->c[i]) != 0)
+            mp_int_gcd(g, p->c[i], g);
+    if(mp_int_compare_zero(p->c[p->deg]) < 0)
+        mp_int_neg(g, g);
+
+    for(i = 0; i <= p->deg; i++)
+        mp_int_div(p->c[i], g, p->c[i], NULL);
+    mp_rat_mul_int(p->scale, g, p->scale);
+
+    for(p->low = 0; mp_int_compare_zero(p->c[p->low]) == 0; p->low++);
+    if(p->low > 0) {
+        for(i = 0; i < p->low; i++)
+            mp_int_free(p->c[i]);
+        for(i = 0; i <= p->deg - p->low; i++)
+            p->c[i] = p->c[i + p->low];
+        for(; i <= p->deg; i++)
+            p->c[i] = NULL;
+        p->deg -= p->low;
+    }
+}
+
+static mp_small small_gcd(mp_small a, mp_small b) {
+    while(b != 0) {
+        mp_small t = a % b;
+        a = b;
+        b = t;
+    }
+    return a;
+}
+
+/*positive divisors of n > 0. returns how many.*/
+static int divisors(mp_small n, mp_small *out) {
+    mp_small d;
+    int count = 0;
+
+    for(d = 1; d * d <= n; d++) {
+        if(n % d == 0) {
+            out[count++] = d;
+            if(d != n / d)
+                out[count++] = n / d;
+        }
+    }
+    return count;
+}
+
+/*is p/q a root? Horner on q^deg * P(p/q), so it stays in integers (no float rounding bugs)*/
+/*integer? i hardly know 'er bwahahhhaaa*/
+/*you need to leave!!*/
+static bool poly_is_root(poly_t *poly, mp_small p, mp_small q) {
+    mp_int v = poly->tmp[0], qpow = poly->tmp[1], t = poly->tmp[2];
+    int i;
+
+    mp_int_copy(poly->c[poly->deg], v);
+    mp_int_set_value(qpow, 1);
+    for(i = poly->deg - 1; i >= 0; i--) {
+        mp_int_mul_value(v, p, v);
+        mp_int_mul_value(qpow, q, qpow);
+        mp_int_mul(poly->c[i], qpow, t);
+        mp_int_add(v, t, v);
+    }
+    return mp_int_compare_zero(v) == 0;
+}
+
+/*some rational root p/q (q > 0) of a primitive poly with c[0] != 0, by the
+rational root theorem: p divides c[0], q divides c[deg]*/
+static bool poly_find_root(poly_t *poly, mp_small *p, mp_small *q) {
+    mp_small a0, an, *dp = poly->dp, *dq = poly->dq;
+    int np, nq, i, j, sign;
+
+    if(mp_int_to_int(poly->c[0], &a0) != MP_OK || mp_int_to_int(poly->c[poly->deg], &an) != MP_OK)
+        return false;
+    if(a0 < 0)
+        a0 = -a0;
+    if(a0 > POLY_MAX_ROOT_SEARCH || an > POLY_MAX_ROOT_SEARCH)
+        return false;
+
+    np = divisors(a0, dp);
+    nq = divisors(an, dq);
+    for(j = 0; j < nq; j++) {
+        for(i = 0; i < np; i++) {
+            if(small_gcd(dp[i], dq[j]) != 1)
+                continue;
+            for(sign = 1; sign >= -1; sign -= 2) {
+                if(poly_is_root(poly, sign * dp[i], dq[j])) {
+                    *p = sign * dp[i];
+                    *q = dq[j];
+                    return true;
+                }
+            }
+        }
+    }
+    return false;
+}
+
+/*poly /= (qX - p), for a root p/q. synthetic division, top down:
+b[n-1] = c[n]/q, b[i-1] = (c[i] + p*b[i])/q, each b[i] kept in c[i+1]*/
+static void poly_divide(poly_t *poly, mp_small p, mp_small q) {
+    mp_int t = poly->tmp[0];
+    int i, n = poly->deg;
+
+    mp_int_div_value(poly->c[n], q, poly->c[n], NULL);
+    for(i = n - 1; i >= 1; i--) {
+        mp_int_mul_value(poly->c[i + 1], p, t);
+        mp_int_add(poly->c[i], t, poly->c[i]);
+        mp_int_div_value(poly->c[i], q, poly->c[i], NULL);
+    }
+
+    mp_int_free(poly->c[0]);
+    for(i = 0; i < n; i++)
+        poly->c[i] = poly->c[i + 1];
+    poly->c[n] = NULL;
+    poly->deg--;
+}
+
+static pcas_ast_t *int_number(mp_int z) {
+    mp_rat r = mp_rat_alloc();
+
+    mp_int_copy(z, mp_rat_numer_ref(r));
+    return ast_MakeNumber(r);
+}
+
+static pcas_ast_t *power_or_self(pcas_ast_t *e, int n) {
+    return n == 1 ? e : ast_MakeBinary(OP_POW, e, ast_MakeNumber(num_FromInt(n)));
+}
+
+/*qX - p*/
+static pcas_ast_t *poly_linear(Symbol var, mp_small p, mp_small q) {
+    pcas_ast_t *x = ast_MakeSymbol((char)var);
+
+    if(q != 1)
+        x = ast_MakeBinary(OP_MULT, ast_MakeNumber(num_FromInt(q)), x);
+    return ast_MakeBinary(OP_ADD, x, ast_MakeNumber(num_FromInt(-p)));
+}
+
+static pcas_ast_t *poly_to_ast(poly_t *poly) {
+    pcas_ast_t *sum = ast_MakeOperator(OP_ADD);
+    int i;
+
+    for(i = poly->deg; i >= 0; i--) {
+        pcas_ast_t *term;
+
+        if(mp_int_compare_zero(poly->c[i]) == 0)
+            continue;
+
+        if(i == 0) {
+            term = int_number(poly->c[i]);
+        } else {
+            term = power_or_self(ast_MakeSymbol((char)poly->var), i);
+            if(mp_int_compare_value(poly->c[i], 1) != 0)
+                term = ast_MakeBinary(OP_MULT, int_number(poly->c[i]), term);
+        }
+        ast_ChildAppend(sum, term);
+    }
+    return sum;
+}
+
+/*the factored form of e, or NULL if e isn't a polynomial or doesn't factor*/
+static pcas_ast_t *poly_factor(pcas_ast_t *e) {
+    poly_t *poly = poly_new();
+    pcas_ast_t *result = NULL;
+    int pieces, i;
+
+    if(poly == NULL)
+        return NULL;
+    if(!poly_read(e, poly)) {
+        poly_free(poly);
+        return NULL;
+    }
+    poly_primitive(poly);
+
+    while(poly->deg >= 1) {
+        mp_small p, q;
+
+        if(!poly_find_root(poly, &p, &q))
+            break;
+        poly_divide(poly, p, q);
+
+        /*a root found again is one more power of its factor*/
+        for(i = 0; i < poly->found && (poly->fp[i] != p || poly->fq[i] != q); i++);
+        if(i == poly->found) {
+            poly->fp[i] = p;
+            poly->fq[i] = q;
+            poly->mult[i] = 0;
+            poly->found++;
+        }
+        poly->mult[i]++;
+    }
+
+    /*only a change if it's now a product of two or more things*/
+    pieces = (mp_rat_compare_value(poly->scale, 1, 1) != 0) + (poly->low > 0) + (poly->deg >= 1);
+    for(i = 0; i < poly->found; i++)
+        pieces += poly->mult[i];
+
+    if(pieces >= 2) {
+        result = ast_MakeOperator(OP_MULT);
+
+        if(mp_rat_compare_value(poly->scale, 1, 1) != 0) {
+            ast_ChildAppend(result, ast_MakeNumber(poly->scale));
+            poly->scale = NULL;
+        }
+        if(poly->low > 0)
+            ast_ChildAppend(result, power_or_self(ast_MakeSymbol((char)poly->var), poly->low));
+        for(i = 0; i < poly->found; i++)
+            ast_ChildAppend(result, power_or_self(poly_linear(poly->var, poly->fp[i], poly->fq[i]), poly->mult[i]));
+        if(poly->deg >= 1)
+            ast_ChildAppend(result, poly_to_ast(poly));
+    }
+
+    poly_free(poly);
+    return result;
+}
+
+/*factors e as one polynomial if it is one (products expanded first). if not,
+the polynomials in its top-level parts: the top and bottom of a fraction, the
+factors of a product, the base of a power. not inside functions: sin(X^2 _ 1)
+stays as it is.*/
+static bool factor_polynomial(pcas_ast_t *e) {
+    pcas_ast_t *copy, *result, *child;
+    bool changed = false;
+
+    if(e->type != NODE_OPERATOR)
+        return false;
+
+    copy = ast_Copy(e);
+    expand(copy, EXP_ALL);
+    simplify(copy, SIMP_NORMALIZE | SIMP_COMMUTATIVE | SIMP_RATIONAL | SIMP_EVAL | SIMP_LIKE_TERMS);
+    result = poly_factor(copy);
+    ast_Cleanup(copy);
+
+    if(result != NULL) {
+        simplify(result, SIMP_NORMALIZE | SIMP_COMMUTATIVE | SIMP_RATIONAL | SIMP_EVAL);
+        replace_node(e, result);
+        return true;
+    }
+
+    if(isoptype(e, OP_DIV) || isoptype(e, OP_MULT)) {
+        for(child = ast_ChildGet(e, 0); child != NULL; child = child->next)
+            changed |= factor_polynomial(child);
+    } else if(isoptype(e, OP_POW)) {
+        changed = factor_polynomial(ast_ChildGet(e, 0));
+    }
+
+    /*a factored part is a product inside this one: flatten it*/
+    if(changed)
+        simplify(e, SIMP_COMMUTATIVE);
+    return changed;
+}
+
 bool factor(pcas_ast_t *e, unsigned char flags) {
     bool changed = false;
 
-    if(flags & (FAC_SIMPLE_ADDITION_EVALUATEABLE | FAC_SIMPLE_ADDITION_NONEVALUATEABLE))
+    /*Fluxion: polynomials first. pairing up terms by their gcd would split
+    X^3+X^2_8X_12 into a worse sum, so it only gets what isn't a polynomial.*/
+    if((flags & FAC_POLYNOMIAL) && factor_polynomial(e))
+        return true;
+
+    if(flags & (FAC_SIMPLE_ADDITION_EVALUATEABLE | FAC_SIMPLE_ADDITION_NONEVALUATEABLE)) {
         changed |= factor_addition(e, flags);
-    /*Need to implement polynomial factoring*/
+
+        /*Fluxion: and the polynomials that pulled out: X^2sin(X)_sin(X) -> (X^2_1)sin(X) -> (X_1)(X+1)sin(X)*/
+        if(changed && (flags & FAC_POLYNOMIAL))
+            factor_polynomial(e);
+    }
     return changed;
 }
