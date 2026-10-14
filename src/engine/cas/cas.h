@@ -136,6 +136,11 @@ cancels what they share: (X^2_1)/(X_1) = (X+1). call before simplify(), which
 splits fractions apart.*/
 bool cancel_fractions(pcas_ast_t *e);
 
+/*Fluxion: every sum with a fraction in it becomes one fraction over the lcm of the
+denominators, common factors cancelled: 1/X+1 = (X+1)/X. top and bottom expanded, or
+factored if factored is true. call after simplify(), which would split it again.*/
+bool comdenom(pcas_ast_t *e, bool factored);
+
 /*EVAL_DISTRIBUTE_NUMBERS, EVAL_DISTRIBUTE_MULTIPLICATION, EVAL_DISTRIBUTE_ADDITION, EVAL_EXPAND_POWERS*/
 
 /*Expand 2(A+B) to 2A + 2B or -(A+B) to -1*A + -1*B*/
@@ -190,6 +195,18 @@ bool eval(pcas_ast_t *e, unsigned short flags);
 #define SOLVE_ALL       (-1)
 #define SOLVE_UNKNOWN   (-2)
 int solve(pcas_ast_t *e, Symbol var, pcas_ast_t **out);
+
+/*
+    Fluxion: the decimal form (cas/approx.c). every part without variables that
+    isn't a number yet (pi, e, roots, ln, trig in radians, ...) becomes a number
+    as close as a float (about 7 digits). exact numbers stay exact. follow with simplify() to
+    combine them: 2sqrt(2)X -> 2.82843X.
+*/
+bool approx(pcas_ast_t *e);
+
+/*Fluxion: r as a decimal with digits significant digits: 1.25, 0.333333, 2.28892E7.
+plain from 0.001 up to 10^digits. buf needs digits + 10 chars*/
+void approx_format(mp_rat r, int digits, char *buf);
 
 /*Replaces all instances of from ast to to ast in e*/
 bool substitute(pcas_ast_t *e, pcas_ast_t *from, pcas_ast_t *to);

@@ -63,3 +63,36 @@ cancel; (X^3+X^2_8X_12)/(X_3); (X+2)^2
 cancel; (X^2_1)/(X_1); X+1
 cancel; (X^2_1)/(X^2+2X+1); X/(X+1)_1/(X+1)
 cancel; (2X+2)/(X+1); 2
+
+#One fraction over a common denominator (a form). comdenomf = top and bottom factored. ACT Q26
+comdenomf; sqrt(2(D_C)/A); sqrt(2(D_C)/A)
+comdenom; sqrt(2(D_C)/A); sqrt((2D_2C)/A)
+comdenom; 1+1/X; (X+1)/X
+comdenom; A/B+C/D; (AD+BC)/(BD)
+comdenom; X/2+Y/3; (3X+2Y)/6
+comdenom; 1/X_1/(X+1); 1/(X^2+X)
+comdenomf; 1/X_1/(X+1); 1/(X(X+1))
+comdenom; (X^2_1)/(X+1)^2; (X_1)/(X+1)
+comdenom; 1/(X_1)+1/(X^2_1); (X+2)/(X^2_1)
+comdenom; X+Y; X+Y
+
+#Decimal form: approx(), then 6 significant digits like the nspire. ACT Q11, Q45, Q23
+decimal; -4.9*3^2+30*3+55; 100.9
+decimal; 0.75*1+0.25*2; 1.25
+decimal; 7e^(3*5)+1; 2.28831E7
+decimal; 1/3; 0.333333
+decimal; 2/3; 0.666667
+decimal; -1/8; -0.125
+decimal; pi; 3.14159
+decimal; sqrt(2); 1.41421
+decimal; 2sqrt(2)+1; 3.82843
+decimal; 1/1024; 9.76563E-4
+decimal; 1/1000; 0.001
+decimal; 999999.6; 1E6
+decimal; 123456; 123456
+decimal; 1234567; 1.23457E6
+decimal; 100; 100
+decimal; ln(2); 0.693147
+decimal; sin(1); 0.841471
+decimal; 3root(2); 1.25992
+decimal; 5!; 120

@@ -77,6 +77,9 @@ Forms (`*` = needs engine work, `?` = haven't checked if PineappleCAS can):
 | partial fractions\* | $\frac{1}{x-1} - \frac{1}{x}$ |
 | decimal? | $-0.0892$ |
 
+#### Decision
+~~cycle per answer~~ a mode instead. the key switches the mode (like expanded -> factored), redraws the last answer in it, and everything after comes out that way too. doing the engine part first, haven't picked the key or the order yet
+
 ### What the engine gives
 
 - has: simplify (6 identity toggles), evaluate, substitute, expand, derivative. that's it
