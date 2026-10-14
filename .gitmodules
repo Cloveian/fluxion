@@ -1,0 +1,3 @@
+[submodule "installer/ceashell-installer"]
+	path = installer/ceashell-installer
+	url = https://github.com/RoccoLoxPrograms/CEaShell-Installer

@@ -7,7 +7,10 @@
 #define ID_MAX_TEXT 50
 
 typedef struct {
-    char from_text[ID_MAX_TEXT], to_text[ID_MAX_TEXT];
+    /*Fluxion: pointers (were char[ID_MAX_TEXT]), so the text stays read-only. as
+    arrays the tables were 16 KB of .data, and a Flash App with that much .data
+    crashes on launch before main even runs. took way too long to find, like 3 hours gone*/
+    const char *from_text, *to_text;
     pcas_ast_t *from, *to;
     /*Fluxion: functions (sin, ln, ...) that appear in from, see func_mask().
     read from from_text before loading, so unneeded identities never get parsed.*/

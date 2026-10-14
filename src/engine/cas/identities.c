@@ -516,12 +516,12 @@ bool id_Execute(pcas_ast_t *e, pcas_id_t *id, bool recursive) {
 bool id_Load(pcas_id_t *id) {
     pcas_error_t err;
 
-    id->from = parse((uint8_t*)id->from_text, strlen(id->from_text), str_table, &err);
+    id->from = parse((const uint8_t*)id->from_text, strlen(id->from_text), str_table, &err);
 
     if(err != E_SUCCESS)
         return false;
 
-    id->to = parse((uint8_t*)id->to_text, strlen(id->to_text), str_table, &err);
+    id->to = parse((const uint8_t*)id->to_text, strlen(id->to_text), str_table, &err);
 
     if(err != E_SUCCESS)
         return false;
