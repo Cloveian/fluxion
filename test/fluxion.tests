@@ -1,5 +1,6 @@
 #Fluxion's own engine tests, same format as pcas.tests (PineappleCAS's, left as they are).
 #_ is subtract, - is negate.
+#What the engine gets wrong or hangs on is in todo.tests (not run by make), with what it gives now.
 
 #Polynomial factoring over the rationals (FAC_POLYNOMIAL)
 #ACT Q37, Q5
@@ -11,6 +12,9 @@ factor; 2X^2+X_1; (2X_1)(X+1)
 factor; 6X^2_5X+1; (2X_1)(3X_1)
 factor; 4X^2_12X+9; (2X_3)^2
 factor; X^3_3X^2+3X_1; (X_1)^3
+factor; X^2+2X+1; (X+1)^2
+factor; 6X^3+11X^2+6X+1; (X+1)(2X+1)(3X+1)
+factor; 2X^3_X^2_2X+1; (X_1)(X+1)(2X_1)
 
 #The number in front, powers of the variable, the sign
 factor; 2X^2+4X; 2X(X+2)
@@ -18,14 +22,43 @@ factor; X^2/2_1/2; (X_1)(X+1)/2
 factor; X^5_X^3; X^3(X_1)(X+1)
 factor; -X_1; -(X+1)
 factor; Y^2_9; (Y_3)(Y+3)
+factor; X^2+X; X(X+1)
+factor; 12X^2_3; 3(2X_1)(2X+1)
+factor; -2X^2+8; -2(X_2)(X+2)
+factor; X^4+X^2; X^2(X^2+1)
 
-#No rational roots: left as it is, like the Nspire
+#Fraction and decimal coefficients: cleared, the number goes in front
+factor; X^2_1/4; (2X_1)(2X+1)/4
+factor; 0.5X^2_0.5; (X_1)(X+1)/2
+factor; X^3/6_X/6; X(X_1)(X+1)/6
+
+#Degree 4 and up, and the root search limit (lowest and highest coefficient up to 1000000)
+factor; X^4_5X^2+4; (X_1)(X+1)(X_2)(X+2)
+factor; X^10_1; (X_1)(X+1)(X^8+X^6+X^4+X^2+1)
+factor; X^33+X^32; X^32(X+1)
+factor; 1000000X^2_1; (1000X_1)(1000X+1)
+factor; X^2_1000001; X^2_1000001
+
+#No rational roots: left as it is, like the Nspire. The rest still comes out around it
 factor; X^2_2; X^2_2
 factor; X^2+1; X^2+1
 factor; X^4_1; (X_1)(X+1)(X^2+1)
+factor; X^3+8; (X+2)(X^2_2X+4)
+factor; X^3_1; (X_1)(X^2+X+1)
 
-#Polynomials inside a product
+#Nothing to factor
+factor; X^2; X^2
+factor; 5; 5
+
+#Polynomials inside a product, fraction or power. Not inside functions
 factor; sin(X)(X^2_1); (X_1)(X+1)sin(X)
+factor; (X^2_1)sin(X)+(X^2_1)cos(X); (X_1)(X+1)(sin(X)+cos(X))
+factor; (X+1)(X^2_1); (X_1)(X+1)^2
+factor; (X^2_1)^2; (X_1)^2(X+1)^2
+factor; (X^2_1)/(X^2_4); (X_1)(X+1)/((X_2)(X+2))
+factor; 1/(X^2_1); 1/((X_1)(X+1))
+factor; sin(X^2_1); sin(X^2_1)
+factor; sin(X)^2_1; sin(X)^2_1
 
 #Solve over the reals (solve; equation; variable; roots smallest first, or true / false / unknown)
 #ACT Q1, Q9, Q33
@@ -35,9 +68,30 @@ solve; 2(3X+5)+2(X+3)=360; X; 43
 
 #Linear
 solve; 2X+3=7; X; 2
+solve; 2=X; X; 2
+solve; 3X=0; X; 0
+solve; 3_X=0; X; 3
+solve; -X=-3; X; 3
+solve; 2X_1=X+3; X; 4
+solve; (X+1)/2=(X_1)/3; X; -5
+solve; X^2+X=X^2+1; X; 1
+
+#Linear, with other variables in the coefficients
 solve; AX+B=0; X; -B/A
+solve; AX+BX=C; X; C/(A+B)
+solve; XY=1; X; 1/Y
+solve; X+Y=0; X; -Y
+solve; -X+Y=0; X; Y
+solve; 2X+Y=1; X; (1_Y)/2
+solve; sqrt(2)X=2; X; sqrt(2)
+
+#Every value, or none
 solve; X+1=X+1; X; true
 solve; X+1=X+2; X; false
+solve; 0=0; X; true
+solve; 1=2; X; false
+solve; X^2=X^2+1; X; false
+solve; X/X=1; X; true
 
 #Polynomials: rational roots, then quadratics by the formula
 solve; X^2_X_30=0; X; -5,6
@@ -45,54 +99,231 @@ solve; X^3+X^2_8X_12; X; -2,3
 solve; X^3_X; X; -1,0,1
 solve; X^2=2; X; -sqrt(2),sqrt(2)
 solve; X^2+1=0; X; false
+solve; (X_1)(X+2)=0; X; -2,1
+solve; X(X+1)(X+2)=0; X; -2,-1,0
+solve; X^2=10000; X; -100,100
+solve; -X^2+4=0; X; -2,2
+solve; X^2=X; X; 0,1
+solve; 3X^2=X; X; 0,1/3
+solve; (X_1)^2=4; X; -1,3
+solve; X^3_6X^2+11X_6=0; X; 1,2,3
+solve; X^4_5X^2+4=0; X; -2,-1,1,2
 
-#Can't yet: no rational roots above degree 2, not polynomials
+#A repeated root once
+solve; 2X^2+4X+2=0; X; -1
+solve; X^2=2X_1; X; 1
+solve; 9X^2_6X+1=0; X; 1/3
+solve; X^2=0; X; 0
+solve; X^32=0; X; 0
+
+#Irrational roots. 2^(3/2) is 2sqrt(2) before the canonical form (like terms merge it back)
+solve; X^2_2X_1=0; X; 1_sqrt(2),1+sqrt(2)
+solve; X^2_6X+7=0; X; 3_sqrt(2),3+sqrt(2)
+solve; X^2+2X_2=0; X; -1_sqrt(3),-1+sqrt(3)
+solve; X^2=12; X; -2sqrt(3),2sqrt(3)
+solve; X^2=8; X; -2^(3/2),2^(3/2)
+
+#Only the real roots
+solve; X^2=-1; X; false
+solve; X^2+X+1=0; X; false
+solve; X^4=1; X; -1,1
+solve; X^3=8; X; 2
+solve; X^3+X=0; X; 0
+
+#Can't yet: no rational roots above degree 2, not a polynomial in the variable, other variables or roots in the coefficients
 solve; X^3_2=0; X; unknown
 solve; sin(X)=0; X; unknown
-solve; X^2_2X_1=0; X; 1_sqrt(2),1+sqrt(2)
-solve; 2X^2+4X+2=0; X; -1
+solve; e^X=1; X; unknown
+solve; sqrt(X)=2; X; unknown
+solve; 1/X=2; X; unknown
+solve; X^2=Y; X; unknown
+solve; X^2_2sqrt(2)X+2=0; X; unknown
+solve; Y=1; X; unknown
+solve; X^2_1=0; Y; unknown
 
-#k-th powers out of roots. ACT Q8. (2^(3/2) -> 2sqrt(2) is the canonical form's job, not tested here)
+#k-th powers out of roots. ACT Q8. 2sqrt(2) merges back to 2^(3/2) as like terms: the canonical form splits it at output
 simplify; sqrt(35*108); 6sqrt(105)
 simplify; sqrt(72); 6sqrt(2)
 simplify; 54^(1/3); 3*2^(1/3)
 simplify; sqrt(12)/2; sqrt(3)
+simplify; sqrt(50); 5sqrt(2)
+simplify; sqrt(2*3^4); 9sqrt(2)
+simplify; sqrt(8); 2^(3/2)
+simplify; 3root(16); 2^(4/3)
+simplify; 4root(48); 2*3^(1/4)
+simplify; sqrt(-8); 2^(3/2)i
+simplify; sqrt(8/9); 2^(3/2)/3
+simplify; sqrt(9/4); 3/2
+simplify; sqrt(12)X; 2sqrt(3)X
+simplify; 2sqrt(8); 4sqrt(2)
+simplify; sqrt(12)*sqrt(3); 6
+
+#Nothing to take out, or all of it
+simplify; sqrt(2); sqrt(2)
+simplify; sqrt(0); 0
+simplify; sqrt(4); 2
+simplify; sqrt(1024); 32
+simplify; sqrt(2^40); 1048576
+
+#ACT problems the engine did out of the box: Q13, Q15, Q17, Q18, Q19, Q24, Q33, Q43
+simplify; (5/13)/(5/12); 12/13
+expand; (Y+7)^3; Y^3+21Y^2+147Y+343
+simplify; (X^2_Y^2)_(6X^2+4XY_Y^2); -5X^2_4XY
+simplify; sqrt(9)+sqrt(-16); 3+4i
+simplify; 7+14(25_1); 343
+simplify; 40pi/180; 2pi/9
+simplify; 2(3X+5)+2(X+3); 8X+16
+simplify; pi*9^2*2; 162pi
 
 #Cancel common factors in a fraction, then simplify (what enter does). ACT Q37
 cancel; (X^3+X^2_8X_12)/(X_3); (X+2)^2
+cancel; (X^3+X^2_8X_12)/(X+2); (X+2)(X_3)
+cancel; (X^3+X^2_8X_12)/(X+2)^2; X_3
 cancel; (X^2_1)/(X_1); X+1
-cancel; (X^2_1)/(X^2+2X+1); X/(X+1)_1/(X+1)
+cancel; (4X^2_1)/(2X_1); 2X+1
+cancel; (X^2+2X+1)/(X+1); X+1
+cancel; (X^3_X)/(X^2_1); X
+cancel; (X^2+X)/X; X+1
 cancel; (2X+2)/(X+1); 2
+cancel; (X^2_1)/((X_1)(X+1)); 1
+
+#What's left: a fraction, a product of factors, or a sum of fractions (simplify splits them)
+cancel; (X^2_1)/(X^2+2X+1); X/(X+1)_1/(X+1)
+cancel; (X^2+2X+1)/(X^2_1); X/(X_1)+1/(X_1)
+cancel; (X^2_4)/(X^2_4X+4); X/(X_2)+2/(X_2)
+cancel; (X+1)/(X^2+2X+1); 1/(X+1)
+cancel; X^2/(X^3+X); X/(X^2+1)
+cancel; (X^4_1)/(X^2+1); (X_1)(X+1)
+cancel; (X^2_1)/(X^2_1)^2; 1/(X^2_1)
+cancel; (X^2_4)/(2X+4); X/2_1
+cancel; (X^2_1)/(2X+2)+1/2; X/2
+cancel; (X^2_1)/(2X_2)_1/2; X/2
+
+#Powers of the variable and of a factor
+cancel; X^2/X; X
+cancel; X/X^2; 1/X
+cancel; (X_1)/(X_1)^3; 1/(X_1)^2
+cancel; (X+1)^2/(X+1)^2; 1
+
+#Fractions anywhere in the expression. Nothing to cancel
+cancel; sin(X)(X_1)/(X_1); sin(X)
+cancel; sin((X^2_1)/(X_1)); sin(X+1)
+cancel; 1/(X+1)+(X^2_1)/(X+1); X_1+1/(X+1)
+cancel; (X^2_1)/(X_1)+(X^2_4)/(X_2); 2X+3
+cancel; (X^2_1)/(X_2); X^2/(X_2)_1/(X_2)
+cancel; X+1; X+1
 
 #One fraction over a common denominator (a form). comdenomf = top and bottom factored. ACT Q26
 comdenomf; sqrt(2(D_C)/A); sqrt(2(D_C)/A)
 comdenom; sqrt(2(D_C)/A); sqrt((2D_2C)/A)
 comdenom; 1+1/X; (X+1)/X
+comdenom; X+1/X; (X^2+1)/X
 comdenom; A/B+C/D; (AD+BC)/(BD)
 comdenom; X/2+Y/3; (3X+2Y)/6
+comdenom; 1/4+X/6; (2X+3)/12
+comdenom; 1/X+1/Y; (X+Y)/(XY)
+comdenom; 1/X+1/Y+1/Z; (YZ+XZ+XY)/(XYZ)
+comdenom; X/(X+1)+1; (2X+1)/(X+1)
+comdenom; 1/sin(X)+1; (1+sin(X))/sin(X)
+comdenom; sin(X)/(X+1)+cos(X)/(X_1); (Xsin(X)_sin(X)+Xcos(X)+cos(X))/(X^2_1)
+
+#The lcm of the denominators: each factor at its largest power, the numbers' lcm
 comdenom; 1/X_1/(X+1); 1/(X^2+X)
 comdenomf; 1/X_1/(X+1); 1/(X(X+1))
-comdenom; (X^2_1)/(X+1)^2; (X_1)/(X+1)
+comdenom; 1/(X+1)+1/(X_1); 2X/(X^2_1)
+comdenomf; 1/(X+1)+1/(X_1); 2X/((X_1)(X+1))
+comdenom; 1/(X+1)_1/(X_1); -2/(X^2_1)
 comdenom; 1/(X_1)+1/(X^2_1); (X+2)/(X^2_1)
-comdenom; X+Y; X+Y
+comdenom; 2/(X^2_4)+1/(X+2); X/(X^2_4)
+comdenomf; 2/(X^2_4)+1/(X+2); X/((X_2)(X+2))
+comdenom; 1/X+1/X^2; (X+1)/X^2
+comdenom; 1+2/X+1/X^2; (X^2+2X+1)/X^2
+comdenomf; 1+2/X+1/X^2; (X+1)^2/X^2
+comdenom; 1/(X+1)+1/(X^2+2X+1)+1/(X^3+3X^2+3X+1); (X^2+3X+3)/(X^3+3X^2+3X+1)
+comdenom; 1/(X^2_1)+1/(X_1)^2; 2X/(X^3_X^2_X+1)
+comdenomf; 1/(X^2_1)+1/(X_1)^2; 2X/((X_1)^2(X+1))
+comdenomf; 1/(X^2_4)_1/(X^2+4X+4); 4/((X_2)(X+2)^2)
+comdenom; 1/X+1/(X+1)+1/(X+2); (3X^2+6X+2)/(X^3+3X^2+2X)
+comdenom; 1/(2X)+1/(3X); 5/(6X)
+comdenom; X/2+1/(2X); (X^2+1)/(2X)
+comdenom; 1/(X_1)+1/(2_2X); -1/(2_2X)
 
-#Decimal form: approx(), then 6 significant digits like the nspire. ACT Q11, Q45, Q23
+#Cancelled afterwards
+comdenom; (X^2_1)/(X+1)^2; (X_1)/(X+1)
+comdenomf; X/(X_1)_1/(X_1); 1
+comdenom; (X+1)/(X_1); (X+1)/(X_1)
+
+#Inner sums first: a fraction of fractions
+comdenom; (1+1/X)/(1_1/X); (X+1)/(X_1)
+
+#Nothing to do
+comdenom; X+Y; X+Y
+comdenom; 1/X; 1/X
+comdenom; pi/2+pi/3; 5pi/6
+comdenom; 1/X_1/X; 0
+
+#Decimal form: approx(), then 6 significant digits like the nspire. ACT Q11, Q45, Q23, Q13, Q19, Q24
 decimal; -4.9*3^2+30*3+55; 100.9
 decimal; 0.75*1+0.25*2; 1.25
 decimal; 7e^(3*5)+1; 2.28831E7
+decimal; (5/13)/(5/12); 0.923077
+decimal; 7+14(25_1); 343
+decimal; 2/9pi; 0.698132
+
+#Fractions stay exact until the end
 decimal; 1/3; 0.333333
 decimal; 2/3; 0.666667
 decimal; -1/8; -0.125
+decimal; 1/7; 0.142857
+decimal; 1/3+2/3; 1
+
+#Constants, roots, logs, trig (radians), factorial
 decimal; pi; 3.14159
+decimal; e; 2.71828
+decimal; 2pi; 6.28319
+decimal; e^2; 7.38906
+decimal; pi/pi; 1
 decimal; sqrt(2); 1.41421
 decimal; 2sqrt(2)+1; 3.82843
-decimal; 1/1024; 9.76563E-4
-decimal; 1/1000; 0.001
-decimal; 999999.6; 1E6
-decimal; 123456; 123456
-decimal; 1234567; 1.23457E6
-decimal; 100; 100
-decimal; ln(2); 0.693147
-decimal; sin(1); 0.841471
+decimal; sqrt(2)/2; 0.707107
+decimal; 2sqrt(3); 3.4641
+decimal; 1_sqrt(2); -0.414214
+decimal; sqrt(2)^2; 2
+decimal; (1+sqrt(5))/2; 1.61803
 decimal; 3root(2); 1.25992
+decimal; 8^(2/3); 4
+decimal; 2^(3/2); 2.82843
+decimal; 6sqrt(105); 61.4817
+decimal; ln(2); 0.693147
+decimal; log(100); 2
+decimal; sin(1); 0.841471
+decimal; cos(pi); -1
+decimal; abs(-3); 3
 decimal; 5!; 120
+decimal; 10!; 3.6288E6
+
+#Six significant digits, trailing zeros dropped, rounded half up
+decimal; 0; 0
+decimal; 9.5; 9.5
+decimal; 123456; 123456
+decimal; 123456.7; 123457
+decimal; 12345.67; 12345.7
+decimal; 123.456789; 123.457
+decimal; 0.9999995; 1
+decimal; 2.5000051; 2.50001
+decimal; 999999.4; 999999
+decimal; 999999.6; 1E6
+
+#Plain from 0.001 up to 999999, else 1.23457E6 like the TI-84
+decimal; 1000000; 1E6
+decimal; 1234567; 1.23457E6
+decimal; -1234567; -1.23457E6
+decimal; 2^20; 1.04858E6
+decimal; 10^20; 1E20
+decimal; 1/1000; 0.001
+decimal; 0.0012345678; 0.00123457
+decimal; 1/1024; 9.76563E-4
+decimal; 1/3000; 3.33333E-4
+decimal; 10^-20; 1E-20
+decimal; 1[E]6; 1E6
+decimal; 1.5[E]-3; 0.0015

@@ -100,8 +100,11 @@ test_t **test_Load(char *file, unsigned *len) {
     while(fgets(line, sizeof(line), f) != NULL) {
         test_t *t;
 
-        if(i >= MAX_TESTS)
+        /*Fluxion: say so, otherwise the rest of the file looks like it passed. wasted ages on this*/
+        if(i >= MAX_TESTS) {
+            printf("Only the first %u tests in %s are run (MAX_TESTS), the rest are skipped.\n", MAX_TESTS, file);
             break;
+        }
 
         t = test_Parse(line);
 

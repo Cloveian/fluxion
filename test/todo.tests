@@ -1,0 +1,122 @@
+#What the engine gets wrong, badly, or hangs on. Same format as fluxion.tests, not run by make.
+#The expected value is the right answer; the comment above each case says what it gives now.
+#Move a case to fluxion.tests once it passes. (2026-10-14)
+
+#HANG: simplify(NORMALIZE|COMMUTATIVE|RATIONAL|EVAL), i.e. without LIKE_TERMS, never ends on a
+#numeric fraction plus or minus another term (X/2_1/2, 3/2_sqrt(5), 3/2+sqrt(5)/2, X^2/2_1/2):
+#simplify_rational and eval undo each other, ~10000 passes each in 4 s, eval_pow never called.
+#simplify(SIMP_ALL) on the same text is fine. That flag set is used by the test runner on every
+#expected value, by cancel_fraction() and comdenom on the top and bottom, by factor_addition()
+#(NORMALIZE|RATIONAL|EVAL) and by the app's factor( command (SIMP_BASIC|SIMP_EVAL).
+#gives: hang, in cancel_fraction's simplify of the top
+cancel; (X^2/2_1/2)/(X_1); (X+1)/2
+#gives: the right roots (3/2_sqrt(5)/2, 3/2+sqrt(5)/2), but the runner hangs on the expected text so they can't be tested
+solve; X^2_3X+1=0; X; 3/2_sqrt(5)/2,3/2+sqrt(5)/2
+solve; X^2_X_1=0; X; 1/2_sqrt(5)/2,1/2+sqrt(5)/2
+
+#HANG: simplify(SIMP_ALL) itself, on two fractions over the same variable whose numbers don't
+#divide each other (1/(2X)+1/(2X^2), 1/X+1/(2X^2), 1/(2X)+1/(4X^2) are fine). rational and eval
+#alternate forever (~30000 passes each in 5 s) inside the simplify that factor_addition() calls
+#from simplify's identities step. No Fluxion code in the loop, so maybe upstream's too.
+#gives: hang, so enter hangs the calculator
+simplify; 1/(2X)+1/X^2; 1/(2X)+1/X^2
+simplify; 1/(2X)+1/(3X^2); 1/(2X)+1/(3X^2)
+#gives: hang (in the simplify before comdenom)
+comdenom; 1/(4X)+1/(6X^2); (3X+2)/(12X^2)
+
+#Solve: a fraction coefficient makes the polynomial "not numeric": simplify keeps 1/4 as the
+#fraction node 1/4, not a number, so read_term() sets numeric = false and a quadratic is unknown
+#gives: unknown
+solve; X^2=1/4; X; -1/2,1/2
+solve; X^2/4=1; X; -2,2
+solve; 0.5X^2=2; X; -2,2
+solve; X^2/2_X/2_15=0; X; -5,6
+solve; X^2=X/2; X; 0,1/2
+solve; X^2=1/2; X; -sqrt(2)/2,sqrt(2)/2
+
+#Solve: fraction roots aren't sorted (sort_roots() only compares number nodes; 1/2 is a fraction node)
+#gives: 1/2, -1/2
+solve; 4X^2=1; X; -1/2,1/2
+#gives: 0, -1/2
+solve; 2X^2+X=0; X; -1/2,0
+#gives: 1/2, -1/3
+solve; (2X_1)(3X+1)=0; X; -1/3,1/2
+#gives: -1, 1, 1/2
+solve; 2X^3_X^2_2X+1=0; X; -1,1/2,1
+
+#Solve: a negative coefficient of X leaves the root as a fraction over -1
+#gives: 3/-1
+solve; -X=3; X; -3
+#gives: 2/-1
+solve; -2X=4; X; -2
+
+#Solve: sqrt(3/2) comes out as sqrt(3)/sqrt(2), not rationalized (the Nspire gives sqrt(6)/2)
+#gives: -sqrt(3)/sqrt(2), sqrt(3)/sqrt(2)
+solve; 2X^2=3; X; -sqrt(6)/2,sqrt(6)/2
+
+#Solve: a degree over SOLVE_MAX (32) gives up even when it's X^n
+#gives: unknown
+solve; X^33=0; X; 0
+
+#Factor: with no rational roots, the pairwise gcd factoring makes a polynomial worse (the Q37 problem)
+#gives: 1+X(1+X)
+factor; X^2+X+1; X^2+X+1
+#gives: -1000002+X(1+X). The coefficient is over the root search limit, so no roots are looked for
+factor; X^2+X_1000002; X^2+X_1000002
+
+#Factor: one variable only. The Nspire factors these
+#gives: X^2+Y(Y+2X)
+factor; X^2+2XY+Y^2; (X+Y)^2
+#gives: X^2_Y^2
+factor; X^2_Y^2; (X_Y)(X+Y)
+#Factor: only rational roots are found, X^4+X^2+1 = (X^2_X+1)(X^2+X+1) over the rationals
+#gives: (X_1)(X+1)(X^4+X^2+1)
+factor; X^6_1; (X_1)(X+1)(X^2_X+1)(X^2+X+1)
+
+#Cancel: one variable only
+#gives: A^2/(A_B)_B^2/(A_B)
+cancel; (A^2_B^2)/(A_B); A+B
+#Cancel: a fraction over a fraction isn't flattened first, so nothing cancels
+#gives: X^2/(X_1)_1/(X_1)
+cancel; ((X^2_1)/(X+3))/((X_1)/(X+3)); X+1
+#Cancel: cancelling (X_1) against -(X_1) leaves X/1 behind
+#gives: -1_X/1
+cancel; (X^2_1)/(1_X); -X_1
+
+#Comdenom: a top that cancels to 0 stays 0 over the denominator
+#gives: 0/(1_X)
+comdenom; 1/(X_1)+1/(1_X); 0
+#gives: 0/(X^2_1)
+comdenom; 1/(X_1)_1/(X+1)_2/(X^2_1); 0
+#Comdenom: top and bottom of a fraction of fractions share XY, not cancelled (one variable only)
+#gives: (XY^2+YX^2)/(XY^2_YX^2)
+comdenom; (1/X+1/Y)/(1/X_1/Y); (X+Y)/(Y_X)
+#Comdenomf: a top with no rational roots goes through the pairwise gcd factoring, which makes it worse
+#gives: (3X^2+2(1+3X))/(X(X+1)(X+2))
+comdenomf; 1/X+1/(X+1)+1/(X+2); (3X^2+6X+2)/(X(X+1)(X+2))
+#gives: (1+X(1+X))/X^3
+comdenomf; 1/X+1/X^2+1/X^3; (X^2+X+1)/X^3
+
+#Roots: like terms don't add roots of the same number (2^(3/2) and 3*2^(1/2) look different)
+#gives: 3sqrt(2)+2^(3/2)
+simplify; sqrt(18)+sqrt(8); 5sqrt(2)
+#gives: 2sqrt(3)+3^(3/2)
+simplify; sqrt(12)+sqrt(27); 5sqrt(3)
+#Roots: trial division stops at 1000 (ROOT_MAX_FACTOR), so the square of a bigger prime stays inside
+#gives: sqrt(2036162)
+simplify; sqrt(2*1009^2); 1009sqrt(2)
+#Roots: an odd root of a negative number becomes the principal complex root. The TI-84 and the
+#Nspire give the real one, approx() computes the real one, so the decimal form has no answer
+#gives: 1+sqrt(3)i
+simplify; 3root(-8); -2
+#gives: 3/2^(2/3)+i3^(3/2)/2^(2/3)
+simplify; 3root(-54); -3*2^(1/3)
+#gives: not a number (simplify made it complex first)
+decimal; 3root(-8); -2
+#Roots: sqrt(X^2) is X, not abs(X) (upstream behaviour)
+#gives: 2Xsqrt(3)
+simplify; sqrt(12X^2); 2sqrt(3)abs(X)
+
+#Decimal: float isn't good for 6 digits after a power: pi^2 = 9.869604..., but float(pi)^2 = 9.869605
+#gives: 9.86961
+decimal; pi^2; 9.8696

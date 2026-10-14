@@ -9,7 +9,7 @@
 /*Max length for a line in the file*/
 #define MAX_LINE (MAX_PAR * 3)
 /*Max tests we will have*/
-#define MAX_TESTS 256
+#define MAX_TESTS 1024
 
 typedef enum {
     TEST_SIMPLIFY,
