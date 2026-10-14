@@ -89,24 +89,45 @@ static box_t *word_box(const char *text) {
     return b;
 }
 
-/* x = -5 or x = 6, like the Nspire */
+/* put the plain number first in a root's sum (or the top of its fraction) so
+   (-3 - 2sqrt(6))/5, (-3 + 2sqrt(6))/5 read as a pair. the layout keeps the
+   order of same-degree terms, so just moving it in the tree is enough (i think) */
+static void number_first(pcas_ast_t *e) {
+    pcas_ast_t *k;
+    unsigned i = 0;
+
+    if(isoptype(e, OP_DIV))
+        e = ast_ChildGet(e, 0);
+    if(!isoptype(e, OP_ADD))
+        return;
+    for(k = ast_ChildGet(e, 0); k != NULL; k = k->next, i++) {
+        if(k->type == NODE_NUMBER && i > 0) {
+            ast_ChildInsert(e, ast_ChildRemoveIndex(e, i), 0);
+            return;
+        }
+    }
+}
+
+/* x = -5, 6. each root over one denominator, number first */
 static box_t *solutions_box(char var, pcas_ast_t **roots, int n) {
     char name[2] = { var, '\0' };
     box_t *row = layout_box(BOX_ROW, 0);
     int i;
 
+    layout_add(row, layout_text(name, 0));
+    layout_add(row, layout_space(LAYOUT_SPACE(0)));
+    layout_add(row, layout_text("=", 0));
+    layout_add(row, layout_space(LAYOUT_SPACE(0)));
+
     for(i = 0; i < n; i++) {
         if(i > 0) {
-            layout_add(row, layout_space(2 * SPACE_BINARY));
-            layout_add(row, layout_text("or", 0));
+            layout_add(row, layout_text(",", 0));
             layout_add(row, layout_space(2 * SPACE_BINARY));
         }
-        layout_add(row, layout_text(name, 0));
-        layout_add(row, layout_space(LAYOUT_SPACE(0)));
-        layout_add(row, layout_text("=", 0));
-        layout_add(row, layout_space(LAYOUT_SPACE(0)));
 
+        comdenom(roots[i], false);
         simplify_canonical_form(roots[i], canon_flags);
+        number_first(roots[i]);
         layout_add(row, layout_build(roots[i], &draw_font));
     }
 
@@ -910,8 +931,9 @@ static void draw_screen(void) {
     screen_show();
 }
 
-/* The key that stops a slow answer. K_NONE: not picked yet, nothing stops it */
-#define CANCEL_KEY K_NONE
+/* [on]+this stops a slow answer, like [on] breaks a program on the TI */
+/* #define CANCEL_KEY K_ON   // plain [on] is the TI's own break key, dont */
+#define CANCEL_KEY K_MODE
 
 static clock_t busy_next;
 static unsigned busy_frame;
@@ -946,7 +968,11 @@ static bool busy_poll(void) {
     busy_next = clock() + CLOCKS_PER_SEC / 10;
     busy_frame++;
     draw_working();
-    return CANCEL_KEY != K_NONE && keys_peek().key == CANCEL_KEY;
+    {
+        keypress_t p = keys_peek();
+
+        return p.on && p.key == CANCEL_KEY;
+    }
 }
 
 static void busy_start(void) {

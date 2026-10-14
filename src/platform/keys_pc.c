@@ -266,6 +266,9 @@ keypress_t keys_peek(void) {
         if(down[sc])
             press.key = from_key(SDL_GetKeyFromScancode((SDL_Scancode)sc, SDL_KMOD_NONE, false));
     }
+    /* Esc is [mode] here (it quits from keys_wait()): Ctrl+Esc = [on]+[mode], cancel */
+    if(press.key == K_NONE && down[SDL_SCANCODE_ESCAPE])
+        press.key = K_MODE;
 
     /* its key-down is queued too, don't let keys_wait() see it as a new press */
     if(press.key != K_NONE || press.on) {

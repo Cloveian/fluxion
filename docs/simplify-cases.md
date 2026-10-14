@@ -12,7 +12,8 @@ Real cases where the nspire's answer wasn't what i wanted. This is the spec for 
 | # | Input | Nspire gave | Want | Why |
 | - | ----- | ----------- | ---- | --- |
 | 1 | | $\frac{-\sqrt{10\pi}}{20\pi}$ | $-\frac{1}{2\sqrt{10\pi}}$ | rationalized for no reason, π is still on the bottom |
-| 2 | | a bunch of `e` and `log` | only `ln` | the input only needed `ln` |
+| 2 | | a bunch of $e$ and $\log$ | only $\ln$ | the input only needed $\ln$ |
+| 3 | `solve(5x²+6x=3,x)` | $x=\frac{-(2\sqrt6+3)}{5}$ or $x=\frac{2\sqrt6-3}{5}$ | $x=\frac{-3-2\sqrt6}{5}, \frac{-3+2\sqrt6}{5}$ (and $\frac{-3\pm2\sqrt6}{5}$ as a form) | one fraction each, written the same way round, one $x =$ and commas, not "or". **Done** 10-14 ($\pm$ not yet) |
 
 ## Real problems (ACT practice test, 2026 booklet, maths section)
 
