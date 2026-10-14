@@ -1,5 +1,11 @@
 # Log
 
+## 2026-10-14 - more engine tests
+
+- `fluxion.tests` went from 68 to 256 tests, every feature + edge cases
+- `todo.tests` is a list of stuff the engine gets wrong right now (not run by make)
+- the test runner silently stopped at 256 tests per file?? (・_・ヾ so it said 256/256 when there were more. raised it and it says when it skips now
+
 ## 2026-10-14 - engine for the forms
 
 - decided forms are a mode (see [ui](../design-choices/ui.md)). engine first, the key isn't picked yet so nothing's wired up
