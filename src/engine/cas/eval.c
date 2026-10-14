@@ -303,6 +303,53 @@ static bool eval_div(pcas_ast_t *e, unsigned short flags) {
 
 #define power_in_small_range(a, b) (mp_rat_compare_value((a)->op.num, -1, 1) == 0 || (mp_rat_compare_value((a)->op.num, 10, 1) <= 0 && mp_rat_compare_value((b)->op.num, 10, 1) <= 0))
 
+/*Fluxion: trial division for root factors stops here, so a k-th power of a bigger
+prime stays inside the root (still right, just not as simple)*/
+#define ROOT_MAX_FACTOR 1000
+
+/*Fluxion: n^(1/k) with n = s^k * r, s > 1, becomes s * r^(1/k): sqrt(3780) = 6sqrt(105).
+exponent is the 1/k node. returns false if there's no k-th power to take out.*/
+/*rawr~~*/
+static bool eval_root_factors(pcas_ast_t *e, mp_int n, mp_small k, pcas_ast_t *exponent) {
+    mp_int r = mp_int_alloc(), s = mp_int_alloc(), q = mp_int_alloc();
+    mp_small p, rem;
+    bool changed = false;
+    int count, i;
+
+    if(r != NULL && s != NULL && q != NULL) {
+        mp_int_copy(n, r);
+        mp_int_set_value(s, 1);
+
+        for(p = 2; p <= ROOT_MAX_FACTOR && mp_int_compare_value(r, 1) > 0; p += p == 2 ? 1 : 2) {
+            for(count = 0; mp_int_div_value(r, p, q, &rem) == MP_OK && rem == 0; count++)
+                mp_int_copy(q, r);
+
+            /*p^count: whole k-th powers out, the rest back in*/
+            for(i = 0; i < count / k; i++)
+                mp_int_mul_value(s, p, s);
+            for(i = 0; i < count % k; i++)
+                mp_int_mul_value(r, p, r);
+        }
+
+        if(mp_int_compare_value(s, 1) > 0) {
+            mp_rat outside = num_FromInt(1), inside = num_FromInt(1);
+
+            mp_int_copy(s, &outside->num);
+            mp_int_copy(r, &inside->num);
+            replace_node(e, ast_MakeBinary(OP_MULT,
+                                ast_MakeNumber(outside),
+                                ast_MakeBinary(OP_POW, ast_MakeNumber(inside), ast_Copy(exponent))
+                            ));
+            changed = true;
+        }
+    }
+
+    if(r != NULL) mp_int_free(r);
+    if(s != NULL) mp_int_free(s);
+    if(q != NULL) mp_int_free(q);
+    return changed;
+}
+
 static bool eval_pow(pcas_ast_t *e, unsigned short flags) {
     /*a^b*/
     pcas_ast_t *a, *b;
@@ -444,6 +491,9 @@ static bool eval_pow(pcas_ast_t *e, unsigned short flags) {
                 replace_node(e, ast_MakeNumber(ret));
 
                 changed = true;
+            } else {
+                /*Fluxion: not a perfect power, but maybe part of it is (trial division only to 1000, too slow otherwise)*/
+                changed = eval_root_factors(e, &b->op.num->num, small, temp);
             }
 
             mp_int_free(check);

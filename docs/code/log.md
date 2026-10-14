@@ -1,5 +1,11 @@
 # Log
 
+## 2026-10-13 - square factors out of roots
+
+- $\sqrt{35\cdot108} \to 6\sqrt{105}$ (ACT Q8), $\sqrt{72} \to 6\sqrt{2}$, etc
+- had to do it in two places because simplify keeps merging $2\sqrt{2}$ back into $2^{3/2}$
+- noticed: a fraction in an exponent ($54^{1/3}$) is drawn big and low so it looks like the mixed number $54\frac{1}{3}$ lol
+
 ## 2026-10-13 - solve
 
 - `solve(2x+3=7,x)` from the Algebra folder, `=` is `[2nd][math]` (TEST on the TI, `=` is the first thing in it). if you leave out the variable it uses x
