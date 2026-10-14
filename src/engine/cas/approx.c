@@ -167,11 +167,31 @@ static void scaled_round(mp_int n, mp_int d, int s, mp_int out) {
     mp_int_free(p);
 }
 
+/*n <=> d * 10^k, n and d positive*/
+static int compare_pow10(mp_int n, mp_int d, int k) {
+    mp_int a = mp_int_alloc(), b = mp_int_alloc(), p = mp_int_alloc();
+    int c;
+
+    mp_int_expt_value(10, k < 0 ? -k : k, p);
+    if(k >= 0) {
+        mp_int_copy(n, a);
+        mp_int_mul(d, p, b);
+    } else {
+        mp_int_mul(n, p, a);
+        mp_int_copy(d, b);
+    }
+    c = mp_int_compare(a, b);
+
+    mp_int_free(a);
+    mp_int_free(b);
+    mp_int_free(p);
+    return c;
+}
+
 void approx_format(mp_rat r, int digits, char *buf) {
-    mp_int n = mp_int_alloc(), d = mp_int_alloc(), m = mp_int_alloc(), lo = mp_int_alloc(), hi = mp_int_alloc();
+    mp_int n = mp_int_alloc(), d = mp_int_alloc(), m = mp_int_alloc(), hi = mp_int_alloc();
     char s[24];
     int exp, len, i;
-    real v;
 
     if(mp_rat_compare_zero(r) == 0) {
         strcpy(buf, "0");
@@ -183,20 +203,26 @@ void approx_format(mp_rat r, int digits, char *buf) {
     mp_int_abs(mp_rat_numer_ref(r), n);
     mp_int_copy(mp_rat_denom_ref(r), d);
 
-    /*digits significant digits: m in [10^(digits-1), 10^digits). The log is a
-    guess, fixed by checking m (it's off by one around powers of 10)*/
-    v = int_value(n) / int_value(d);
-    exp = isfinite(v) && v > 0 ? (int)floorf(log10f(v)) : 0;
-    mp_int_expt_value(10, digits - 1, lo);
+    /*10^exp <= n/d < 10^(exp+1), exactly: the digit counts are a guess (a bound,
+    can be one or two off). not a float log: past 10^38 that was inf, and m got
+    every digit*/
+    /*OwO*/
+    exp = (int)mp_int_string_len(n, 10) - (int)mp_int_string_len(d, 10);
+    while(compare_pow10(n, d, exp) < 0)
+        exp--;
+    while(compare_pow10(n, d, exp + 1) >= 0)
+        exp++;
+
+    /*digits significant digits, m in [10^(digits-1), 10^digits). rounding can
+    carry over: 9.999996 is 10.0000*/
+    scaled_round(n, d, digits - 1 - exp, m);
     mp_int_expt_value(10, digits, hi);
-    for(i = 0; i < 4; i++) {
-        scaled_round(n, d, digits - 1 - exp, m);
-        if(mp_int_compare(m, hi) >= 0)     exp++;
-        else if(mp_int_compare(m, lo) < 0) exp--;
-        else break;
+    if(mp_int_compare(m, hi) >= 0) {
+        exp++;
+        mp_int_div_value(m, 10, m, NULL);
     }
 
-    mp_int_to_string(m, 10, s, sizeof(s));
+    mp_int_to_string(m, 10, s, sizeof(s) - 1);     /*imath writes the NUL at s[limit]*/
     len = (int)strlen(s);
     while(len > 1 && s[len - 1] == '0')
         len--;
@@ -244,6 +270,5 @@ done:
     mp_int_free(n);
     mp_int_free(d);
     mp_int_free(m);
-    mp_int_free(lo);
     mp_int_free(hi);
 }

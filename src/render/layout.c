@@ -688,7 +688,11 @@ static int deepest(const box_t *b) {
     int d = 0;
 
     for(; b != NULL; b = b->next) {
-        int here = MAX(b->level, deepest(b->child));
+        /* into a local first! MAX evaluates it twice, which made this exponential
+           in the nesting (16 nested sin( took over 30 s on the PC, found that
+           one the hard way) */
+        int child = deepest(b->child), here = MAX(b->level, child);
+
         d = MAX(d, here);
     }
     return d;
@@ -710,7 +714,8 @@ void layout_finish(box_t *root, const layout_font_t *font) {
 
     /* normal math at font->base, unless something nests deeper than the sizes
        below it: then a bigger base, so the deepest part is still size 0 */
-    base = MAX(font->base, deepest(root));
+    base = deepest(root);
+    base = MAX(font->base, base);
     if(base > font->sizes - 1)
         base = font->sizes - 1;
     assign_sizes(root, base);
