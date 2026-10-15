@@ -59,7 +59,8 @@ typedef enum {
     BOX_PARENS, /* content, brackets grown to its height */
     BOX_ABS, /* content, |bars| as tall as it */
     BOX_CURSOR, /* the editor's cursor, no width and a line's height */
-    BOX_SLOT /* an empty slot in a template, drawn as a box */
+    BOX_SLOT, /* an empty slot in a template, drawn as a box */
+    BOX_SELECT /* a row, highlighted (the editor's selection) */
 } box_kind_t;
 
 typedef struct box {

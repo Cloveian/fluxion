@@ -3,12 +3,14 @@
 /*
     PC version of keys.h: the SDL window's keyboard, mapped to TI keys.
 
-      typing        digits, letters (either case), + - * / ^ ( ) , .
+      typing        digits, letters, + - * / ^ ( ) , .
       ~             [(-)], negate    =         [2nd][math]
       numpad        digits . + - * / enter, with NumLock on or off
       Backspace     [clear]          Delete    [del]
       Enter         [enter]          arrows    arrows
       Shift alone   [alpha]          Alt alone [2nd]
+      Shift+letter  a capital (same as [2nd][alpha] + letter)
+      Shift+arrows  [alpha] + arrow, selects
       Alt+key       [2nd], then the key
       Ctrl alone    [on]             Ctrl+key  the key, with [on] held
       Tab           [2nd]
@@ -79,7 +81,7 @@ static key_t from_text(char c) {
     if(c >= 'a' && c <= 'z')
         return (key_t)(K_LETTER_A + (c - 'a'));
     if(c >= 'A' && c <= 'Z')
-        return (key_t)(K_LETTER_A + (c - 'A'));
+        return (key_t)(K_CAPITAL_A + (c - 'A'));
 
     switch(c) {
     case '+': return K_ADD;
@@ -200,6 +202,7 @@ static bool is_modifier(SDL_Keycode k) {
 static void key_down(const SDL_KeyboardEvent *ev) {
     bool on = (ev->mod & SDL_KMOD_CTRL) != 0;
     bool alt = (ev->mod & SDL_KMOD_ALT) != 0;
+    bool shift = (ev->mod & SDL_KMOD_SHIFT) != 0;
     key_t key;
 
     /* new keystroke, so whatever text comes next belongs to it */
@@ -232,6 +235,8 @@ static void key_down(const SDL_KeyboardEvent *ev) {
     if(key != K_NONE) {
         if(alt)
             push(K_2ND, on);
+        if(shift && (key == K_LEFT || key == K_RIGHT || key == K_UP || key == K_DOWN))
+            push(K_ALPHA, on);  /* [alpha] + arrow selects */
         push(key, on);
         return;
     }

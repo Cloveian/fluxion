@@ -15,6 +15,7 @@
 #include "platform/keys.h"
 #include "platform/power.h"
 #include "ui/catalog.h"
+#include "ui/page.h"
 
 /*
     screen, top to bottom:
@@ -34,10 +35,21 @@ typedef struct {
     box_t *in, *out;    /* out == NULL means a message instead */
     const char *message;
     unsigned long ms;
+    ed_row_t *row, *out_row;    /* both again as editor rows, for pasting back */
 } entry_t;
 
 static entry_t history[HISTORY_MAX];
 static int history_len;
+
+/*
+    the history works like the nspire's. up from the line highlights the last answer, up
+    again its input, up again the answer before... enter pastes it, [on]+2
+    copies it. left/right goes inside it (browsing) to select just a part.
+*/
+static int hist = -1; /* entry highlighted, -1 = typing in the input line */
+static bool hist_out; /* its answer instead of its input */
+static bool browsing; /* moving around inside it, with view */
+static editor_t view;
 
 static editor_t ed;
 static bool second, alpha;      /* [2nd] / [alpha] pressed, for the next key */
@@ -53,10 +65,13 @@ static unsigned char canon_flags = CANONICAL_ALL;
 
 /* history */
 
+/* always called while ed still has the line that was run */
 static void push(box_t *in, box_t *out, const char *message, unsigned long ms) {
     if(history_len == HISTORY_MAX) {
         layout_free(history[0].in);
         layout_free(history[0].out);
+        ed_row_free(history[0].row);
+        ed_row_free(history[0].out_row);
         memmove(&history[0], &history[1], (HISTORY_MAX - 1) * sizeof(entry_t));
         history_len--;
     }
@@ -65,6 +80,8 @@ static void push(box_t *in, box_t *out, const char *message, unsigned long ms) {
     history[history_len].out = out;
     history[history_len].message = message;
     history[history_len].ms = ms;
+    history[history_len].row = ed_copy_line(&ed);
+    history[history_len].out_row = out != NULL ? ed_from_box(out) : NULL;
     history_len++;
 }
 
@@ -73,7 +90,44 @@ static void clear_history(void) {
         history_len--;
         layout_free(history[history_len].in);
         layout_free(history[history_len].out);
+        ed_row_free(history[history_len].row);
+        ed_row_free(history[history_len].out_row);
     }
+    hist = -1;
+    browsing = false;
+}
+
+/* the row that's highlighted */
+static const ed_row_t *hist_row(void) {
+    return hist_out ? history[hist].out_row : history[hist].row;
+}
+
+/* up off the top of the input line */
+static void history_open(void) {
+    if(history_len == 0)
+        return;
+    hist = history_len - 1;
+    hist_out = history[hist].out_row != NULL;
+    browsing = false;
+}
+
+/* -- undo -- */
+
+/* the last key typed a plain character. a run of those is one undo step, else
+   undoing "sin(x)+12" would take forever */
+static bool typing_run;
+
+/* call before a key changes the line */
+static void will_edit(bool typing) {
+    if(!(typing && typing_run))
+        ed_checkpoint(&ed);
+    typing_run = typing;
+}
+
+/* the line's been run, clear it (undo brings it back) */
+static void line_done(void) {
+    will_edit(false);
+    ed_clear(&ed);
 }
 
 /* running the engine */
@@ -240,7 +294,7 @@ static void evaluate(void) {
     if(cmd != NULL && strcmp(cmd, "solve") == 0) {
         run_solve(src, ed_layout(&ed, &draw_font, false));
         free(src);
-        ed_clear(&ed);
+        line_done();
         return;
     }
     if(strchr(src, '=') != NULL) {
@@ -255,7 +309,7 @@ static void evaluate(void) {
 
     if(err != E_SUCCESS || e == NULL) {
         push(in, NULL, error_text[err], 0);
-        ed_clear(&ed);
+        line_done();
         return;
     }
 
@@ -285,7 +339,7 @@ static void evaluate(void) {
     push(in, pcas_cancelled ? NULL : layout_build(e, &draw_font), pcas_cancelled ? "cancelled" : NULL,
          (unsigned long)((clock() - start) * 1000 / CLOCKS_PER_SEC));
     ast_Cleanup(e);
-    ed_clear(&ed);
+    line_done();
 }
 
 /* -- menus -- */
@@ -448,6 +502,8 @@ static void menu_open(int folder) {
 static void menu_choose(int i) {
     const item_t *it = menu_item(i);
 
+    if(it->kind != ITEM_SETTING && pick(it, true))
+        will_edit(false);
     if(!pick(it, false)) {
         status = "not in Fluxion yet";
         return;
@@ -484,6 +540,108 @@ static void menu_key(keypress_t p) {
     }
 }
 
+/* the Catalog page, [2nd][0] like the TI. everything you can type, a-z, the
+   keys for it on the right and what it does at the bottom. enter types it */
+
+static unsigned char cat_order[96];
+static int cat_count;
+
+static const item_t *cat_item(int i) {
+    return catalog[cat_order[i]];
+}
+
+/* case doesn't matter, symbols end up first */
+static int cat_cmp(const char *a, const char *b) {
+    for(; *a != '\0' && *b != '\0'; a++, b++) {
+        char x = (char)(*a >= 'A' && *a <= 'Z' ? *a - 'A' + 'a' : *a);
+        char y = (char)(*b >= 'A' && *b <= 'Z' ? *b - 'A' + 'a' : *b);
+
+        if(x != y)
+            return x - y;
+    }
+    return *a - *b;
+}
+
+static const char *cat_label(int i) { return cat_item(i)->label; }
+static const char *cat_keys(int i)  { return cat_item(i)->keys; }
+static const char *cat_help(int i)  { return cat_item(i)->help; }
+
+static bool cat_pick(int i) {
+    const item_t *it = cat_item(i);
+
+    if(!pick(it, true)) {
+        status = it->have == HAVE_NO ? "not in Fluxion yet" : "use the keys on the right for that";
+        return true;
+    }
+    will_edit(false);
+    pick(it, false);
+    return true;
+}
+
+static page_t catalog_page = { "Catalog", 0, cat_label, cat_keys, cat_help, cat_pick };
+
+static void catalog_open(void) {
+    /* sorted once, insertion sort is plenty for ~60 */
+    /* order? i hardly know 'er bwhahaHAHAah */
+    if(cat_count == 0) {
+        unsigned i;
+
+        for(i = 0; i < catalog_count && cat_count < (int)sizeof cat_order; i++) {
+            int k = cat_count++;
+
+            if(catalog[i]->kind == ITEM_SETTING) {
+                cat_count--;    /* those go in a settings page */
+                continue;
+            }
+            for(; k > 0 && cat_cmp(catalog[cat_order[k - 1]]->label, catalog[i]->label) > 0; k--)
+                cat_order[k] = cat_order[k - 1];
+            cat_order[k] = (unsigned char)i;
+        }
+        catalog_page.count = cat_count;
+    }
+    page_open(&catalog_page);
+}
+
+/* [math] pops up the plain characters with no key of their own, in a little grid that
+   pops up at the cursor. 1-9 and 0 pick them straight away */
+
+#define POPUP_COLS 5
+
+static const char popup_chars[] = {
+    '=', CH_NE, '<', '>', CH_LE,
+    CH_GE, '!', CH_INF, CH_DEG, CH_THETA
+};
+#define POPUP_COUNT ((int)sizeof popup_chars)
+
+static int popup = -1; /* selected one, -1 = closed */
+
+/* where the cursor was last drawn, so the popup knows where to go */
+static int cur_x, cur_top;
+
+static void popup_pick(int i) {
+    will_edit(false);
+    ed_insert_char(&ed, popup_chars[i]);
+    popup = -1;
+}
+
+static void popup_key(keypress_t p) {
+    switch(p.key) {
+    case K_LEFT:  popup = (popup + POPUP_COUNT - 1) % POPUP_COUNT; break;
+    case K_RIGHT: popup = (popup + 1) % POPUP_COUNT; break;
+    case K_UP: case K_DOWN:
+        popup = (popup + POPUP_COLS) % POPUP_COUNT;
+        break;
+    case K_ENTER: popup_pick(popup); break;
+    case K_CLEAR: case K_MATH: popup = -1; break;
+    default:
+        if(p.key >= K_1 && p.key <= K_9 && (int)(p.key - K_1) < POPUP_COUNT)
+            popup_pick((int)(p.key - K_1));
+        else if(p.key == K_0 && POPUP_COUNT >= 10)
+            popup_pick(9);
+        break;
+    }
+}
+
 /* typing (key -> editor) */
 
 /* x^2, x^-1. make an exponent with this in it, then step back out */
@@ -510,10 +668,23 @@ static char alpha_letter(key_t k) {
     }
 }
 
+static bool key_plain(keypress_t p);
+
 /* returns false to quit */
 static bool key_2nd(keypress_t p) {
     switch(p.key) {
     case K_MODE:   return false;   /* quit */
+    case K_LEFT:   typing_run = false; ed_home(&ed); return true;
+    case K_RIGHT:  typing_run = false; ed_end(&ed); return true;
+    case K_0:      typing_run = false; catalog_open(); return true;
+    case K_UP: case K_DOWN: case K_ENTER: case K_DEL: case K_CLEAR:
+        return key_plain(p);
+    default:
+        will_edit(false);
+        break;
+    }
+
+    switch(p.key) {
     case K_POW:    ed_insert_char(&ed, CH_PI); break;
     case K_DIV:    ed_insert_char(&ed, CH_EULER); break;
     case K_DOT:    ed_insert_char(&ed, CH_IMAG); break;
@@ -531,12 +702,34 @@ static bool key_2nd(keypress_t p) {
 
 static bool key_plain(keypress_t p) {
     if(p.key >= K_0 && p.key <= K_9) {
+        will_edit(true);
         ed_insert_char(&ed, (char)('0' + (p.key - K_0)));
         return true;
     }
     if(p.key >= K_LETTER_A && p.key <= K_LETTER_Z) {
+        will_edit(true);
         ed_insert_char(&ed, (char)('a' + (p.key - K_LETTER_A)));
         return true;
+    }
+    if(p.key >= K_CAPITAL_A && p.key <= K_CAPITAL_Z) {
+        will_edit(true);
+        ed_insert_char(&ed, (char)('A' + (p.key - K_CAPITAL_A)));
+        return true;
+    }
+
+    switch(p.key) {
+    case K_LEFT: case K_RIGHT: case K_UP: case K_DOWN: case K_ENTER:
+    case K_YEQU: case K_WINDOW: case K_ZOOM: case K_TRACE: case K_GRAPH:
+    case K_QUIT: case K_MATH:
+        typing_run = false;     /* not an edit (enter saves its own step) */
+        break;
+    case K_DOT: case K_NEG: case K_ADD: case K_SUB: case K_MUL: case K_DIV:
+    case K_COMMA: case K_XT:
+        will_edit(true);
+        break;
+    default:
+        will_edit(false);
+        break;
     }
 
     switch(p.key) {
@@ -546,7 +739,12 @@ static bool key_plain(keypress_t p) {
     case K_ADD:    ed_insert_char(&ed, ED_PLUS); break;
     case K_SUB:    ed_insert_char(&ed, ED_SUB); break;
     case K_MUL:    ed_insert_char(&ed, ED_TIMES); break;
-    case K_DIV:    ed_insert_char(&ed, ED_DIVIDE); break;
+    case K_DIV:    /* with something selected it goes on top of a fraction (nspire) */
+        if(ed_has_selection(&ed))
+            ed_insert(&ed, ED_FRAC, NULL);
+        else
+            ed_insert_char(&ed, ED_DIVIDE);
+        break;
     case K_POW:    ed_insert(&ed, ED_POW, NULL); break;
     case K_SQUARE: power_of("2"); break;
     case K_RECIP: {
@@ -564,24 +762,34 @@ static bool key_plain(keypress_t p) {
     case K_LN:     ed_insert(&ed, ED_FUNC, "ln"); break;
     case K_LOG:    ed_insert(&ed, ED_FUNC, "log"); break;
 
-    case K_LEFT:   ed_left(&ed); break;
-    case K_RIGHT:  ed_right(&ed); break;
-    case K_UP:     ed_up(&ed); break;
+    /* with something selected, left/right just drop it on that side (like any
+       text box) */
+    case K_LEFT:
+        if(ed_has_selection(&ed))
+            ed_deselect(&ed, true);
+        else
+            ed_left(&ed);
+        break;
+    case K_RIGHT:
+        if(ed_has_selection(&ed))
+            ed_deselect(&ed, false);
+        else
+            ed_right(&ed);
+        break;
+    case K_UP:
+        if(!ed_up(&ed))
+            history_open();
+        break;
     case K_DOWN:   ed_down(&ed); break;
 
-    /* [clear] is backspace, [on]+[clear] clears the line (Ctrl+Backspace) */
-    case K_CLEAR:
-        if(p.on)
-            ed_clear(&ed);
-        else
-            ed_backspace(&ed);
-        break;
+    case K_CLEAR:  ed_backspace(&ed); break;    /* [on]+[clear] is in key_ctl */
     case K_DEL:    ed_delete(&ed); break;
     case K_ENTER:  evaluate(); break;
 
     case K_YEQU: case K_WINDOW: case K_ZOOM: case K_TRACE: case K_GRAPH:
         menu_open((int)(p.key - K_YEQU));
         break;
+    case K_MATH:   popup = 0; break;
 
     default:
         break;
@@ -592,9 +800,9 @@ static bool key_plain(keypress_t p) {
 /* two taps of [2nd] or [alpha] this close together lock it */
 #define DOUBLE_TAP (CLOCKS_PER_SEC * 2 / 5)
 
-/* [2nd] / [alpha] / [on]: on for the next key, a double tap or [2nd][alpha]
-   locks (alpha lock, like the TI), one more tap unlocks. [on] goes with either */
-/* one modifier tapped. a quick second tap locks it whatever the first one did
+/* [2nd] / [alpha] / [on]: on for the next key, a double tap locks, one more tap
+   unlocks. they're separate so any of them can be on together ([2nd][alpha] + a
+   letter is a capital). a quick second tap locks it whatever the first one did
    (it may have just turned it off), a tap while locked unlocks */
 static void tap(bool *on, bool *lock, bool again) {
     if(again)
@@ -617,26 +825,180 @@ static void modifier(key_t k) {
     last = k;
     last_time = clock();
 
-    if(k == K_ON) {
+    if(k == K_ON)
         tap(&ctl, &ctl_lock, again);
-    } else if(k == K_ALPHA && second && !second_lock) {
-        second = false;
-        alpha = alpha_lock = true;
-        again = true;
-    } else if(k == K_2ND) {
+    else if(k == K_2ND)
         tap(&second, &second_lock, again);
-        alpha = alpha_lock = false;
-    } else {
+    else
         tap(&alpha, &alpha_lock, again);
-        second = second_lock = false;
-    }
 
     /* locking ate the double tap, so a third quick tap starts a fresh one */
     if(again)
         last = K_NONE;
 }
 
+static ed_row_t *clipboard;
+
+/* [on] + key is Ctrl on a computer. 1 2 3 are cut copy paste since they're next
+   to each other, like X C V. false if it isn't one of these */
+static bool key_ctl(keypress_t p) {
+    switch(p.key) {
+    case K_1:
+    case K_2: {
+        ed_row_t *copy = ed_copy(&ed);
+
+        if(copy == NULL) {
+            status = ed_has_selection(&ed) ? "out of memory" : "nothing selected ([alpha] + arrows)";
+            return true;
+        }
+        ed_row_free(clipboard);
+        clipboard = copy;
+        if(p.key == K_1) {
+            will_edit(false);
+            ed_erase_selection(&ed);
+        }
+        return true;
+    }
+    case K_3:
+        if(clipboard == NULL) {
+            status = "nothing copied yet";
+            return true;
+        }
+        will_edit(false);
+        ed_paste(&ed, clipboard);
+        return true;
+    case K_STO:
+        typing_run = false;
+        if(!ed_undo(&ed))
+            status = "nothing to undo";
+        return true;
+    case K_CLEAR: /* whole line, Ctrl+Backspace */
+        will_edit(false);
+        ed_clear(&ed);
+        return true;
+    default:
+        return false;
+    }
+}
+
+/* one step up / down through answer, input, answer before... */
+static void hist_up(void) {
+    if(hist_out) {
+        hist_out = false;
+    } else if(hist > 0) {
+        hist--;
+        hist_out = history[hist].out_row != NULL;
+    }
+}
+
+static void hist_down(void) {
+    if(!hist_out && history[hist].out_row != NULL) {
+        hist_out = true;
+    } else if(hist < history_len - 1) {
+        hist++;
+        hist_out = false;
+    } else {
+        hist = -1;  /* past the newest, back to typing */
+    }
+}
+
+/* what enter and copy take, just the selected part when browsing, else the whole thing */
+static ed_row_t *hist_take(void) {
+    if(browsing)
+        return ed_has_selection(&view) ? ed_copy(&view) : ed_copy_line(&view);
+    return ed_row_copy(hist_row());
+}
+
+/* keys while the history's highlighted. true if the key was used up, else it
+   goes back to the input line and gets handled there like normal */
+static bool history_key(keypress_t p, bool alp) {
+    if(p.on && p.key == K_2) {
+        ed_row_t *copy = hist_take();
+
+        if(copy != NULL) {
+            ed_row_free(clipboard);
+            clipboard = copy;
+        }
+        return true;
+    }
+
+    if(browsing) {
+        switch(p.key) {
+        case K_LEFT:
+            if(alp)
+                ed_select_left(&view);
+            else if(ed_has_selection(&view))
+                ed_deselect(&view, true);
+            else
+                ed_left(&view);
+            return true;
+        case K_RIGHT:
+            if(alp)
+                ed_select_right(&view);
+            else if(ed_has_selection(&view))
+                ed_deselect(&view, false);
+            else
+                ed_right(&view);
+            return true;
+        case K_UP:
+            if(!ed_up(&view)) {
+                browsing = false;
+                hist_up();
+            }
+            return true;
+        case K_DOWN:
+            if(!ed_down(&view)) {
+                browsing = false;
+                hist_down();
+            }
+            return true;
+        case K_CLEAR:
+            browsing = false;   /* back to the whole thing highlighted */
+            return true;
+        default:
+            break;
+        }
+    } else {
+        switch(p.key) {
+        case K_UP:    hist_up(); return true;
+        case K_DOWN:  hist_down(); return true;
+        case K_LEFT:
+        case K_RIGHT:
+            /* inside it, the cursor coming in from that side */
+            if(hist_row() != NULL && ed_load(&view, hist_row(), p.key == K_LEFT))
+                browsing = true;
+            return true;
+        case K_CLEAR:
+            hist = -1;
+            return true;
+        default:
+            break;
+        }
+    }
+
+    if(p.key == K_ENTER) {
+        ed_row_t *row = hist_take();
+
+        /* into the line at the cursor, like the nspire */
+        if(row != NULL) {
+            will_edit(false);
+            ed_paste(&ed, row);
+            ed_row_free(row);
+        }
+        hist = -1;
+        browsing = false;
+        return true;
+    }
+
+    hist = -1;
+    browsing = false;
+    return false;
+}
+
 static bool handle(keypress_t p) {
+    bool sec, alp;
+    char c;
+
     status = NULL;
 
     if(p.key == K_QUIT)
@@ -646,31 +1008,68 @@ static bool handle(keypress_t p) {
         menu_key(p);
         return true;
     }
+    if(popup >= 0) {
+        popup_key(p);
+        return true;
+    }
+
 
     if(p.key == K_2ND || p.key == K_ALPHA || p.key == K_ON) {
         modifier(p.key);
         return true;
     }
     last = K_NONE;
-    if(ctl) {
-        p.on = true;
-        ctl = ctl_lock;
+
+    /* every modifier that's on (tapped or held down) goes with this key, then
+       the tapped ones turn off unless locked */
+    p.on = p.on || ctl;
+    sec = second || p.second;
+    alp = alpha || p.alpha;
+    ctl = ctl_lock;
+    second = second_lock;
+    alpha = alpha_lock;
+
+    c = alp ? alpha_letter(p.key) : 0;
+    if(p.key >= K_LETTER_A && p.key <= K_LETTER_Z)
+        c = (char)('a' + (p.key - K_LETTER_A));
+
+    if(page_is_open()) {
+        if(sec && p.key == K_MODE)  /* [2nd][mode] is quit, out of the page here */
+            page_close();
+        else
+            page_key(p, c);
+        return true;
     }
 
-    if(second) {
-        second = second_lock;
+    if(hist >= 0 && history_key(p, alp))
+        return true;
+
+    if(p.on && key_ctl(p))
+        return true;
+
+    /* [2nd][alpha] + letter, a capital */
+    if(sec && alp && c >= 'a' && c <= 'z') {
+        will_edit(true);
+        ed_insert_char(&ed, (char)(c - 'a' + 'A'));
+        return true;
+    }
+
+    if(sec)
         return key_2nd(p);
-    }
 
-    if(alpha) {
-        char c = alpha_letter(p.key);
-
-        alpha = alpha_lock;
-        if(p.key == K_YEQU) {   /* [alpha][y=] is n/d, like the TI */
+    if(alp) {
+        switch(p.key) {
+        case K_LEFT:  typing_run = false; ed_select_left(&ed); return true;
+        case K_RIGHT: typing_run = false; ed_select_right(&ed); return true;
+        case K_YEQU:  /* [alpha][y=] is n/d, like the TI */
+            will_edit(false);
             ed_insert(&ed, ED_FRAC, NULL);
             return true;
+        default:
+            break;
         }
         if(c != 0) {
+            will_edit(true);
             ed_insert_char(&ed, c);
             return true;
         }
@@ -776,6 +1175,46 @@ static void draw_menu(void) {
     }
 }
 
+static int top_h(void);
+
+/* the [math] grid, just above the cursor, each cell numbered in the corner */
+static void draw_popup(void) {
+    const font_t *font = draw_font_for(draw_font.base), *tiny = draw_font_for(0);
+    int cell_w = 22, cell_h = font->ascent + font->descent + 6;
+    int rows = (POPUP_COUNT + POPUP_COLS - 1) / POPUP_COLS;
+    int w = POPUP_COLS * cell_w + 1, h = rows * cell_h + 1;
+    int x = cur_x - w / 2, y = cur_top - h - 2, i;
+
+    if(x < 1)
+        x = 1;
+    if(x + w > SCREEN_W - 1)
+        x = SCREEN_W - 1 - w;
+    if(y < top_h())
+        y = top_h();
+
+    screen_color(COL_BG);
+    screen_fill(x, y, w, h);
+    screen_color(COL_DIM);
+    screen_hline(x, y, w);
+    screen_hline(x, y + h - 1, w);
+    screen_vline(x, y, h);
+    screen_vline(x + w - 1, y, h);
+
+    for(i = 0; i < POPUP_COUNT; i++) {
+        int cx = x + (i % POPUP_COLS) * cell_w, cy = y + (i / POPUP_COLS) * cell_h;
+        char s[2] = { popup_chars[i], '\0' }, num[2] = { (char)(i < 9 ? '1' + i : '0'), '\0' };
+
+        if(i == popup) {
+            screen_color(COL_ACCENT);
+            screen_fill(cx + 1, cy + 1, cell_w - 1, cell_h - 1);
+        }
+        screen_color(i == popup ? COL_BG : COL_DIM);
+        draw_text(cx + 2, cy + 1, num, tiny);
+        screen_color(i == popup ? COL_BG : COL_FG);
+        draw_text(cx + (cell_w - draw_text_width(s, font)) / 2 + 2, cy + 4, s, font);
+    }
+}
+
 /* the status bar */
 
 /* along the top: 2nd / alpha (with a padlock when locked), the working dots,
@@ -847,12 +1286,48 @@ static void draw_top_bar(void) {
         draw_modifier(x, "alpha", alpha_lock);
 }
 
+/* behind the highlighted half of a history entry. browsing gets just an outline,
+   the selection inside it is the highlight then */
+static void highlight(int x, int base, const box_t *b) {
+    int top = base - b->ascent - 1, h = b->ascent + b->descent + 2;
+
+    if(browsing) {
+        screen_color(COL_DIM);
+        screen_hline(x - 2, top, b->width + 4);
+        screen_hline(x - 2, top + h - 1, b->width + 4);
+        screen_vline(x - 2, top, h);
+        screen_vline(x + b->width + 1, top, h);
+    } else {
+        screen_color(COL_SELECT);
+        screen_fill(x - 2, top, b->width + 4, h);
+    }
+}
+
+/* how far up one history entry goes, the same steps draw_screen takes */
+static int entry_h(const entry_t *h) {
+    const font_t *small = draw_label_font();
+    int n = h->out != NULL ? h->out->ascent + h->out->descent + 2 : small->ascent + small->descent + 2;
+
+    if(h->in != NULL)
+        n += h->in->ascent + h->in->descent + GAP;
+    return n + GAP;
+}
+
 static void draw_screen(void) {
     const font_t *small = draw_label_font();
     box_t *in = ed_layout(&ed, &draw_font, true);
     int line_y, y, i, avail = SCREEN_W - 2 * MARGIN;
 
     screen_clear();
+
+    if(page_is_open()) {
+        layout_free(in);
+        page_draw(top_h() + 2);
+        draw_top_bar();
+        screen_show();
+        return;
+    }
+
     draw_bar();
 
     /* input line, just above the soft keys. scrolls sideways to keep the cursor in view. */
@@ -869,6 +1344,8 @@ static void draw_screen(void) {
         }
         screen_color(COL_FG);
         draw_box(in, x, base);
+        cur_x = cursor_x(in, x);
+        cur_top = base - in->ascent;
         line_y = base - in->ascent - 3;
         layout_free(in);
     } else {
@@ -886,16 +1363,37 @@ static void draw_screen(void) {
     }
 
     /* history, newest at the bottom, going up to the status bar (drawn over
-       the top of the last one) */
+       the top of the last one). scrolled so the highlighted one fits */
+    i = history_len - 1;
+    if(hist >= 0) {
+        int below = 0, k;
+
+        for(k = hist; k <= i; k++)
+            below += entry_h(&history[k]);
+        for(; i > hist && below > line_y - GAP - top_h(); i--)
+            below -= entry_h(&history[i]);
+    }
     y = line_y - GAP;
-    for(i = history_len - 1; i >= 0 && y > top_h(); i--) {
+    for(; i >= 0 && y > top_h(); i--) {
         entry_t *h = &history[i];
+        box_t *out = h->out, *inb = h->in, *browse = NULL;
 
-        if(h->out != NULL) {
-            int base = y - h->out->descent;
+        /* when browsing, the editor's version (cursor, selection and all) goes in
+           place of the highlighted half */
+        if(i == hist && browsing && (browse = ed_layout(&view, &draw_font, true)) != NULL) {
+            if(hist_out)
+                out = browse;
+            else
+                inb = browse;
+        }
 
+        if(out != NULL) {
+            int base = y - out->descent, x = SCREEN_W - MARGIN - out->width;
+
+            if(i == hist && hist_out)
+                highlight(x, base, out);
             screen_color(COL_FG);
-            draw_box(h->out, SCREEN_W - MARGIN - h->out->width, base);
+            draw_box(out, x, base);
             if(h->ms >= 100) {
                 char t[32];
 
@@ -903,7 +1401,7 @@ static void draw_screen(void) {
                 screen_color(COL_DIM);
                 draw_text(MARGIN, base - small->ascent, t, small);
             }
-            y -= h->out->ascent + h->out->descent + 2;
+            y -= out->ascent + out->descent + 2;
         } else {
             screen_color(COL_DIM);
             draw_text(SCREEN_W - MARGIN - draw_text_width(h->message, small),
@@ -911,11 +1409,14 @@ static void draw_screen(void) {
             y -= small->ascent + small->descent + 2;
         }
 
-        if(h->in != NULL) {
+        if(inb != NULL) {
+            if(i == hist && !hist_out)
+                highlight(MARGIN, y - inb->descent, inb);
             screen_color(COL_FG);
-            draw_box(h->in, MARGIN, y - h->in->descent);
-            y -= h->in->ascent + h->in->descent + GAP;
+            draw_box(inb, MARGIN, y - inb->descent);
+            y -= inb->ascent + inb->descent + GAP;
         }
+        layout_free(browse);
 
         screen_color(COL_DIM);
         screen_hline(MARGIN + 20, y + 1, SCREEN_W - 2 * MARGIN - 40);
@@ -925,6 +1426,8 @@ static void draw_screen(void) {
 
     if(menu >= 0)
         draw_menu();
+    if(popup >= 0)
+        draw_popup();
 
     screen_show();
 }

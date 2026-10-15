@@ -4,110 +4,167 @@
 
 /*
     keys are a proposal (input.md left the mapping for later): each key keeps the
-    meaning it has on the TI-84 itself, so nothing needs learning. [on] chords for
-    select / copy / paste come later.
+    meaning it has on the TI-84 itself, so nothing needs learning. select / copy /
+    paste are [on] chords, those are in app.c (key_ctl).
 
     engine syntax reminders: capital single-letter variables, _ is subtract,
     - is negate, $ marks a slot the editor fills in.
 */
 
-#define ITEM(name, label, kind, keys, engine, have, note) \
-    static const item_t name = { label, kind, keys, engine, have, note };
+#define ITEM(name, label, kind, keys, engine, have, note, help) \
+    static const item_t name = { label, kind, keys, engine, have, note, help };
 
 /* stuff you type straight from the keypad */
 
 /* numbers */
-ITEM(it_digits,   "0-9",   ITEM_CHAR, "[0]-[9]",  "0-9",   HAVE_YES, NULL)
-ITEM(it_point,    ".",     ITEM_CHAR, "[.]",      ".",     HAVE_YES, NULL)
-ITEM(it_negate,   "(-)",   ITEM_CHAR, "[(-)]",    "-",     HAVE_YES, "negate, not subtract")
-ITEM(it_sci,      "E",     ITEM_CHAR, "[2nd][,]", "[E]",   HAVE_YES, "scientific: 2E3")
+ITEM(it_digits,   "0-9",   ITEM_CHAR, "[0]-[9]",  "0-9",   HAVE_YES, NULL,
+     "the digits. answers stay exact, so 1/3 stays 1/3")
+ITEM(it_point,    ".",     ITEM_CHAR, "[.]",      ".",     HAVE_YES, NULL,
+     "decimal point, for numbers like 2.5")
+ITEM(it_negate,   "(-)",   ITEM_CHAR, "[(-)]",    "-",     HAVE_YES, "negate, not subtract",
+     "negative sign, the (-) key. not the same as subtract")
+ITEM(it_sci,      "E",     ITEM_CHAR, "[2nd][,]", "[E]",   HAVE_YES, "scientific: 2E3",
+     "times ten to a power, for very big or small numbers. 2E3 -> 2000")
 
 /* operators */
-ITEM(it_plus,     "+",     ITEM_CHAR, "[+]",      "+",     HAVE_YES, NULL)
-ITEM(it_minus,    "-",     ITEM_CHAR, "[-]",      "_",     HAVE_YES, NULL)
-ITEM(it_times,    "x",     ITEM_CHAR, "[x]",      "*",     HAVE_YES, "shown as nothing, or a dot between numbers")
-ITEM(it_divide,   "/",     ITEM_CHAR, "[/]",      "/",     HAVE_YES, "typed inline, shown stacked (Nspire)")
-ITEM(it_open,     "(",     ITEM_CHAR, "[(]",      "(",     HAVE_YES, NULL)
-ITEM(it_close,    ")",     ITEM_CHAR, "[)]",      ")",     HAVE_YES, NULL)
-ITEM(it_comma,    ",",     ITEM_CHAR, "[,]",      ",",     HAVE_YES, "between arguments: logb(x,2)")
-ITEM(it_equals,   "=",     ITEM_CHAR, "[2nd][math]", "=", HAVE_PARTLY, "only in solve(: the engine has no equations, the app splits the line")
+ITEM(it_plus,     "+",     ITEM_CHAR, "[+]",      "+",     HAVE_YES, NULL,
+     "adds. 2+3 -> 5")
+ITEM(it_minus,    "-",     ITEM_CHAR, "[-]",      "_",     HAVE_YES, NULL,
+     "subtracts. 5-3 -> 2. for a negative number use the (-) key instead")
+ITEM(it_times,    "x",     ITEM_CHAR, "[x]",      "*",     HAVE_YES, "shown as nothing, or a dot between numbers",
+     "multiplies. 2*x shows as 2x; between two numbers it shows as a dot")
+ITEM(it_divide,   "/",     ITEM_CHAR, "[/]",      "/",     HAVE_YES, "typed inline, shown stacked (Nspire)",
+     "divides. you type it in a line and it is drawn as a stacked fraction. 6/4 -> 3/2")
+ITEM(it_open,     "(",     ITEM_CHAR, "[(]",      "(",     HAVE_YES, NULL,
+     "opening parenthesis, to group things. 2(x+1)")
+ITEM(it_close,    ")",     ITEM_CHAR, "[)]",      ")",     HAVE_YES, NULL,
+     "closing parenthesis, ends a group or a function's input")
+ITEM(it_comma,    ",",     ITEM_CHAR, "[,]",      ",",     HAVE_YES, "between arguments: logb(x,2)",
+     "separates the inputs of a function, like solve(2x=6,x)")
+ITEM(it_equals,   "=",     ITEM_CHAR, "[2nd][math]", "=", HAVE_PARTLY, "only in solve(: the engine has no equations, the app splits the line",
+     "equals sign, [2nd][math]. only works inside solve. solve(2x=6,x) -> x = 3")
 
 /* variables and constants */
-ITEM(it_x,        "x",     ITEM_CHAR, "[x,t,theta,n]", "X", HAVE_YES, "shown lowercase")
-ITEM(it_letters,  "a-z",   ITEM_CHAR, "[alpha] + key", "A-Z", HAVE_YES, "shown lowercase, one letter each")
-ITEM(it_pi,       "pi",    ITEM_CHAR, "[2nd][^]",  "pi",   HAVE_YES, NULL)
-ITEM(it_e,        "e",     ITEM_CHAR, "[2nd][/]",  "e",    HAVE_YES, "the constant, drawn bold")
-ITEM(it_i,        "i",     ITEM_CHAR, "[2nd][.]",  "i",    HAVE_YES, "the constant, drawn bold")
-ITEM(it_theta,    "theta", ITEM_CHAR, NULL,        "theta", HAVE_YES, NULL)
+ITEM(it_x,        "x",     ITEM_CHAR, "[x,t,theta,n]", "X", HAVE_YES, "shown lowercase",
+     "the variable x, on its own key: [x,t,theta,n]")
+ITEM(it_letters,  "a-z",   ITEM_CHAR, "[alpha] + key", "A-Z", HAVE_YES, "shown lowercase, one letter each",
+     "variables, one letter each. [alpha] + a key types the letter above it")
+ITEM(it_pi,       "pi",    ITEM_CHAR, "[2nd][^]",  "pi",   HAVE_YES, NULL,
+     "the number pi = 3.14159..., kept exact. sin(pi/2) -> 1")
+ITEM(it_e,        "e",     ITEM_CHAR, "[2nd][/]",  "e",    HAVE_YES, "the constant, drawn bold",
+     "the number e = 2.71828..., drawn bold so it isn't the variable e. ln(e) -> 1")
+ITEM(it_i,        "i",     ITEM_CHAR, "[2nd][.]",  "i",    HAVE_YES, "the constant, drawn bold",
+     "the imaginary unit, i^2 = -1. drawn bold so it isn't the variable i")
+ITEM(it_theta,    "theta", ITEM_CHAR, NULL,        "theta", HAVE_YES, NULL,
+     "the variable theta, often used for angles. it has no key of its own")
 
 /* powers and roots */
-ITEM(it_power,    "x^n",   ITEM_TEMPLATE, "[^]",       "($)^($)",   HAVE_YES, "cursor jumps into the exponent")
-ITEM(it_square,   "x^2",   ITEM_CHAR,     "[x^2]",     "^2",        HAVE_YES, NULL)
-ITEM(it_recip,    "x^-1",  ITEM_CHAR,     "[x^-1]",    "^(-1)",     HAVE_YES, NULL)
-ITEM(it_sqrt,     "sqrt",  ITEM_TEMPLATE, "[2nd][x^2]", "sqrt($)",  HAVE_YES, NULL)
-ITEM(it_cbrt,     "cbrt",  ITEM_TEMPLATE, NULL,        "($)root($)", HAVE_YES, "3root: ROOT with index 3")
-ITEM(it_nroot,    "n-root", ITEM_TEMPLATE, NULL,       "($)root($)", HAVE_YES, "index first")
+ITEM(it_power,    "x^n",   ITEM_TEMPLATE, "[^]",       "($)^($)",   HAVE_YES, "cursor jumps into the exponent",
+     "raises to a power; the cursor moves into the exponent. 2^5 -> 32")
+ITEM(it_square,   "x^2",   ITEM_CHAR,     "[x^2]",     "^2",        HAVE_YES, NULL,
+     "squares what comes before it. 3^2 -> 9")
+ITEM(it_recip,    "x^-1",  ITEM_CHAR,     "[x^-1]",    "^(-1)",     HAVE_YES, NULL,
+     "one over what comes before it. 4^-1 -> 1/4")
+ITEM(it_sqrt,     "sqrt",  ITEM_TEMPLATE, "[2nd][x^2]", "sqrt($)",  HAVE_YES, NULL,
+     "square root. sqrt(8) -> 2sqrt(2)")
+ITEM(it_cbrt,     "cbrt",  ITEM_TEMPLATE, NULL,        "($)root($)", HAVE_YES, "3root: ROOT with index 3",
+     "cube root. cbrt(27) -> 3")
+ITEM(it_nroot,    "n-root", ITEM_TEMPLATE, NULL,       "($)root($)", HAVE_YES, "index first",
+     "root with any index; type the index first. the 4th root of 16 -> 2")
 
 /* functions with their own key */
-ITEM(it_sin,      "sin",   ITEM_FUNCTION, "[sin]",       "sin($)",  HAVE_YES, NULL)
-ITEM(it_cos,      "cos",   ITEM_FUNCTION, "[cos]",       "cos($)",  HAVE_YES, NULL)
-ITEM(it_tan,      "tan",   ITEM_FUNCTION, "[tan]",       "tan($)",  HAVE_YES, NULL)
-ITEM(it_asin,     "sin^-1", ITEM_FUNCTION, "[2nd][sin]", "asin($)", HAVE_YES, NULL)
-ITEM(it_acos,     "cos^-1", ITEM_FUNCTION, "[2nd][cos]", "acos($)", HAVE_YES, NULL)
-ITEM(it_atan,     "tan^-1", ITEM_FUNCTION, "[2nd][tan]", "atan($)", HAVE_YES, NULL)
-ITEM(it_ln,       "ln",    ITEM_FUNCTION, "[ln]",        "ln($)",   HAVE_YES, NULL)
-ITEM(it_exp,      "e^x",   ITEM_TEMPLATE, "[2nd][ln]",   "e^($)",   HAVE_YES, NULL)
-ITEM(it_log,      "log",   ITEM_FUNCTION, "[log]",       "log($)",  HAVE_YES, "base 10")
-ITEM(it_pow10,    "10^x",  ITEM_TEMPLATE, "[2nd][log]",  "10^($)",  HAVE_YES, NULL)
+ITEM(it_sin,      "sin",   ITEM_FUNCTION, "[sin]",       "sin($)",  HAVE_YES, NULL,
+     "sine of an angle, in radians. sin(pi/6) -> 1/2")
+ITEM(it_cos,      "cos",   ITEM_FUNCTION, "[cos]",       "cos($)",  HAVE_YES, NULL,
+     "cosine of an angle, in radians. cos(pi/3) -> 1/2")
+ITEM(it_tan,      "tan",   ITEM_FUNCTION, "[tan]",       "tan($)",  HAVE_YES, NULL,
+     "tangent of an angle, in radians. tan(pi/4) -> 1")
+ITEM(it_asin,     "sin^-1", ITEM_FUNCTION, "[2nd][sin]", "asin($)", HAVE_YES, NULL,
+     "inverse sine: the angle with this sine, in radians. sin^-1(1/2) -> pi/6")
+ITEM(it_acos,     "cos^-1", ITEM_FUNCTION, "[2nd][cos]", "acos($)", HAVE_YES, NULL,
+     "inverse cosine: the angle with this cosine, in radians. cos^-1(0) -> pi/2")
+ITEM(it_atan,     "tan^-1", ITEM_FUNCTION, "[2nd][tan]", "atan($)", HAVE_YES, NULL,
+     "inverse tangent: the angle with this tangent, in radians. tan^-1(1) -> pi/4")
+ITEM(it_ln,       "ln",    ITEM_FUNCTION, "[ln]",        "ln($)",   HAVE_YES, NULL,
+     "natural logarithm, base e. ln(e^2) -> 2")
+ITEM(it_exp,      "e^x",   ITEM_TEMPLATE, "[2nd][ln]",   "e^($)",   HAVE_YES, NULL,
+     "e raised to a power, the opposite of ln. e^0 -> 1")
+ITEM(it_log,      "log",   ITEM_FUNCTION, "[log]",       "log($)",  HAVE_YES, "base 10",
+     "logarithm base 10. log(1000) -> 3")
+ITEM(it_pow10,    "10^x",  ITEM_TEMPLATE, "[2nd][log]",  "10^($)",  HAVE_YES, NULL,
+     "10 raised to a power, the opposite of log. 10^3 -> 1000")
 
 /* folder-only (no direct key) */
 
 /* Functions */
-ITEM(it_sinh,     "sinh",  ITEM_FUNCTION, NULL, "sinh($)",  HAVE_YES, NULL)
-ITEM(it_cosh,     "cosh",  ITEM_FUNCTION, NULL, "cosh($)",  HAVE_YES, NULL)
-ITEM(it_tanh,     "tanh",  ITEM_FUNCTION, NULL, "tanh($)",  HAVE_YES, NULL)
-ITEM(it_asinh,    "sinh^-1", ITEM_FUNCTION, NULL, "asinh($)", HAVE_YES, NULL)
-ITEM(it_acosh,    "cosh^-1", ITEM_FUNCTION, NULL, "acosh($)", HAVE_YES, NULL)
-ITEM(it_atanh,    "tanh^-1", ITEM_FUNCTION, NULL, "atanh($)", HAVE_YES, NULL)
-ITEM(it_logb,     "log_b", ITEM_TEMPLATE, NULL, "logb($,$)", HAVE_YES, "argument first, then base")
-ITEM(it_abs,      "|x|",   ITEM_TEMPLATE, NULL, "abs($)",   HAVE_YES, NULL)
-ITEM(it_fact,     "!",     ITEM_CHAR,     NULL, "!",        HAVE_YES, NULL)
-ITEM(it_int,      "int",   ITEM_FUNCTION, NULL, "int($)",   HAVE_YES, "floor, like the TI's int(")
+ITEM(it_sinh,     "sinh",  ITEM_FUNCTION, NULL, "sinh($)",  HAVE_YES, NULL,
+     "hyperbolic sine, (e^x-e^-x)/2. sinh(0) -> 0")
+ITEM(it_cosh,     "cosh",  ITEM_FUNCTION, NULL, "cosh($)",  HAVE_YES, NULL,
+     "hyperbolic cosine, (e^x+e^-x)/2. cosh(0) -> 1")
+ITEM(it_tanh,     "tanh",  ITEM_FUNCTION, NULL, "tanh($)",  HAVE_YES, NULL,
+     "hyperbolic tangent, sinh(x)/cosh(x). tanh(0) -> 0")
+ITEM(it_asinh,    "sinh^-1", ITEM_FUNCTION, NULL, "asinh($)", HAVE_YES, NULL,
+     "inverse hyperbolic sine. sinh^-1(0) -> 0")
+ITEM(it_acosh,    "cosh^-1", ITEM_FUNCTION, NULL, "acosh($)", HAVE_YES, NULL,
+     "inverse hyperbolic cosine. cosh^-1(1) -> 0")
+ITEM(it_atanh,    "tanh^-1", ITEM_FUNCTION, NULL, "atanh($)", HAVE_YES, NULL,
+     "inverse hyperbolic tangent. tanh^-1(0) -> 0")
+ITEM(it_logb,     "log_b", ITEM_TEMPLATE, NULL, "logb($,$)", HAVE_YES, "argument first, then base",
+     "logarithm with any base. log_2(8) -> 3")
+ITEM(it_abs,      "|x|",   ITEM_TEMPLATE, NULL, "abs($)",   HAVE_YES, NULL,
+     "absolute value, the distance from 0. |-5| -> 5")
+ITEM(it_fact,     "!",     ITEM_CHAR,     NULL, "!",        HAVE_YES, NULL,
+     "factorial, multiplies 1 up to n. 5! -> 120")
+ITEM(it_int,      "int",   ITEM_FUNCTION, NULL, "int($)",   HAVE_YES, "floor, like the TI's int(",
+     "rounds down to a whole number, like the TI's int(. int(7/2) -> 3")
 
 /* Templates */
-ITEM(it_frac,     "n/d",   ITEM_TEMPLATE, "[alpha][y=]", "($)/($)", HAVE_YES, "empty fraction, cursor in the top")
-ITEM(it_parens,   "( )",   ITEM_TEMPLATE, NULL, "($)",       HAVE_YES, NULL)
-ITEM(it_piecewise, "piecewise", ITEM_TEMPLATE, NULL, NULL,   HAVE_NO, "no conditions in the engine")
+ITEM(it_frac,     "n/d",   ITEM_TEMPLATE, "[alpha][y=]", "($)/($)", HAVE_YES, "empty fraction, cursor in the top",
+     "an empty fraction. type the top, then move down to type the bottom")
+ITEM(it_parens,   "( )",   ITEM_TEMPLATE, NULL, "($)",       HAVE_YES, NULL,
+     "a pair of parentheses with the cursor inside, to group things")
+ITEM(it_piecewise, "piecewise", ITEM_TEMPLATE, NULL, NULL,   HAVE_NO, "no conditions in the engine",
+     "A function with a different rule for different values of x. not in Fluxion yet")
 
 /* Algebra (commands) */
 ITEM(it_simplify, "simplify", ITEM_COMMAND, "[enter]", NULL, HAVE_YES,
-     "always runs on enter: simplify(SIMP_ALL) + canonical form")
-ITEM(it_expand,   "expand", ITEM_COMMAND, NULL, "expand($)", HAVE_YES, "expand() with EXP_ALL")
+     "always runs on enter: simplify(SIMP_ALL) + canonical form",
+     "runs on [enter]: simplifies whatever is on the line")
+ITEM(it_expand,   "expand", ITEM_COMMAND, NULL, "expand($)", HAVE_YES, "expand() with EXP_ALL",
+     "multiplies everything out. expand((x+1)^2) -> x^2+2x+1")
 ITEM(it_subst,    "substitute", ITEM_COMMAND, NULL, "subst($,$,$)", HAVE_PARTLY,
-     "substitute() exists, but the parser has no syntax for it: Fluxion handles it")
+     "substitute() exists, but the parser has no syntax for it: Fluxion handles it",
+     "puts a value or expression in place of a variable. not in Fluxion yet")
 ITEM(it_evaluate, "evaluate", ITEM_COMMAND, NULL, "eval($)", HAVE_PARTLY,
-     "exact only (big powers, factorials); no decimal approximation yet")
+     "exact only (big powers, factorials); no decimal approximation yet",
+     "works out the exact value. eval(2^10) -> 1024. no decimal answers yet")
 ITEM(it_factor,   "factor", ITEM_COMMAND, NULL, "factor($)", HAVE_PARTLY,
-     "one variable over the rationals; not x^2-y^2, not irrational roots (factor(x^2-2,x))")
+     "one variable over the rationals; not x^2-y^2, not irrational roots (factor(x^2-2,x))",
+     "writes it as a product. factor(x^2-1) -> (x-1)(x+1). one variable only")
 ITEM(it_solve,    "solve",  ITEM_COMMAND, NULL, "solve($)", HAVE_PARTLY,
-     "solve(eq,x): linear (any coefficients), polynomials via factor + the quadratic formula; no systems")
+     "solve(eq,x): linear (any coefficients), polynomials via factor + the quadratic formula; no systems",
+     "solves linear and polynomial equations. solve(x^2-4=0,x) -> x = -2, 2. no systems")
 
 /* Calculus */
-ITEM(it_deriv,    "d/dx",   ITEM_TEMPLATE, NULL, "deriv($,X,X)", HAVE_YES, "derivative with respect to x")
-ITEM(it_deriv_at, "d/dx at", ITEM_TEMPLATE, NULL, "deriv($,X,$)", HAVE_YES, "derivative evaluated at a value")
-ITEM(it_integral, "integral", ITEM_TEMPLATE, NULL, NULL, HAVE_NO, "table + linearity + u-substitution")
-ITEM(it_limit,    "limit",  ITEM_TEMPLATE, NULL, NULL, HAVE_NO, NULL)
+ITEM(it_deriv,    "d/dx",   ITEM_TEMPLATE, NULL, "deriv($,X,X)", HAVE_YES, "derivative with respect to x",
+     "derivative with respect to x. d/dx(x^3) -> 3x^2")
+ITEM(it_deriv_at, "d/dx at", ITEM_TEMPLATE, NULL, "deriv($,X,$)", HAVE_YES, "derivative evaluated at a value",
+     "derivative at one value of x. d/dx(x^2) at x=3 -> 6")
+ITEM(it_integral, "integral", ITEM_TEMPLATE, NULL, NULL, HAVE_NO, "table + linearity + u-substitution",
+     "integral, the area under a curve. not in Fluxion yet")
+ITEM(it_limit,    "limit",  ITEM_TEMPLATE, NULL, NULL, HAVE_NO, NULL,
+     "the value a function gets close to as x gets close to a number. not in Fluxion yet")
 
 /* Tools */
-ITEM(it_id_basic, "basic identities", ITEM_SETTING, NULL, NULL, HAVE_YES, "SIMP_ID_GENERAL")
-ITEM(it_id_trig,  "trig identities",  ITEM_SETTING, NULL, NULL, HAVE_YES, "SIMP_ID_TRIG")
-ITEM(it_id_hyp,   "hyperbolic identities", ITEM_SETTING, NULL, NULL, HAVE_YES, "SIMP_ID_HYPERBOLIC")
-ITEM(it_id_cplx,  "complex identities", ITEM_SETTING, NULL, NULL, HAVE_YES, "SIMP_ID_COMPLEX")
-ITEM(it_id_tconst, "trig constants",  ITEM_SETTING, NULL, NULL, HAVE_YES, "SIMP_ID_TRIG_CONSTANTS")
-ITEM(it_id_iconst, "inverse trig constants", ITEM_SETTING, NULL, NULL, HAVE_YES, "SIMP_ID_TRIG_INV_CONSTANTS")
+ITEM(it_id_basic, "basic identities", ITEM_SETTING, NULL, NULL, HAVE_YES, "SIMP_ID_GENERAL", NULL)
+ITEM(it_id_trig,  "trig identities",  ITEM_SETTING, NULL, NULL, HAVE_YES, "SIMP_ID_TRIG", NULL)
+ITEM(it_id_hyp,   "hyperbolic identities", ITEM_SETTING, NULL, NULL, HAVE_YES, "SIMP_ID_HYPERBOLIC", NULL)
+ITEM(it_id_cplx,  "complex identities", ITEM_SETTING, NULL, NULL, HAVE_YES, "SIMP_ID_COMPLEX", NULL)
+ITEM(it_id_tconst, "trig constants",  ITEM_SETTING, NULL, NULL, HAVE_YES, "SIMP_ID_TRIG_CONSTANTS", NULL)
+ITEM(it_id_iconst, "inverse trig constants", ITEM_SETTING, NULL, NULL, HAVE_YES, "SIMP_ID_TRIG_INV_CONSTANTS", NULL)
 ITEM(it_rationalize, "rationalize", ITEM_SETTING, NULL, NULL, HAVE_YES,
-     "CANONICAL_RATIONALIZE; off by default is still undecided")
-ITEM(it_clear,    "clear history", ITEM_SETTING, NULL, NULL, HAVE_YES, NULL)
+     "CANONICAL_RATIONALIZE; off by default is still undecided", NULL)
+ITEM(it_clear,    "clear history", ITEM_SETTING, NULL, NULL, HAVE_YES, NULL, NULL)
 
 /* the lists */
 

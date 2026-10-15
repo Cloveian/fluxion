@@ -19,6 +19,7 @@ enum {
     COL_FG,
     COL_DIM, /* timings, labels */
     COL_ACCENT, /* cursor + highlights */
+    COL_SELECT, /* behind selected stuff, dark so the text on it still reads */
     COL_COUNT
 };
 

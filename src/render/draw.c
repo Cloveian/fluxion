@@ -170,6 +170,13 @@ void draw_box(const box_t *b, int x, int y) {
         screen_color(COL_FG);
         break;
 
+    case BOX_SELECT:
+        /* children are drawn after this, on top */
+        screen_color(COL_SELECT);
+        screen_fill(x, top, b->width, bottom - top + 1);
+        screen_color(COL_FG);
+        break;
+
     case BOX_SLOT: {
         /* dotted outline, one pixel in from the box */
         int i, l = x + 1, r = x + b->width - 2, t = top + 1, bt = bottom - 1;

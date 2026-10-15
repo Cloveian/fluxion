@@ -35,13 +35,17 @@ typedef enum {
 
     /* PC only - letters come straight off the keyboard, no alpha needed */
     K_LETTER_A, K_LETTER_Z = K_LETTER_A + 25,
+    K_CAPITAL_A, K_CAPITAL_Z = K_CAPITAL_A + 25,
 
     K_QUIT  /* the PC window got closed */
 } key_t;
 
+/* [on], [2nd] and [alpha] held down while the key was pressed. tapped on their
+   own (down and up, nothing in between) they come as K_ON / K_2ND / K_ALPHA */
 typedef struct {
     key_t key;
     bool on;    /* ctrl, i.e. [on] being held */
+    bool second, alpha;
 } keypress_t;
 
 void keys_begin(void);

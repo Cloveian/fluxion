@@ -32,6 +32,7 @@ typedef struct {
     const char *engine; /* engine string syntax, $ is a slot to fill */
     have_t have;
     const char *note;
+    const char *help; /* what it does, for the catalog page. NULL for settings */
 } item_t;
 
 typedef struct {

@@ -19,6 +19,7 @@ static const unsigned char palette[COL_COUNT][3] = {
     { 235, 235, 240 },  /* COL_FG */
     { 120, 120, 140 },  /* COL_DIM */
     { 110, 170, 255 },  /* COL_ACCENT */
+    {  40,  64, 112 },  /* COL_SELECT */
 };
 
 void screen_begin(void) { screen_clear(); }
