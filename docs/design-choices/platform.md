@@ -5,7 +5,7 @@ what language, toolchain and CAS engine
 I need to decide what to write this in, and what does the actual math
 
 ### Relevant constraints/nice to haves:
-- TI-84 Plus CE: eZ80 at 48 MHz, 320\*240 colour LCD, ~150 KB of user RAM
+- TI-84 Plus CE: eZ80 at 48 MHz, 320\*240 colour LCD, ~150 KB of user RAM. malloc only gets ~59 KB though, the toolchain's heap is a fixed window (`BSSHEAP_LOW`/`HIGH` in CEdev's `makefile.mk`), appvars in RAM come out of the rest
 - Program size: one program variable tops out around 64 KB
 - OS 5.5+ blocks C/asm programs unless jailbroken (arTIfiCE)
 

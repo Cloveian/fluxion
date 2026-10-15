@@ -3,7 +3,8 @@
 ## foundation thingys
 
 - [ ] Storage strategy. where persistent state lives, instead of leaning on
-  the OS's own variables.
+  the OS's own variables. going with RAM appvars, a RAM reset clearing them is fine. size gets capped,
+  history drops the oldest off the end when its full
 - [ ] Names. multi-letter vars and typeable functions are the same thing, one table of
   functions / `e` / `i` / stored stuff, letters turn into the longest name. stored = bold =
   not symbolic, always ([design](design-choices/input.md#names))
@@ -15,17 +16,21 @@
 
 ## engine maths
 
-- [ ] cot / sec / csc.
-- [ ] Multi-var / systems solve (ACT Q14). one variable only today.
-- [ ] Solving trig equations.
-- [ ] Holes & asymptotes. zeros of the denominator.
+- [ ] cot / sec / csc. real functions, not lazy: `cot` in means `cot` out, never 1/tan
+- [ ] Multi-var solve, pulling one var out, like `solve(y=7x+3,x)` -> $x=\frac{y-3}{7}$. linear already works, anything else gives up (`y=x^2+3`, `a=pi r^2`, `y=2^x`)
+- [ ] Systems (ACT Q14). its own function like the nspire's, commas, no `and`
+- [ ] Solving trig equations. general solution or an interval, that's a mode setting
+- [ ] Holes & asymptotes. zeros of the denominator. a function, answer on a few lines so it's readable.
 - [ ] Better "normal" math handling. the everyday cases that don't come out clean yet.
 
 ## polish
 
 - [ ] Lock icons. a padlock with the A / C / 2 in negative space, in their own spots so they show at once.
 - [ ] Finish bold / italic. the draw layer does it already, italic's unused.
-- [ ] Mode menu.
+- [ ] Mode menu. degrees / radians, simplify mode, the trig answer thing. simplify mode picks
+  what "simplest" means since its subjective (expanded or factored? roots in the bottom?).
+  presets plus a few toggles, "by hand" is the default preset and is really just a toggle
+  combo. the form key switches it, the rationalize toggle in Tools moves here
 - Optimisation. ongoing, cancel/poll is in and the slow cases are logged.
 
 ## later
