@@ -18,8 +18,17 @@ const font_t *draw_label_font(void);
 /* measurements for layout_build(), matching the fonts above */
 extern layout_font_t draw_font;
 
+/* bold / italic, done at draw time so there's no second font. a bitmask, so you
+   can OR them. nothing's styled by default yet */
+typedef enum {
+    STYLE_NORMAL = 0,
+    STYLE_BOLD   = 1,
+    STYLE_ITALIC = 2
+} font_style_t;
+
 /* text with its first row at top, in the current colour */
 void draw_text(int x, int top, const char *text, const font_t *font);
+void draw_text_styled(int x, int top, const char *text, const font_t *font, font_style_t style);
 int draw_text_width(const char *text, const font_t *font);
 
 /* draws b with its origin (left edge, baseline) at screen (x, y), in the current colour */

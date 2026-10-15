@@ -47,8 +47,16 @@ void draw_set_ladder(const font_t *const *fonts, int count, int base) {
     draw_font.base = (unsigned char)(base < count ? base : count - 1);
 }
 
-/* each glyph row as runs of horizontal lines (way faster than per-pixel, dont touch) */
 void draw_text(int x, int top, const char *text, const font_t *font) {
+    draw_text_styled(x, top, text, font, STYLE_NORMAL);
+}
+
+/* each glyph row as runs of horizontal lines (way faster than per-pixel, dont touch).
+   bold ORs each row onto itself shifted a pixel, same trick bdf2c bakes into the
+   constant e/i. italic shears each row by how far it is from the baseline, so the top
+   leans right and descenders lean left. advances don't change, so a styled run can
+   come out a touch wide (not chasing that pixel yet) */
+void draw_text_styled(int x, int top, const char *text, const font_t *font, font_style_t style) {
     int height = font->ascent + font->descent;
 
     for(; *text != '\0'; text++) {
@@ -59,6 +67,10 @@ void draw_text(int x, int top, const char *text, const font_t *font) {
         for(r = 0; r < height; r++) {
             unsigned short bits = rows[r];
             int col = 0;
+            int lean = (style & STYLE_ITALIC) ? (font->ascent - r) / 3 : 0;
+
+            if(style & STYLE_BOLD)
+                bits |= bits >> 1;
 
             while(bits != 0) {
                 int start, len = 0;
@@ -73,7 +85,7 @@ void draw_text(int x, int top, const char *text, const font_t *font) {
                     col++;
                     len++;
                 }
-                screen_hline(x + start, top + r, len);
+                screen_hline(x + start + lean, top + r, len);
             }
         }
 
@@ -139,7 +151,7 @@ void draw_box(const box_t *b, int x, int y) {
     switch(b->kind) {
     case BOX_TEXT: {
         const font_t *font = draw_font_for(b->size);
-        draw_text(x, y - font->ascent, b->text, font);
+        draw_text_styled(x, y - font->ascent, b->text, font, (font_style_t)b->style);
         break;
     }
 

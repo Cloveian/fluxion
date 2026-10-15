@@ -121,5 +121,26 @@ The five keys under the screen (`y=` `window` `zoom` `trace` `graph`) open the f
 - Tools stuff toggles (✓)
 - stuff the engine can't do yet is greyed out with a `*`
 
+## Names
+
+not built yet, this is the plan (roadmap: Names)
+
+multi-letter variables and typing `solve(` to get the function turned out to be the same problem, so it's one thing. there's a table of names: the functions, `e` and `i` (probably `pi` too), and anything stored. a run of letters gets split into the longest names from the left, redone on every edit, so `sinh` is one function, `xi` is $x \cdot i$ and `pin` is $\pi n$. if `ab` is stored then typing `a` `b` gives you `ab`, want $a \cdot b$? type `a*b`
+
+storing is `expr [sto→] name`, one letter or more. the name after the arrow is taken literally so you can make new ones. can't store to a builtin (`sin`, `e`, ...), and a loop like `a+1 [sto→] a` gets refused when you store it instead of hanging later. a value can be a whole expression or an equation, which keeps both sides since the engine has no `=`
+
+bold means it has a value. `e`, `i`, anything stored, and a bold name always gets substituted, no exceptions. so `solve(2x=6,x)` with x stored is an error ("x is stored") instead of quietly solving for 5. plain = symbolic. deleting it on the vars page makes it plain again
+
+the app does the substituting before it parses, so the engine still only ever sees single letters and doesnt change at all
+
+gotchas:
+
+- `e` and `i` can't be variables anymore
+- on the calc every letter is its own `[alpha]`, so `sin` goes `s`, `si` (bold i!), `sin`. just the display catching up
+- history keeps how it looked when you typed it, pasting it back re-splits it
+
+### Decision
+one name table. stored = bold = substituted everywhere, single letters can be stored too, `e` and `i` turn into names
+
 ---
 Back to [design choices](index.md) · [rendering](rendering.md) · [screens & operations](ui.md)

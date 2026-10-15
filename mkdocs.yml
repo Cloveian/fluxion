@@ -84,4 +84,5 @@ nav:
       - code/index.md
       - Structure: code/structure.md
       - Log: code/log.md
+  - Feature roadmap: roadmap.md
   - Shipping checklist: shipping-checklist.md
