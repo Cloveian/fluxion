@@ -941,6 +941,7 @@ static void put_char(out_t *o, char c) {
     case CH_THETA:  put(o, "theta"); return;
     case CH_EULER:  put(o, "e");     return;
     case CH_IMAG:   put(o, "i");     return;
+    case ED_SCI:    put(o, "[E]");   return;
     default:
         break;
     }
@@ -1110,6 +1111,9 @@ static box_t *lay_char(char c, unsigned char level) {
         break;
     case ED_TIMES:
         s[0] = CH_CDOT;
+        break;
+    case ED_SCI:
+        s[0] = 'E';
         break;
     default:
         break;

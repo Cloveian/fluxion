@@ -692,6 +692,7 @@ static bool key_2nd(keypress_t p) {
     case K_POW:    ed_insert_char(&ed, CH_PI); break;
     case K_DIV:    ed_insert_char(&ed, CH_EULER); break;
     case K_DOT:    ed_insert_char(&ed, CH_IMAG); break;
+    case K_COMMA:  ed_insert_char(&ed, ED_SCI); break;
     case K_SQUARE: ed_insert(&ed, ED_SQRT, NULL); break;
     case K_SIN:    ed_insert(&ed, ED_FUNC, "asin"); break;
     case K_COS:    ed_insert(&ed, ED_FUNC, "acos"); break;

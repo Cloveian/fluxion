@@ -33,6 +33,7 @@ typedef enum {
 #define ED_NEG      '\x07'      /* negate, the (-) key. minus with no space after it */
 #define ED_TIMES    '*'         /* shown as a dot */
 #define ED_DIVIDE   '/'         /* typed inline (nspire), stacked once it's a result */
+#define ED_SCI      '\x08'      /* the E in 2E3, [2nd][,]. drawn as a capital E, the engine gets [E] */
 
 /* more special characters, past ED_NEG. font codes like layout.h's, see tools/bdf2c.py */
 #define CH_LE       '\x10'
