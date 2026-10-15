@@ -5,7 +5,7 @@ Real cases where the nspire's answer wasn't what i wanted. This is the spec for 
 ## Rules so far
 - only rationalize if it actually helps (the bottom actually ends up rational, or it gets smaller)
 - don't put in functions i didn't type. $\ln$ in -> $\ln$ out, and turn internal stuff back ($e^{x\ln 2} \to 2^x$)
-- default is whatever's smallest on screen, other forms (factored, expanded, etc) one key away
+- default is what you'd write by hand as the simplified answer, other forms (factored, expanded, etc) one key away
 
 ## Cases
 

@@ -60,7 +60,7 @@ Folders, first guess (`*` = not in the engine yet, hybrid work or later):
 the nspire just picks a form and if you want a diffrent one you have to know `expand` / `factor` / `comDenom` / etc. i want to just be able to switch (examples in [simplify cases](../simplify-cases.md))
 
 first idea:
-- enter gives the smallest one
+- enter gives what you'd write by hand
 - ← → on an answer in history goes through the other forms, with a little label (`factored 2/4`)
 - skip forms that come out the same
 - only work them out when you actually press ← / → (it's 48 MHz, can't do all of them every enter)
@@ -69,7 +69,7 @@ Forms (`*` = needs engine work, `?` = haven't checked if PineappleCAS can):
 
 | Form | Example |
 | ---- | ------- |
-| smallest (default) | $-\frac{1}{2\sqrt{10\pi}}$ |
+| by hand (default) | $-\frac{1}{2\sqrt{10\pi}}$ |
 | expanded | $x^2 - 1$ |
 | factored\* | $(x-1)(x+1)$ |
 | common denominator? | $\frac{x+1}{x}$ instead of $1 + \frac{1}{x}$ |
