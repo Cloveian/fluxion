@@ -677,8 +677,12 @@ static bool key_2nd(keypress_t p) {
     case K_LEFT:   typing_run = false; ed_home(&ed); return true;
     case K_RIGHT:  typing_run = false; ed_end(&ed); return true;
     case K_0:      typing_run = false; catalog_open(); return true;
-    case K_UP: case K_DOWN: case K_ENTER: case K_DEL: case K_CLEAR:
+    case K_UP: case K_DOWN: case K_ENTER: case K_DEL:
         return key_plain(p);
+    case K_CLEAR:  /* same as [on]+[clear], clear the whole line */
+        will_edit(false);
+        ed_clear(&ed);
+        return true;
     default:
         will_edit(false);
         break;

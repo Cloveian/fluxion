@@ -76,6 +76,7 @@ typedef struct box {
 
     unsigned char level; /* nesting. 0 normal, 1 exponent, 2 an exponent's exponent... */
     unsigned char size; /* the font size it ended up at (see layout_font_t), 0 = smallest */
+    unsigned char style; /* font_style_t bits from draw.h, only BOX_TEXT reads it. 0 = normal */
     char *text;
 
     struct box *child; /* first child */
