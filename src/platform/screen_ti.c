@@ -16,6 +16,7 @@ void screen_begin(void) {
     gfx_palette[COL_FG]     = gfx_RGBTo1555(235, 235, 240);
     gfx_palette[COL_DIM]    = gfx_RGBTo1555(120, 120, 140);
     gfx_palette[COL_ACCENT] = gfx_RGBTo1555(110, 170, 255);
+    gfx_palette[COL_SELECT] = gfx_RGBTo1555(40, 64, 112);
 }
 
 void screen_end(void) {

@@ -561,7 +561,8 @@ static void measure(const layout_font_t *f, box_t *b) {
         /* width was set when it was made */
         break;
 
-    case BOX_ROW: {
+    case BOX_ROW:
+    case BOX_SELECT: {
         int x = 0;
 
         /* even an empty row is a line tall */

@@ -34,35 +34,87 @@ typedef enum {
 #define ED_TIMES    '*'         /* shown as a dot */
 #define ED_DIVIDE   '/'         /* typed inline (nspire), stacked once it's a result */
 
+/* more special characters, past ED_NEG. font codes like layout.h's, see tools/bdf2c.py */
+#define CH_LE       '\x10'
+#define CH_GE       '\x11'
+#define CH_NE       '\x12'
+#define CH_INF      '\x13'
+#define CH_DEG      '\x14'
+
 typedef struct ed_row ed_row_t;
 typedef struct ed_node ed_node_t;
+
+/* undo keeps whole copies of the line, so not too many (they're ~1 KB each on a long line) */
+#define ED_UNDO_MAX 16
+
+typedef struct {
+    ed_row_t *root, *row;
+    int pos;
+} ed_state_t;
 
 typedef struct {
     ed_row_t *root;
     ed_row_t *row; /* row the cursor sits in */
     int pos; /* index of the item we're before (0 = start of row) */
+    int anchor; /* other end of the selection, in the same row. -1 when nothing's selected */
+
+    ed_state_t undo[ED_UNDO_MAX];
+    int undo_len;
 } editor_t;
 
 bool ed_init(editor_t *ed);
 void ed_free(editor_t *ed);
-void ed_clear(editor_t *ed);
+void ed_clear(editor_t *ed); /* empties the line, keeps the undo steps */
 bool ed_is_empty(const editor_t *ed);
 
 /* typing. return false if out of memory or not allowed here. */
 bool ed_insert_char(editor_t *ed, char c);              /* ')' leaves the brackets it's in */
 bool ed_insert(editor_t *ed, ed_kind_t kind, const char *name);  /* name: ED_FUNC only */
 
-/* moving */
+/* moving. these drop the selection. up/down return false if there was nowhere to go
+   (the app goes into the history then) */
 void ed_left(editor_t *ed);
 void ed_right(editor_t *ed);
-void ed_up(editor_t *ed);
-void ed_down(editor_t *ed);
+bool ed_up(editor_t *ed);
+bool ed_down(editor_t *ed);
+void ed_home(editor_t *ed);
+void ed_end(editor_t *ed);
+
+/*
+    selecting, whole items at a time (never goes into a template). at the edge of a
+    slot it grows to the whole template, like the nspire. typing or pasting replaces
+    the selection; a template (brackets, fraction, root, function) goes around it.
+*/
+void ed_select_left(editor_t *ed);
+void ed_select_right(editor_t *ed);
+bool ed_has_selection(const editor_t *ed);
+void ed_deselect(editor_t *ed, bool to_start); /* cursor goes to the start or the end of it */
+void ed_erase_selection(editor_t *ed);
+
+/* copies of rows, for the clipboard and the history. NULL if there's nothing or no memory */
+ed_row_t *ed_copy(const editor_t *ed); /* the selection */
+ed_row_t *ed_copy_line(const editor_t *ed);
+ed_row_t *ed_row_copy(const ed_row_t *r);
+bool ed_paste(editor_t *ed, const ed_row_t *clip);
+void ed_row_free(ed_row_t *r);
+
+/* an answer's boxes (layout_build) back into a row, for the history */
+ed_row_t *ed_from_box(const box_t *b);
+
+/* puts a copy of row in ed, for browsing the history (nobody edits it, promise) */
+bool ed_load(editor_t *ed, const ed_row_t *row, bool at_end);
+
+/* undo. the app saves a step before a key changes the line */
+void ed_checkpoint(editor_t *ed);
+bool ed_undo(editor_t *ed);
 
 /*
     deleting, with rules that are always the same (MathPrint's aren't):
       backspace  deletes the character on the left. a template on the left: steps
-                 into it. at the start of an empty template: removes it.
-      delete     deletes what's on the right, a whole template if it's one.
+                 into it. at the start of a template: removes it, but what was in
+                 it stays (sin(x+1) -> x+1).
+      delete     deletes what's on the right. a template keeps its insides the
+                 same way.
 */
 void ed_backspace(editor_t *ed);
 void ed_delete(editor_t *ed);

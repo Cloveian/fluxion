@@ -19,11 +19,10 @@ typedef struct {
 
 static const map_t map[] = {
     { 1, kb_Graph, K_GRAPH },   { 1, kb_Trace, K_TRACE },   { 1, kb_Zoom, K_ZOOM },
-    { 1, kb_Window, K_WINDOW }, { 1, kb_Yequ, K_YEQU },     { 1, kb_2nd, K_2ND },
+    { 1, kb_Window, K_WINDOW }, { 1, kb_Yequ, K_YEQU },
     { 1, kb_Mode, K_MODE },     { 1, kb_Del, K_DEL },
     { 2, kb_Sto, K_STO },       { 2, kb_Ln, K_LN },         { 2, kb_Log, K_LOG },
     { 2, kb_Square, K_SQUARE }, { 2, kb_Recip, K_RECIP },   { 2, kb_Math, K_MATH },
-    { 2, kb_Alpha, K_ALPHA },
     { 3, kb_0, K_0 },           { 3, kb_1, K_1 },           { 3, kb_4, K_4 },
     { 3, kb_7, K_7 },           { 3, kb_Comma, K_COMMA },   { 3, kb_Sin, K_SIN },
     { 3, kb_Apps, K_APPS },     { 3, kb_GraphVar, K_XT },
@@ -84,27 +83,47 @@ void keys_end(void) {
     kb_ClearOnLatch();
 }
 
+/*
+    [on], [2nd] and [alpha] get read on their own, not through scan(), so holding one
+    doesn't hide the key pressed with it (scan() only finds the first key down,
+    and 2nd/alpha are near the start). down then up with no key in between is a
+    tap of its own, K_ON / K_2ND / K_ALPHA, which the app makes sticky.
+    (holding alpha and pressing an arrow just did nothing before this ╮(─ω─)╭)
+*/
+typedef struct {
+    bool down, used;    /* held, and a key got pressed with it */
+} mod_t;
+
+static mod_t mods[3];
+static const key_t mod_keys[3] = { K_ON, K_2ND, K_ALPHA };
+
 keypress_t keys_wait(void) {
-    static bool on_down, on_used;  /* whether [on] is held, and a key hit with it */
     keypress_t press;
+    int i;
 
     for(;;) {
         bool changed = (kb_IntStatus & KB_DATA_CHANGED) != 0;
+        bool now[3];
         key_t k;
 
         kb_IntAcknowledge = KB_DATA_CHANGED;
         k = scan();
 
-        /* [on] isn't in the key matrix. down then up with no key in
-           between is a tap of its own, K_ON */
-        if(kb_On && !on_down) {
-            on_down = true;
-            on_used = false;
-        } else if(!kb_On && on_down) {
-            on_down = false;
-            if(!on_used) {
-                press.key = K_ON;
-                press.on = false;
+        now[0] = kb_On;
+        now[1] = (kb_Data[1] & kb_2nd) != 0;
+        now[2] = (kb_Data[2] & kb_Alpha) != 0;
+        for(i = 0; i < 3; i++) {
+            if(now[i] == mods[i].down)
+                continue;
+            /* the latch was this modifier, not the key being let go and pressed
+               again. else letting go of alpha mid select fires the arrow again */
+            changed = false;
+            mods[i].down = now[i];
+            if(now[i]) {
+                mods[i].used = false;
+            } else if(!mods[i].used) {
+                press.key = mod_keys[i];
+                press.on = press.second = press.alpha = false;
                 return press;
             }
         }
@@ -136,9 +155,12 @@ keypress_t keys_wait(void) {
         }
     }
 
-    on_used |= on_down;
+    for(i = 0; i < 3; i++)
+        mods[i].used |= mods[i].down;
     press.key = held;
-    press.on = kb_On;
+    press.on = mods[0].down;
+    press.second = mods[1].down;
+    press.alpha = mods[2].down;
     return press;
 }
 
@@ -148,6 +170,7 @@ keypress_t keys_peek(void) {
     /* held from here on, so keys_wait() dosen't take it as a new press after */
     press.key = held = scan();
     press.on = kb_On;
+    press.second = press.alpha = false;
     return press;
 }
 

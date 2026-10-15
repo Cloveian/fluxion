@@ -130,23 +130,83 @@ static bool all_empty(const ed_node_t *n) {
     return true;
 }
 
+/* copies. mark is a row in the source; *marked gets its copy (how the undo steps
+   know where the cursor was) */
+
+static ed_row_t *row_copy(const ed_row_t *src, int from, int to, ed_node_t *parent, int slot,
+                          const ed_row_t *mark, ed_row_t **marked);
+
+static ed_node_t *node_copy(const ed_node_t *src, const ed_row_t *mark, ed_row_t **marked) {
+    ed_node_t *n = calloc(1, sizeof(ed_node_t));
+    int i;
+
+    if(n == NULL)
+        return NULL;
+    n->kind = src->kind;
+    n->ch = src->ch;
+    memcpy(n->name, src->name, sizeof n->name);
+
+    for(i = 0; i < src->slots; i++) {
+        n->slot[i] = row_copy(src->slot[i], 0, src->slot[i]->len, n, i, mark, marked);
+        if(n->slot[i] == NULL) {
+            node_free(n);
+            return NULL;
+        }
+        n->slots++;     /* only counts the slots that made it, for node_free */
+    }
+    return n;
+}
+
+static ed_row_t *row_copy(const ed_row_t *src, int from, int to, ed_node_t *parent, int slot,
+                          const ed_row_t *mark, ed_row_t **marked) {
+    ed_row_t *r = row_new(parent, slot);
+    int i;
+
+    if(r == NULL)
+        return NULL;
+    if(src == mark)
+        *marked = r;
+
+    for(i = from; i < to; i++) {
+        ed_node_t *n = node_copy(src->items[i], mark, marked);
+
+        if(n == NULL || !row_insert(r, r->len, n)) {
+            if(n != NULL)
+                node_free(n);
+            row_free(r);
+            return NULL;
+        }
+    }
+    return r;
+}
+
 /* the editor itself */
 
 bool ed_init(editor_t *ed) {
     ed->root = row_new(NULL, 0);
     ed->row = ed->root;
     ed->pos = 0;
+    ed->anchor = -1;
+    ed->undo_len = 0;
     return ed->root != NULL;
 }
 
 void ed_free(editor_t *ed) {
     row_free(ed->root);
     ed->root = ed->row = NULL;
+    while(ed->undo_len > 0)
+        row_free(ed->undo[--ed->undo_len].root);
 }
 
 void ed_clear(editor_t *ed) {
-    ed_free(ed);
-    ed_init(ed);
+    ed_row_t *root = row_new(NULL, 0);
+
+    if(root == NULL)
+        return;
+    row_free(ed->root);
+    ed->root = ed->row = root;
+    ed->pos = 0;
+    ed->anchor = -1;
 }
 
 bool ed_is_empty(const editor_t *ed) {
@@ -173,6 +233,15 @@ static void after(editor_t *ed, ed_node_t *n) {
     ed->pos = index_of(n) + 1;
 }
 
+/* the selection is items [sel_start, sel_end) of ed->row */
+static int sel_start(const editor_t *ed) {
+    return ed->anchor < ed->pos ? ed->anchor : ed->pos;
+}
+
+static int sel_end(const editor_t *ed) {
+    return ed->anchor > ed->pos ? ed->anchor : ed->pos;
+}
+
 /* typing */
 
 bool ed_insert_char(editor_t *ed, char c) {
@@ -185,6 +254,7 @@ bool ed_insert_char(editor_t *ed, char c) {
         /* brackets come in pairs: ) just steps out of the brackets your in */
         ed_row_t *r;
 
+        ed_deselect(ed, false);
         for(r = ed->row; r->parent != NULL; r = r->parent->in) {
             if(r->parent->kind == ED_PARENS || r->parent->kind == ED_FUNC || r->parent->kind == ED_LOGB) {
                 after(ed, r->parent);
@@ -194,10 +264,9 @@ bool ed_insert_char(editor_t *ed, char c) {
         return false;
     }
 
-    /* there's only one x, and it's lowercase */
-    if(c >= 'A' && c <= 'Z')
-        c = (char)(c - 'A' + 'a');
-
+    /* capitals stay capitals on screen but they're the same variable (nspire is
+       case insensitive too), see put_char */
+    ed_erase_selection(ed);
     n = node_new(ED_CHAR, c, NULL);
     if(n == NULL || !row_insert(ed->row, ed->pos, n)) {
         free(n);
@@ -207,15 +276,64 @@ bool ed_insert_char(editor_t *ed, char c) {
     return true;
 }
 
+/* the selection moves into n's main slot (the bottom of a root, the argument of
+   log_b), then the cursor goes to the first slot still empty or after n */
+static void wrap(editor_t *ed, ed_node_t *n) {
+    ed_row_t *into = n->slot[n->kind == ED_NROOT || n->kind == ED_LOGB ? 1 : 0];
+    int from = sel_start(ed), to = sel_end(ed), i;
+
+    for(i = from; i < to; i++)
+        row_insert(into, into->len, row_remove(ed->row, from));  /* can't fail, see below */
+    ed->pos = from;
+    ed->anchor = -1;
+
+    for(i = 0; i < n->slots; i++) {
+        if(n->slot[i]->len == 0) {
+            ed->row = n->slot[i];
+            ed->pos = 0;
+            return;
+        }
+    }
+}
+
 bool ed_insert(editor_t *ed, ed_kind_t kind, const char *name) {
     ed_node_t *n;
 
     if(kind == ED_CHAR)
         return false;
 
+    /* x+1 selected, then ^: (x+1)^ */
+    if(kind == ED_POW && ed_has_selection(ed) && sel_end(ed) - sel_start(ed) > 1) {
+        if(!ed_insert(ed, ED_PARENS, NULL))
+            return false;
+    }
+    if(kind == ED_POW)
+        ed_deselect(ed, false);
+
     n = node_new(kind, 0, name);
     if(n == NULL)
         return false;
+
+    if(ed_has_selection(ed)) {
+        /* the wrapped slot needs room for every selected item first, so wrap()
+           can't run out of memory halfway */
+        ed_row_t *into = n->slot[kind == ED_NROOT || kind == ED_LOGB ? 1 : 0];
+        int need = sel_end(ed) - sel_start(ed);
+        ed_node_t **items = malloc(need * sizeof(ed_node_t *));
+
+        if(items == NULL || !row_insert(ed->row, sel_end(ed), n)) {
+            free(items);
+            node_free(n);
+            return false;
+        }
+        into->items = items;
+        into->cap = need;
+        wrap(ed, n);
+        if(ed->row == n->in)
+            after(ed, n);
+        return true;
+    }
+
     if(!row_insert(ed->row, ed->pos, n)) {
         node_free(n);
         return false;
@@ -230,6 +348,7 @@ bool ed_insert(editor_t *ed, ed_kind_t kind, const char *name) {
 void ed_right(editor_t *ed) {
     ed_node_t *p;
 
+    ed->anchor = -1;
     if(ed->pos < ed->row->len) {
         ed_node_t *n = ed->row->items[ed->pos];
 
@@ -255,6 +374,7 @@ void ed_right(editor_t *ed) {
 void ed_left(editor_t *ed) {
     ed_node_t *p;
 
+    ed->anchor = -1;
     if(ed->pos > 0) {
         ed_node_t *n = ed->row->items[ed->pos - 1];
 
@@ -281,9 +401,10 @@ static int clamp(int pos, const ed_row_t *r) {
     return pos < r->len ? pos : r->len;
 }
 
-void ed_down(editor_t *ed) {
+bool ed_down(editor_t *ed) {
     ed_row_t *r;
 
+    ed->anchor = -1;
     for(r = ed->row; r->parent != NULL; r = r->parent->in) {
         ed_node_t *p = r->parent;
 
@@ -291,24 +412,27 @@ void ed_down(editor_t *ed) {
         if((p->kind == ED_FRAC || p->kind == ED_NROOT) && r->parent_slot == 0) {
             ed->pos = clamp(r == ed->row ? ed->pos : p->slot[1]->len, p->slot[1]);
             ed->row = p->slot[1];
-            return;
+            return true;
         }
 
         /* out of an exponent, back down to its base line */
         if(p->kind == ED_POW) {
             after(ed, p);
-            return;
+            return true;
         }
     }
+    return false;
 }
 
-void ed_up(editor_t *ed) {
+bool ed_up(editor_t *ed) {
     ed_row_t *r;
+
+    ed->anchor = -1;
 
     /* just after an exponent, back up into it */
     if(ed->pos > 0 && ed->row->items[ed->pos - 1]->kind == ED_POW) {
         enter_last(ed, ed->row->items[ed->pos - 1]);
-        return;
+        return true;
     }
 
     for(r = ed->row; r->parent != NULL; r = r->parent->in) {
@@ -318,16 +442,420 @@ void ed_up(editor_t *ed) {
         if((p->kind == ED_FRAC || p->kind == ED_NROOT) && r->parent_slot == 1) {
             ed->pos = clamp(r == ed->row ? ed->pos : p->slot[0]->len, p->slot[0]);
             ed->row = p->slot[0];
-            return;
+            return true;
         }
     }
+    return false;
+}
+
+/* [2nd] + left/right, like the TI's own line editing */
+void ed_home(editor_t *ed) {
+    ed->anchor = -1;
+    ed->row = ed->root;
+    ed->pos = 0;
+}
+
+void ed_end(editor_t *ed) {
+    ed->anchor = -1;
+    ed->row = ed->root;
+    ed->pos = ed->root->len;
+}
+
+/* --- selecting --- */
+
+bool ed_has_selection(const editor_t *ed) {
+    return ed->anchor >= 0 && ed->anchor != ed->pos;
+}
+
+/* at the edge of a slot the whole template it's in gets selected instead */
+static void select_parent(editor_t *ed, bool leftwards) {
+    ed_node_t *p = ed->row->parent;
+    int at;
+
+    if(p == NULL)
+        return;
+    at = index_of(p);
+    ed->row = p->in;
+    ed->pos = leftwards ? at : at + 1;
+    ed->anchor = leftwards ? at + 1 : at;
+}
+
+void ed_select_left(editor_t *ed) {
+    if(ed->anchor < 0)
+        ed->anchor = ed->pos;
+    if(ed->pos > 0)
+        ed->pos--;
+    else
+        select_parent(ed, true);
+}
+
+void ed_select_right(editor_t *ed) {
+    if(ed->anchor < 0)
+        ed->anchor = ed->pos;
+    if(ed->pos < ed->row->len)
+        ed->pos++;
+    else
+        select_parent(ed, false);
+}
+
+void ed_deselect(editor_t *ed, bool to_start) {
+    if(ed_has_selection(ed))
+        ed->pos = to_start ? sel_start(ed) : sel_end(ed);
+    ed->anchor = -1;
+}
+
+void ed_erase_selection(editor_t *ed) {
+    int from, to;
+
+    if(!ed_has_selection(ed)) {
+        ed->anchor = -1;
+        return;
+    }
+    from = sel_start(ed);
+    to = sel_end(ed);
+    while(to > from)
+        node_free(row_remove(ed->row, --to));
+    ed->pos = from;
+    ed->anchor = -1;
+}
+
+/* copy paste */
+
+void ed_row_free(ed_row_t *r) {
+    row_free(r);
+}
+
+ed_row_t *ed_copy(const editor_t *ed) {
+    if(!ed_has_selection(ed))
+        return NULL;
+    return row_copy(ed->row, sel_start(ed), sel_end(ed), NULL, 0, NULL, NULL);
+}
+
+ed_row_t *ed_row_copy(const ed_row_t *r) {
+    return r != NULL ? row_copy(r, 0, r->len, NULL, 0, NULL, NULL) : NULL;
+}
+
+ed_row_t *ed_copy_line(const editor_t *ed) {
+    if(ed->root->len == 0)
+        return NULL;
+    return row_copy(ed->root, 0, ed->root->len, NULL, 0, NULL, NULL);
+}
+
+bool ed_paste(editor_t *ed, const ed_row_t *clip) {
+    int i;
+
+    if(clip == NULL)
+        return false;
+    ed_erase_selection(ed);
+    for(i = 0; i < clip->len; i++) {
+        ed_node_t *n = node_copy(clip->items[i], NULL, NULL);
+
+        if(n == NULL || !row_insert(ed->row, ed->pos, n)) {
+            if(n != NULL)
+                node_free(n);
+            return false;
+        }
+        ed->pos++;
+    }
+    return true;
+}
+
+/*
+    boxes back into editor rows, so an answer in the history can be pasted and
+    picked apart. the boxes are what's on screen, already in display order, and
+    nearly every kind is one of ours (frac, sup, root, parens, abs). the only
+    guessing: a name before brackets is a function, and a minus with a space
+    before it is a subtract
+*/
+
+static bool from_box(ed_row_t *r, const box_t *b);
+
+static bool append(ed_row_t *r, ed_node_t *n) {
+    if(n == NULL)
+        return false;
+    if(!row_insert(r, r->len, n)) {
+        node_free(n);
+        return false;
+    }
+    return true;
+}
+
+static bool from_children(ed_row_t *r, const box_t *k) {
+    for(; k != NULL; k = k->next)
+        if(!from_box(r, k))
+            return false;
+    return true;
+}
+
+static bool is_name(const box_t *b) {
+    const char *s;
+
+    if(b == NULL || b->kind != BOX_TEXT || b->text == NULL || b->text[0] == '\0' || b->text[1] == '\0')
+        return false;
+    for(s = b->text; *s != '\0'; s++)
+        if(*s < 'a' || *s > 'z')
+            return false;
+    return true;
+}
+
+/* what comes before a function's brackets (sin, sin^-1, log_b, d/dx). NULL if k
+   isn't one. the base of log_b goes in here too */
+static ed_node_t *func_head(const box_t *k) {
+    char name[8];
+
+    if(is_name(k))
+        return node_new(ED_FUNC, 0, k->text);
+
+    if(k->kind == BOX_SUP && is_name(k->child) && strlen(k->child->text) < sizeof name - 1) {
+        name[0] = 'a';
+        strcpy(name + 1, k->child->text);
+        return node_new(ED_FUNC, 0, name);
+    }
+
+    if(k->kind == BOX_SUB && is_name(k->child)) {
+        ed_node_t *n = node_new(ED_LOGB, 0, NULL);
+
+        if(n != NULL && !from_box(n->slot[0], k->child->next)) {
+            node_free(n);
+            return NULL;
+        }
+        return n;
+    }
+
+    if(k->kind == BOX_FRAC && k->child->kind == BOX_TEXT && strcmp(k->child->text, "d") == 0)
+        return node_new(ED_FUNC, 0, "deriv");
+    return NULL;
+}
+
+static bool from_text(ed_row_t *r, const box_t *b, bool after_space) {
+    const char *s;
+
+    for(s = b->text; *s != '\0'; s++) {
+        char c = *s;
+
+        if(c == CH_MINUS && !after_space)
+            c = ED_NEG;
+        else if(c == CH_CDOT)
+            c = ED_TIMES;
+        if(!append(r, node_new(ED_CHAR, c, NULL)))
+            return false;
+    }
+    return true;
+}
+
+static bool from_box(ed_row_t *r, const box_t *b) {
+    const box_t *k;
+    ed_node_t *n;
+
+    if(b == NULL)
+        return true;
+
+    switch(b->kind) {
+    case BOX_ROW:
+    case BOX_SELECT: {
+        const box_t *prev = NULL;
+
+        for(k = b->child; k != NULL; prev = k, k = k->next) {
+            const box_t *arg = k->next;
+
+            /* a function and its brackets (or ln|x|, the bars are its brackets) */
+            if(arg != NULL && (arg->kind == BOX_PARENS || arg->kind == BOX_ABS) &&
+               (n = func_head(k)) != NULL) {
+                ed_row_t *slot = n->slot[n->kind == ED_LOGB ? 1 : 0];
+
+                if(!append(r, n))
+                    return false;
+                if(!(arg->kind == BOX_PARENS ? from_children(slot, arg->child) : from_box(slot, arg)))
+                    return false;
+                k = arg;
+                continue;
+            }
+
+            if(k->kind == BOX_TEXT) {
+                if(!from_text(r, k, prev != NULL && prev->kind == BOX_SPACE))
+                    return false;
+            } else if(!from_box(r, k)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    case BOX_TEXT:
+        return from_text(r, b, false);
+
+    case BOX_FRAC:
+        n = node_new(ED_FRAC, 0, NULL);
+        return append(r, n) && from_box(n->slot[0], b->child) && from_box(n->slot[1], b->child->next);
+
+    case BOX_SUP:
+        /* the base is just whatever's before the exponent */
+        if(!from_box(r, b->child))
+            return false;
+        n = node_new(ED_POW, 0, NULL);
+        return append(r, n) && from_box(n->slot[0], b->child->next);
+
+    case BOX_ROOT:
+        if(b->child->next == NULL) {
+            n = node_new(ED_SQRT, 0, NULL);
+            return append(r, n) && from_box(n->slot[0], b->child);
+        }
+        n = node_new(ED_NROOT, 0, NULL);
+        return append(r, n) && from_box(n->slot[0], b->child->next) && from_box(n->slot[1], b->child);
+
+    case BOX_PARENS:
+    case BOX_ABS:
+        n = node_new(b->kind == BOX_PARENS ? ED_PARENS : ED_ABS, 0, NULL);
+        return append(r, n) && from_children(n->slot[0], b->child);
+
+    case BOX_SUB:
+        return from_children(r, b->child);
+
+    default:
+        return true;    /* spaces, cursor, empty slots */
+    }
+}
+
+bool ed_load(editor_t *ed, const ed_row_t *row, bool at_end) {
+    ed_row_t *copy = row_copy(row, 0, row->len, NULL, 0, NULL, NULL);
+
+    if(copy == NULL)
+        return false;
+    ed_free(ed);
+    ed_init(ed);
+    row_free(ed->root);
+    ed->root = ed->row = copy;
+    ed->pos = at_end ? copy->len : 0;
+    return true;
+}
+
+ed_row_t *ed_from_box(const box_t *b) {
+    ed_row_t *r = row_new(NULL, 0);
+
+    if(r != NULL && !from_box(r, b)) {
+        row_free(r);
+        return NULL;
+    }
+    return r;
+}
+
+/* undo */
+
+void ed_checkpoint(editor_t *ed) {
+    ed_state_t s;
+
+    s.row = NULL;
+    s.root = row_copy(ed->root, 0, ed->root->len, NULL, 0, ed->row, &s.row);
+    s.pos = ed->pos;
+    if(s.root == NULL)
+        return;     /* no memory, that step just can't be undone */
+
+    if(ed->undo_len == ED_UNDO_MAX) {
+        row_free(ed->undo[0].root);
+        memmove(&ed->undo[0], &ed->undo[1], (ED_UNDO_MAX - 1) * sizeof(ed_state_t));
+        ed->undo_len--;
+    }
+    ed->undo[ed->undo_len++] = s;
+}
+
+bool ed_undo(editor_t *ed) {
+    ed_state_t *s;
+
+    if(ed->undo_len == 0)
+        return false;
+    s = &ed->undo[--ed->undo_len];
+    row_free(ed->root);
+    ed->root = s->root;
+    ed->row = s->row;
+    ed->pos = s->pos;
+    ed->anchor = -1;
+    return true;
 }
 
 /* deleting (the fiddly bit) */
 
+/* room for extra more items, so moving nodes in can't fail halfway (a node that's
+   been taken out and can't go back in would just be lost) */
+static bool row_reserve(ed_row_t *r, int extra) {
+    ed_node_t **items;
+
+    if(r->len + extra <= r->cap)
+        return true;
+    items = realloc(r->items, (r->len + extra) * sizeof(ed_node_t *));
+    if(items == NULL)
+        return false;
+    r->items = items;
+    r->cap = r->len + extra;
+    return true;
+}
+
+/* moves everything in from into to at pos, returns how many */
+static int move_items(ed_row_t *from, ed_row_t *to, int pos) {
+    int n = 0;
+
+    while(from->len > 0)
+        row_insert(to, pos + n++, row_remove(from, 0));
+    return n;
+}
+
+/* half of a fraction going inline: x+1 needs brackets to stay the top, x doesn't */
+static int move_part(ed_row_t *from, ed_row_t *to, int pos) {
+    ed_node_t *parens;
+
+    if(from->len > 1 && (parens = node_new(ED_PARENS, 0, NULL)) != NULL) {
+        if(row_reserve(parens->slot[0], from->len)) {
+            move_items(from, parens->slot[0], 0);
+            row_insert(to, pos, parens);
+            return 1;
+        }
+        node_free(parens);
+    }
+    return move_items(from, to, pos);
+}
+
+/*
+    takes template n out and leaves what was in it, cursor where n started.
+    sin(x+1) -> x+1, (a)/(b) -> a/b, x^(2) -> x2. roots and log_b keep the main
+    part, the index / base goes (theres nowhere sensible to put it ugh)
+*/
+static void unwrap(editor_t *ed, ed_node_t *n) {
+    ed_row_t *in = n->in, *main = n->slot[n->kind == ED_NROOT || n->kind == ED_LOGB ? 1 : 0];
+    int at = index_of(n), pos = at;
+    ed_node_t *bar = NULL;
+
+    if(n->kind == ED_FRAC && n->slot[1]->len > 0)
+        bar = node_new(ED_CHAR, ED_DIVIDE, NULL);
+    if(!row_reserve(in, n->slot[0]->len + (n->slots > 1 ? n->slot[1]->len : 0) + 1)) {
+        if(bar != NULL)
+            node_free(bar);
+        return;     /* out of memory, leave it be */
+    }
+
+    row_remove(in, at);
+    if(n->kind == ED_FRAC) {
+        pos += move_part(n->slot[0], in, pos);
+        if(bar != NULL) {
+            row_insert(in, pos++, bar);
+            pos += move_part(n->slot[1], in, pos);
+        }
+    } else {
+        move_items(main, in, pos);
+    }
+    node_free(n);
+
+    ed->row = in;
+    ed->pos = at;
+    ed->anchor = -1;
+}
+
 void ed_backspace(editor_t *ed) {
     ed_node_t *p;
 
+    if(ed_has_selection(ed)) {
+        ed_erase_selection(ed);
+        return;
+    }
+    ed->anchor = -1;
     if(ed->pos > 0) {
         ed_node_t *n = ed->row->items[ed->pos - 1];
 
@@ -355,12 +883,21 @@ void ed_backspace(editor_t *ed) {
         ed->row = p->slot[ed->row->parent_slot - 1];
         ed->pos = ed->row->len;
     } else {
-        before(ed, p);
+        unwrap(ed, p);  /* start of sin(x+1), so the sin( goes and x+1 stays */
     }
 }
 
 void ed_delete(editor_t *ed) {
-    if(ed->pos < ed->row->len)
+    if(ed_has_selection(ed)) {
+        ed_erase_selection(ed);
+        return;
+    }
+    ed->anchor = -1;
+    if(ed->pos >= ed->row->len)
+        return;
+    if(ed->row->items[ed->pos]->slots > 0 && !all_empty(ed->row->items[ed->pos]))
+        unwrap(ed, ed->row->items[ed->pos]);
+    else
         node_free(row_remove(ed->row, ed->pos));
 }
 
@@ -546,7 +1083,7 @@ static box_t *lay_char(char c, unsigned char level) {
     char s[2] = { c, '\0' };
 
     switch(c) {
-    case '+': case ED_SUB: case '=':
+    case '+': case ED_SUB: case '=': case '<': case '>': case CH_LE: case CH_GE: case CH_NE:
         return spaced(s, level);
     case ED_NEG:
         s[0] = CH_MINUS;
@@ -653,9 +1190,21 @@ static box_t *lay_row(lay_t *l, const ed_row_t *r, unsigned char level) {
     int i;
 
     for(i = 0; i < r->len; i++) {
+        box_t *item;
+
         if(here && l->ed->pos == i)
             layout_add(row, layout_box(BOX_CURSOR, level));
-        layout_add(row, lay_node(l, r->items[i], row, level));
+        item = lay_node(l, r->items[i], row, level);
+
+        /* each selected item gets its own highlight, so an exponent still finds
+           its base as the last box in the row */
+        if(here && ed_has_selection(l->ed) && i >= sel_start(l->ed) && i < sel_end(l->ed)) {
+            box_t *sel = layout_box(BOX_SELECT, level);
+
+            layout_add(sel, item);
+            item = sel;
+        }
+        layout_add(row, item);
     }
 
     if(here && l->ed->pos == r->len)

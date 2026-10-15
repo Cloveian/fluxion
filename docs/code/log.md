@@ -1,5 +1,23 @@
 # Log
 
+## 2026-10-15 - math popup, catalog, history browsing
+
+- holding 2nd / alpha with another key works on the calculator now. the scan only finds the first key down and those two come first, so holding alpha hid the arrow. they're read on their own like `[on]` now, a tap counts on release
+- `[math]` pops up a little grid at the cursor: = ≠ < > ≤ ≥ ! ∞ ° θ, 1-9/0 pick straight away
+- catalog on `[2nd][0]` like the TI: everything a-z, the keys for it on the right, what it does at the bottom, alpha + letter jumps. it's built on a new page thing (`ui/page.c`) so a mode menu can use it later
+- deleting a template keeps whats in it: backspace at the start of `sin(x+1)` leaves `x+1`, fractions go inline with brackets if they need them
+- history: up goes answer, input, answer before... enter pastes, `[on]`+2 copies, left/right goes inside it to select just a bit. answers get turned back into editor stuff from their boxes (whats on screen) so they paste back the same
+
+## 2026-10-14 - select, copy paste, undo, history
+
+- 2nd / alpha / `[on]` can all be on at once now, `[2nd][alpha]` + letter is a capital. capitals are the same variable as lowercase (nspire does that too). alpha lock is double tap alpha now
+- `[alpha]` + arrows selects (Shift+arrows on the PC). it goes item by item and grabs the whole template at the edge of a slot. typing replaces it, templates wrap it, so select `x+1` then `÷` is $\frac{x+1}{\square}$
+- `[on]` + 1 / 2 / 3 is cut / copy / paste, `[on]` + `[sto→]` undo. undo keeps copies of the whole line (16 steps), typing a run of characters counts as one
+- `↑` off the top goes into the history, enter pastes that entry's input back. not the answer yet, that needs the result turned back into editor stuff
+- `[2nd]` + left/right is start/end of the line
+- font has ≤ ≥ ≠ ∞ ° now for the `[math]` popup, which isn't done
+- +2.7 KB compressed. doesn't matter much since it's an app now, no 64 KB program limit. haven't timed undo copies on the calculator
+
 ## 2026-10-14 - sweep fixes, ready to push
 
 - solve now writes the roots like i wanted in case 3 ٩(•̀ᗜ•́)و : $x = \frac{-3-2\sqrt{6}}{5}, \frac{-3+2\sqrt{6}}{5}$. one $x =$, commas, each root one fraction. $\pm$ version will be a form later

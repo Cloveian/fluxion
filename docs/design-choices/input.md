@@ -86,9 +86,31 @@ basically like typing on a computer, the cursor is a line and `[on]` is Ctrl. th
 | `[del]` | delete right of the cursor (a whole template if it's one) | Delete |
 | `[on]` + `[clear]` | clear the whole line | Ctrl+Backspace |
 | `←` `→` | move, into and out of templates slot by slot | arrows |
-| `↑` `↓` | top / bottom of a fraction, in / out of an exponent | |
+| `[2nd]` + `←` `→` | start / end of the line | Home / End |
+| `↑` `↓` | top / bottom of a fraction, in / out of an exponent. `↑` with nowhere to go goes into the history | |
+| `[alpha]` + `←` `→` | select, a whole item at a time. at the edge of a slot it grabs the whole template | Shift+arrows |
+| `[on]` + `[1]` `[2]` `[3]` | cut, copy, paste | Ctrl+X C V |
+| `[on]` + `[sto→]` | undo (a run of typing is one step) | Ctrl+Z |
 | `[enter]` | simplify | |
-| `[on]` + others | select, copy, paste, undo: later | Ctrl+... |
+
+with something selected: typing replaces it, `(` `÷` `√` `sin` etc go *around* it, `^` makes it the base
+
+### Modifiers
+
+`[2nd]`, `[alpha]` and `[on]` are separate, any of them can be on at once. tap = next key, double tap = lock, tap again = off. `[2nd][alpha]` + a letter is a capital, same variable as the lowercase one (nspire's case insensitive too). this replaced `[2nd][alpha]` = alpha lock, double tap `[alpha]` for that now
+
+### History
+
+`↑` from the top of the line highlights the last answer, then its input, then the answer before... `[enter]` pastes it at the cursor, `[on]`+`[2]` copies it, `[clear]` goes back. `←` `→` go inside it, then arrows move and `[alpha]` + arrows select just a part
+
+### Popups and pages
+
+- `[math]`: a grid at the cursor with = ≠ < > ≤ ≥ ! ∞ ° θ, arrows + `[enter]` or `1`-`9` `0`
+- `[2nd][0]`: the catalog, everything a-z with what it does. `[alpha]` + letter jumps, `[enter]` types it, `[clear]` closes
+
+### Not done yet
+
+- the full key map (every key x plain / 2nd / alpha / 2nd+alpha / on)
 
 ### Menus
 

@@ -4,7 +4,8 @@
 #define FLUXION_FONTS_H
 
 /* a bitmap font: rows[code * height + row], bit 15 = leftmost pixel.
-   codes 32-126 are ASCII, 1-4 are the special characters in layout.h. */
+   codes 32-126 are ASCII, 1-4 are the special characters in layout.h,
+   0x10-0x14 the ones in editor.h. */
 typedef struct {
     const char *name;
     unsigned char ascent, descent;      /* rows above / below the baseline */
