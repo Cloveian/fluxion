@@ -3,9 +3,10 @@
 #include "app.h"
 #include "page.h"
 #include "settings.h"
+#include "platform/screen.h"
 
 /* rows, in the order they show */
-enum { ROW_ANGLE, ROW_TRIG, ROW_FORM, ROW_RATIONALIZE, ROW_COUNT };
+enum { ROW_ANGLE, ROW_TRIG, ROW_FORM, ROW_RATIONALIZE, ROW_THEME, ROW_COUNT };
 
 static const char *mode_label(int i) {
     switch(i) {
@@ -13,6 +14,7 @@ static const char *mode_label(int i) {
     case ROW_TRIG:        return "trig answers";
     case ROW_FORM:        return "simplest";
     case ROW_RATIONALIZE: return "rationalize";
+    case ROW_THEME:       return "theme";
     }
     return "";
 }
@@ -26,6 +28,7 @@ static const char *mode_value(int i) {
         return setting_angle == ANGLE_DEGREES ? "0 to 360" : "0 to 2pi";
     case ROW_FORM:        return app_form_name();
     case ROW_RATIONALIZE: return app_rationalize() ? "on" : "off";
+    case ROW_THEME:       return setting_light ? "light" : "dark";
     }
     return NULL;
 }
@@ -40,6 +43,8 @@ static const char *mode_help(int i) {
         return "what enter gives. [2nd][enter] cycles it from the line too, [alpha][enter] is decimal";
     case ROW_RATIONALIZE:
         return "roots off the bottom, 1/sqrt(2) -> sqrt(2)/2. off keeps them where you wrote them";
+    case ROW_THEME:
+        return "light is easier outside or in a bright room. [2nd] up/down is the brightness, from anywhere but here";
     }
     return NULL;
 }
@@ -51,6 +56,7 @@ static bool mode_pick(int i) {
     case ROW_TRIG:        setting_trig = setting_trig == TRIG_GENERAL ? TRIG_ONE_TURN : TRIG_GENERAL; break;
     case ROW_FORM:        app_next_form(); break;
     case ROW_RATIONALIZE: app_toggle_rationalize(); break;
+    case ROW_THEME:       setting_light = !setting_light; screen_theme(setting_light); break;
     }
     settings_save();    /* so a flip sticks even if the app dies before exit */
     return false;

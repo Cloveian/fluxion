@@ -46,6 +46,17 @@ void screen_direct(bool on);
    still works while its off, it's just dark. on the PC it does nothing */
 void screen_power(bool on);
 
+/* [2nd] up/down. 0 brightest .. 7 darkest, our own steps, not the OS's. the
+   PC just remembers it, there's no backlight on a monitor to poke */
+void screen_brightness(int level);
+
+/* what the OS had when screen_begin ran, in those same steps. the default
+   before anything's saved */
+int screen_brightness_current(void);
+
+/* swaps the colours behind the COL_ indexes, so nothing that draws has to know */
+void screen_theme(bool light);
+
 #ifndef __TICE__
 /* PC only */
 const unsigned char *screen_pixels(void);       /* SCREEN_W * SCREEN_H palette indexes */
