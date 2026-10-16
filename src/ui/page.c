@@ -72,6 +72,8 @@ void page_key(keypress_t p, char letter) {
     case K_ENTER:
         if(o->page->pick != NULL && o->page->pick(o->sel))
             page_close();
+        else if(o->sel >= o->page->count)  /* it deleted the bottom row */
+            o->sel = o->page->count - 1;
         break;
     case K_CLEAR:
         page_close();

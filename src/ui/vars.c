@@ -68,14 +68,7 @@ static bool vars_pick(int i) {
     names_delete(i);
     if(empty())
         return true;    /* that was the last one, nothing left to look at */
-
-    /* page.c reads count live but never moves sel back, so deleting the bottom
-       row would leave it past the end. reopening starts it at the top */
-    vars_page.count = names_count();
-    if(i >= vars_page.count) {
-        page_close();
-        page_open(&vars_page);
-    }
+    vars_page.count = names_count();  /* page.c pulls sel back if it fell off */
     return false;
 }
 
