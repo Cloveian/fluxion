@@ -44,6 +44,7 @@ TestType resolve_type(char *type) {
     if(!strcmp(type, "comdenomf"))  return TEST_COMDENOMF;
     if(!strcmp(type, "decimal"))    return TEST_DECIMAL;
     if(!strcmp(type, "asym"))       return TEST_ASYM;
+    if(!strcmp(type, "domain"))     return TEST_DOMAIN;
     if(!strcmp(type, "system"))     return TEST_SYSTEM;
     if(!strcmp(type, "turn"))       return TEST_TURN;
     if(!strcmp(type, "csolve"))     return TEST_CSOLVE;
@@ -343,6 +344,53 @@ static bool test_asym(test_t *t) {
     return passed;
 }
 
+/*Fluxion: domain; expression; var; lower <x> | upper <x> | holes <list>. o after a bound
+for open (lower 0o is x > 0), - for none, | partial on the end when domain() says there may
+be more out. empty when there's no x at all, unknown when it gives up*/
+static bool test_domain(test_t *t) {
+    pcas_error_t err;
+    pcas_ast_t *e = parse((uint8_t*)t->arg1, strlen(t->arg1), str_table, &err);
+    domain_t d;
+    char got[MAX_LINE] = "";
+    char *trimmed;
+    bool passed;
+
+    if(err != E_SUCCESS || e == NULL) {
+        printf("Test failed on line %u. Unable to parse %s\n", t->line, t->arg1);
+        return false;
+    }
+
+    if(!domain(e, (Symbol)t->arg2[0], &d)) {
+        strcpy(got, "unknown");
+    } else if(d.empty) {
+        strcpy(got, "empty");
+        domain_free(&d);
+    } else {
+        strcpy(got, "lower");
+        asym_list(got, sizeof(got), &d.lower, d.lower != NULL);
+        if(d.lower_open)
+            strncat(got, "o", sizeof(got) - strlen(got) - 1);
+        strncat(got, " | upper", sizeof(got) - strlen(got) - 1);
+        asym_list(got, sizeof(got), &d.upper, d.upper != NULL);
+        if(d.upper_open)
+            strncat(got, "o", sizeof(got) - strlen(got) - 1);
+        strncat(got, " | holes", sizeof(got) - strlen(got) - 1);
+        asym_list(got, sizeof(got), d.holes, d.nholes);
+        if(d.partial)
+            strncat(got, " | partial", sizeof(got) - strlen(got) - 1);
+        domain_free(&d);
+    }
+
+    trimmed = trim(got);
+    passed = strcmp(trimmed, t->arg3) == 0;
+    free(trimmed);
+    if(!passed)
+        printf("Test failed on line %u. Expected %s but got %s\n", t->line, t->arg3, got);
+
+    ast_Cleanup(e);
+    return passed;
+}
+
 /*Fluxion: system; eq,eq,...; vars; expected. each eq is A=B, or A for A=0. vars run
 together (XY), one letter each. expected is the values in var order, or false / many / unknown*/
 static bool test_system(test_t *t) {
@@ -512,6 +560,8 @@ bool test_Run(test_t *t) {
         return test_decimal(t);
     if(t->type == TEST_ASYM)
         return test_asym(t);
+    if(t->type == TEST_DOMAIN)
+        return test_domain(t);
     if(t->type == TEST_SYSTEM)
         return test_system(t);
 

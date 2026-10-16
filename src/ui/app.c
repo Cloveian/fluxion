@@ -583,6 +583,107 @@ static void run_asym(char *src, box_t *in) {
     asym_free(&a);
 }
 
+/* x >= 2, one side of a domain() answer. rel is one character, the font has >= and <= */
+static box_t *bound_box(char var, char rel, pcas_ast_t *v) {
+    char name[2] = { var, '\0' }, op[2] = { rel, '\0' };
+    box_t *row = layout_box(BOX_ROW, 0);
+
+    layout_add(row, layout_text(name, 0));
+    layout_add(row, layout_space(LAYOUT_SPACE(0)));
+    layout_add(row, layout_text(op, 0));
+    layout_add(row, layout_space(LAYOUT_SPACE(0)));
+    layout_add(row, value_box(v));
+    layout_finish(row, &draw_font);
+    return row;
+}
+
+/*
+    domain(expression, variable). a line per bound, then the single values that
+    are out. comma like asym, writes into src too
+*/
+static void run_domain(char *src, box_t *in) {
+    pcas_ast_t *e;
+    domain_t d;
+    char *comma = NULL, *s, shown = 'x';
+    Symbol var = SYM_X;
+    pcas_error_t err;
+    clock_t start;
+    unsigned long ms;
+    int depth = 0;
+    bool ok;
+    box_t *col;
+
+    for(s = src; *s != '\0'; s++) {
+        if(*s == '(')
+            depth++;
+        else if(*s == ')')
+            depth--;
+        else if(depth == 0 && *s == ',')
+            comma = s;
+    }
+    if(comma != NULL) {
+        *comma = '\0';
+        if(!read_var(comma + 1, &var, &shown)) {
+            push(in, NULL, "domain(expression, variable)", 0);
+            return;
+        }
+    }
+
+    e = parse((const uint8_t *)src, strlen(src), str_table, &err);
+    if(err != E_SUCCESS || e == NULL) {
+        if(e != NULL)
+            ast_Cleanup(e);
+        push(in, NULL, error_text[err], 0);
+        return;
+    }
+    if(setting_angle == ANGLE_DEGREES)
+        e = degrees_in(e);
+
+    start = clock();
+    ok = domain(e, var, &d);
+    ms = (unsigned long)((clock() - start) * 1000 / CLOCKS_PER_SEC);
+    ast_Cleanup(e);
+
+    if(pcas_cancelled) {
+        push(in, NULL, pcas_oom ? "out of memory" : "cancelled", ms);
+        domain_free(&d);
+        return;
+    }
+    if(!ok) {
+        push(in, NULL, "the bottom is 0 everywhere", ms);
+        return;
+    }
+    if(d.empty) {
+        char none[] = "no real x";
+
+        none[8] = shown;
+        push(in, word_box(none), NULL, ms);
+        domain_free(&d);
+        return;
+    }
+    if(d.lower == NULL && d.upper == NULL && d.nholes == 0) {
+        /* "all reals (and maybe more)" would be a lie the other way round */
+        if(d.partial)
+            push(in, NULL, "can't work all of this one out yet", ms);
+        else
+            push(in, word_box("all reals"), NULL, ms);
+        return;
+    }
+
+    col = layout_box(BOX_COL, 0);
+    if(d.lower != NULL)
+        layout_add(col, bound_box(shown, d.lower_open ? '>' : CH_GE, d.lower));
+    if(d.upper != NULL)
+        layout_add(col, bound_box(shown, d.upper_open ? '<' : CH_LE, d.upper));
+    if(d.nholes > 0)
+        layout_add(col, labelled("except", solutions_box(shown, d.holes, d.nholes)));
+    if(d.partial)
+        layout_add(col, layout_text("(and maybe more)", 0));
+    layout_finish(col, &draw_font);
+    push(in, col, NULL, ms);
+    domain_free(&d);
+}
+
 /*
     system(eq, eq, ..., x, y). the pieces between the top level commas with an =
     are equations, the rest are the variables. no variables given, it takes the
@@ -765,7 +866,7 @@ static bool run(editor_t *line) {
     /* no nesting commands yet, expand(...) has to be the whole line (todo, ugh) */
     if(strstr(src, "expand(") || strstr(src, "factor(") || strstr(src, "eval(") || strstr(src, "solve(")
        || strstr(src, "asym(") || strstr(src, "system(") || strstr(src, "slope(") || strstr(src, "dist(")
-       || strstr(src, "mid(") || strstr(src, "par(") || strstr(src, "perp(")) {
+       || strstr(src, "mid(") || strstr(src, "par(") || strstr(src, "perp(") || strstr(src, "domain(")) {
         free(src);
         status = "commands have to be the whole line (for now)";
         return false;
@@ -778,6 +879,11 @@ static bool run(editor_t *line) {
     }
     if(cmd != NULL && strcmp(cmd, "asym") == 0) {
         run_asym(src, ed_layout(line, &draw_font, false));
+        free(src);
+        return true;
+    }
+    if(cmd != NULL && strcmp(cmd, "domain") == 0) {
+        run_domain(src, ed_layout(line, &draw_font, false));
         free(src);
         return true;
     }
@@ -1066,7 +1172,7 @@ static bool pick_into(editor_t *into, const item_t *it, bool dry) {
            strcmp(s, "factor($)") != 0 && strcmp(s, "eval($)") != 0 && strcmp(s, "solve($)") != 0
            && strcmp(s, "asym($)") != 0 && strcmp(s, "system($)") != 0 && strcmp(s, "slope($)") != 0
            && strcmp(s, "dist($)") != 0 && strcmp(s, "mid($)") != 0 && strcmp(s, "par($)") != 0
-           && strcmp(s, "perp($)") != 0)
+           && strcmp(s, "perp($)") != 0 && strcmp(s, "domain($)") != 0)
             return false;
         if(!dry) {
             memcpy(name, s, n);

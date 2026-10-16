@@ -164,6 +164,9 @@ ITEM(it_solve,    "solve",  "solve", ITEM_COMMAND, NULL, "solve($)", HAVE_PARTLY
 ITEM(it_asym,     "asymptotes", "asym", ITEM_COMMAND, NULL, "asym($)", HAVE_PARTLY,
      "asym(f,x): holes, vertical and horizontal asymptotes of a rational function. no slant ones yet",
      "holes and asymptotes of a fraction. asym((x^2-1)/(x-1),x) -> hole at x = 1. no slant ones yet")
+ITEM(it_domain,   "domain", "domain", ITEM_COMMAND, NULL, "domain($)", HAVE_PARTLY,
+     "domain(f,x): zeros of bottoms, even roots and logs of ax+b, tan at pi/2+pi n. worse inside a root or log just says (and maybe more)",
+     "where it's defined. domain(sqrt(x-2),x) -> x >= 2. a root or log of more than ax+b is only partly done")
 ITEM(it_system,   "system", "system", ITEM_COMMAND, NULL, "system($)", HAVE_PARTLY,
      "system(eq, eq, ..., x, y): linear systems by elimination, letters in the coefficients ok. nothing nonlinear yet",
      "solves equations together. system(2x-y=7,x+y=2,x,y) -> x = 3, y = -1. linear only, for now")
@@ -215,7 +218,7 @@ const item_t *const catalog[] = {
     &it_sinh, &it_cosh, &it_tanh, &it_asinh, &it_acosh, &it_atanh, &it_logb, &it_abs, &it_fact, &it_int,
     &it_gcd, &it_lcm, &it_ncr, &it_npr,
     &it_frac, &it_parens, &it_piecewise,
-    &it_simplify, &it_expand, &it_subst, &it_evaluate, &it_factor, &it_solve, &it_asym, &it_system,
+    &it_simplify, &it_expand, &it_subst, &it_evaluate, &it_factor, &it_solve, &it_asym, &it_domain, &it_system,
     &it_slope, &it_dist, &it_mid, &it_par, &it_perp,
     &it_deriv, &it_deriv_at, &it_integral, &it_limit,
     &it_id_basic, &it_id_trig, &it_id_hyp, &it_id_cplx, &it_id_tconst, &it_id_iconst, &it_rationalize, &it_clear
@@ -223,7 +226,7 @@ const item_t *const catalog[] = {
 const unsigned catalog_count = sizeof catalog / sizeof catalog[0];
 
 static const item_t *const algebra[] = {
-    &it_expand, &it_factor, &it_solve, &it_asym, &it_system, &it_slope, &it_dist, &it_mid,
+    &it_expand, &it_factor, &it_solve, &it_asym, &it_domain, &it_system, &it_slope, &it_dist, &it_mid,
     &it_par, &it_perp, &it_subst, &it_evaluate
 };
 static const item_t *const calculus[] = {

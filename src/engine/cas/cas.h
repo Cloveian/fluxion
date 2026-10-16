@@ -280,6 +280,24 @@ typedef struct {
 bool asym(pcas_ast_t *f, Symbol var, asym_t *out);
 void asym_free(asym_t *a);
 
+/*Fluxion: where f is defined in var, over the reals (cas/domain.c). lower and
+  upper are the bounds (NULL for none, open = the bound itself is out), holes are
+  the single x values out on top of that, smallest first, tan's as pi/2 + pi n.
+  partial when a root or log had something in it that isn't linear, there may be
+  more out than this. empty when the bounds cross (or meet with one open), no x at
+  all, the bounds stay and the holes go. false when nothing at all is defined
+  (1/(x-x)) or cancelled*/
+typedef struct {
+    pcas_ast_t *holes[SOLVE_MAX];
+    int nholes;
+    pcas_ast_t *lower, *upper;
+    bool lower_open, upper_open;
+    bool partial;
+    bool empty;
+} domain_t;
+bool domain(pcas_ast_t *f, Symbol var, domain_t *out);
+void domain_free(domain_t *d);
+
 /*Fluxion: linear systems (cas/system.c). n expressions that are = 0, in the n
   vars. out[i] gets the value of vars[i] (all NULL going in). returns n, or 0 for
   no solution, SOLVE_ALL when they're dependent (infinitely many), SOLVE_UNKNOWN
