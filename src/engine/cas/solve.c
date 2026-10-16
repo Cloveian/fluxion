@@ -5,10 +5,10 @@
     with complex on is more its csolve(): quadratics give their complex roots too.
       var gone after simplifying   every value (0 = 0) or none (1 = 0)
       linear in var                var = -b/a. a and b can have other variables in them
-      polynomial with numbers      factored (factor.c), then each factor: linear, or a
-                                   quadratic by the formula. a cubic or higher factor
-                                   left over means it can't be solved (yet), never a
-                                   partial answer.
+      polynomial with numbers      factored (factor.c), then each factor: linear, a
+                                   quadratic by the formula, or a cubic by cardano / the
+                                   cos form. a quartic or higher factor left over means
+                                   it can't be solved (yet), never a partial answer.
 
     Your mom
 */
@@ -412,6 +412,382 @@ static int solve_quadratic_sym(coefs_t *p, pcas_ast_t **out, int n) {
     return n;
 }
 
+/*a numeric coef as one rational, missing is 0. normalize can leave it as a/b so
+that too. false for anything else*/
+static bool coef_rat(pcas_ast_t *e, mp_rat r) {
+    if(e == NULL) {
+        mp_rat_zero(r);
+        return true;
+    }
+    if(e->type == NODE_NUMBER)
+        return mp_rat_copy(e->op.num, r) == MP_OK;
+    if(isoptype(e, OP_DIV) && ast_ChildGet(e, 0)->type == NODE_NUMBER && ast_ChildGet(e, 1)->type == NODE_NUMBER
+       && !is_zero(ast_ChildGet(e, 1)))
+        return mp_rat_div(ast_ChildGet(e, 0)->op.num, ast_ChildGet(e, 1)->op.num, r) == MP_OK;
+    return false;
+}
+
+/*a*b into *out, false if it doesnt fit a long (24 bit int on the calculator, long is 32)*/
+static bool mul_small(mp_small a, mp_small b, mp_small *out) {
+    mp_small x = a < 0 ? -a : a;
+
+    if(x != 0 && (b > MP_SMALL_MAX / x || b < -(MP_SMALL_MAX / x)))
+        return false;
+    *out = a * b;
+    return true;
+}
+
+/*the kth powers in *m taken out, f up to 1000, k 2 or 3. 54 and 3 leaves 2, gives 3.
+only small factors get tried, the calculator has to do this too*/
+static mp_small take_powers(mp_small *m, int k) {
+    mp_small f, fk, front = 1;
+
+    for(f = 2; f <= 1000; f++) {
+        fk = k == 2 ? f * f : f * f * f;
+        if(fk > *m)
+            break;
+        while(*m % fk == 0) {
+            *m /= fk;
+            front *= f;
+        }
+    }
+    return front;
+}
+
+/*splits r^(1/k) into front * m^(1/k) / d with all three whole, r > 0. false on overflow*/
+static bool root_parts(mp_rat r, int k, mp_small *front, mp_small *m, mp_small *d) {
+    mp_small n;
+    int i;
+
+    if(mp_rat_to_ints(r, &n, d) != MP_OK || n <= 0)
+        return false;
+    for(*m = n, i = 1; i < k; i++)
+        if(!mul_small(*m, *d, m))
+            return false;
+    *front = take_powers(m, k);
+    return true;
+}
+
+/*r^(1/k), r >= 0, k 2 or 3, as the root of n*d^(k-1) over d so the bottom is
+whole, with the kth powers taken out front: sqrt(31/108) is sqrt(93)/18, cbrt(16)
+is 2cbrt(2). simplify leaves those alone. a plain number if it comes out even*/
+static pcas_ast_t *root_rat(mp_rat r, int k) {
+    mp_small front, m, d;
+
+    if(mp_rat_compare_zero(r) == 0)
+        return number(0);
+    if(!root_parts(r, k, &front, &m, &d)) /*too big to bother*/
+        return ast_MakeBinary(OP_POW, ast_MakeNumber(num_Copy(r)), ast_MakeNumber(num_FromFraction(1, k)));
+    if(m == 1)
+        return ast_MakeNumber(num_FromFraction(front, d));
+    return ast_MakeBinary(OP_DIV,
+        ast_MakeBinary(OP_MULT, number(front), ast_MakeBinary(OP_POW, number(m), ast_MakeNumber(num_FromFraction(1, k)))),
+        number(d));
+}
+
+/*cbrt((a + b sqrt(m)) / d) as c cbrt(a' + b' sqrt(m)) / d, whole numbers inside.
+the full simplify hangs on cbrt(sqrt(93)/18 - 1/2) - cbrt(sqrt(93)/18 + 1/2), the
+canonical form (the app runs it to show the answer) goes round and round in gcd().
+with the inside whole it doesnt, at least on the ones i tried. NULL if a number
+gets too big for a long*/
+static pcas_ast_t *cbrt_surd(mp_small a, mp_small b, mp_small m, mp_small d) {
+    mp_small dd, g, c;
+
+    if(!mul_small(d, d, &dd) || !mul_small(a, dd, &a) || !mul_small(b, dd, &b))
+        return NULL;
+    g = gcd_small(a, b);
+    c = take_powers(&g, 3);
+    a /= c * c * c;
+    b /= c * c * c;
+    return ast_MakeBinary(OP_DIV,
+        ast_MakeBinary(OP_MULT, number(c),
+            ast_MakeBinary(OP_ROOT, number(3),
+                ast_MakeBinary(OP_ADD, number(a),
+                    ast_MakeBinary(OP_MULT, number(b), ast_MakeBinary(OP_POW, number(m), ast_MakeNumber(num_FromFraction(1, 2))))))),
+        number(d));
+}
+
+/*cbrt(mid + sg*sqrt(disc)) as sign*cbrt(|...|), NULL when it's 0. approx gives up
+on x^(1/3) of a negative, and then sort_roots can't place it. the sign comes from
+mid^2 against disc, no decimals*/
+static pcas_ast_t *cardano_term(mp_rat mid, mp_rat disc, int sg) {
+    mp_rat t = num_FromInt(0);
+    pcas_ast_t *s, *in = NULL, *r;
+    mp_small f, m, e, mn, md, d, a, b;
+    int sign, cmp;
+
+    if(t == NULL)
+        return NULL;
+    mp_rat_mul(mid, mid, t);
+    cmp = mp_rat_compare(t, disc);
+    if(mp_rat_compare_zero(mid) == 0 || mp_rat_compare_zero(mid) == sg || cmp < 0)
+        sign = sg;
+    else
+        sign = cmp == 0 ? 0 : mp_rat_compare_zero(mid);
+    if(sign == 0) {
+        num_Cleanup(t);
+        return NULL;
+    }
+
+    s = root_rat(disc, 2);
+    if(s == NULL) {
+        num_Cleanup(t);
+        return NULL;
+    }
+    if(s->type == NODE_NUMBER) {
+        /*disc was a square, so its all one number and the cube root can come out too*/
+        if(sg > 0)
+            mp_rat_add(mid, s->op.num, t);
+        else
+            mp_rat_sub(mid, s->op.num, t);
+        if(sign < 0)
+            mp_rat_neg(t, t);
+        ast_Cleanup(s);
+        in = root_rat(t, 3);
+    } else {
+        /*sign*mid + sign*sg*f sqrt(m)/e over one whole bottom d*/
+        if(root_parts(disc, 2, &f, &m, &e) && mp_rat_to_ints(mid, &mn, &md) == MP_OK
+           && mul_small(md / gcd_small(md, e), e, &d)
+           && mul_small(sign * mn, d / md, &a) && mul_small(sign * sg * f, d / e, &b))
+            in = cbrt_surd(a, b, m, d);
+        if(in != NULL) {
+            ast_Cleanup(s);
+        } else {
+            /*too big for longs, the fraction stays inside then*/
+            mp_rat_copy(mid, t);
+            if(sign < 0)
+                mp_rat_neg(t, t);
+            in = ast_MakeBinary(OP_ROOT, number(3),
+                ast_MakeBinary(OP_ADD, ast_MakeNumber(num_Copy(t)), ast_MakeBinary(OP_MULT, number(sign * sg), s)));
+        }
+    }
+    num_Cleanup(t);
+    r = ast_MakeBinary(OP_MULT, number(sign), in);
+    return r;
+}
+
+/*(-1 + sg*i*sqrt(3))/2, a cube root of 1*/
+static pcas_ast_t *unity(int sg) {
+    return ast_MakeBinary(OP_DIV,
+        ast_MakeBinary(OP_ADD, number(-1),
+            ast_MakeBinary(OP_MULT, number(sg),
+                ast_MakeBinary(OP_MULT, ast_MakeSymbol(SYM_IMAG),
+                    ast_MakeBinary(OP_POW, number(3), ast_MakeNumber(num_FromFraction(1, 2)))))),
+        number(2));
+}
+
+/*wu*U + wv*V + shift, either cbrt term can be missing (NULL)*/
+static pcas_ast_t *cardano_root(pcas_ast_t *u, pcas_ast_t *v, int wu, int wv, mp_rat shift) {
+    pcas_ast_t *r = ast_MakeOperator(OP_ADD);
+
+    if(r == NULL)
+        return NULL;
+    if(u != NULL)
+        ast_ChildAppend(r, wu == 0 ? ast_Copy(u) : ast_MakeBinary(OP_MULT, unity(wu), ast_Copy(u)));
+    if(v != NULL)
+        ast_ChildAppend(r, wv == 0 ? ast_Copy(v) : ast_MakeBinary(OP_MULT, unity(wv), ast_Copy(v)));
+    ast_ChildAppend(r, ast_MakeNumber(num_Copy(shift)));
+    simplify(r, SIMP_SOLVE);
+    return r;
+}
+
+/*true if e is some rational c times pi (pi, n pi, pi/m or n pi/m), which is what a
+folded acos comes back as*/
+static bool pi_part(pcas_ast_t *e, mp_rat c) {
+    pcas_ast_t *top = e, *x, *y;
+
+    if(isoptype(e, OP_DIV)) {
+        if(ast_ChildGet(e, 1)->type != NODE_NUMBER || is_zero(ast_ChildGet(e, 1)))
+            return false;
+        top = ast_ChildGet(e, 0);
+    }
+    if(top->type == NODE_SYMBOL && top->op.symbol == SYM_PI) {
+        mp_rat_set_value(c, 1, 1);
+    } else if(isoptype(top, OP_MULT) && ast_ChildLength(top) == 2) {
+        x = ast_ChildGet(top, 0);
+        y = ast_ChildGet(top, 1);
+        if(x->type != NODE_NUMBER) {
+            x = y;
+            y = ast_ChildGet(top, 0);
+        }
+        if(x->type != NODE_NUMBER || y->type != NODE_SYMBOL || y->op.symbol != SYM_PI)
+            return false;
+        mp_rat_copy(x->op.num, c);
+    } else {
+        return false;
+    }
+    if(top != e)
+        mp_rat_div(c, ast_ChildGet(e, 1)->op.num, c);
+    return true;
+}
+
+/*a*X^3 + b*X^2 + c*X + d, all numbers, added at out[n]. X = t - b/3a gives
+t^3 + pt + q, and the sign of disc = (q/2)^2 + (p/3)^3 says which way:
+below 0 three real roots, the cos one (cardano would want cube roots of complex
+numbers for those). above 0 one real root by cardano, and the two complex ones
+if complex. 0 is a repeated root, factor() takes those out before here so that's
+just in case. returns the new count*/
+static int solve_cubic(coefs_t *p, pcas_ast_t **out, int n, bool complex) {
+    mp_rat a, b, c, d, pp, q, disc, mid, shift, t, k;
+    int i;
+
+    if(pcas_cancelled)
+        return SOLVE_UNKNOWN;
+    a = num_FromInt(0);
+    b = num_FromInt(0);
+    c = num_FromInt(0);
+    d = num_FromInt(0);
+    pp = num_FromInt(0);
+    q = num_FromInt(0);
+    disc = num_FromInt(0);
+    mid = num_FromInt(0);
+    shift = num_FromInt(0);
+    t = num_FromInt(0);
+    k = num_FromInt(0);
+    if(a == NULL || b == NULL || c == NULL || d == NULL || pp == NULL || q == NULL || disc == NULL
+       || mid == NULL || shift == NULL || t == NULL || k == NULL
+       || !coef_rat(p->lead, a) || !coef_rat(p->c[2], b) || !coef_rat(p->c[1], c) || !coef_rat(p->c[0], d)
+       || mp_rat_compare_zero(a) == 0) {
+        n = SOLVE_UNKNOWN;
+        goto done;
+    }
+
+    /*monic first, then p = c - b^2/3, q = 2b^3/27 - bc/3 + d*/
+    mp_rat_div(b, a, b);
+    mp_rat_div(c, a, c);
+    mp_rat_div(d, a, d);
+    mp_rat_mul(b, b, t);
+    mp_rat_set_value(k, 1, 3);
+    mp_rat_mul(t, k, t);
+    mp_rat_sub(c, t, pp);
+    mp_rat_expt(b, 3, q);
+    mp_rat_set_value(k, 2, 27);
+    mp_rat_mul(q, k, q);
+    mp_rat_mul(b, c, t);
+    mp_rat_set_value(k, 1, 3);
+    mp_rat_mul(t, k, t);
+    mp_rat_sub(q, t, q);
+    mp_rat_add(q, d, q);
+
+    /*shift = -b/3, mid = -q/2, disc = (q/2)^2 + (p/3)^3*/
+    mp_rat_set_value(k, -1, 3);
+    mp_rat_mul(b, k, shift);
+    mp_rat_set_value(k, -1, 2);
+    mp_rat_mul(q, k, mid);
+    mp_rat_mul(mid, mid, disc);
+    mp_rat_set_value(k, 1, 3);
+    mp_rat_mul(pp, k, t);
+    mp_rat_expt(t, 3, t);
+    mp_rat_add(disc, t, disc);
+
+    if(mp_rat_compare_zero(disc) < 0) {
+        /*2 sqrt(-p/3) cos(acos((3q/2p) sqrt(-3/p))/3 - 2pi k/3), k = 0 1 2. p < 0 here*/
+        pcas_ast_t *amp, *arg, *theta;
+        mp_rat cpi;
+        bool nice, folded;
+
+        mp_rat_set_value(k, -1, 3);
+        mp_rat_mul(pp, k, t);
+        amp = ast_MakeBinary(OP_MULT, number(2), root_rat(t, 2));
+        mp_rat_set_value(k, 3, 2);
+        mp_rat_div(q, pp, t);
+        mp_rat_mul(t, k, t);
+        mp_rat_set_value(k, -3, 1);
+        mp_rat_div(k, pp, k);
+        arg = ast_MakeBinary(OP_MULT, ast_MakeNumber(num_Copy(t)), root_rat(k, 2));
+        simplify(arg, SIMP_SOLVE);
+        theta = ast_MakeUnary(OP_COS_INV, arg);
+
+        /*the identity passes, but only on the acos and only when it can fold: acos(-1/2)
+        is 2pi/3. those all have arg^2 = 1/4, 1/2 or 3/4, and arg^2 is just t^2*k. for
+        anything else it was a ms on the PC for nothing*/
+        cpi = num_FromInt(0);
+        nice = false;
+        if(cpi != NULL) {
+            mp_rat_mul(t, t, cpi);
+            mp_rat_mul(cpi, k, cpi);
+            nice = mp_rat_compare_value(cpi, 1, 4) == 0 || mp_rat_compare_value(cpi, 1, 2) == 0
+                || mp_rat_compare_value(cpi, 3, 4) == 0;
+        }
+        simplify(theta, nice ? SIMP_ALL : SIMP_SOLVE);
+        folded = nice && theta != NULL && pi_part(theta, cpi);
+
+        for(i = 0; i < 3 && !pcas_cancelled; i++) {
+            pcas_ast_t *angle, *r;
+
+            if(folded) {
+                /*(c pi - 2pi k)/3 done here, the light simplify leaves 2pi/9 - 4pi/3
+                alone. then into 0..pi, cos(-4pi/9) is cos(4pi/9)*/
+                mp_rat_set_value(k, -2 * i, 1);
+                mp_rat_add(cpi, k, t);
+                mp_rat_set_value(k, 1, 3);
+                mp_rat_mul(t, k, t);
+                mp_rat_set_value(k, 2, 1);
+                while(mp_rat_compare_zero(t) < 0)
+                    mp_rat_add(t, k, t);
+                while(mp_rat_compare(t, k) >= 0)
+                    mp_rat_sub(t, k, t);
+                if(mp_rat_compare_value(t, 1, 1) > 0)
+                    mp_rat_sub(k, t, t);
+                angle = ast_MakeBinary(OP_MULT, ast_MakeNumber(num_Copy(t)), ast_MakeSymbol(SYM_PI));
+            } else {
+                angle = ast_MakeBinary(OP_DIV, ast_Copy(theta), number(3));
+                if(i > 0)
+                    angle = ast_MakeBinary(OP_ADD, angle,
+                        ast_MakeBinary(OP_DIV, ast_MakeBinary(OP_MULT, number(-2 * i), ast_MakeSymbol(SYM_PI)), number(3)));
+            }
+            r = ast_MakeBinary(OP_ADD,
+                ast_MakeBinary(OP_MULT, ast_Copy(amp), ast_MakeUnary(OP_COS, angle)),
+                ast_MakeNumber(num_Copy(shift)));
+            simplify(r, SIMP_SOLVE);
+            n = add_root(out, n, r);
+        }
+        ast_Cleanup(amp);
+        ast_Cleanup(theta);
+        num_Cleanup(cpi);
+    } else if(mp_rat_compare_zero(disc) > 0) {
+        /*cbrt(-q/2 + sqrt(disc)) + cbrt(-q/2 - sqrt(disc)). the complex pair is
+        the two cbrts times the other cube roots of 1, the -i one first*/
+        pcas_ast_t *u = cardano_term(mid, disc, 1), *v = cardano_term(mid, disc, -1);
+
+        n = add_root(out, n, cardano_root(u, v, 0, 0, shift));
+        if(complex) {
+            n = add_root(out, n, cardano_root(u, v, -1, 1, shift));
+            n = add_root(out, n, cardano_root(u, v, 1, -1, shift));
+        }
+        ast_Cleanup(u);
+        ast_Cleanup(v);
+    } else if(mp_rat_compare_zero(pp) == 0) {
+        n = add_root(out, n, quadratic_root(shift, shift, 0)); /*p and q both 0, one triple root*/
+    } else {
+        /*t = 3q/p once and -3q/2p twice*/
+        mp_rat_div(q, pp, t);
+        mp_rat_set_value(k, 3, 1);
+        mp_rat_mul(t, k, t);
+        mp_rat_add(t, shift, k);
+        n = add_root(out, n, quadratic_root(k, k, 0));
+        mp_rat_div(q, pp, t);
+        mp_rat_set_value(k, -3, 2);
+        mp_rat_mul(t, k, t);
+        mp_rat_add(t, shift, k);
+        n = add_root(out, n, quadratic_root(k, k, 0));
+    }
+
+done:
+    num_Cleanup(a);
+    num_Cleanup(b);
+    num_Cleanup(c);
+    num_Cleanup(d);
+    num_Cleanup(pp);
+    num_Cleanup(q);
+    num_Cleanup(disc);
+    num_Cleanup(mid);
+    num_Cleanup(shift);
+    num_Cleanup(t);
+    num_Cleanup(k);
+    return n;
+}
+
 /*roots of one factor of the factored polynomial, added at out[n]. returns the
 new count, or SOLVE_UNKNOWN.*/
 static int solve_factor(pcas_ast_t *f, Symbol var, pcas_ast_t **out, int n, bool complex) {
@@ -443,8 +819,10 @@ static int solve_factor(pcas_ast_t *f, Symbol var, pcas_ast_t **out, int n, bool
         n = solve_quadratic(&p, out, n, complex);
     else if(p.deg == 2)
         n = solve_quadratic_sym(&p, out, n);
+    else if(p.deg == 3 && p.numeric)
+        n = solve_cubic(&p, out, n, false); /*the complex pair takes minutes to draw on the calculator, real only for now*/
     else
-        n = SOLVE_UNKNOWN;      /*TODO cubics someday, cardano looks awful though*/
+        n = SOLVE_UNKNOWN;      /*quartics someday, ferrari looks even worse*/
 
     coefs_free(&p);
     return n;
