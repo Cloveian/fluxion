@@ -15,7 +15,7 @@
 - [x] cot / sec / csc.
 - [x] Multi-var solve, (pulling one var out)
 - [x] Systems solveing
-- [ ] Solving trig equations.
+- [x] Solving trig equations.
 - [x] Holes & asymptotes. zeros of the denominator.
 - [ ] Better "normal" math handling.
 

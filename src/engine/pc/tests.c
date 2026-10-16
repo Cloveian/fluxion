@@ -45,6 +45,7 @@ TestType resolve_type(char *type) {
     if(!strcmp(type, "decimal"))    return TEST_DECIMAL;
     if(!strcmp(type, "asym"))       return TEST_ASYM;
     if(!strcmp(type, "system"))     return TEST_SYSTEM;
+    if(!strcmp(type, "turn"))       return TEST_TURN;
 
     return TEST_INVALID;
 }
@@ -164,9 +165,10 @@ bool check(test_t *t, pcas_ast_t *actual, pcas_ast_t *expected) {
 }
 
 /*Fluxion: solve; equation; var; expected. the equation is A=B, or A for A=0.
-expected is the roots smallest first (A,B,...), or true / false / unknown.*/
-static bool test_solve(test_t *t) {
-    pcas_ast_t *roots[SOLVE_MAX] = {0}, *e, *rhs = NULL;
+expected is the roots smallest first (A,B,...), or true / false / unknown.
+one_turn is turn; the same, then solve_in_range() to 2pi like the one turn mode row*/
+static bool solve_roots(test_t *t, bool one_turn) {
+    pcas_ast_t *roots[SOLVE_MAX] = {0}, *e, *rhs = NULL, *hi;
     char *eq = strchr(t->arg1, '='), *s, *start;
     pcas_error_t err;
     int n, i = 0, depth = 0;
@@ -190,6 +192,19 @@ static bool test_solve(test_t *t) {
     }
 
     n = solve(e, (Symbol)t->arg2[0], roots);
+
+    if(one_turn && n > 0) {
+        hi = parse((uint8_t*)"2pi", 3, str_table, &err);
+        if(err != E_SUCCESS || hi == NULL) {
+            printf("Test failed on line %u. Unable to parse 2pi\n", t->line);
+            for(i = 0; i < n; i++)
+                ast_Cleanup(roots[i]);
+            ast_Cleanup(e);
+            return false;
+        }
+        n = solve_in_range(roots, n, hi);
+        ast_Cleanup(hi);
+    }
 
     if(!strcmp(t->arg3, "true"))
         passed = n == SOLVE_ALL;
@@ -230,7 +245,7 @@ static bool test_solve(test_t *t) {
     }
 
     if(!passed) {
-        printf("Test failed on line %u. solve() gave %d root(s)", t->line, n);
+        printf("Test failed on line %u. %s gave %d root(s)", t->line, one_turn ? "solve_in_range()" : "solve()", n);
         for(i = 0; i < n; i++) {
             unsigned len;
             char *out = (char*)export_to_binary(roots[i], &len, str_table, &err);
@@ -247,6 +262,15 @@ static bool test_solve(test_t *t) {
         ast_Cleanup(roots[i]);
     ast_Cleanup(e);
     return passed;
+}
+
+static bool test_solve(test_t *t) {
+    return solve_roots(t, false);
+}
+
+/*Fluxion: turn; equation; var; the roots from 0 up to 2pi, smallest first*/
+static bool test_turn(test_t *t) {
+    return solve_roots(t, true);
 }
 
 /*Fluxion: the values exported like test_solve prints its roots, joined with commas, - for none*/
@@ -449,6 +473,8 @@ bool test_Run(test_t *t) {
     /*Fluxion: its arguments aren't all expressions*/
     if(t->type == TEST_SOLVE)
         return test_solve(t);
+    if(t->type == TEST_TURN)
+        return test_turn(t);
     if(t->type == TEST_DECIMAL)
         return test_decimal(t);
     if(t->type == TEST_ASYM)

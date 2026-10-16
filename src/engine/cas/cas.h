@@ -208,6 +208,12 @@ bool eval(pcas_ast_t *e, unsigned short flags);
 #define SOLVE_UNKNOWN   (-2)
 int solve(pcas_ast_t *e, Symbol var, pcas_ast_t **out);
 
+/*Fluxion: the trig families solve() gives (pi/6 + 2 pi n) turned into the ones
+  from 0 up to hi, which is 2pi, or 360 in degrees. small integers go in for n
+  and what lands in range stays, sorted. roots without an n pass through. the
+  array is rewritten in place, returns the new count*/
+int solve_in_range(pcas_ast_t **roots, int n, pcas_ast_t *hi);
+
 /*
     Fluxion: the decimal form (cas/approx.c). every part without variables that
     isn't a number yet (pi, e, roots, ln, trig in radians, ...) becomes a number

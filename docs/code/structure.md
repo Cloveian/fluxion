@@ -11,7 +11,7 @@ fluxion/
 │   ├── main.c  calculator start: app_run()
 │   ├── main_pc.c  the same app on the PC (window, or scripted keys -> PNG)
 │   ├── engine/   PineappleCAS engine (MIT, see its README for what's changed)
-│   │   ├── cas/   simplify, expand, factor, derivative, identities, solve, approx (decimal), degrees
+│   │   ├── cas/   simplify, expand, factor, derivative, identities, solve (+ trig families, systems in system.c), asym, approx (decimal), degrees
 │   │   ├── imath/  big-number + rational maths
 │   │   └── pc/  PC-only command line + test runner (empty on the calculator)
 │   ├── platform/  screen.h / keys.h / store.h: *_ti.c = graphx + keypadc + appvars, *_pc.c = framebuffer + SDL + files in build-pc/store
