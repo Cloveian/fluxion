@@ -247,5 +247,7 @@ bool absolute_val(pcas_ast_t *e);
 /*Fluxion: degree mode (cas/degrees.c). gives back the tree to use, which is a new
 root when the whole thing was an inverse trig*/
 pcas_ast_t *degrees_in(pcas_ast_t *e);
+/*Fluxion: after simplify, takes the pi/180 back out of trig arguments that stayed symbolic*/
+void degrees_out(pcas_ast_t *e);
 
 #endif
