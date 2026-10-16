@@ -602,6 +602,32 @@ bool simplify_canonical_form(pcas_ast_t *e, unsigned char flags) {
             changed |= intermediate_change;
         }
 
+        /*Fluxion: the power split above hands back a product, and inside a product
+          that nests, 8*(3*sqrt(3)) printed as 83sqrt(3). splice it in, and the
+          number goes into the number already there so nothing has to re-collect*/
+        if(isoptype(e, OP_MULT)) {
+            for(i = 0; i < ast_ChildLength(e); i++) {
+                pcas_ast_t *inner = ast_ChildGet(e, i), *first = ast_ChildGet(e, 0);
+
+                if(!isoptype(inner, OP_MULT))
+                    continue;
+                ast_ChildRemoveIndex(e, i);
+                while(ast_ChildLength(inner) > 0) {
+                    pcas_ast_t *k = ast_ChildRemoveIndex(inner, 0);
+
+                    if(k->type == NODE_NUMBER && first != NULL && first->type == NODE_NUMBER) {
+                        mp_rat_mul(first->op.num, k->op.num, first->op.num);
+                        ast_Cleanup(k);
+                    } else {
+                        ast_ChildInsert(e, k, i++);
+                    }
+                }
+                ast_Cleanup(inner);
+                intermediate_change = changed = true;
+                break;
+            }
+        }
+
     } while(intermediate_change && !pcas_check());
 
     return changed;
