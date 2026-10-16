@@ -47,6 +47,7 @@ static int history_len;
     copies it. left/right goes inside it (browsing) to select just a part.
 */
 static int hist = -1; /* entry highlighted, -1 = typing in the input line */
+static int cleared; /* [on][clear] on an empty line scrolls everything below this up out of view */
 static bool hist_out; /* its answer instead of its input */
 static bool browsing; /* moving around inside it, with view */
 static editor_t view;
@@ -102,6 +103,7 @@ static void clear_history(void) {
         ed_row_free(history[history_len].out_row);
     }
     hist = -1;
+    cleared = 0;
     browsing = false;
 }
 
@@ -394,6 +396,8 @@ static void pop_last(void) {
     layout_free(h->out);
     ed_row_free(h->row);
     ed_row_free(h->out_row);
+    if(cleared > history_len)
+        cleared = history_len;
 }
 
 /* switch form and redo the last answer in it. its input comes back out of the
@@ -949,6 +953,12 @@ static bool key_ctl(keypress_t p) {
             status = "nothing to undo";
         return true;
     case K_CLEAR: /* whole line, Ctrl+Backspace */
+        /* on an empty line it clears the screen instead. nothing gets deleted,
+           the history just scrolls up out of view and up brings it back */
+        if(ed_is_empty(&ed)) {
+            cleared = history_len;
+            return true;
+        }
         will_edit(false);
         ed_clear(&ed);
         return true;
@@ -1402,7 +1412,7 @@ static int entry_h(const entry_t *h) {
 static void draw_screen(void) {
     const font_t *small = draw_label_font();
     box_t *in = ed_layout(&ed, &draw_font, true);
-    int line_y, y, i, avail = SCREEN_W - 2 * MARGIN;
+    int line_y, y, i, avail = SCREEN_W - 2 * MARGIN, first;
 
     screen_clear();
 
@@ -1460,7 +1470,9 @@ static void draw_screen(void) {
             below -= entry_h(&history[i]);
     }
     y = line_y - GAP;
-    for(; i >= 0 && y > top_h(); i--) {
+    /* the cleared ones stay hidden unless you've gone up into them */
+    first = hist >= 0 && hist < cleared ? 0 : cleared;
+    for(; i >= first && y > top_h(); i--) {
         entry_t *h = &history[i];
         box_t *out = h->out, *inb = h->in, *browse = NULL;
 
