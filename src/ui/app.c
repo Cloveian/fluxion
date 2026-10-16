@@ -1193,6 +1193,14 @@ static bool handle(keypress_t p) {
     }
 
 
+    /* [2nd][alpha][on] is lights out. both are already on by the time the on tap
+       comes, so that's the whole check */
+    if(p.key == K_ON && second && alpha) {
+        second = alpha = second_lock = alpha_lock = false;
+        keys_sleep();
+        return true;
+    }
+
     if(p.key == K_2ND || p.key == K_ALPHA || p.key == K_ON) {
         modifier(p.key);
         return true;
@@ -1719,6 +1727,14 @@ static void busy_start(void) {
     draw_working();
 }
 
+/* keys_wait calls this when it goes dark or wakes up. the waking key already got
+   eaten down there, so all that's left here is a redraw */
+static void on_sleep(bool asleep) {
+    screen_power(!asleep);
+    if(!asleep)
+        draw_screen();
+}
+
 /* main loop */
 
 void app_run(void) {
@@ -1730,6 +1746,7 @@ void app_run(void) {
     keys_begin();
     draw_screen();
     pcas_poll = busy_poll;
+    keys_on_sleep = on_sleep;
 
     for(;;) {
         keypress_t p = keys_wait();

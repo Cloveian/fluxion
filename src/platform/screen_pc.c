@@ -25,6 +25,7 @@ static const unsigned char palette[COL_COUNT][3] = {
 void screen_begin(void) { screen_clear(); }
 void screen_end(void) {}
 void screen_show(void) { window_present(); }   /* does nothing unless a window is open */
+void screen_power(bool on) { (void)on; } /* no backlight to turn off here */
 
 /* just the one framebuffer here, so drawing is always "direct", only needs showing */
 void screen_direct(bool on) {

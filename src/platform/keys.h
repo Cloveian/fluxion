@@ -11,6 +11,7 @@
 */
 
 #include <stdbool.h>
+#include <time.h>   /* CLOCKS_PER_SEC for the idle timeout */
 
 typedef enum {
     K_NONE,
@@ -57,6 +58,17 @@ keypress_t keys_wait(void);
 /* doesn't wait. the key down right now (K_NONE if none) and [on], for checking
    while the engine works; that key won't come back from keys_wait() as a press. */
 keypress_t keys_peek(void);
+
+/*
+    going dark. after KEYS_IDLE_OFF of waiting with no key, keys_wait() calls
+    keys_on_sleep(true) (the app turns the screen off) and the next key calls it
+    with false and gets eaten, like the TI's own APD does with the key that wakes
+    it. keys_sleep() does it right away ([2nd][alpha][on]). the idle clock starts
+    when keys_wait() is entered, so a long solve doesn't count as idling.
+*/
+#define KEYS_IDLE_OFF (CLOCKS_PER_SEC * 120)   /* 2 min for now, a mode setting later */
+extern void (*keys_on_sleep)(bool asleep);
+void keys_sleep(void);
 
 #ifndef __TICE__
 /* PC only, for tests. presses come from this list instead of the keyboard, then

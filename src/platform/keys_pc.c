@@ -283,6 +283,24 @@ keypress_t keys_peek(void) {
     return press;
 }
 
+/* same shape as keys_ti.c. there's no backlight here but the app's hook still
+   runs, so the sleep logic gets exercised on the PC too */
+void (*keys_on_sleep)(bool asleep) = NULL;
+static bool asleep;
+
+static void wake(void) {
+    asleep = false;
+    if(keys_on_sleep != NULL)
+        keys_on_sleep(false);
+}
+
+void keys_sleep(void) {
+    if(!asleep && keys_on_sleep != NULL) {
+        asleep = true;
+        keys_on_sleep(true);
+    }
+}
+
 keypress_t keys_wait(void) {
     keypress_t press = { K_NONE, false };
 
@@ -292,9 +310,18 @@ keypress_t keys_wait(void) {
     while(pending_count == 0) {
         SDL_Event ev;
 
-        if(!SDL_WaitEvent(&ev)) {
-            push(K_QUIT, false);
-            break;
+        /* a timeout while awake is the idle clock running out */
+        if(!SDL_WaitEventTimeout(&ev, asleep ? -1 : (int)(KEYS_IDLE_OFF / (CLOCKS_PER_SEC / 1000)))) {
+            if(asleep) {
+                push(K_QUIT, false);
+                break;
+            }
+            keys_sleep();
+            continue;
+        }
+        if(asleep && ev.type == SDL_EVENT_KEY_DOWN) {
+            wake();     /* that key only turns the screen back on */
+            continue;
         }
 
         switch(ev.type) {
