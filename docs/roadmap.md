@@ -21,7 +21,7 @@
 
 ## polish
 
-- [ ] Lock icons. (for mod keys)
+- [x] Lock icons. (for mod keys)
 - [x] Clear the screen. `[on][clear]` 
 - [x] Modifier taps while meth is processing
 - [x] 'Soft' key menus in math print.
