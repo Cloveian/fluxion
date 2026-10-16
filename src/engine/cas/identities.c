@@ -605,7 +605,8 @@ unsigned long func_mask(pcas_ast_t *e) {
     if(e->type != NODE_OPERATOR)
         return 0;
 
-    if(optype(e) == OP_LOG || optype(e) == OP_DERIV || is_op_unary(optype(e)))
+    if(optype(e) == OP_LOG || optype(e) == OP_DERIV || is_op_unary(optype(e))
+       || (optype(e) >= OP_GCD && optype(e) <= OP_NPR)) /*Fluxion: matched exactly too, they come after the unary range*/
         mask |= 1UL << optype(e);
 
     for(child = ast_ChildGet(e, 0); child != NULL; child = child->next)
@@ -625,6 +626,7 @@ static const struct { const char *text; OperatorType op; } text_funcs[] = {
     {"sinh(", OP_SINH}, {"cosh(", OP_COSH}, {"tanh(", OP_TANH},
     {"sin(", OP_SIN}, {"cos(", OP_COS}, {"tan(", OP_TAN},
     {"cot(", OP_COT}, {"sec(", OP_SEC}, {"csc(", OP_CSC},
+    {"gcd(", OP_GCD}, {"lcm(", OP_LCM}, {"nCr(", OP_NCR}, {"nPr(", OP_NPR},
     {"log(", OP_LOG}, {"int(", OP_INT}, {"abs(", OP_ABS},
     {"ln(", OP_LOG},
     {"!", OP_FACTORIAL}

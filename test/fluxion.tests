@@ -216,6 +216,17 @@ simplify; sqrt(12)X; 2sqrt(3)X
 simplify; 2sqrt(8); 4sqrt(2)
 simplify; sqrt(12)*sqrt(3); 6
 
+#gcd lcm nCr nPr work out on whole numbers, with letters they stay. factor( takes a whole number apart into primes
+simplify; gcd(12,18); 6
+simplify; lcm(4,6); 12
+simplify; gcd(X,6); gcd(X,6)
+simplify; nCr(5,2); 10
+simplify; nPr(5,2); 20
+simplify; nCr(50,2); 1225
+factor; 360; 2^3*3^2*5
+factor; 97; 97
+factor; -12; -2^2*3
+
 #Nothing to take out, or all of it
 simplify; sqrt(2); sqrt(2)
 simplify; sqrt(0); 0

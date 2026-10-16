@@ -299,6 +299,21 @@ static unsigned _to_binary(pcas_ast_t *e, uint8_t *data, unsigned index, struct 
             add_token(TOK_CLOSE_PAR);
 
             break;
+        } case OP_GCD: case OP_LCM: case OP_NCR: case OP_NPR: {
+            /*Fluxion: same order in and out, nothing to swap like logb*/
+            switch(optype(e)) {
+                case OP_GCD:        add_token(TOK_GCD);      break;
+                case OP_LCM:        add_token(TOK_LCM);      break;
+                case OP_NCR:        add_token(TOK_NCR);      break;
+                default:            add_token(TOK_NPR);      break;
+            }
+
+            index = _to_binary(ast_ChildGet(e, 0), data, index, lookup, err);
+            add_token(TOK_COMMA);
+            index = _to_binary(ast_ChildGet(e, 1), data, index, lookup, err);
+            add_token(TOK_CLOSE_PAR);
+
+            break;
         } case OP_FACTORIAL: {
 
             pcas_ast_t *a;

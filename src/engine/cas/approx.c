@@ -28,7 +28,7 @@ static bool is_whole(real x) {
 /*the value of e if it has no variables and is real, in *x. floats the whole way, good enough*/
 static bool value(pcas_ast_t *e, real *x) {
     pcas_ast_t *child;
-    real a = 0, b = 0;
+    real a = 0, b = 0, c, d, t;
 
     if(e->type == NODE_NUMBER) {
         *x = int_value(mp_rat_numer_ref(e->op.num)) / int_value(mp_rat_denom_ref(e->op.num));
@@ -97,6 +97,27 @@ static bool value(pcas_ast_t *e, real *x) {
     case OP_SINH_INV: *x = asinhf(a); break;
     case OP_COSH_INV: if(a < 1) return false; *x = acoshf(a); break;
     case OP_TANH_INV: if(a <= -1 || a >= 1) return false; *x = atanhf(a); break;
+    case OP_GCD:
+    case OP_LCM:
+        /*only reaches here when eval couldn't, gcd(int(pi),6) say. euclid, exact while it fits a float*/
+        if(!is_whole(a) || !is_whole(b)) return false;
+        a = fabsf(a);
+        b = fabsf(b);
+        for(c = a, d = b; d != 0; ) {
+            t = fmodf(c, d);
+            c = d;
+            d = t;
+        }
+        *x = optype(e) == OP_GCD ? c : c == 0 ? 0 : a / c * b;
+        break;
+    case OP_NCR:
+    case OP_NPR:
+        /*stops at inf, which is a few hundred steps at most*/
+        if(!is_whole(a) || !is_whole(b) || b < 0 || b > a) return false;
+        if(optype(e) == OP_NCR && a - b < b) b = a - b;
+        for(*x = 1, c = 0; c < b && isfinite(*x); c++)
+            *x = optype(e) == OP_NCR ? *x * (a - c) / (c + 1) : *x * (a - c);
+        break;
     default:
         return false;
     }
