@@ -182,6 +182,11 @@ static bool test_solve(test_t *t) {
     if(rhs != NULL)
         e = ast_MakeBinary(OP_ADD, e, ast_MakeBinary(OP_MULT, ast_MakeNumber(num_FromInt(-1)), rhs));
 
+    if(e == NULL) { /*Fluxion: oom*/
+        printf("Test failed on line %u. Out of memory building the equation\n", t->line);
+        return false;
+    }
+
     n = solve(e, (Symbol)t->arg2[0], roots);
 
     if(!strcmp(t->arg3, "true"))

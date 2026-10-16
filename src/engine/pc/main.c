@@ -163,6 +163,13 @@ int run_simplify(int argc, char **argv) {
         simplify(e, SIMP_ALL);
         simplify_canonical_form(e, CANONICAL_ALL);
 
+        if(pcas_oom) { /*Fluxion: oom*/
+            printf("Out of memory\n");
+            free(trimmed);
+            ast_Cleanup(e);
+            return 0;
+        }
+
         dbg_print_tree(e, 4);
 
         printf("\n");
@@ -233,6 +240,13 @@ uint8_t *trimmed;
         /*simplify(e, SIMP_ALL);*/
         simplify_canonical_form(e, CANONICAL_ALL);
 
+        if(pcas_oom) { /*Fluxion: oom*/
+            printf("Out of memory\n");
+            free(trimmed);
+            ast_Cleanup(e);
+            return 0;
+        }
+
         dbg_print_tree(e, 4);
         printf("\n");
 
@@ -298,6 +312,13 @@ int run_expand(int argc, char **argv) {
         expand(e, EXP_ALL);
         simplify(e, SIMP_NORMALIZE | SIMP_COMMUTATIVE | SIMP_RATIONAL | SIMP_LIKE_TERMS | SIMP_EVAL);
         simplify_canonical_form(e, CANONICAL_ALL ^ CANONICAL_COMBINE_POWERS);
+
+        if(pcas_oom) { /*Fluxion: oom*/
+            printf("Out of memory\n");
+            free(trimmed);
+            ast_Cleanup(e);
+            return 0;
+        }
 
         dbg_print_tree(e, 4);
         printf("\n");
@@ -410,6 +431,9 @@ int run_derivative(int argc, char **argv) {
 
     }
 
+    if(err == E_SUCCESS && (e == NULL || respect_to == NULL || at == NULL) && pcas_oom) /*Fluxion: oom*/
+        printf("Out of memory\n");
+
     if(err == E_SUCCESS && e != NULL && respect_to != NULL && at != NULL) {
 
         printf("\n");
@@ -433,6 +457,14 @@ int run_derivative(int argc, char **argv) {
 
         simplify(e, SIMP_ALL);
         simplify_canonical_form(e, CANONICAL_ALL);
+
+        if(pcas_oom) { /*Fluxion: oom*/
+            printf("Out of memory\n");
+            ast_Cleanup(e);
+            ast_Cleanup(respect_to);
+            ast_Cleanup(at);
+            return 0;
+        }
 
         dbg_print_tree(e, 4);
         printf("\n");

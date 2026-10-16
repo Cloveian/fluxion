@@ -6,6 +6,9 @@ static bool eval_commutative(pcas_ast_t *e, unsigned short flags) {
     unsigned i;
     mp_rat accumulator;
 
+    if(pcas_cancelled) /*Fluxion: stop here, the answer's being thrown away*/
+        return false;
+
     if(!(flags & EVAL_COMMUTATIVE))
         return false;
 
@@ -30,6 +33,9 @@ static bool eval_commutative(pcas_ast_t *e, unsigned short flags) {
     }
 
     accumulator = num_FromInt(optype(e) == OP_MULT ? 1 : 0);
+
+    if(accumulator == NULL) /*Fluxion: oom*/
+        return false;
 
     for(i = 0; i < ast_ChildLength(e); i++) {
         pcas_ast_t *child = ast_ChildGet(e, i);
@@ -121,6 +127,9 @@ static bool eval_div_mult(pcas_ast_t *num, pcas_ast_t *den, unsigned short flags
     bool changed = false;
     bool div_changed = false;
 
+    if(pcas_cancelled) /*Fluxion: stop here, the answer's being thrown away*/
+        return false;
+
     if(isoptype(num, OP_MULT)) {
         unsigned i = 0;
 
@@ -210,8 +219,17 @@ static bool eval_div(pcas_ast_t *e, unsigned short flags) {
 
     bool changed = false;
 
+    if(pcas_cancelled) /*Fluxion: stop here, the answer's being thrown away*/
+        return false;
+
+    if(e == NULL) /*Fluxion: oom*/
+        return false;
+
     num = ast_ChildGet(e, 0);
     den = ast_ChildGet(e, 1);
+
+    if(num == NULL || den == NULL) /*Fluxion: oom*/
+        return false;
 
     if(flags & EVAL_BASIC_IDENTITIES) {
 
@@ -336,7 +354,7 @@ static bool eval_root_factors(pcas_ast_t *e, mp_int n, mp_small k, pcas_ast_t *e
     bool changed = false;
     int count, i;
 
-    if(r != NULL && s != NULL && q != NULL) {
+    if(!pcas_cancelled && r != NULL && s != NULL && q != NULL) { /*Fluxion: skip it all once cancelled, the answer's being thrown away*/
         mp_int_copy(n, r);
         mp_int_set_value(s, 1);
 
@@ -374,6 +392,9 @@ static bool eval_pow(pcas_ast_t *e, unsigned short flags) {
     /*a^b*/
     pcas_ast_t *a, *b;
     bool changed = false;
+
+    if(pcas_cancelled) /*Fluxion: stop here, the answer's being thrown away*/
+        return false;
 
     a = ast_ChildGet(e, 0);
     b = ast_ChildGet(e, 1);
@@ -595,8 +616,14 @@ static bool eval_abs(pcas_ast_t *e, unsigned short flags) {
 static bool eval_log(pcas_ast_t *e, unsigned short flags) {
     pcas_ast_t *base, *val;
 
+    if(pcas_cancelled) /*Fluxion: stop here, the answer's being thrown away*/
+        return false;
+
     base = ast_ChildGet(e, 0);
     val = ast_ChildGet(e, 1);
+
+    if(base == NULL || val == NULL) /*Fluxion: oom*/
+        return false;
 
     if(flags & EVAL_BASIC_IDENTITIES) {
         /*log(1) = 0*/
@@ -637,6 +664,9 @@ static bool eval_log(pcas_ast_t *e, unsigned short flags) {
 static bool eval_factorial(pcas_ast_t *e, unsigned short flags) {
 
     pcas_ast_t *a = ast_ChildGet(e, 0);
+
+    if(pcas_cancelled) /*Fluxion: stop here, the answer's being thrown away*/
+        return false;
 
     if(a->type == NODE_NUMBER) {
 
@@ -682,6 +712,9 @@ bool eval(pcas_ast_t *e, unsigned short flags) {
 
     bool changed = false;
     pcas_ast_t *current;
+
+    if(pcas_cancelled) /*Fluxion: stop here, the answer's being thrown away*/
+        return false;
 
     /*Get a head start to evaluate the identity ln(A^B)=Bln(A)
     before child power node is evaluated*/

@@ -25,6 +25,7 @@
  */
 
 #include "imrat.h"
+#include "../error.h"
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
@@ -62,15 +63,27 @@ mp_result mp_rat_init(mp_rat r)
   return mp_int_set_value(MP_DENOM_P(r), 1);
 }
 
+/*Fluxion: see mp_int_alloc in imath.c, same trick for rationals*/
+static mpq_t oom_rat;
+static bool  oom_rat_ready = false;
+
 mp_rat mp_rat_alloc(void)
 {
-  mp_rat out = malloc(sizeof(*out));
+  mp_rat out = pcas_malloc(sizeof(*out));
 
   if (out != NULL) {
     if (mp_rat_init(out) != MP_OK) {
       free(out);
-      return NULL;
+      out = NULL;
     }
+  }
+
+  if (out == NULL) {
+    if (!oom_rat_ready) {
+      mp_rat_init(&oom_rat);
+      oom_rat_ready = true;
+    }
+    out = &oom_rat;
   }
 
   return out;
@@ -141,6 +154,8 @@ void      mp_rat_clear(mp_rat r)
   mp_int_clear(MP_NUMER_P(r));
   mp_int_clear(MP_DENOM_P(r));
 
+  if (r == &oom_rat) /*Fluxion: keep the static one usable*/
+    mp_rat_init(r);
 }
 
 void      mp_rat_free(mp_rat r)
@@ -150,6 +165,8 @@ void      mp_rat_free(mp_rat r)
   if (r->num.digits != NULL)
     mp_rat_clear(r);
 
+  if (r == &oom_rat) /*Fluxion: the static one, see mp_rat_alloc*/
+    return;
   free(r);
 }
 

@@ -2,6 +2,8 @@
 
 mp_rat num_FromString(const char *str) {
     mp_rat n = mp_rat_alloc();
+    if(n == NULL) /*Fluxion: oom*/
+        return NULL;
     mp_rat_init(n);
     mp_rat_read_decimal(n, RADIX, str);
     return n;
@@ -9,6 +11,8 @@ mp_rat num_FromString(const char *str) {
 
 mp_rat num_FromInt(mp_small num) {
     mp_rat n = mp_rat_alloc();
+    if(n == NULL) /*Fluxion: oom*/
+        return NULL;
     mp_rat_init(n);
     mp_rat_set_value(n, num, 1);
     return n;
@@ -16,6 +20,8 @@ mp_rat num_FromInt(mp_small num) {
 
 mp_rat num_FromFraction(mp_small num, mp_small den) {
     mp_rat n = mp_rat_alloc();
+    if(n == NULL) /*Fluxion: oom*/
+        return NULL;
     mp_rat_init(n);
     mp_rat_set_value(n, num, den);
     return n;
@@ -23,6 +29,8 @@ mp_rat num_FromFraction(mp_small num, mp_small den) {
 
 mp_rat num_Copy(mp_rat other) {
     mp_rat n = mp_rat_alloc();
+    if(n == NULL) /*Fluxion: oom*/
+        return NULL;
     mp_rat_init_copy(n, other);
     return n;
 }
@@ -36,14 +44,18 @@ char *num_ToString(mp_rat num, mp_size precision) {
     if(mp_rat_is_integer(num)) {
         mp_rat_reduce(num);
         len = mp_int_string_len(&num->num, RADIX);
-        str = malloc(len * sizeof(char));
+        str = pcas_malloc(len * sizeof(char));
+        if(str == NULL)
+            return NULL;
         if((res = mp_int_to_string(&num->num, RADIX, str, len)) != MP_OK) {
             free(str);
             return NULL;
         }
     } else {
         len = mp_rat_decimal_len(num, RADIX, precision);
-        str = malloc(len * sizeof(char));
+        str = pcas_malloc(len * sizeof(char));
+        if(str == NULL)
+            return NULL;
         if((res = mp_rat_to_decimal(num, RADIX, precision, MP_ROUND_HALF_UP, str, len)) != MP_OK) {
             free(str);
             return NULL;
@@ -59,7 +71,16 @@ void num_Cleanup(mp_rat num) {
 }
 
 pcas_ast_t *ast_MakeNumber(mp_rat num) {
-    pcas_ast_t *ret = malloc(sizeof(pcas_ast_t));
+    pcas_ast_t *ret;
+
+    /*Fluxion: oom. a NULL num is read_num's buffer not fitting, imath itself hands out its spare*/
+    if(num == NULL)
+        return NULL;
+    ret = pcas_malloc(sizeof(pcas_ast_t));
+    if(ret == NULL) { /*we own num either way*/
+        num_Cleanup(num);
+        return NULL;
+    }
     ret->type = NODE_NUMBER;
     ret->next = NULL;
 
@@ -69,7 +90,9 @@ pcas_ast_t *ast_MakeNumber(mp_rat num) {
 }
 
 pcas_ast_t *ast_MakeSymbol(char symbol) {
-    pcas_ast_t *ret = malloc(sizeof(pcas_ast_t));
+    pcas_ast_t *ret = pcas_malloc(sizeof(pcas_ast_t));
+    if(ret == NULL) /*Fluxion: oom*/
+        return NULL;
     ret->type = NODE_SYMBOL;
     ret->next = NULL;
 
@@ -79,7 +102,9 @@ pcas_ast_t *ast_MakeSymbol(char symbol) {
 }
 
 pcas_ast_t *ast_MakeOperator(OperatorType type) {
-    pcas_ast_t *ret = malloc(sizeof(pcas_ast_t));
+    pcas_ast_t *ret = pcas_malloc(sizeof(pcas_ast_t));
+    if(ret == NULL) /*Fluxion: oom*/
+        return NULL;
     ret->type = NODE_OPERATOR;
     ret->next = NULL;
 
@@ -91,12 +116,21 @@ pcas_ast_t *ast_MakeOperator(OperatorType type) {
 
 pcas_ast_t *ast_MakeUnary(OperatorType type, pcas_ast_t *operand) {
     pcas_ast_t *ret = ast_MakeOperator(type);
+    if(ret == NULL) { /*Fluxion: oom, don't leak the operand*/
+        ast_Cleanup(operand);
+        return NULL;
+    }
     ast_ChildAppend(ret, operand);
     return ret;
 }
 
 pcas_ast_t *ast_MakeBinary(OperatorType type, pcas_ast_t *left, pcas_ast_t *right) {
     pcas_ast_t *ret = ast_MakeOperator(type);
+    if(ret == NULL) { /*Fluxion: oom*/
+        ast_Cleanup(left);
+        ast_Cleanup(right);
+        return NULL;
+    }
     ast_ChildAppend(ret, left);
     ast_ChildAppend(ret, right);
     return ret;
@@ -115,6 +149,8 @@ pcas_ast_t *ast_Copy(pcas_ast_t *e) {
         pcas_ast_t *copy, *child;
 
         copy = ast_MakeOperator(optype(e));
+        if(copy == NULL) /*Fluxion: oom, no point copying the children*/
+            return NULL;
         child = opbase(e);
 
         for(child = opbase(e); child != NULL; child = child->next)
@@ -142,6 +178,9 @@ bool ast_Compare(pcas_ast_t *a, pcas_ast_t *b) {
     if(a == b)
         return true;
 
+    if(a == NULL || b == NULL) /*Fluxion: oom somewhere, one of them never got made*/
+        return false;
+
     if(a->type != b->type)
         return false;
 
@@ -167,7 +206,10 @@ bool ast_Compare(pcas_ast_t *a, pcas_ast_t *b) {
             bool had_match = true;
 
             /*Keep track if we have already matched a node to another node in the past*/
-            unsigned *buffer = calloc(length, sizeof(unsigned));
+            unsigned *buffer = pcas_calloc(length, sizeof(unsigned));
+
+            if(buffer == NULL) /*Fluxion: oom, the answer gets thrown away anyway*/
+                return false;
 
             for(a_index = 0; a_index < length && had_match; a_index++) {
 
@@ -237,7 +279,10 @@ void ast_Cleanup(pcas_ast_t *e) {
 pcas_error_t ast_ChildAppend(pcas_ast_t *parent, pcas_ast_t *child) {
     pcas_ast_t *last;
 
-    if(parent->type != NODE_OPERATOR)
+    if(child == NULL) /*Fluxion: oom somewhere upstream, nothing to append*/
+        return E_GENERIC;
+
+    if(parent == NULL || parent->type != NODE_OPERATOR) /*Fluxion: NULL is oom upstream*/
         return E_AST_NOT_ALLOWED;
 
     last = ast_ChildGetLast(parent);
@@ -256,7 +301,7 @@ pcas_ast_t *ast_ChildGet(pcas_ast_t *parent, LSIZE index) {
     LSIZE i;
     pcas_ast_t *current;
 
-    if(parent->type != NODE_OPERATOR)
+    if(parent == NULL || parent->type != NODE_OPERATOR) /*Fluxion: NULL is oom upstream*/
         return NULL;
 
     current = opbase(parent);
@@ -271,7 +316,7 @@ pcas_ast_t *ast_ChildGet(pcas_ast_t *parent, LSIZE index) {
 }
 
 pcas_ast_t *ast_ChildGetLast(pcas_ast_t *parent) {
-    if(parent->type != NODE_OPERATOR)
+    if(parent == NULL || parent->type != NODE_OPERATOR) /*Fluxion: NULL is oom upstream*/
         return NULL;
 
     if(opbase(parent) == NULL) {
@@ -289,7 +334,10 @@ pcas_error_t ast_ChildInsert(pcas_ast_t *parent, pcas_ast_t *child, LSIZE index)
     LSIZE i;
     pcas_ast_t *current;
 
-    if(parent->type != NODE_OPERATOR)
+    if(child == NULL) /*Fluxion: oom*/
+        return E_GENERIC;
+
+    if(parent == NULL || parent->type != NODE_OPERATOR) /*Fluxion: NULL is oom upstream*/
         return E_AST_NOT_ALLOWED;
 
     if(index == 0) {
@@ -324,7 +372,7 @@ pcas_error_t ast_ChildInsert(pcas_ast_t *parent, pcas_ast_t *child, LSIZE index)
 }
 
 pcas_ast_t *ast_ChildRemove(pcas_ast_t *parent, pcas_ast_t *child) {
-    if(parent->type != NODE_OPERATOR)
+    if(parent == NULL || parent->type != NODE_OPERATOR) /*Fluxion: NULL is oom upstream*/
         return NULL;
     return ast_ChildRemoveIndex(parent, ast_ChildIndexOf(parent, child));
 }
@@ -333,7 +381,7 @@ LSIZE ast_ChildIndexOf(pcas_ast_t *parent, pcas_ast_t *child) {
     LSIZE i;
     pcas_ast_t *current;
 
-    if(parent->type != NODE_OPERATOR)
+    if(parent == NULL || parent->type != NODE_OPERATOR) /*Fluxion: NULL is oom upstream*/
         return -1;
 
     i = 0;
@@ -351,7 +399,7 @@ pcas_ast_t *ast_ChildRemoveIndex(pcas_ast_t *parent, LSIZE index) {
     LSIZE i;
     pcas_ast_t *current;
 
-    if(parent->type != NODE_OPERATOR)
+    if(parent == NULL || parent->type != NODE_OPERATOR) /*Fluxion: NULL is oom upstream*/
         return NULL;
 
     if(index == 0) {
@@ -390,7 +438,7 @@ LSIZE ast_ChildLength(pcas_ast_t *parent) {
     LSIZE i;
     pcas_ast_t *current;
 
-    if(parent->type != NODE_OPERATOR)
+    if(parent == NULL || parent->type != NODE_OPERATOR) /*Fluxion: NULL is oom upstream*/
         return 0;
 
     i = 0;

@@ -5,6 +5,9 @@ static pcas_ast_t *gcd_mult(pcas_ast_t *mult, pcas_ast_t *b) {
     unsigned i;
     pcas_ast_t *current_gcd, *copy;
 
+    if(pcas_cancelled) /*Fluxion: stop here, the answer's being thrown away*/
+        return NULL;
+
     copy = ast_Copy(b);
 
     current_gcd = ast_MakeOperator(OP_MULT);
@@ -50,6 +53,9 @@ static pcas_ast_t *gcd_add(pcas_ast_t *add, pcas_ast_t *b) {
 static pcas_ast_t *gcd_div(pcas_ast_t *div, pcas_ast_t *b) {
     pcas_ast_t *num1, *num2, *den1, *den2, *num_g, *den_g;
 
+    if(pcas_cancelled) /*Fluxion: stop here, the answer's being thrown away*/
+        return NULL;
+
     num1 = ast_ChildGet(div, 0);
     den1 = ast_ChildGet(div, 1);
 
@@ -75,8 +81,14 @@ static pcas_ast_t *gcd_div(pcas_ast_t *div, pcas_ast_t *b) {
 static pcas_ast_t *gcd_pow(pcas_ast_t *pow, pcas_ast_t *b) {
     pcas_ast_t *base1, *power1;
 
+    if(pcas_cancelled) /*Fluxion: stop here, the answer's being thrown away*/
+        return NULL;
+
     base1 = ast_ChildGet(pow, 0);
     power1 = ast_ChildGet(pow, 1);
+
+    if(pow == NULL || b == NULL || power1 == NULL) /*Fluxion: oom*/
+        return NULL;
 
     /*We purposefully ignore A^X, A^Y and only yield when
     we can determine the numerical powers*/
@@ -87,6 +99,9 @@ static pcas_ast_t *gcd_pow(pcas_ast_t *pow, pcas_ast_t *b) {
         power1 = ast_ChildGet(pow, 1);
         base2 = ast_ChildGet(b, 0);
         power2 = ast_ChildGet(b, 1);
+
+        if(base2 == NULL || power2 == NULL) /*Fluxion: oom*/
+            return NULL;
 
         if(power1->type == NODE_NUMBER && power2->type == NODE_NUMBER) {
             bool use_first;
@@ -108,6 +123,12 @@ static pcas_ast_t *gcd_pow(pcas_ast_t *pow, pcas_ast_t *b) {
 
 pcas_ast_t *gcd(pcas_ast_t *a, pcas_ast_t *b) {
     pcas_ast_t *ret = NULL;
+
+    if(pcas_cancelled) /*Fluxion: stop here, the answer's being thrown away*/
+        return NULL;
+
+    if(a == NULL || b == NULL) /*Fluxion: oom*/
+        return NULL;
 
     if(ast_Compare(a, b))
         return ast_Copy(a);
@@ -155,7 +176,7 @@ bool factor_addition(pcas_ast_t *e, unsigned char flags) {
 
     /*Fluxion: cancelled, the simplifies below do nothing, and pairing up terms
     that aren't simplified any more grows them (took longer than finishing)*/
-    if(e->type != NODE_OPERATOR || pcas_cancelled)
+    if(pcas_cancelled || e == NULL || e->type != NODE_OPERATOR) /*Fluxion: flag first, e can be NULL under oom*/
         return false;
 
     for(child = ast_ChildGet(e, 0); child != NULL; child = child->next)
@@ -172,6 +193,9 @@ bool factor_addition(pcas_ast_t *e, unsigned char flags) {
                 pcas_ast_t *b = ast_ChildGet(e, j);
 
                 g = gcd(a, b);
+
+                if(g == NULL) /*Fluxion: oom*/
+                    break;
 
                 if(!is_ast_int(g, 1)) {
                     bool can_factor;
@@ -196,6 +220,12 @@ bool factor_addition(pcas_ast_t *e, unsigned char flags) {
 
                     simplify(first, SIMP_NORMALIZE | SIMP_COMMUTATIVE | SIMP_RATIONAL | SIMP_EVAL);
                     simplify(second, SIMP_NORMALIZE | SIMP_COMMUTATIVE | SIMP_RATIONAL | SIMP_EVAL);
+
+                    if(first == NULL || second == NULL) { /*Fluxion: oom*/
+                        ast_Cleanup(append);
+                        ast_Cleanup(g);
+                        break;
+                    }
 
                     if(first->type == NODE_NUMBER && second->type == NODE_NUMBER)
                         can_factor = flags & FAC_SIMPLE_ADDITION_EVALUATEABLE;
@@ -270,7 +300,7 @@ typedef struct {
 static void poly_free(poly_t *p);
 
 static poly_t *poly_new(void) {
-    poly_t *p = calloc(1, sizeof(poly_t));
+    poly_t *p = pcas_calloc(1, sizeof(poly_t));
     int i;
 
     if(p == NULL)
@@ -308,6 +338,9 @@ static void poly_free(poly_t *p) {
 static bool poly_term(pcas_ast_t *e, Symbol *var, mp_rat coef, int *k) {
     pcas_ast_t *child;
 
+    if(pcas_cancelled) /*Fluxion: stop here, the answer's being thrown away*/
+        return false;
+
     switch(e->type) {
     case NODE_NUMBER:
         return mp_rat_mul(coef, e->op.num, coef) == MP_OK;
@@ -333,6 +366,8 @@ static bool poly_term(pcas_ast_t *e, Symbol *var, mp_rat coef, int *k) {
     case OP_DIV: {
         pcas_ast_t *den = ast_ChildGet(e, 1);
 
+        if(den == NULL) /*Fluxion: oom*/
+            return false;
         if(den->type != NODE_NUMBER || mp_rat_compare_zero(den->op.num) == 0)
             return false;
         if(!poly_term(ast_ChildGet(e, 0), var, coef, k))
@@ -344,6 +379,8 @@ static bool poly_term(pcas_ast_t *e, Symbol *var, mp_rat coef, int *k) {
         pcas_ast_t *base = ast_ChildGet(e, 0), *exp = ast_ChildGet(e, 1);
         mp_small num, den;
 
+        if(base == NULL || exp == NULL) /*Fluxion: oom*/
+            return false;
         if(base->type != NODE_SYMBOL || exp->type != NODE_NUMBER)
             return false;
         if(mp_rat_to_ints(exp->op.num, &num, &den) != MP_OK || den != 1 || num < 1 || num > POLY_MAX_DEGREE)
@@ -365,8 +402,14 @@ static bool poly_read(pcas_ast_t *e, poly_t *p) {
     mp_rat coef = p->scale;     /*free until the end*/
     mp_int lcm;
     pcas_ast_t *term;
-    bool ok = isoptype(e, OP_ADD);
+    bool ok;
     int i;
+
+    if(pcas_cancelled) /*Fluxion: stop here, the answer's being thrown away*/
+        return false;
+    if(e == NULL) /*Fluxion: oom*/
+        return false;
+    ok = isoptype(e, OP_ADD);
 
     p->var = SYM_INVALID;
     p->deg = -1;
@@ -574,10 +617,13 @@ static pcas_ast_t *poly_to_ast(poly_t *poly) {
 
 /*the factored form of e, or NULL if e isn't a polynomial or doesn't factor*/
 static pcas_ast_t *poly_factor(pcas_ast_t *e) {
-    poly_t *poly = poly_new();
+    poly_t *poly;
     pcas_ast_t *result = NULL;
     int pieces, i;
 
+    if(pcas_cancelled) /*Fluxion: stop here, the answer's being thrown away*/
+        return NULL;
+    poly = poly_new();
     if(poly == NULL)
         return NULL;
     if(!poly_read(e, poly)) {
@@ -635,6 +681,9 @@ stays as it is.*/
 static bool factor_polynomial(pcas_ast_t *e) {
     pcas_ast_t *copy, *result, *child;
     bool changed = false;
+
+    if(pcas_cancelled) /*Fluxion: stop here, the answer's being thrown away*/
+        return false;
 
     if(e->type != NODE_OPERATOR)
         return false;
@@ -747,6 +796,9 @@ static bool cancel_fraction(pcas_ast_t *e) {
 bool cancel_fractions(pcas_ast_t *e) {
     pcas_ast_t *child;
     bool changed = false;
+
+    if(pcas_cancelled) /*Fluxion: stop here, the answer's being thrown away*/
+        return false;
 
     if(e->type != NODE_OPERATOR)
         return false;
@@ -880,6 +932,9 @@ static void comdenom_sum(pcas_ast_t *e, bool factored) {
 bool comdenom(pcas_ast_t *e, bool factored) {
     pcas_ast_t *child;
     bool changed = false;
+
+    if(pcas_cancelled) /*Fluxion: stop here, the answer's being thrown away*/
+        return false;
 
     if(e->type != NODE_OPERATOR)
         return false;

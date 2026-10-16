@@ -25,6 +25,7 @@
  */
 
 #include "imath.h"
+#include "../error.h"
 
 #if DEBUG
 #include <stdio.h>
@@ -366,12 +367,27 @@ mp_result mp_int_init(mp_int z)
   return MP_OK;
 }
 
+/*Fluxion: out of memory. instead of NULL, hand out a static number that's always
+  valid. the CAS makes scratch values and feeds them to imath straight away, so a
+  NULL here crashed in dozens of places. the maths is garbage from then on, but
+  pcas_oom is set and the answer gets thrown away. clear re-inits it and free
+  skips it, so it stays usable however it's treated*/
+static mpz_t oom_int;
+static bool  oom_int_ready = false;
+
 mp_int    mp_int_alloc(void)
 {
-  mp_int out = malloc(sizeof(mpz_t));
+  mp_int out = pcas_malloc(sizeof(mpz_t));
 
   if (out != NULL)
     mp_int_init(out);
+  else {
+    if (!oom_int_ready) {
+      mp_int_init(&oom_int);
+      oom_int_ready = true;
+    }
+    out = &oom_int;
+  }
 
   return out;
 }
@@ -470,6 +486,9 @@ void      mp_int_clear(mp_int z)
 
     MP_DIGITS(z) = NULL;
   }
+
+  if (z == &oom_int) /*Fluxion: keep the static one usable*/
+    mp_int_init(z);
 }
 
 void      mp_int_free(mp_int z)
@@ -477,6 +496,8 @@ void      mp_int_free(mp_int z)
   NRCHECK(z != NULL);
 
   mp_int_clear(z);
+  if (z == &oom_int) /*Fluxion: the static one, see mp_int_alloc*/
+    return;
   free(z); /* note: NOT s_free() */
 }
 
@@ -1965,9 +1986,10 @@ const char *mp_error_string(mp_result res)
 
 STATIC mp_digit *s_alloc(mp_size num)
 {
-  mp_digit *out = malloc(num * sizeof(mp_digit));
+  mp_digit *out = pcas_malloc(num * sizeof(mp_digit));
 
-  assert(out != NULL); /* for debugging */
+  /*Fluxion: upstream asserted out != NULL here. oom is a real path now and the
+  tests inject it, and every caller checks anyway*/
 #if DEBUG > 1
   {
     mp_digit v = (mp_digit) 0xdeadbeef;
@@ -1995,9 +2017,8 @@ STATIC mp_digit *s_realloc(mp_digit *old, mp_size osize, mp_size nsize)
   mp_digit *new;
   (void)osize;
 
-  new = realloc(old, nsize * sizeof(mp_digit));
-
-  assert(new != NULL); /* for debugging */
+  new = pcas_realloc(old, nsize * sizeof(mp_digit));
+  /*Fluxion: no assert here either, see s_alloc*/
 #endif
   return new;
 }

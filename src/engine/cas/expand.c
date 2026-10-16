@@ -38,6 +38,9 @@ static bool _expand(pcas_ast_t *e, unsigned char flags) {
     bool did_change = false;
     bool intermediate_change = false;
 
+    if(pcas_cancelled) /*Fluxion: stop here, the answer's being thrown away*/
+        return false;
+
     for(i = 0; i < ast_ChildLength(e); i++)
         did_change |= _expand(ast_ChildGet(e, i), flags);
 
