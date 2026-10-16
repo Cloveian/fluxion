@@ -476,7 +476,7 @@ static void run_solve(char *src, box_t *in) {
     if(setting_angle == ANGLE_DEGREES)
         e = degrees_in(e);
     start = clock();
-    n = solve(e, var, roots);
+    n = solve_ex(e, var, roots, true);
     if(n > 0 && setting_trig == TRIG_ONE_TURN) {
         pcas_ast_t *hi = setting_angle == ANGLE_DEGREES
                          ? ast_MakeNumber(num_FromInt(360))
