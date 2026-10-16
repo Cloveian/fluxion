@@ -92,6 +92,8 @@ basically like typing on a computer, the cursor is a line and `[on]` is Ctrl. th
 | `[on]` + `[1]` `[2]` `[3]` | cut, copy, paste | Ctrl+X C V |
 | `[on]` + `[sto→]` | undo (a run of typing is one step) | Ctrl+Z |
 | `[enter]` | simplify | |
+| `[2nd]` + `[enter]` | next form (by hand, expanded, factored, decimal). redoes the last answer and sticks | |
+| `[alpha]` + `[enter]` | decimal form, and back | |
 
 with something selected: typing replaces it, `(` `÷` `√` `sin` etc go *around* it, `^` makes it the base
 

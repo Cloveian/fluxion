@@ -52,6 +52,7 @@ static bool browsing; /* moving around inside it, with view */
 static editor_t view;
 
 static editor_t ed;
+static editor_t *running = &ed; /* the editor whose line is being run, for push(). the form keys run from view */
 static bool second, alpha;      /* [2nd] / [alpha] pressed, for the next key */
 static bool second_lock, alpha_lock;    /* stay on after a key */
 static bool ctl, ctl_lock;      /* [on] tapped, so the next key becomes [on]+key (Ctrl) */
@@ -62,6 +63,13 @@ static int menu_sel, menu_top;
 
 static unsigned short simp_flags = SIMP_ALL;
 static unsigned char canon_flags = CANONICAL_ALL;
+
+/* what enter gives. [2nd][enter] cycles through them, [alpha][enter] jumps to
+   decimal and back. it's a mode (ui.md): changing it redoes the last answer and
+   everything after comes out that way too */
+typedef enum { FORM_HAND, FORM_EXPANDED, FORM_FACTORED, FORM_DECIMAL, FORM_COUNT } form_t;
+static form_t form = FORM_HAND;
+static const char *const form_names[FORM_COUNT] = { "", "expanded", "factored", "decimal" };
 
 /* history */
 
@@ -80,7 +88,7 @@ static void push(box_t *in, box_t *out, const char *message, unsigned long ms) {
     history[history_len].out = out;
     history[history_len].message = message;
     history[history_len].ms = ms;
-    history[history_len].row = ed_copy_line(&ed);
+    history[history_len].row = ed_copy_line(running);
     history[history_len].out_row = out != NULL ? ed_from_box(out) : NULL;
     history_len++;
 }
@@ -134,6 +142,27 @@ static void line_done(void) {
 
 #define SIMP_BASIC (SIMP_NORMALIZE | SIMP_COMMUTATIVE | SIMP_RATIONAL)
 
+/* the form on top of a plain simplify, the same steps the commands take */
+static void apply_form(pcas_ast_t *e) {
+    switch(form) {
+    case FORM_EXPANDED:
+        expand(e, EXP_ALL);
+        simplify(e, SIMP_BASIC | SIMP_EVAL | SIMP_LIKE_TERMS);
+        break;
+    case FORM_FACTORED:
+        comdenom(e, true);
+        factor(e, FAC_ALL);
+        simplify(e, SIMP_BASIC | SIMP_EVAL);
+        break;
+    case FORM_DECIMAL:
+        approx(e);
+        simplify(e, SIMP_BASIC | SIMP_EVAL);
+        break;
+    default:
+        break;
+    }
+}
+
 /* a word as a result, like true / false */
 static box_t *word_box(const char *text) {
     box_t *b = layout_text(text, 0);
@@ -181,6 +210,10 @@ static box_t *solutions_box(char var, pcas_ast_t **roots, int n) {
 
         comdenom(roots[i], false);
         simplify_canonical_form(roots[i], canon_flags);
+        if(form == FORM_DECIMAL) {
+            approx(roots[i]);
+            simplify(roots[i], SIMP_BASIC | SIMP_EVAL);
+        }
         number_first(roots[i]);
         layout_add(row, layout_build(roots[i], &draw_font));
     }
@@ -267,50 +300,54 @@ static void run_solve(char *src, box_t *in) {
         ast_Cleanup(roots[i]);
 }
 
-static void evaluate(void) {
-    const char *cmd = ed_command(&ed);
+static void busy_start(void);
+
+/* parse what's in line, run the command or a simplify with the form on top, push
+   the answer. true if something got pushed (the caller clears the line then) */
+static bool run(editor_t *line) {
+    const char *cmd = ed_command(line);
     char *src;
     pcas_error_t err;
     pcas_ast_t *e;
     box_t *in;
     clock_t start;
 
-    if(ed_is_empty(&ed))
-        return;
+    if(ed_is_empty(line))
+        return false;
+    running = line;
+    layout_decimal(form == FORM_DECIMAL);
 
-    src = cmd != NULL ? ed_command_arg(&ed) : ed_to_engine(&ed);
+    src = cmd != NULL ? ed_command_arg(line) : ed_to_engine(line);
     if(src == NULL) {
         status = "fill in the empty boxes first";
-        return;
+        return false;
     }
 
     /* no nesting commands yet, expand(...) has to be the whole line (todo, ugh) */
     if(strstr(src, "expand(") || strstr(src, "factor(") || strstr(src, "eval(") || strstr(src, "solve(")) {
         free(src);
         status = "commands have to be the whole line (for now)";
-        return;
+        return false;
     }
 
     if(cmd != NULL && strcmp(cmd, "solve") == 0) {
-        run_solve(src, ed_layout(&ed, &draw_font, false));
+        run_solve(src, ed_layout(line, &draw_font, false));
         free(src);
-        line_done();
-        return;
+        return true;
     }
     if(strchr(src, '=') != NULL) {
         free(src);
         status = "= only works in solve( for now";
-        return;
+        return false;
     }
 
     e = parse((const uint8_t *)src, strlen(src), str_table, &err);
     free(src);
-    in = ed_layout(&ed, &draw_font, false);
+    in = ed_layout(line, &draw_font, false);
 
     if(err != E_SUCCESS || e == NULL) {
         push(in, NULL, error_text[err], 0);
-        line_done();
-        return;
+        return true;
     }
 
     start = clock();
@@ -332,6 +369,7 @@ static void evaluate(void) {
         /* before simplify splits the fractions apart */
         cancel_fractions(e);
         simplify(e, simp_flags);
+        apply_form(e);
     }
     simplify_canonical_form(e, canon_flags);
 
@@ -339,7 +377,36 @@ static void evaluate(void) {
     push(in, pcas_cancelled ? NULL : layout_build(e, &draw_font), pcas_cancelled ? "cancelled" : NULL,
          (unsigned long)((clock() - start) * 1000 / CLOCKS_PER_SEC));
     ast_Cleanup(e);
-    line_done();
+    return true;
+}
+
+static void evaluate(void) {
+    if(run(&ed))
+        line_done();
+}
+
+/* so a form switch swaps the last answer out instead of stacking a second copy */
+static void pop_last(void) {
+    entry_t *h = &history[--history_len];
+
+    layout_free(h->in);
+    layout_free(h->out);
+    ed_row_free(h->row);
+    ed_row_free(h->out_row);
+}
+
+/* switch form and redo the last answer in it. its input comes back out of the
+   history and runs again from the scratch editor, so whatever's being typed is
+   left alone */
+static void form_set(form_t f) {
+    form = f;
+    if(history_len == 0 || hist >= 0)
+        return;
+    if(ed_load(&view, history[history_len - 1].row, true)) {
+        pop_last();
+        busy_start();
+        run(&view);
+    }
 }
 
 /* -- menus -- */
@@ -679,8 +746,9 @@ static bool key_2nd(keypress_t p) {
     case K_LEFT:   typing_run = false; ed_home(&ed); return true;
     case K_RIGHT:  typing_run = false; ed_end(&ed); return true;
     case K_0:      typing_run = false; catalog_open(); return true;
-    case K_UP: case K_DOWN: case K_ENTER: case K_DEL:
+    case K_UP: case K_DOWN: case K_DEL:
         return key_plain(p);
+    case K_ENTER:  form_set((form_t)((form + 1) % FORM_COUNT)); return true;
     case K_CLEAR:  /* same as [on]+[clear], clear the whole line */
         will_edit(false);
         ed_clear(&ed);
@@ -1068,6 +1136,7 @@ static bool handle(keypress_t p) {
         switch(p.key) {
         case K_LEFT:  typing_run = false; ed_select_left(&ed); return true;
         case K_RIGHT: typing_run = false; ed_select_right(&ed); return true;
+        case K_ENTER: form_set(form == FORM_DECIMAL ? FORM_HAND : FORM_DECIMAL); return true;
         case K_YEQU:  /* [alpha][y=] is n/d, like the TI */
             will_edit(false);
             ed_insert(&ed, ED_FRAC, NULL);
@@ -1291,6 +1360,15 @@ static void draw_top_bar(void) {
         draw_modifier(x, "2nd", second_lock);
     else if(alpha)
         draw_modifier(x, "alpha", alpha_lock);
+
+    /* the form, when it isn't the normal one, over by the battery */
+    if(form != FORM_HAND) {
+        const font_t *small = draw_label_font();
+
+        screen_color(COL_DIM);
+        draw_text(SCREEN_W - MARGIN - BATTERY_W - 6 - draw_text_width(form_names[form], small), 1,
+                  form_names[form], small);
+    }
 }
 
 /* behind the highlighted half of a history entry. browsing gets just an outline,
@@ -1504,8 +1582,8 @@ void app_run(void) {
     for(;;) {
         keypress_t p = keys_wait();
 
-        if(p.key == K_ENTER && menu < 0 && !second && !ed_is_empty(&ed))
-            busy_start();
+        if(p.key == K_ENTER && menu < 0 && !second && !alpha && !ed_is_empty(&ed))
+            busy_start(); /* the form keys start it themselves */
         if(!handle(p))
             break;
         draw_screen();
