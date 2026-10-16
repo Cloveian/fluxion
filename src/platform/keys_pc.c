@@ -50,7 +50,7 @@ static keypress_t scripted(void) {
         { "2nd", K_2ND }, { "alpha", K_ALPHA }, { "mode", K_MODE },
         { "y=", K_YEQU }, { "window", K_WINDOW }, { "zoom", K_ZOOM }, { "trace", K_TRACE }, { "graph", K_GRAPH },
         { "x^2", K_SQUARE }, { "x^-1", K_RECIP }, { "sin", K_SIN }, { "cos", K_COS }, { "tan", K_TAN },
-        { "ln", K_LN }, { "log", K_LOG }, { "neg", K_NEG }, { "xt", K_XT }, { "sto", K_STO }, { "math", K_MATH },
+        { "ln", K_LN }, { "log", K_LOG }, { "neg", K_NEG }, { "xt", K_XT }, { "sto", K_STO }, { "math", K_MATH }, { "vars", K_VARS },
         { "on", K_ON },
     };
     keypress_t press = { K_QUIT, false };

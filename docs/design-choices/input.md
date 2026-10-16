@@ -94,6 +94,8 @@ basically like typing on a computer, the cursor is a line and `[on]` is Ctrl. th
 | `[enter]` | simplify | |
 | `[2nd]` + `[enter]` | next form (by hand, expanded, factored, decimal). redoes the last answer and sticks | |
 | `[alpha]` + `[enter]` | decimal form, and back | |
+| `[sto→]` | the arrow. `value [sto→] name` stores, `[sto→] name` on its own deletes (see Names below) | |
+| `[vars]` | the stored names and their values, enter deletes one | |
 
 with something selected: typing replaces it, `(` `÷` `√` `sin` etc go *around* it, `^` makes it the base
 
@@ -125,9 +127,9 @@ The five keys under the screen (`y=` `window` `zoom` `trace` `graph`) open the f
 
 ## Names
 
-not built yet, this is the plan (roadmap: Names)
+multi-letter variables and typing `sin` to get the function turned out to be the same problem, so it's one thing. there's a table of names: the catalog's words (`sin`, `asinh`, `pi`, `e`, `i`, `theta`, `sqrt`, ...) and anything stored. a run of letters gets split into the longest names from the left, redone on every edit, so `sinh` is one function, `xi` is $x \cdot i$ and `pin` is $\pi n$. if `ab` is stored then typing `a` `b` gives you `ab`, want $a \cdot b$? type `a*b`
 
-multi-letter variables and typing `solve(` to get the function turned out to be the same problem, so it's one thing. there's a table of names: the functions, `e` and `i` (probably `pi` too), and anything stored. a run of letters gets split into the longest names from the left, redone on every edit, so `sinh` is one function, `xi` is $x \cdot i$ and `pin` is $\pi n$. if `ab` is stored then typing `a` `b` gives you `ab`, want $a \cdot b$? type `a*b`
+the letters stay letters in the editor. the split is just how a run gets read (for the engine) and drawn, which is what makes "redone on every edit" free: the cursor, undo and backspace never knew anything happened. a name is drawn as one thing, bold if it has a value, and turns back into letters while the cursor's inside it so you can see where you are. `[vars]` lists what's stored, enter on a row deletes it. typed commands (`solve(` as letters) aren't picked up yet, those still come from the folders (todo)
 
 storing is `expr [sto→] name`, one letter or more. the name after the arrow is taken literally so you can make new ones. can't store to a builtin (`sin`, `e`, ...), and a loop like `a+1 [sto→] a` gets refused when you store it instead of hanging later. a value can be a whole expression or an equation, which keeps both sides since the engine has no `=`
 
@@ -142,7 +144,7 @@ gotchas:
 - history keeps how it looked when you typed it, pasting it back re-splits it
 
 ### Decision
-one name table. stored = bold = substituted everywhere, single letters can be stored too, `e` and `i` turn into names
+one name table. stored = bold = substituted everywhere, single letters can be stored too, `e` and `i` turn into names. done 10-15
 
 ---
 Back to [design choices](index.md) · [rendering](rendering.md) · [screens & operations](ui.md)

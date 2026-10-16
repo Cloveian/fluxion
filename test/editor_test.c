@@ -19,6 +19,7 @@
 #include "engine/cas/cas.h"
 #include "engine/cas/identities.h"
 #include "editor/editor.h"
+#include "ui/names.h"
 #include "render/draw.h"
 #include "platform/screen.h"
 
@@ -70,6 +71,7 @@ int main(int argc, char **argv) {
     }
 
     ed_init(&ed);
+    names_init();   /* so typed words turn into names like in the app */
     for(; i < argc; i++)
         if(!step(&ed, argv[i]))
             return 1;

@@ -1,4 +1,6 @@
 #include "app.h"
+#include "names.h"
+#include "vars.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -319,9 +321,43 @@ static bool run(editor_t *line) {
     running = line;
     layout_decimal(form == FORM_DECIMAL);
 
+    /* a line with the sto arrow only stores (or deletes), nothing gets run */
+    {
+        int arrow = ed_row_find_char(line->root, CH_STO);
+
+        if(arrow >= 0) {
+            bool deleted;
+            const char *err = names_store_line(line->root, arrow, &deleted);
+
+            if(err != NULL) {
+                status = err;
+                return false;
+            }
+            push(ed_layout(line, &draw_font, false), NULL, deleted ? "deleted" : "stored", 0);
+            return true;
+        }
+    }
+
+    /* solving for a variable that has a value makes no sense, and would quietly
+       solve for 5. bold = not symbolic, consistently */
+    if(cmd != NULL && strcmp(cmd, "solve") == 0) {
+        const ed_row_t *arg = ed_command_row(line);
+        int comma = arg != NULL ? ed_row_find_last(arg, ',') : -1;
+        char var[NAME_LEN + 1];
+
+        if(comma >= 0 && ed_row_word(arg, comma + 1, var, NAME_LEN) == 1 && names_is_stored_letter(var[0])) {
+            static char msg[40];
+
+            strcpy(msg, "x is stored, delete it to solve for x");
+            msg[0] = msg[36] = var[0];
+            status = msg;
+            return false;
+        }
+    }
+
     src = cmd != NULL ? ed_command_arg(line) : ed_to_engine(line);
     if(src == NULL) {
-        status = "fill in the empty boxes first";
+        status = ed_error != NULL ? ed_error : "fill in the empty boxes first";
         return false;
     }
 
@@ -800,7 +836,7 @@ static bool key_plain(keypress_t p) {
     switch(p.key) {
     case K_LEFT: case K_RIGHT: case K_UP: case K_DOWN: case K_ENTER:
     case K_YEQU: case K_WINDOW: case K_ZOOM: case K_TRACE: case K_GRAPH:
-    case K_QUIT: case K_MATH:
+    case K_QUIT: case K_MATH: case K_VARS:
         typing_run = false;     /* not an edit (enter saves its own step) */
         break;
     case K_DOT: case K_NEG: case K_ADD: case K_SUB: case K_MUL: case K_DIV:
@@ -836,6 +872,7 @@ static bool key_plain(keypress_t p) {
     case K_RPAREN: ed_insert_char(&ed, ')'); break;
     case K_COMMA:  ed_insert_char(&ed, ','); break;
     case K_XT:     ed_insert_char(&ed, 'x'); break;
+    case K_STO:    ed_insert_char(&ed, CH_STO); break;  /* value -> name, see names.c */
     case K_SIN:    ed_insert(&ed, ED_FUNC, "sin"); break;
     case K_COS:    ed_insert(&ed, ED_FUNC, "cos"); break;
     case K_TAN:    ed_insert(&ed, ED_FUNC, "tan"); break;
@@ -870,6 +907,7 @@ static bool key_plain(keypress_t p) {
         menu_open((int)(p.key - K_YEQU));
         break;
     case K_MATH:   popup = 0; break;
+    case K_VARS:   vars_open(); break;  /* the stored names, like the TI's vars */
 
     default:
         break;
@@ -1469,7 +1507,8 @@ static void draw_screen(void) {
         for(; i > hist && below > line_y - GAP - top_h(); i--)
             below -= entry_h(&history[i]);
     }
-    y = line_y - GAP;
+    /* the status line takes the bottom row, else it lands on the last message */
+    y = line_y - GAP - (status != NULL ? small->ascent + small->descent + 2 : 0);
     /* the cleared ones stay hidden unless you've gone up into them */
     first = hist >= 0 && hist < cleared ? 0 : cleared;
     for(; i >= first && y > top_h(); i--) {
@@ -1615,6 +1654,7 @@ void app_run(void) {
     if(!ed_init(&ed))
         return;
 
+    names_init();
     screen_begin();
     keys_begin();
     draw_screen();

@@ -41,6 +41,7 @@ typedef enum {
 #define CH_NE       '\x12'
 #define CH_INF      '\x13'
 #define CH_DEG      '\x14'
+#define CH_STO      '\x15' /* the sto-> arrow, expr -> name stores */
 
 typedef struct ed_row ed_row_t;
 typedef struct ed_node ed_node_t;
@@ -123,6 +124,49 @@ void ed_delete(editor_t *ed);
 /* the engine's string syntax (see catalog.c), or NULL if something's unfinished
    (an empty slot, nothing typed). caller frees. */
 char *ed_to_engine(const editor_t *ed);
+
+/* the same for any row (a stored value, the vars page) */
+char *ed_row_to_engine(const ed_row_t *r);
+
+/* why the last ed_to_engine() / ed_command_arg() gave NULL, for the status line.
+   NULL means the usual, something's unfinished */
+extern const char *ed_error;
+
+/* a copy of items [from, to) of a row, for splitting a line at the sto arrow */
+ed_row_t *ed_row_slice(const ed_row_t *r, int from, int to);
+
+/* where a character sits in a row (the arrow), -1 if it isn't there. _last for
+   the comma before solve's variable */
+int ed_row_find_char(const ed_row_t *r, char c);
+int ed_row_find_last(const ed_row_t *r, char c);
+
+/* the row inside the command when the line is one (see ed_command), else NULL */
+const ed_row_t *ed_command_row(const editor_t *ed);
+
+/* the letters from item `from` to the end of the row, lowercased into buf (max + 1
+   long). -1 if anything there isn't a letter or there are more than max */
+int ed_row_word(const ed_row_t *r, int from, char *buf, int max);
+
+/* does r use the stored row target, directly or through other names. it's how
+   storing catches a loop before it hangs */
+bool ed_row_reaches(const ed_row_t *r, const ed_row_t *target);
+
+/*
+    names. the app plugs a lookup in: given a run of letters (lowercased, n of
+    them) it says how many the first name takes (0 = just a one-letter variable)
+    and what it is. letters stay letters in the editor, this is only how a run gets
+    read (put_row) and drawn (lay_row), so "redone on every edit" comes for free.
+    a stored name's value goes to the engine in its place, in brackets, and gets
+    drawn bold. see ui/names.c
+*/
+typedef struct {
+    int len;
+    const char *engine; /* what the engine gets, "sin" or "pi". NULL when it's row */
+    const ed_row_t *row; /* a stored value, put in its place (and read the same way, so it's live) */
+    const char *shown; /* drawn instead of the letters (the pi glyph), NULL = the letters */
+    bool bold;
+} ed_name_t;
+extern bool (*ed_name_lookup)(const char *letters, int n, ed_name_t *out);
 
 /* when the whole line is a single command (expand, factor, eval, solve), its name. else NULL.
    the app runs those itself; the engine's parser doesn't know them. */

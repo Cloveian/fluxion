@@ -27,6 +27,7 @@ typedef enum {
 
 typedef struct {
     const char *label; /* how it looks in a menu */
+    const char *word; /* what you type to get it (sin, pi, solve), NULL if it cant be typed */
     item_kind_t kind;
     const char *keys; /* TI keys that type it (a proposal), NULL means folder-only */
     const char *engine; /* engine string syntax, $ is a slot to fill */
