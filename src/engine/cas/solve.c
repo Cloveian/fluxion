@@ -242,6 +242,111 @@ static int solve_quadratic(coefs_t *p, pcas_ast_t **out, int n) {
     return n;
 }
 
+/*the coef as a tree, 0 when its missing*/
+static pcas_ast_t *coef(coefs_t *p, int k) {
+    return p->c[k] != NULL ? ast_Copy(p->c[k]) : number(0);
+}
+
+/*sqrt(d) with any square number factor pulled out front, sqrt(4(y_3)) as
+2sqrt(y_3). left to simplify the 4 just gets distributed back in and it stays a
+lump. only the number child of a product, a plain number sqrt works already*/
+static pcas_ast_t *root_of(pcas_ast_t *d, long *k) {
+    pcas_ast_t *num = NULL;
+    mp_small n, den;
+    long s;
+    unsigned i;
+
+    *k = 1;
+    if(isoptype(d, OP_MULT))
+        for(i = 0; i < ast_ChildLength(d) && num == NULL; i++)
+            if(ast_ChildGet(d, i)->type == NODE_NUMBER)
+                num = ast_ChildGet(d, i);
+    if(num == NULL || mp_rat_to_ints(num->op.num, &n, &den) != MP_OK || den != 1 || n < 4)
+        return ast_MakeBinary(OP_POW, d, ast_MakeNumber(num_FromFraction(1, 2)));
+
+    for(s = 1; (s + 1) * (s + 1) <= n; s++)
+        ;
+    for(*k = s; *k > 1 && n % (*k * *k) != 0; (*k)--)
+        ;
+    if(*k > 1)
+        mp_rat_set_value(num->op.num, n / (*k * *k), 1);
+    return ast_MakeBinary(OP_POW, d, ast_MakeNumber(num_FromFraction(1, 2)));
+}
+
+static long gcd_small(long a, long b) {
+    if(a < 0) a = -a;
+    if(b < 0) b = -b;
+    while(b != 0) {
+        long t = a % b;
+        a = b;
+        b = t;
+    }
+    return a;
+}
+
+/*the coef as a plain number if it is one (or missing, 0). false if it's letters*/
+static bool coef_small(coefs_t *p, int i, long *v) {
+    mp_small n, den;
+
+    if(p->c[i] == NULL) {
+        *v = 0;
+        return true;
+    }
+    if(p->c[i]->type != NODE_NUMBER || mp_rat_to_ints(p->c[i]->op.num, &n, &den) != MP_OK || den != 1)
+        return false;
+    *v = n;
+    return true;
+}
+
+/*a x^2 + b x + c with a b c being expressions in other letters, y = x^2 + 3 solved
+for x. the plain formula built as a tree, (-b +- sqrt(b^2 - 4ac)) / 2a, and
+simplify sorts it out. the discriminant gets factored first so sqrt(4y_12) comes
+out as 2sqrt(y_3) and not a lump*/
+static int solve_quadratic_sym(coefs_t *p, pcas_ast_t **out, int n) {
+    int sign, k;
+    long a, b, g = 1;
+    pcas_ast_t *disc;
+    bool double_root;
+
+    /*a negative in front only ever gives /-2 or /(-pi), so flip the lot*/
+    if(p->c[2] != NULL && is_negative_for_sure(p->c[2]))
+        for(k = 0; k < 3; k++)
+            if(p->c[k] != NULL) {
+                p->c[k] = ast_MakeBinary(OP_MULT, number(-1), p->c[k]);
+                simplify(p->c[k], SIMP_SOLVE);
+            }
+
+    disc = ast_MakeBinary(OP_ADD,
+        ast_MakeBinary(OP_POW, coef(p, 1), number(2)),
+        ast_MakeBinary(OP_MULT, number(-4), ast_MakeBinary(OP_MULT, coef(p, 2), coef(p, 0))));
+    simplify(disc, SIMP_SOLVE);
+    factor(disc, FAC_ALL);
+    double_root = is_ast_int(disc, 0);  /*(x_sqrt2)^2, say it once*/
+
+    for(sign = double_root ? 1 : -1; sign <= 1 && !pcas_cancelled; sign += 2) {
+        pcas_ast_t *r, *root;
+        long rk;
+
+        root = root_of(ast_Copy(disc), &rk);
+
+        /*(-4 +- 2sqrt(..))/4 with a and b numbers, simplify won't cancel the 2
+        on its own, so take the gcd out here. c can be whatever*/
+        if(coef_small(p, 2, &a) && coef_small(p, 1, &b))
+            g = gcd_small(gcd_small(b, rk), 2 * a);
+        if(g < 1)
+            g = 1;
+        r = ast_MakeBinary(OP_DIV,
+            ast_MakeBinary(OP_ADD,
+                ast_MakeBinary(OP_MULT, number(-1), g > 1 ? number((int)(b / g)) : coef(p, 1)),
+                ast_MakeBinary(OP_MULT, number(sign * (int)(rk / g)), root)),
+            g > 1 ? number((int)(2 * a / g)) : ast_MakeBinary(OP_MULT, number(2), coef(p, 2)));
+        simplify(r, SIMP_SOLVE);
+        n = add_root(out, n, r);
+    }
+    ast_Cleanup(disc);
+    return n;
+}
+
 /*roots of one factor of the factored polynomial, added at out[n]. returns the
 new count, or SOLVE_UNKNOWN.*/
 static int solve_factor(pcas_ast_t *f, Symbol var, pcas_ast_t **out, int n) {
@@ -271,6 +376,8 @@ static int solve_factor(pcas_ast_t *f, Symbol var, pcas_ast_t **out, int n) {
         n = add_root(out, n, linear_root(&p));
     else if(p.deg == 2 && p.numeric)
         n = solve_quadratic(&p, out, n);
+    else if(p.deg == 2)
+        n = solve_quadratic_sym(&p, out, n);
     else
         n = SOLVE_UNKNOWN;      /*TODO cubics someday, cardano looks awful though*/
 
@@ -320,6 +427,8 @@ int solve(pcas_ast_t *expr, Symbol var, pcas_ast_t **out) {
         } else if(p.numeric && p.deg <= SOLVE_MAX) {
             factor(e, FAC_POLYNOMIAL);
             n = solve_factor(e, var, out, 0);
+        } else if(p.deg == 2) {
+            n = solve_quadratic_sym(&p, out, 0);   /*letters in the coefs, no factoring those*/
         }
         coefs_free(&p);
     }
