@@ -19,7 +19,7 @@ const font_t *draw_label_font(void);
 extern layout_font_t draw_font;
 
 /* bold / italic, done at draw time so there's no second font. a bitmask, so you
-   can OR them. nothing's styled by default yet */
+   can OR them. stored names are bold, nothing's italic yet */
 typedef enum {
     STYLE_NORMAL = 0,
     STYLE_BOLD   = 1,
@@ -30,6 +30,7 @@ typedef enum {
 void draw_text(int x, int top, const char *text, const font_t *font);
 void draw_text_styled(int x, int top, const char *text, const font_t *font, font_style_t style);
 int draw_text_width(const char *text, const font_t *font);
+int draw_text_width_styled(const char *text, const font_t *font, font_style_t style);
 
 /* draws b with its origin (left edge, baseline) at screen (x, y), in the current colour */
 void draw_box(const box_t *b, int x, int y);

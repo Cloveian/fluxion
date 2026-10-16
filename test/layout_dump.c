@@ -11,7 +11,8 @@
 #include "engine/cas/identities.h"
 #include "render/layout.h"
 
-static int text_width(const char *text, unsigned char level) {
+static int text_width(const char *text, unsigned char level, unsigned char style) {
+    (void)style;    /* every glyph is 8 wide here anyway */
     (void)level;
     return 8 * (int)strlen(text);
 }

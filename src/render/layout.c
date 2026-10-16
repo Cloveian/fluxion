@@ -575,7 +575,7 @@ static void measure(const layout_font_t *f, box_t *b) {
 
     switch(b->kind) {
     case BOX_TEXT:
-        b->width = f->text_width(b->text, b->size);
+        b->width = f->text_width(b->text, b->size, b->style);
         b->ascent = f->ascent[fi];
         b->descent = f->descent[fi];
         break;
@@ -683,7 +683,7 @@ static void measure(const layout_font_t *f, box_t *b) {
         break;
 
     case BOX_SLOT:
-        b->width = f->text_width("0", b->size) + 2;
+        b->width = f->text_width("0", b->size, 0) + 2;
         b->ascent = f->ascent[fi];
         b->descent = f->descent[fi];
         break;
