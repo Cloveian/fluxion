@@ -17,7 +17,7 @@
 ## engine maths
 
 - [x] cot / sec / csc. real functions, not lazy: `cot` in means `cot` out, never 1/tan
-- [ ] Multi-var solve, pulling one var out, like `solve(y=7x+3,x)` -> $x=\frac{y-3}{7}$. linear and quadratic in the variable work now (10-16), `y=2^x` and anything else still gives up. needs an isolate-the-variable solver for those
+- [x] Multi-var solve, pulling one var out, like `solve(y=7x+3,x)` -> $x=\frac{y-3}{7}$. linear, quadratic, and anything where the variable only shows up once (y=2^x, sqrt(x)=2, sin(x)=1/2). done 10-16
 - [ ] Systems (ACT Q14). its own function like the nspire's, commas, no `and`
 - [ ] Solving trig equations. general solution or an interval, that's a mode setting
 - [ ] Holes & asymptotes. zeros of the denominator. a function, answer on a few lines so it's readable.
