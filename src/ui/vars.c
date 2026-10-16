@@ -60,7 +60,7 @@ static const char *vars_help(int i) {
 
 static bool vars_pick(int i);
 
-static page_t vars_page = { "stored", 0, vars_label, vars_value, vars_help, vars_pick, NULL };
+static page_t vars_page = { "stored", 0, vars_label, vars_value, vars_help, vars_pick, NULL, NULL, NULL };
 
 static bool vars_pick(int i) {
     if(empty())

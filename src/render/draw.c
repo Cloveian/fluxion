@@ -101,6 +101,25 @@ void draw_text_styled(int x, int top, const char *text, const font_t *font, font
     }
 }
 
+void draw_softkeys(const char *const names[5], int lit) {
+    const font_t *font = draw_font_for(0);     /* smallest, five names have to fit somehow */
+    int i, w = SCREEN_W / 5, top = SCREEN_H - BAR_H;
+
+    for(i = 0; i < 5; i++) {
+        const char *name = names[i];
+        int x = i * w + (w - draw_text_width(name, font)) / 2;
+
+        if(i == lit) {
+            screen_color(COL_ACCENT);
+            screen_fill(i * w + 1, top, w - 2, BAR_H);
+            screen_color(COL_BG);
+        } else {
+            screen_color(COL_DIM);
+        }
+        draw_text(x, top + (BAR_H - font->ascent - font->descent) / 2, name, font);
+    }
+}
+
 /* the shapes (brackets, root sign) */
 
 /*

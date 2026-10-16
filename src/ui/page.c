@@ -110,6 +110,17 @@ void page_key(keypress_t p, char letter) {
     case K_CLEAR:
         page_close();
         break;
+    case K_YEQU: case K_WINDOW: case K_ZOOM: case K_TRACE: case K_GRAPH:
+        if(o->page->jump != NULL) {
+            int row = o->page->jump((int)(p.key - K_YEQU));
+
+            if(row >= 0 && row < n) {
+                o->sel = row;
+                /* section starts at the top, its header with it */
+                o->top = row > 0 && is_header(o->page, row - 1) ? row - 1 : row;
+            }
+        }
+        break;
     default:
         break;
     }
@@ -153,9 +164,11 @@ void page_draw(int top) {
     const page_t *pg = o->page;
     const font_t *font = draw_label_font(), *big = draw_font_for(draw_font.base);
     int row_h = font->ascent + font->descent + 2;
-    int help_h = HELP_LINES * (font->ascent + font->descent + 1) + 4;
+    /* the bar eats about a line, so the help gives one up and the list keeps its rows */
+    int help_lines = pg->softkeys != NULL ? HELP_LINES - 1 : HELP_LINES;
+    int help_h = help_lines * (font->ascent + font->descent + 1) + 4;
     int list_top = top + big->ascent + big->descent + 4;
-    int list_bottom = SCREEN_H - help_h - 2;
+    int list_bottom = SCREEN_H - (pg->softkeys != NULL ? BAR_H : 0) - help_h - 2;
     int rows, i;
     const char *help;
 
@@ -217,6 +230,9 @@ void page_draw(int top) {
     help = pg->help != NULL ? pg->help(o->sel) : NULL;
     if(help != NULL) {
         screen_color(COL_FG);
-        wrapped(6, list_bottom + 4, SCREEN_W - 12, help, font, HELP_LINES);
+        wrapped(6, list_bottom + 4, SCREEN_W - 12, help, font, help_lines);
     }
+
+    if(pg->softkeys != NULL)
+        draw_softkeys(pg->softkeys, -1);
 }
