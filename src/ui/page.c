@@ -17,11 +17,41 @@ static open_t stack[PAGE_DEPTH];
 static int depth;
 static int shown_rows = 1;  /* rows that fit last time it was drawn, for paging */
 
+static bool is_header(const page_t *pg, int i) {
+    return pg->header != NULL && pg->header(i);
+}
+
+/* nearest real row from i going dir, or the other way if that runs off the end.
+   for paging, which clamps instead of wrapping */
+static int settle(const page_t *pg, int i, int dir) {
+    int k;
+
+    for(k = i; k >= 0 && k < pg->count; k += dir)
+        if(!is_header(pg, k))
+            return k;
+    for(k = i; k >= 0 && k < pg->count; k -= dir)
+        if(!is_header(pg, k))
+            return k;
+    return i;   /* nothing but headers, nowhere to go */
+}
+
+/* one real row up or down, wrapping round like before */
+static int step(const page_t *pg, int i, int dir) {
+    int n = pg->count, k;
+
+    for(k = 0; k < n; k++) {
+        i = (i + dir + n) % n;
+        if(!is_header(pg, i))
+            break;
+    }
+    return i;
+}
+
 void page_open(const page_t *page) {
     if(depth == PAGE_DEPTH)
         return;     /* 4 deep is already silly lol */
     stack[depth].page = page;
-    stack[depth].sel = 0;
+    stack[depth].sel = settle(page, 0, 1);
     stack[depth].top = 0;
     depth++;
 }
@@ -52,7 +82,7 @@ void page_key(keypress_t p, char letter) {
             int k = (o->sel + i) % n;
             const char *s = o->page->label(k);
 
-            if(lower(s[0]) == lower(letter)) {
+            if(!is_header(o->page, k) && lower(s[0]) == lower(letter)) {
                 o->sel = k;
                 break;
             }
@@ -61,15 +91,17 @@ void page_key(keypress_t p, char letter) {
     }
 
     switch(p.key) {
-    case K_UP:    o->sel = (o->sel + n - 1) % n; break;
-    case K_DOWN:  o->sel = (o->sel + 1) % n; break;
+    case K_UP:    o->sel = step(o->page, o->sel, -1); break;
+    case K_DOWN:  o->sel = step(o->page, o->sel, 1); break;
     case K_LEFT:  /* a page at a time */
-        o->sel = o->sel > shown_rows ? o->sel - shown_rows : 0;
+        o->sel = settle(o->page, o->sel > shown_rows ? o->sel - shown_rows : 0, -1);
         break;
     case K_RIGHT:
-        o->sel = o->sel + shown_rows < n - 1 ? o->sel + shown_rows : n - 1;
+        o->sel = settle(o->page, o->sel + shown_rows < n - 1 ? o->sel + shown_rows : n - 1, 1);
         break;
     case K_ENTER:
+        if(is_header(o->page, o->sel))
+            break;
         if(o->page->pick != NULL && o->page->pick(o->sel))
             page_close();
         else if(o->sel >= o->page->count)  /* it deleted the bottom row */
@@ -143,11 +175,21 @@ void page_draw(int top) {
         stack[depth - 1].top = o->sel;
     if(o->sel >= o->top + rows)
         stack[depth - 1].top = o->sel - rows + 1;
+    /* and the header just above it, else you lose which section you're in */
+    if(rows > 1 && o->sel > 0 && o->sel - 1 < o->top && is_header(pg, o->sel - 1))
+        stack[depth - 1].top = o->sel - 1;
 
     for(i = 0; i < rows && o->top + i < pg->count; i++) {
         int n = o->top + i, y = list_top + i * row_h;
-        const char *value = pg->value != NULL ? pg->value(n) : NULL;
+        const char *value;
 
+        if(is_header(pg, n)) {
+            /* just the name in accent, nothing to pick so no highlight */
+            screen_color(COL_ACCENT);
+            draw_text(6, y, pg->label(n), font);
+            continue;
+        }
+        value = pg->value != NULL ? pg->value(n) : NULL;
         if(n == o->sel) {
             screen_color(COL_ACCENT);
             screen_fill(2, y - 1, SCREEN_W - 4, row_h);

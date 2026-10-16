@@ -1117,11 +1117,23 @@ static void menu_key(keypress_t p) {
     }
 }
 
-/* the Catalog page, [2nd][0] like the TI. everything you can type, a-z, the
-   keys for it on the right and what it does at the bottom. enter types it */
+/* the Catalog page, [2nd][0] like the TI. everything you can type, under the
+   same folders as the soft keys, then the plain keys a-z, then all of it a-z
+   again. the keys for it on the right and what it does at the bottom. enter
+   types it */
 
-static unsigned char cat_order[96];
+/* catalog indexes, plus 200+k for folder k's header, 255 for the keys one and
+   254 for All. ~140 rows today, All has everything a second time */
+#define CAT_FOLDER  200
+#define CAT_ALL     254
+#define CAT_KEYS    255
+
+static unsigned char cat_order[160];
 static int cat_count;
+
+static bool cat_header(int i) {
+    return cat_order[i] >= CAT_FOLDER;
+}
 
 static const item_t *cat_item(int i) {
     return catalog[cat_order[i]];
@@ -1139,13 +1151,24 @@ static int cat_cmp(const char *a, const char *b) {
     return *a - *b;
 }
 
-static const char *cat_label(int i) { return cat_item(i)->label; }
-static const char *cat_keys(int i)  { return cat_item(i)->keys; }
-static const char *cat_help(int i)  { return cat_item(i)->help; }
+static const char *cat_label(int i) {
+    if(cat_order[i] == CAT_KEYS)
+        return "Keys";
+    if(cat_order[i] == CAT_ALL)
+        return "All";
+    if(cat_header(i))
+        return folders[cat_order[i] - CAT_FOLDER].name;
+    return cat_item(i)->label;
+}
+static const char *cat_keys(int i)  { return cat_header(i) ? NULL : cat_item(i)->keys; }
+static const char *cat_help(int i)  { return cat_header(i) ? NULL : cat_item(i)->help; }
 
 static bool cat_pick(int i) {
-    const item_t *it = cat_item(i);
+    const item_t *it;
 
+    if(cat_header(i))
+        return false;   /* page.c doesnt send these, but still */
+    it = cat_item(i);
     if(!pick(it, true)) {
         status = it->have == HAVE_NO ? "not in Fluxion yet" : "use the keys on the right for that";
         return true;
@@ -1155,25 +1178,74 @@ static bool cat_pick(int i) {
     return true;
 }
 
-static page_t catalog_page = { "Catalog", 0, cat_label, cat_keys, cat_help, cat_pick };
+static page_t catalog_page = { "Catalog", 0, cat_label, cat_keys, cat_help, cat_pick, cat_header };
+
+/* where an item sits in catalog[], folders only have the pointers */
+static int cat_index(const item_t *it) {
+    unsigned i;
+
+    for(i = 0; i < catalog_count; i++)
+        if(catalog[i] == it)
+            return (int)i;
+    return -1;
+}
+
+static bool in_a_folder(const item_t *it) {
+    unsigned f, j;
+
+    for(f = 0; f < FOLDER_COUNT; f++)
+        for(j = 0; j < folders[f].count; j++)
+            if(folders[f].items[j] == it)
+                return true;
+    return false;
+}
+
+/* a header then its items a-z, insertion sort is plenty for ~60. all of them
+   for All, just the ones no folder has for Keys */
+static void cat_sorted(unsigned char header, bool everything) {
+    unsigned i;
+    int from;
+
+    if(cat_count < (int)sizeof cat_order)
+        cat_order[cat_count++] = header;
+    from = cat_count;
+    for(i = 0; i < catalog_count && cat_count < (int)sizeof cat_order; i++) {
+        int k = cat_count;
+
+        /* settings go in a settings page */
+        if(catalog[i]->kind == ITEM_SETTING || (!everything && in_a_folder(catalog[i])))
+            continue;
+        cat_count++;
+        for(; k > from && cat_cmp(catalog[cat_order[k - 1]]->label, catalog[i]->label) > 0; k--)
+            cat_order[k] = cat_order[k - 1];
+        cat_order[k] = (unsigned char)i;
+    }
+}
 
 static void catalog_open(void) {
-    /* sorted once, insertion sort is plenty for ~60 */
+    /* built once. the folders keep their menu order, Keys and All go a-z */
     /* order? i hardly know 'er bwhahaHAHAah */
     if(cat_count == 0) {
-        unsigned i;
+        unsigned f, j;
 
-        for(i = 0; i < catalog_count && cat_count < (int)sizeof cat_order; i++) {
-            int k = cat_count++;
+        for(f = 0; f < FOLDER_COUNT; f++) {
+            int head = cat_count;
 
-            if(catalog[i]->kind == ITEM_SETTING) {
-                cat_count--;    /* those go in a settings page */
-                continue;
+            if(cat_count < (int)sizeof cat_order)
+                cat_order[cat_count++] = (unsigned char)(CAT_FOLDER + f);
+            for(j = 0; j < folders[f].count && cat_count < (int)sizeof cat_order; j++) {
+                int at = cat_index(folders[f].items[j]);
+
+                /* settings show no on/off here, they have tools and mode */
+                if(at >= 0 && catalog[at]->kind != ITEM_SETTING)
+                    cat_order[cat_count++] = (unsigned char)at;
             }
-            for(; k > 0 && cat_cmp(catalog[cat_order[k - 1]]->label, catalog[i]->label) > 0; k--)
-                cat_order[k] = cat_order[k - 1];
-            cat_order[k] = (unsigned char)i;
+            if(cat_count == head + 1)
+                cat_count = head;   /* nothing left in it (tools), no lonely header */
         }
+
+        cat_sorted(CAT_KEYS, false);
+        cat_sorted(CAT_ALL, true);
         catalog_page.count = cat_count;
     }
     page_open(&catalog_page);
