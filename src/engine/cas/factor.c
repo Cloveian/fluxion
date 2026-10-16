@@ -1054,6 +1054,304 @@ static bool factor_integer(pcas_ast_t *e) {
     return changed;
 }
 
+/*Fluxion: the textbook ones with more than one letter, a^2_b^2, a^2+-2ab+b^2 and a^3+-b^3,
+a and b a number times letters. poly_factor() only knows one letter and the gcd pairing
+turns X^2+2XY+Y^2 into X^2+Y(2X+Y), so these get a look first*/
+#define PAT_VARS 8
+#define PAT_MAX_POWER 1000
+
+typedef struct {
+    mp_rat c;
+    int x[PAT_VARS]; /*power of each letter in pat_vars_t*/
+} mono_t;
+
+typedef struct {
+    Symbol sym[PAT_VARS];
+    int n;
+} pat_vars_t;
+
+static bool mono_init(mono_t *m) {
+    int i;
+
+    for(i = 0; i < PAT_VARS; i++)
+        m->x[i] = 0;
+    m->c = num_FromInt(1);
+    return m->c != NULL;
+}
+
+static int pat_var(pat_vars_t *v, Symbol s) {
+    int i;
+
+    for(i = 0; i < v->n; i++)
+        if(v->sym[i] == s)
+            return i;
+    if(v->n == PAT_VARS)
+        return -1;
+    v->sym[v->n] = s;
+    return v->n++;
+}
+
+/*Fluxion: a term into m (from mono_init), false if it isn't a number times letters to whole powers*/
+static bool mono_read(pcas_ast_t *e, pat_vars_t *v, mono_t *m) {
+    pcas_ast_t *child;
+    mp_small num, den;
+    int i;
+
+    switch(e->type) {
+    case NODE_NUMBER:
+        return mp_rat_mul(m->c, e->op.num, m->c) == MP_OK;
+    case NODE_SYMBOL:
+        /*pi, e and i don't count as letters. i^2 is -1, and pi^2_X^2 isn't a textbook one*/
+        if(e->op.symbol == SYM_PI || e->op.symbol == SYM_EULER || e->op.symbol == SYM_IMAG)
+            return false;
+        if((i = pat_var(v, e->op.symbol)) < 0)
+            return false;
+        return ++m->x[i] <= PAT_MAX_POWER;
+    default:
+        break;
+    }
+
+    switch(optype(e)) {
+    case OP_MULT:
+        for(child = ast_ChildGet(e, 0); child != NULL; child = child->next)
+            if(!mono_read(child, v, m))
+                return false;
+        return true;
+    case OP_DIV:
+        child = ast_ChildGet(e, 1);
+        if(child == NULL || child->type != NODE_NUMBER || mp_rat_compare_zero(child->op.num) == 0)
+            return false;
+        return mono_read(ast_ChildGet(e, 0), v, m) && mp_rat_div(m->c, child->op.num, m->c) == MP_OK;
+    case OP_POW:
+        child = ast_ChildGet(e, 1);
+        if(child == NULL || ast_ChildGet(e, 0)->type != NODE_SYMBOL || child->type != NODE_NUMBER
+           || mp_rat_to_ints(child->op.num, &num, &den) != MP_OK || den != 1 || num < 1 || num > PAT_MAX_POWER)
+            return false;
+        if(!mono_read(ast_ChildGet(e, 0), v, m))
+            return false;
+        i = pat_var(v, ast_ChildGet(e, 0)->op.symbol);
+        m->x[i] += (int)num - 1;
+        return m->x[i] <= PAT_MAX_POWER;
+    default:
+        return false;
+    }
+}
+
+/*Fluxion: k*a*b into out. does its own mono_init, so out can't be a live one (leaks)*/
+static bool mono_mul(const mono_t *a, const mono_t *b, mp_small k, mono_t *out) {
+    int i;
+
+    if(!mono_init(out))
+        return false;
+    for(i = 0; i < PAT_VARS; i++)
+        out->x[i] = a->x[i] + b->x[i];
+    return mp_rat_set_value(out->c, k, 1) == MP_OK && mp_rat_mul(out->c, a->c, out->c) == MP_OK
+           && mp_rat_mul(out->c, b->c, out->c) == MP_OK;
+}
+
+/*Fluxion: z becomes its kth root, only if it's exact (z >= 0). mp_int_root rounds down, hence raising it back to check*/
+static bool int_root(mp_int z, mp_small k) {
+    mp_int r = mp_int_alloc(), back = mp_int_alloc();
+    bool ok = r != NULL && back != NULL && mp_int_root(z, k, r) == MP_OK && mp_int_expt(r, k, back) == MP_OK
+              && mp_int_compare(back, z) == 0 && mp_int_copy(r, z) == MP_OK;
+
+    if(r != NULL)
+        mp_int_free(r);
+    if(back != NULL)
+        mp_int_free(back);
+    return ok;
+}
+
+/*Fluxion: m^(1/k) if that's a monomial too. a square root wants m > 0, a cube root keeps the sign.
+out->c is NULL when it isn't one, so the caller can num_Cleanup it either way*/
+static bool mono_root(const mono_t *m, mp_small k, mono_t *out) {
+    bool neg = mp_rat_compare_zero(m->c) < 0, ok;
+    int i;
+
+    out->c = NULL;
+    if(neg && k % 2 == 0)
+        return false;
+    for(i = 0; i < PAT_VARS; i++)
+        if(m->x[i] % k != 0)
+            return false;
+    if(!mono_init(out))
+        return false;
+    for(i = 0; i < PAT_VARS; i++)
+        out->x[i] = m->x[i] / (int)k;
+
+    ok = mp_rat_abs(m->c, out->c) == MP_OK && int_root(mp_rat_numer_ref(out->c), k)
+         && int_root(mp_rat_denom_ref(out->c), k);
+    if(ok && neg)
+        ok = mp_rat_neg(out->c, out->c) == MP_OK;
+    if(!ok) {
+        num_Cleanup(out->c);
+        out->c = NULL;
+    }
+    return ok;
+}
+
+/*Fluxion: sign*m as a tree, no 1 in front*/
+static pcas_ast_t *mono_ast(const mono_t *m, const pat_vars_t *v, int sign) {
+    pcas_ast_t *prod = ast_MakeOperator(OP_MULT), *only;
+    mp_rat c = num_Copy(m->c);
+    int i;
+
+    if(sign < 0)
+        mp_rat_neg(c, c);
+    ast_ChildAppend(prod, ast_MakeNumber(c));
+    for(i = 0; i < v->n; i++)
+        if(m->x[i] > 0)
+            ast_ChildAppend(prod, power_or_self(ast_MakeSymbol((char)v->sym[i]), m->x[i]));
+    if(ast_ChildLength(prod) > 1 && mp_rat_compare_value(c, 1, 1) == 0)
+        ast_Cleanup(ast_ChildRemoveIndex(prod, 0));
+    if(ast_ChildLength(prod) == 1) {
+        only = ast_ChildRemoveIndex(prod, 0);
+        ast_Cleanup(prod);
+        return only;
+    }
+    return prod;
+}
+
+/*Fluxion: whether a goes before b, more of the first letter (A to Z) first, like the book*/
+static bool mono_first(const mono_t *a, const mono_t *b, const pat_vars_t *v) {
+    int i, j, k, before;
+
+    for(k = 0; k < v->n; k++) {
+        for(i = 0; i < v->n; i++) {
+            for(before = 0, j = 0; j < v->n; j++)
+                before += v->sym[j] < v->sym[i];
+            if(before == k && a->x[i] != b->x[i])
+                return a->x[i] > b->x[i];
+        }
+    }
+    return true;
+}
+
+static bool factor_patterns(pcas_ast_t *e);
+
+/*Fluxion: a^2_b^2 = (a_b)(a+b), and the halves again for X^4_Y^4. else a^3+b^3 =
+(a+b)(a^2_ab+b^2), the minus of a^3_b^3 rides along in b*/
+static pcas_ast_t *pat_two(mono_t *t, const pat_vars_t *v) {
+    mono_t a, b, a2, ab, b2;
+    pcas_ast_t *result = NULL, *lo, *hi;
+    int p = mp_rat_compare_zero(t[0].c) > 0 ? 0 : 1;
+
+    a.c = b.c = NULL;
+    if(mp_rat_compare_zero(t[p].c) > 0 && mp_rat_compare_zero(t[1 - p].c) < 0) {
+        mp_rat_neg(t[1 - p].c, t[1 - p].c);
+        if(mono_root(&t[p], 2, &a) && mono_root(&t[1 - p], 2, &b)) {
+            lo = ast_MakeBinary(OP_ADD, mono_ast(&a, v, 1), mono_ast(&b, v, -1));
+            hi = ast_MakeBinary(OP_ADD, mono_ast(&a, v, 1), mono_ast(&b, v, 1));
+            factor_patterns(lo);
+            factor_patterns(hi);
+            result = ast_MakeBinary(OP_MULT, lo, hi);
+        }
+        mp_rat_neg(t[1 - p].c, t[1 - p].c);
+        num_Cleanup(a.c);
+        num_Cleanup(b.c);
+        if(result != NULL)
+            return result;
+    }
+
+    a.c = b.c = a2.c = ab.c = b2.c = NULL;
+    if(mono_root(&t[0], 3, &a) && mono_root(&t[1], 3, &b)
+       && mono_mul(&a, &a, 1, &a2) && mono_mul(&a, &b, 1, &ab) && mono_mul(&b, &b, 1, &b2)) {
+        lo = ast_MakeBinary(OP_ADD, mono_ast(&a, v, 1), mono_ast(&b, v, 1));
+        factor_patterns(lo);
+        hi = ast_MakeBinary(OP_ADD, ast_MakeBinary(OP_ADD, mono_ast(&a2, v, 1), mono_ast(&ab, v, -1)), mono_ast(&b2, v, 1));
+        result = ast_MakeBinary(OP_MULT, lo, hi);
+    }
+    num_Cleanup(a.c);
+    num_Cleanup(b.c);
+    num_Cleanup(a2.c);
+    num_Cleanup(ab.c);
+    num_Cleanup(b2.c);
+    return result;
+}
+
+/*Fluxion: a^2+-2ab+b^2 = (a+-b)^2, whichever term is the middle one*/
+static pcas_ast_t *pat_three(mono_t *t, const pat_vars_t *v) {
+    mono_t a, b, ab2, *first;
+    pcas_ast_t *result = NULL, *base;
+    int mid, i, sign;
+    bool same;
+
+    for(mid = 0; mid < 3 && result == NULL; mid++) {
+        a.c = b.c = ab2.c = NULL;
+        if(mono_root(&t[(mid + 1) % 3], 2, &a) && mono_root(&t[(mid + 2) % 3], 2, &b) && mono_mul(&a, &b, 2, &ab2)) {
+            same = mp_rat_compare_unsigned(ab2.c, t[mid].c) == 0;
+            for(i = 0; i < PAT_VARS; i++)
+                same = same && ab2.x[i] == t[mid].x[i];
+            if(same) {
+                /*(Y_X)^2 is (X_Y)^2, and the book writes that one*/
+                sign = mp_rat_compare_zero(t[mid].c) < 0 ? -1 : 1;
+                first = sign < 0 && !mono_first(&a, &b, v) ? &b : &a;
+                base = ast_MakeBinary(OP_ADD, mono_ast(first, v, 1), mono_ast(first == &a ? &b : &a, v, sign));
+                factor_patterns(base);
+                result = power_or_self(base, 2);
+            }
+        }
+        num_Cleanup(a.c);
+        num_Cleanup(b.c);
+        num_Cleanup(ab2.c);
+    }
+    return result;
+}
+
+/*Fluxion: a sum of two or three terms in two letters or more, if it's one of the above.
+the number they share comes out in front first, so 2X^2_8Y^2 is 2(X_2Y)(X+2Y)*/
+static bool factor_patterns(pcas_ast_t *e) {
+    mono_t t[3];
+    pat_vars_t v;
+    pcas_ast_t *term, *result = NULL;
+    mp_rat g = NULL;
+    unsigned n, i;
+    int neg = 0;
+    bool ok = true;
+
+    if(pcas_cancelled || !isoptype(e, OP_ADD))
+        return false;
+    n = ast_ChildLength(e);
+    if(n < 2 || n > 3)
+        return false;
+
+    v.n = 0;
+    for(i = 0; i < n; i++)
+        t[i].c = NULL;
+    for(i = 0, term = ast_ChildGet(e, 0); ok && term != NULL; i++, term = term->next)
+        ok = mono_init(&t[i]) && mono_read(term, &v, &t[i]) && mp_rat_compare_zero(t[i].c) != 0;
+
+    /*gcd of the tops over lcm of the bottoms, and a minus too when most terms have one*/
+    if(ok && v.n >= 2 && (g = num_FromInt(1)) != NULL) {
+        mp_int_zero(mp_rat_numer_ref(g));
+        for(i = 0; i < n; i++) {
+            mp_int_gcd(mp_rat_numer_ref(g), mp_rat_numer_ref(t[i].c), mp_rat_numer_ref(g));
+            mp_int_lcm(mp_rat_denom_ref(g), mp_rat_denom_ref(t[i].c), mp_rat_denom_ref(g));
+            neg += mp_rat_compare_zero(t[i].c) < 0;
+        }
+        if(2 * neg > (int)n)
+            mp_rat_neg(g, g);
+        for(i = 0; ok && i < n; i++)
+            ok = mp_rat_div(t[i].c, g, t[i].c) == MP_OK;
+        if(ok)
+            result = n == 2 ? pat_two(t, &v) : pat_three(t, &v);
+    }
+
+    if(result != NULL) {
+        if(mp_rat_compare_value(g, 1, 1) != 0) {
+            result = ast_MakeBinary(OP_MULT, ast_MakeNumber(g), result);
+            g = NULL;
+        }
+        simplify(result, SIMP_NORMALIZE | SIMP_COMMUTATIVE | SIMP_RATIONAL | SIMP_EVAL);
+        replace_node(e, result);
+    }
+
+    num_Cleanup(g);
+    for(i = 0; i < n; i++)
+        num_Cleanup(t[i].c);
+    return result != NULL;
+}
+
 bool factor(pcas_ast_t *e, unsigned char flags) {
     bool changed = false;
 
@@ -1068,6 +1366,10 @@ bool factor(pcas_ast_t *e, unsigned char flags) {
     /*Fluxion: polynomials first. pairing up terms by their gcd would split
     X^3+X^2_8X_12 into a worse sum, so it only gets what isn't a polynomial.*/
     if((flags & FAC_POLYNOMIAL) && factor_polynomial(e))
+        return true;
+
+    /*Fluxion: X^2_Y^2 and friends, before the gcd pairing gets them*/
+    if((flags & FAC_POLYNOMIAL) && factor_patterns(e))
         return true;
 
     if(flags & (FAC_SIMPLE_ADDITION_EVALUATEABLE | FAC_SIMPLE_ADDITION_NONEVALUATEABLE)) {
