@@ -1963,11 +1963,12 @@ static void draw_popup(void) {
 
 /* the status bar */
 
-/* along the top: 2nd / alpha (with a padlock when locked), the working dots,
+/* along the top: a padlock each for 2nd / alpha / ctl, the working dots,
    the battery */
 
 #define BATTERY_W   13
 #define BATTERY_READ (CLOCKS_PER_SEC * 10)     /* the level is read this often (reading every frame was slow) */
+#define LOCK_SLOT   13 /* per padlock, fixed so one turning on doesn't shove the others along */
 
 static int battery = -1;
 static clock_t battery_next;
@@ -1978,12 +1979,36 @@ static int top_h(void) {
     return small->ascent + small->descent + 3;
 }
 
-/* 7 x 8, top left at x, y */
-static void draw_lock(int x, int y) {
-    screen_hline(x + 2, y, 3);
-    screen_vline(x + 1, y + 1, 3);
-    screen_vline(x + 5, y + 1, 3);
-    screen_fill(x, y + 3, 7, 5);
+/* 3x5 letters punched out of the padlocks, top bit on the left: 2, A, C */
+static const unsigned char lock_letters[3][5] = {
+    { 6, 1, 2, 4, 7 },
+    { 2, 5, 7, 5, 5 },
+    { 3, 4, 4, 4, 3 }
+};
+
+/* 9 x 11, top left at x, y. locked has the shackle shut, sticky has it popped
+   up a row and swung right, so it pokes one row above y */
+static void draw_padlock(int x, int y, int letter, bool locked) {
+    int r, c;
+
+    screen_color(COL_ACCENT);
+    if(locked) {
+        screen_hline(x + 3, y, 3);
+        screen_vline(x + 2, y + 1, 3);
+        screen_vline(x + 6, y + 1, 3);
+    } else {
+        screen_hline(x + 5, y - 1, 3);
+        screen_vline(x + 4, y, 2);
+        screen_vline(x + 8, y, 4);
+    }
+    screen_fill(x, y + 4, 9, 7);
+
+    /* the letter is just holes in the body, it still reads at 1x */
+    screen_color(COL_BG);
+    for(r = 0; r < 5; r++)
+        for(c = 0; c < 3; c++)
+            if(lock_letters[letter][r] & (4 >> c))
+                screen_hline(x + 3 + c, y + 5 + r, 1);
 }
 
 /* BATTERY_W x 7, top left at x, y, two columns of fill per bar (0-4) */
@@ -1997,20 +2022,8 @@ static void draw_battery(int x, int y, int level) {
         screen_fill(x + 2, y + 2, level * 2, 3);
 }
 
-/* a modifier's name at x, after a padlock if it's locked. returns where the next goes */
-static int draw_modifier(int x, const char *name, bool locked) {
-    const font_t *small = draw_label_font();
-
-    if(locked) {
-        draw_lock(x, (top_h() - 1 - 8) / 2);
-        x += 10;
-    }
-    draw_text(x, 1, name, small);
-    return x + draw_text_width(name, small) + 8;
-}
-
 static void draw_top_bar(void) {
-    int h = top_h(), x = MARGIN;
+    int h = top_h(), y = (h - 1 - 11) / 2;
 
     if(battery < 0 || clock() >= battery_next) {
         battery = power_battery();
@@ -2023,13 +2036,12 @@ static void draw_top_bar(void) {
     screen_hline(MARGIN, h - 1, SCREEN_W - 2 * MARGIN);
     draw_battery(SCREEN_W - MARGIN - BATTERY_W, (h - 1 - 7) / 2, battery);
 
-    screen_color(COL_ACCENT);
-    if(ctl)
-        x = draw_modifier(x, "ctl", ctl_lock);
     if(second)
-        draw_modifier(x, "2nd", second_lock);
-    else if(alpha)
-        draw_modifier(x, "alpha", alpha_lock);
+        draw_padlock(MARGIN, y, 0, second_lock);
+    if(alpha)
+        draw_padlock(MARGIN + LOCK_SLOT, y, 1, alpha_lock);
+    if(ctl)
+        draw_padlock(MARGIN + 2 * LOCK_SLOT, y, 2, ctl_lock);
 
     /* the form, when it isn't the normal one, over by the battery */
     if(form != FORM_HAND) {
