@@ -255,6 +255,10 @@ simplify; sqrt(12)X; 2sqrt(3)X
 simplify; 2sqrt(8); 4sqrt(2)
 simplify; sqrt(12)*sqrt(3); 6
 
+#the cardano shape, cube roots of a fraction with a sqrt in it. hung in compare(), the gcd kept handing 2^(1/3) back and forth
+simplify; (93^(1/2)/18_1/2)^(1/3)_(93^(1/2)/18+1/2)^(1/3); 3root(sqrt(93)/18_1/2)_(3root(1/2+sqrt(93)/18))
+decimal; (93^(1/2)/18_1/2)^(1/3)_(93^(1/2)/18+1/2)^(1/3); -0.682328
+
 #gcd lcm nCr nPr work out on whole numbers, with letters they stay. factor( takes a whole number apart into primes
 simplify; gcd(12,18); 6
 simplify; lcm(4,6); 12

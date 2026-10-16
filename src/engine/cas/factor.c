@@ -132,6 +132,15 @@ static pcas_ast_t *gcd_pow(pcas_ast_t *pow, pcas_ast_t *b) {
         value1 = pow_value(power1); /*Fluxion: was number nodes only*/
         value2 = pow_value(power2);
 
+        /*Fluxion: a/b powers only for the same base or two numbers. cbrt(1/2+sqrt(93)/18) and cbrt(-1/2+sqrt(93)/18)
+        "shared" 1/2^(1/3), the 2^(1/3) left after dividing never went back in the root and compare() bounced forever*/
+        if((power1->type != NODE_NUMBER || power2->type != NODE_NUMBER) && !ast_Compare(base1, base2)
+            && (base1->type != NODE_NUMBER || base2->type != NODE_NUMBER)) {
+            num_Cleanup(value1);
+            num_Cleanup(value2);
+            return ast_MakeNumber(num_FromInt(1));
+        }
+
         if(value1 != NULL && value2 != NULL) {
             bool use_first;
             pcas_ast_t *current_gcd;
