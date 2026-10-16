@@ -13,4 +13,6 @@ const char *app_form_name(void); /* "by hand", "expanded", ... */
 void app_next_form(void); /* cycles it and redoes the last answer, like [2nd][enter] */
 bool app_rationalize(void);
 void app_toggle_rationalize(void);
+int app_form_index(void); /* for saving. set is quiet, no redoing the last answer */
+void app_set_form_index(int i);
 #endif

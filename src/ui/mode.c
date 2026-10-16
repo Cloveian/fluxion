@@ -44,6 +44,7 @@ static bool mode_pick(int i) {
     case ROW_FORM:        app_next_form(); break;
     case ROW_RATIONALIZE: app_toggle_rationalize(); break;
     }
+    settings_save();    /* so a flip sticks even if the app dies before exit */
     return false;
 }
 

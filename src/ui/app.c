@@ -574,6 +574,15 @@ void app_toggle_rationalize(void) {
     canon_flags ^= CANONICAL_RATIONALIZE;
 }
 
+int app_form_index(void) {
+    return (int)form;
+}
+
+void app_set_form_index(int i) {
+    if(i >= 0 && i < FORM_COUNT)
+        form = (form_t)i;
+}
+
 /* -- menus -- */
 
 static const item_t *menu_item(int i) {
@@ -1872,6 +1881,7 @@ void app_run(void) {
 
     names_init();
     history_load();
+    settings_load();
     screen_begin();
     keys_begin();
     draw_screen();
@@ -1892,6 +1902,7 @@ void app_run(void) {
     screen_end();
     history_save();
     names_save();
+    settings_save();
     clear_history();
     menu_free_boxes();
     ed_free(&ed);
