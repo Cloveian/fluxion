@@ -1545,19 +1545,43 @@ static void draw_working(void) {
     screen_direct(false);
 }
 
-/* pcas_poll, the engine calls this constantly, so check the clock and only
-   draw a frame / read the keys 10 times a second */
-static bool busy_poll(void) {
-    if(clock() < busy_next)
-        return false;
-    busy_next = clock() + CLOCKS_PER_SEC / 10;
-    busy_frame++;
-    draw_working();
-    {
-        keypress_t p = keys_peek();
+/* what the keys looked like at the last poll, for edges */
+static clock_t busy_keys_next;
+static key_t busy_key;
+static bool busy_on, busy_on_chord;
 
-        return p.on && p.key == CANCEL_KEY;
+/* pcas_poll, the engine calls this constantly, so check the clock and only read
+   the keys 40 times a second and draw a frame 10 times a second.
+
+   a modifier tapped while it's working still counts for the next key (they used
+   to just vanish, keys_peek marks whatever's down as held). 2nd / alpha on the
+   press, [on] on the release and only if nothing came with it, since [on]+[mode]
+   is the cancel. 40 Hz so a quick tap doesn't fall between two polls */
+static bool busy_poll(void) {
+    keypress_t p;
+
+    if(clock() < busy_keys_next)
+        return false;
+    busy_keys_next = clock() + CLOCKS_PER_SEC / 40;
+    if(clock() >= busy_next) {
+        busy_next = clock() + CLOCKS_PER_SEC / 10;
+        busy_frame++;
+        draw_working();
     }
+
+    p = keys_peek();
+    if(p.key != busy_key && (p.key == K_2ND || p.key == K_ALPHA) && !p.on)
+        modifier(p.key);
+    if(p.on && !busy_on)
+        busy_on_chord = false;
+    if(p.on && p.key != K_NONE)
+        busy_on_chord = true;
+    if(!p.on && busy_on && !busy_on_chord)
+        modifier(K_ON);
+    busy_key = p.key;
+    busy_on = p.on;
+
+    return p.on && p.key == CANCEL_KEY;
 }
 
 static void busy_start(void) {
@@ -1565,6 +1589,9 @@ static void busy_start(void) {
     pcas_oom = false;
     busy_frame = 0;
     busy_next = clock() + CLOCKS_PER_SEC / 10;
+    busy_keys_next = busy_next;
+    busy_key = K_NONE;
+    busy_on = busy_on_chord = false;
     draw_working();
 }
 

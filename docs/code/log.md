@@ -8,6 +8,7 @@
 - `[2nd][,]` types E, `2E3` -> 2000
 - the form key: `[2nd][enter]` cycles by hand -> expanded -> factored -> decimal, `[alpha][enter]` jumps to decimal and back. it's a mode, it redoes the last answer (runs its input again from the scratch editor, so a half typed line is left alone) and shows in the top bar. decimal is `approx()` plus the layout printing numbers as 0.333333. that's the last four form rows on the scoreboard, 18 of 19 now
 - expand collects like terms after every step now. (x+1)^7 took 5 min on the calculator (62 s at 500%) and ^8 ran out of memory, because it built all 2^n raw terms first. on the PC ^8 went from 144 ms to 27 ms (it hardly noticed, the calculator is where it hurts). it's a flag simplify's own expands dont pass, collecting everywhere broke two complex tests
+- 2nd / alpha / on tapped while its working count for the next key now, busy_poll feeds them into the modifier state, polling at 40 Hz so a quick tap doesnt fall between two polls. cant check that one on the PC, scripted keys never reach keys_peek
 - bold and italic in the draw layer (`draw_text_styled`, `box_t.style`). nothing uses them yet and widths aren't synced, so styled text is a pixel or two off. `[2nd][clear]` clears the line like `[on][clear]`
 - roadmap written up with the decisions so far: names (multi-letter vars and typeable functions are one thing, bold = has a value), RAM appvars for storage, the by-hand default, cot/sec/csc as real functions
 
