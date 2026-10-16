@@ -1254,7 +1254,7 @@ static bool key_2nd(keypress_t p) {
     case K_LEFT:   typing_run = false; ed_home(&ed); return true;
     case K_RIGHT:  typing_run = false; ed_end(&ed); return true;
     case K_0:      typing_run = false; catalog_open(); return true;
-    case K_UP: case K_DOWN: case K_DEL:
+    case K_DEL:
         return key_plain(p);
     case K_ENTER:  form_set((form_t)((form + 1) % FORM_COUNT)); return true;
     case K_CLEAR:  /* same as [on]+[clear], clear the whole line */
@@ -1642,6 +1642,17 @@ static bool handle(keypress_t p) {
             page_close();
         else
             page_key(p, c);
+        return true;
+    }
+
+    /* [2nd] up/down is the brightness, like the TI's own. before the history so
+       it works with an answer highlighted too. the 2nd's already used up above */
+    if(sec && (p.key == K_UP || p.key == K_DOWN)) {
+        setting_brightness += p.key == K_UP ? -1 : 1;
+        if(setting_brightness < 0) setting_brightness = 0;
+        if(setting_brightness > 7) setting_brightness = 7;
+        screen_brightness(setting_brightness);
+        settings_save();
         return true;
     }
 
@@ -2160,8 +2171,8 @@ void app_run(void) {
 
     names_init();
     history_load();
-    settings_load();
     screen_begin();
+    settings_load();    /* after, it sets the palette and gfx_Begin would put its own back */
     keys_begin();
     draw_screen();
     pcas_poll = busy_poll;

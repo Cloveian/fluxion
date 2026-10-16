@@ -8,20 +8,58 @@
 #include <graphx.h>
 #include <sys/lcd.h>
 
+static bool light_theme;
+static unsigned char backlight; /* ours, what waking up goes back to */
+static unsigned char os_backlight; /* the OS's, handed back on the way out */
+static bool asleep;
+
 void screen_begin(void) {
     gfx_Begin();
     gfx_SetDrawBuffer();
+    screen_theme(light_theme);  /* gfx_Begin put its own palette in */
 
-    /* same colours as screen_pc.c */
-    gfx_palette[COL_BG]     = gfx_RGBTo1555(24, 24, 32);
-    gfx_palette[COL_FG]     = gfx_RGBTo1555(235, 235, 240);
-    gfx_palette[COL_DIM]    = gfx_RGBTo1555(120, 120, 140);
-    gfx_palette[COL_ACCENT] = gfx_RGBTo1555(110, 170, 255);
-    gfx_palette[COL_SELECT] = gfx_RGBTo1555(40, 64, 112);
+    os_backlight = backlight = lcd_BacklightLevel;
 }
 
 void screen_end(void) {
     gfx_End();
+    lcd_BacklightLevel = os_backlight;
+}
+
+void screen_theme(bool light) {
+    light_theme = light;
+
+    /* same colours as screen_pc.c */
+    if(light) {
+        gfx_palette[COL_BG]     = gfx_RGBTo1555(245, 245, 248);
+        gfx_palette[COL_FG]     = gfx_RGBTo1555(24, 24, 32);
+        gfx_palette[COL_DIM]    = gfx_RGBTo1555(120, 120, 140);
+        gfx_palette[COL_ACCENT] = gfx_RGBTo1555(40, 110, 220);
+        gfx_palette[COL_SELECT] = gfx_RGBTo1555(200, 215, 245);
+    } else {
+        gfx_palette[COL_BG]     = gfx_RGBTo1555(24, 24, 32);
+        gfx_palette[COL_FG]     = gfx_RGBTo1555(235, 235, 240);
+        gfx_palette[COL_DIM]    = gfx_RGBTo1555(120, 120, 140);
+        gfx_palette[COL_ACCENT] = gfx_RGBTo1555(110, 170, 255);
+        gfx_palette[COL_SELECT] = gfx_RGBTo1555(40, 64, 112);
+    }
+}
+
+/* the register goes 0 brightest to 255 off, 32 a step leaves 7 still readable */
+void screen_brightness(int level) {
+    if(level < 0) level = 0;
+    if(level > 7) level = 7;
+    backlight = (unsigned char)(level * 32);
+    if(!asleep)
+        lcd_BacklightLevel = backlight;
+}
+
+/* the OS's level from screen_begin in our steps, so a first run starts where
+   the OS was instead of jumping */
+int screen_brightness_current(void) {
+    int level = os_backlight / 32;
+
+    return level > 7 ? 7 : level;
 }
 
 void screen_clear(void) {
@@ -49,16 +87,11 @@ void screen_direct(bool on) {
 }
 
 /* just the backlight, not the LCD controller: graphx keeps working and nothing
-   needs setting up again. 255 is darkest, the OS brightness goes back after */
+   needs setting up again. 255 is darkest. waking up goes back to whatever
+   screen_brightness last said, not what the register had */
 void screen_power(bool on) {
-    static unsigned char before = 0;
-
-    if(!on) {
-        before = lcd_BacklightLevel;
-        lcd_BacklightLevel = 255;
-    } else {
-        lcd_BacklightLevel = before;
-    }
+    asleep = !on;
+    lcd_BacklightLevel = on ? backlight : 255;
 }
 
 #else
