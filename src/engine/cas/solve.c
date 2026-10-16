@@ -1,7 +1,8 @@
 /*
     Fluxion: solve(), not in PineappleCAS.
 
-    solves e = 0 for one variable over the reals, like the nspire's solve():
+    solves e = 0 for one variable over the reals, like the nspire's solve(). solve_ex
+    with complex on is more its csolve(): quadratics give their complex roots too.
       var gone after simplifying   every value (0 = 0) or none (1 = 0)
       linear in var                var = -b/a. a and b can have other variables in them
       polynomial with numbers      factored (factor.c), then each factor: linear, or a
@@ -238,14 +239,21 @@ static pcas_ast_t *linear_root(coefs_t *p) {
 /*mid + sign*sqrt(q). as -b/2a +- sqrt(d/4a^2) rather than (-b +- sqrt(d))/2a: the
 2a cancels inside the root, so X^2=2 gives sqrt(2), not sqrt(8)/2 (the engine
 doesn't take square factors out of roots)*/
+/*q < 0 goes in as i*sqrt(-q), so it comes out with an i and not as sqrt(-3)*/
 /*>w<*/
 static pcas_ast_t *quadratic_root(mp_rat mid, mp_rat q, int sign) {
-    pcas_ast_t *r = ast_MakeOperator(OP_ADD);
+    pcas_ast_t *r = ast_MakeOperator(OP_ADD), *s, *qn;
 
     ast_ChildAppend(r, ast_MakeNumber(num_Copy(mid)));
-    if(sign != 0)
-        ast_ChildAppend(r, ast_MakeBinary(OP_MULT, number(sign),
-            ast_MakeBinary(OP_POW, ast_MakeNumber(num_Copy(q)), ast_MakeNumber(num_FromFraction(1, 2)))));
+    if(sign != 0) {
+        qn = ast_MakeNumber(num_Copy(q));
+        s = ast_MakeBinary(OP_POW, qn, ast_MakeNumber(num_FromFraction(1, 2)));
+        if(mp_rat_compare_zero(q) < 0) {
+            mp_rat_neg(qn->op.num, qn->op.num);
+            s = ast_MakeBinary(OP_MULT, ast_MakeSymbol(SYM_IMAG), s);
+        }
+        ast_ChildAppend(r, ast_MakeBinary(OP_MULT, number(sign), s));
+    }
     simplify(r, SIMP_SOLVE);
     return r;
 }
@@ -258,8 +266,9 @@ static int add_root(pcas_ast_t **out, int n, pcas_ast_t *r) {
     return n;
 }
 
-/*real roots of a*X^2 + b*X + c, all numbers, added at out[n]. returns the new count.*/
-static int solve_quadratic(coefs_t *p, pcas_ast_t **out, int n) {
+/*roots of a*X^2 + b*X + c, all numbers, added at out[n]. the complex ones only if
+complex. returns the new count.*/
+static int solve_quadratic(coefs_t *p, pcas_ast_t **out, int n, bool complex) {
     mp_rat a, b, c, mid, q, t;
 
     /*if read_poly got cut short (cancel, oom) the coefs are still sums, and
@@ -283,8 +292,9 @@ static int solve_quadratic(coefs_t *p, pcas_ast_t **out, int n) {
 
     if(mp_rat_compare_zero(q) == 0) {
         n = add_root(out, n, quadratic_root(mid, q, 0));
-    } else if(mp_rat_compare_zero(q) > 0) {
-        n = add_root(out, n, quadratic_root(mid, q, -1)); /*smallest first*/
+    } else if(mp_rat_compare_zero(q) > 0 || complex) {
+        /*smallest first. complex ones have no decimal so sort_roots leaves them, -i first*/
+        n = add_root(out, n, quadratic_root(mid, q, -1));
         n = add_root(out, n, quadratic_root(mid, q, 1));
     }
 
@@ -404,7 +414,7 @@ static int solve_quadratic_sym(coefs_t *p, pcas_ast_t **out, int n) {
 
 /*roots of one factor of the factored polynomial, added at out[n]. returns the
 new count, or SOLVE_UNKNOWN.*/
-static int solve_factor(pcas_ast_t *f, Symbol var, pcas_ast_t **out, int n) {
+static int solve_factor(pcas_ast_t *f, Symbol var, pcas_ast_t **out, int n, bool complex) {
     pcas_ast_t *child;
     coefs_t p;
 
@@ -416,13 +426,13 @@ static int solve_factor(pcas_ast_t *f, Symbol var, pcas_ast_t **out, int n) {
 
     if(isoptype(f, OP_MULT)) {
         for(child = ast_ChildGet(f, 0); child != NULL && n >= 0; child = child->next)
-            n = solve_factor(child, var, out, n);
+            n = solve_factor(child, var, out, n, complex);
         return n;
     }
     if(isoptype(f, OP_DIV))
-        return has_symbol(ast_ChildGet(f, 1), var) ? SOLVE_UNKNOWN : solve_factor(ast_ChildGet(f, 0), var, out, n);
+        return has_symbol(ast_ChildGet(f, 1), var) ? SOLVE_UNKNOWN : solve_factor(ast_ChildGet(f, 0), var, out, n, complex);
     if(isoptype(f, OP_POW))
-        return solve_factor(ast_ChildGet(f, 0), var, out, n);   /*(X+2)^2: X+2 = 0*/
+        return solve_factor(ast_ChildGet(f, 0), var, out, n, complex);   /*(X+2)^2: X+2 = 0*/
 
     if(!read_poly(f, var, &p))
         return SOLVE_UNKNOWN;
@@ -430,7 +440,7 @@ static int solve_factor(pcas_ast_t *f, Symbol var, pcas_ast_t **out, int n) {
     if(p.deg == 1)
         n = add_root(out, n, linear_root(&p));
     else if(p.deg == 2 && p.numeric)
-        n = solve_quadratic(&p, out, n);
+        n = solve_quadratic(&p, out, n, complex);
     else if(p.deg == 2)
         n = solve_quadratic_sym(&p, out, n);
     else
@@ -799,6 +809,10 @@ static void sort_roots(pcas_ast_t **out, int n) {
 }
 
 int solve(pcas_ast_t *expr, Symbol var, pcas_ast_t **out) {
+    return solve_ex(expr, var, out, false);
+}
+
+int solve_ex(pcas_ast_t *expr, Symbol var, pcas_ast_t **out, bool complex) {
     pcas_ast_t *e = ast_Copy(expr);
     coefs_t p;
     int n = SOLVE_UNKNOWN, i;
@@ -826,7 +840,7 @@ int solve(pcas_ast_t *expr, Symbol var, pcas_ast_t **out) {
             n = 1;
         } else if(p.numeric && p.deg <= SOLVE_MAX) {
             factor(e, FAC_POLYNOMIAL);
-            n = solve_factor(e, var, out, 0);
+            n = solve_factor(e, var, out, 0, complex);
         } else if(p.deg == 2) {
             n = solve_quadratic_sym(&p, out, 0);   /*letters in the coefs, no factoring those*/
         }
