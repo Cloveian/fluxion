@@ -309,7 +309,7 @@ static void busy_start(void);
 /* parse what's in line, run the command or a simplify with the form on top, push
    the answer. true if something got pushed (the caller clears the line then) */
 static bool run(editor_t *line) {
-    const char *cmd = ed_command(line);
+    const char *cmd;
     char *src;
     pcas_error_t err;
     pcas_ast_t *e;
@@ -320,6 +320,8 @@ static bool run(editor_t *line) {
         return false;
     running = line;
     layout_decimal(form == FORM_DECIMAL);
+    ed_fold_command(line);  /* solve( typed out counts the same as picked */
+    cmd = ed_command(line);
 
     /* a line with the sto arrow only stores (or deletes), nothing gets run */
     {
