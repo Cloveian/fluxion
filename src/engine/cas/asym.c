@@ -5,8 +5,8 @@
     f = top/bottom in one variable. each zero of the bottom is a hole if the top is
     zero there at least as many times over (multiplicity, counted with derivatives),
     otherwise a vertical asymptote. the horizontal one comes from the degrees, top
-    lower gives y = 0 and the same degree gives lead/lead. top higher has none, it'd
-    be a slant one instead and those are a todo
+    lower gives y = 0 and the same degree gives lead/lead. top one higher gives a
+    slant one instead, y = the quotient of top/bottom. higher than that has neither
 
     the top and bottom are read straight off the tree as typed, since simplify
     would cancel the (x-1) out of (x^2-1)/(x-1) and the hole with it. anything
@@ -67,6 +67,7 @@ void asym_free(asym_t *a) {
     for(i = 0; i < a->nvert; i++)
         ast_Cleanup(a->vert[i]);
     ast_Cleanup(a->horiz);
+    ast_Cleanup(a->slant);
     memset(a, 0, sizeof *a);
 }
 
@@ -74,6 +75,7 @@ bool asym(pcas_ast_t *f, Symbol var, asym_t *out) {
     pcas_ast_t *top, *bot, *lead_t = NULL, *lead_b = NULL;
     pcas_ast_t *zeros[SOLVE_MAX];
     int n, i, dt, db;
+    bool exact;
 
     memset(out, 0, sizeof *out);
     for(i = 0; i < SOLVE_MAX; i++)
@@ -130,6 +132,17 @@ bool asym(pcas_ast_t *f, Symbol var, asym_t *out) {
         out->horiz = ast_MakeBinary(OP_DIV, lead_t, lead_b);
         lead_t = lead_b = NULL;
         simplify(out->horiz, SIMP_ASYM);
+    } else if(dt >= 0 && db >= 0 && dt == db + 1) {
+        /*the remainder over the bottom goes to 0 out there, the quotient is what's left.
+          NULL from poly_quotient (a letter that isn't var) just means no line shown.
+          no remainder means f is that line with holes in it, nothing to approach*/
+        out->slant = poly_quotient(top, bot, var, &exact);
+        if(out->slant != NULL && exact) {
+            ast_Cleanup(out->slant);
+            out->slant = NULL;
+        }
+        if(out->slant != NULL)
+            simplify(out->slant, SIMP_ASYM);
     }
     ast_Cleanup(lead_t);
     ast_Cleanup(lead_b);

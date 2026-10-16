@@ -163,17 +163,22 @@ solve; X^2_2sqrt(2)X+2=0; X; 2^(1/2)
 solve; Y=1; X; unknown
 solve; X^2_1=0; Y; unknown
 
-#holes and asymptotes (asym; expression; variable; holes <x list> | vert <x list> | horiz <y>, - for none)
-asym; (X^2_1)/(X_1); X; holes 1 | vert - | horiz -
-asym; 1/(X_2); X; holes - | vert 2 | horiz 0
-asym; (2X^2+1)/(X^2_4); X; holes - | vert -2,2 | horiz 2
-asym; (X_1)^2/(X_1); X; holes 1 | vert - | horiz -
-asym; (X_1)/(X_1)^2; X; holes - | vert 1 | horiz 0
-asym; (X^2+3X+2)/(X^2_1); X; holes -1 | vert 1 | horiz 1
-asym; 1/X+1/(X_1); X; holes - | vert 0,1 | horiz 0
-asym; X^2+1; X; holes - | vert - | horiz -
-asym; (3X+1)/(2X_5); X; holes - | vert 5/2 | horiz 3/2
-asym; X/(X^2+1); X; holes - | vert - | horiz 0
+#holes and asymptotes (asym; expression; variable; holes <x list> | vert <x list> | horiz <y> | slant <y>, - for none)
+asym; (X^2_1)/(X_1); X; holes 1 | vert - | horiz - | slant -
+asym; 1/(X_2); X; holes - | vert 2 | horiz 0 | slant -
+asym; (2X^2+1)/(X^2_4); X; holes - | vert -2,2 | horiz 2 | slant -
+asym; (X_1)^2/(X_1); X; holes 1 | vert - | horiz - | slant -
+asym; (X_1)/(X_1)^2; X; holes - | vert 1 | horiz 0 | slant -
+asym; (X^2+3X+2)/(X^2_1); X; holes -1 | vert 1 | horiz 1 | slant -
+asym; 1/X+1/(X_1); X; holes - | vert 0,1 | horiz 0 | slant -
+asym; X^2+1; X; holes - | vert - | horiz - | slant -
+asym; (3X+1)/(2X_5); X; holes - | vert 5/2 | horiz 3/2 | slant -
+asym; X/(X^2+1); X; holes - | vert - | horiz 0 | slant -
+asym; (X^2+1)/X; X; holes - | vert 0 | horiz - | slant X
+asym; (X^2+3X+2)/(X_1); X; holes - | vert 1 | horiz - | slant 4+X
+asym; (2X^3+1)/(X^2); X; holes - | vert 0 | horiz - | slant 2X
+asym; (X^3)/(X^2+1); X; holes - | vert - | horiz - | slant X
+asym; (X^2+X)/X; X; holes 0 | vert - | horiz - | slant -
 
 #linear systems (system; eq,eq,...; vars; values in var order, or false / many / unknown)
 system; 2X_Y=7,-4X+2Y=2; XY; false

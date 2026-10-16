@@ -177,6 +177,10 @@ bool expand(pcas_ast_t *e, unsigned char flags);
 /*Fluxion: multiplies out the polynomial parts of e as flat coefficient rows
   (cas/poly.c). expand() calls it first, true if anything changed*/
 bool poly_expand(pcas_ast_t *e);
+/*Fluxion: top/bot by long division, the quotient only (new tree), *exact says the
+  remainder was 0. both have to be polynomials in just var with number coefficients,
+  NULL otherwise*/
+pcas_ast_t *poly_quotient(pcas_ast_t *top, pcas_ast_t *bot, Symbol var, bool *exact);
 
 /*Evaluates identities that are too basic to put in identities.c*/
 #define EVAL_BASIC_IDENTITIES   (1u << 0u)
@@ -267,10 +271,10 @@ void degrees_out(pcas_ast_t *e);
 
 /*Fluxion: holes and asymptotes of f in var (cas/asym.c). holes and vert are the
   x values, sorted, horiz is the y of the horizontal one or NULL for none. false
-  when a zero of the bottom couldn't be found, then out is empty. slant ones are
-  not found (todo), they come out as no horizontal*/
+  when a zero of the bottom couldn't be found, then out is empty. slant is the y
+  of the slant one (top one degree higher), NULL for none, horiz is NULL then*/
 typedef struct {
-    pcas_ast_t *holes[SOLVE_MAX], *vert[SOLVE_MAX], *horiz;
+    pcas_ast_t *holes[SOLVE_MAX], *vert[SOLVE_MAX], *horiz, *slant;
     int nholes, nvert;
 } asym_t;
 bool asym(pcas_ast_t *f, Symbol var, asym_t *out);

@@ -563,7 +563,7 @@ static void run_asym(char *src, box_t *in) {
         push(in, NULL, "can't solve where the bottom is 0", ms);
         return;
     }
-    if(a.nholes == 0 && a.nvert == 0 && a.horiz == NULL) {
+    if(a.nholes == 0 && a.nvert == 0 && a.horiz == NULL && a.slant == NULL) {
         push(in, word_box("none"), NULL, ms);
         return;
     }
@@ -575,6 +575,8 @@ static void run_asym(char *src, box_t *in) {
         layout_add(col, labelled("vertical", solutions_box(shown, a.vert, a.nvert)));
     if(a.horiz != NULL)
         layout_add(col, labelled("horizontal", solutions_box('y', &a.horiz, 1)));
+    if(a.slant != NULL)
+        layout_add(col, labelled("slant", solutions_box('y', &a.slant, 1)));
     layout_finish(col, &draw_font);
     push(in, col, NULL, ms);
     asym_free(&a);

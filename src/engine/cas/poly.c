@@ -356,3 +356,68 @@ bool poly_expand(pcas_ast_t *e) {
         changed |= poly_expand(ast_ChildGet(e, i));
     return changed;
 }
+
+/*the highest term that isn't 0, -1 for none. merged terms can cancel to 0 and stay in the row*/
+static int poly_lead(const poly_t *p) {
+    int i, best = -1;
+
+    for(i = 0; i < p->n; i++)
+        if(mp_rat_compare_zero(p->t[i].c) != 0 && (best < 0 || p->t[i].x[0] > p->t[best].x[0]))
+            best = i;
+    return best;
+}
+
+/*long division in the one letter (x[0]), the quotient into q (empty going in).
+  the remainder is thrown away, all asym wants to know is if it was 0*/
+static bool poly_div(const poly_t *top, const poly_t *bot, poly_t *q, bool *exact) {
+    poly_t rem = { NULL, 0, 0 };
+    unsigned char x[POLY_VARS];
+    mp_rat c = num_FromInt(0), m = num_FromInt(0);
+    int lb = poly_lead(bot), lr, i;
+    bool ok = c != NULL && m != NULL && lb >= 0;
+
+    for(i = 0; ok && i < top->n; i++)
+        ok = poly_push(&rem, top->t[i].c, top->t[i].x);
+    memset(x, 0, sizeof x);
+    /*the lead cancels exactly each time (rationals), so the degree drops and this ends*/
+    while(ok && !pcas_cancelled) {
+        lr = poly_lead(&rem);
+        if(lr < 0 || rem.t[lr].x[0] < bot->t[lb].x[0])
+            break;
+        x[0] = (unsigned char)(rem.t[lr].x[0] - bot->t[lb].x[0]);
+        ok = mp_rat_div(rem.t[lr].c, bot->t[lb].c, c) == MP_OK && poly_push(q, c, x);
+        for(i = 0; ok && i < bot->n; i++) {
+            unsigned char y[POLY_VARS];
+
+            if(mp_rat_compare_zero(bot->t[i].c) == 0) /*a cancelled one can sit above the lead*/
+                continue;
+            memset(y, 0, sizeof y);
+            y[0] = (unsigned char)(x[0] + bot->t[i].x[0]); /*<= the lead of rem, no overflow*/
+            ok = mp_rat_mul(c, bot->t[i].c, m) == MP_OK && mp_rat_neg(m, m) == MP_OK && poly_push(&rem, m, y);
+        }
+    }
+    *exact = poly_lead(&rem) < 0;
+    poly_free(&rem);
+    num_Cleanup(c);
+    num_Cleanup(m);
+    return ok && !pcas_cancelled;
+}
+
+pcas_ast_t *poly_quotient(pcas_ast_t *top, pcas_ast_t *bot, Symbol var, bool *exact) {
+    vars_t v;
+    poly_t pt = { NULL, 0, 0 }, pb = { NULL, 0, 0 }, q = { NULL, 0, 0 };
+    pcas_ast_t *tree = NULL;
+
+    *exact = false;
+    if(top == NULL || bot == NULL || pcas_cancelled)
+        return NULL;
+    v.sym[0] = var; /*so it's x[0] even when one side has no x in it*/
+    v.n = 1;
+    if(collect(top, &v) && collect(bot, &v) && v.n == 1
+       && read_poly(top, &v, &pt) && read_poly(bot, &v, &pb) && poly_div(&pt, &pb, &q, exact))
+        tree = build(&q, &v);
+    poly_free(&pt);
+    poly_free(&pb);
+    poly_free(&q);
+    return tree;
+}
