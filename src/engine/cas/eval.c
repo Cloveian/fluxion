@@ -349,31 +349,41 @@ prime stays inside the root (still right, just not as simple)*/
 exponent is the 1/k node. returns false if there's no k-th power to take out.*/
 /*rawr~~*/
 static bool eval_root_factors(pcas_ast_t *e, mp_int n, mp_small k, pcas_ast_t *exponent) {
-    mp_int r = mp_int_alloc(), s = mp_int_alloc(), q = mp_int_alloc();
+    mp_int r = mp_int_alloc(), s = mp_int_alloc(), q = mp_int_alloc(), left = mp_int_alloc(), pk = mp_int_alloc();
     mp_small p, rem;
     bool changed = false;
     int count, i;
 
-    if(!pcas_cancelled && r != NULL && s != NULL && q != NULL) { /*Fluxion: skip it all once cancelled, the answer's being thrown away*/
+    if(!pcas_cancelled && r != NULL && s != NULL && q != NULL && left != NULL && pk != NULL) { /*Fluxion: skip it all once cancelled, the answer's being thrown away*/
         mp_int_copy(n, r);
         mp_int_set_value(s, 1);
+        mp_int_set_value(left, 1);
 
-        for(p = 2; p <= ROOT_MAX_FACTOR && mp_int_compare_value(r, 1) > 0; p += p == 2 ? 1 : 2) {
+        for(p = 2; p <= ROOT_MAX_FACTOR; p += p == 2 ? 1 : 2) {
+            /*Fluxion: once p^k > r no bigger prime has a k-th power in r, stop. pk stops growing past r so a big k cant blow it up*/
+            mp_int_set_value(pk, p);
+            for(i = 1; i < k && mp_int_compare(pk, r) <= 0; i++)
+                mp_int_mul_value(pk, p, pk);
+            if(mp_int_compare(pk, r) > 0)
+                break;
+
             for(count = 0; mp_int_div_value(r, p, q, &rem) == MP_OK && rem == 0; count++)
                 mp_int_copy(q, r);
 
-            /*p^count: whole k-th powers out, the rest back in*/
+            /*Fluxion: the leftover p's go in left, not back in r, so r is only the unfactored
+            part. it shrinks, and the stop above kicks in early instead of dividing by every odd
+            number up to 1000 on each root*/
             for(i = 0; i < count / k; i++)
                 mp_int_mul_value(s, p, s);
             for(i = 0; i < count % k; i++)
-                mp_int_mul_value(r, p, r);
+                mp_int_mul_value(left, p, left);
         }
 
         if(mp_int_compare_value(s, 1) > 0) {
             mp_rat outside = num_FromInt(1), inside = num_FromInt(1);
 
             mp_int_copy(s, &outside->num);
-            mp_int_copy(r, &inside->num);
+            mp_int_mul(left, r, &inside->num);
             replace_node(e, ast_MakeBinary(OP_MULT,
                                 ast_MakeNumber(outside),
                                 ast_MakeBinary(OP_POW, ast_MakeNumber(inside), ast_Copy(exponent))
@@ -385,6 +395,8 @@ static bool eval_root_factors(pcas_ast_t *e, mp_int n, mp_small k, pcas_ast_t *e
     if(r != NULL) mp_int_free(r);
     if(s != NULL) mp_int_free(s);
     if(q != NULL) mp_int_free(q);
+    if(left != NULL) mp_int_free(left);
+    if(pk != NULL) mp_int_free(pk);
     return changed;
 }
 
