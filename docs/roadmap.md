@@ -16,7 +16,7 @@
 
 ## engine maths
 
-- [ ] cot / sec / csc. real functions, not lazy: `cot` in means `cot` out, never 1/tan
+- [x] cot / sec / csc. real functions, not lazy: `cot` in means `cot` out, never 1/tan
 - [ ] Multi-var solve, pulling one var out, like `solve(y=7x+3,x)` -> $x=\frac{y-3}{7}$. linear already works, anything else gives up (`y=x^2+3`, `a=pi r^2`, `y=2^x`)
 - [ ] Systems (ACT Q14). its own function like the nspire's, commas, no `and`
 - [ ] Solving trig equations. general solution or an interval, that's a mode setting

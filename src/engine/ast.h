@@ -41,6 +41,7 @@ typedef enum {
     OP_SIN, OP_SIN_INV,
     OP_COS, OP_COS_INV,
     OP_TAN, OP_TAN_INV,
+    OP_COT, OP_SEC, OP_CSC,
 
     OP_SINH, OP_SINH_INV,
     OP_COSH, OP_COSH_INV,

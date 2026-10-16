@@ -28,6 +28,7 @@ struct Identifier ti_table[AMOUNT_TOKENS] = {
     {1, {0xC2}}, {1, {0xC3}},   /*TOK_SIN, TOK_SIN_INV*/
     {1, {0xC4}}, {1, {0xC5}},   /*TOK_COS, TOK_COS_INV*/
     {1, {0xC6}}, {1, {0xC7}},   /*TOK_TAN, TOK_TAN_INV*/
+    {2, {0xBB, 0xF0}}, {2, {0xBB, 0xF1}}, {2, {0xBB, 0xF2}},   /*TOK_COT, TOK_SEC, TOK_CSC. Fluxion: made up, the TI has no such tokens and only the strings matter here*/
     {1, {0xC8}}, {1, {0xC9}},   /*TOK_SINH, TOK_SINH_INV*/
     {1, {0xCA}}, {1, {0xCB}},   /*TOK_COSH, TOK_COSH_INV*/
     {1, {0xCC}}, {1, {0xCD}},   /*TOK_TANH, TOK_TANH_INV*/
@@ -67,6 +68,7 @@ struct Identifier str_table[AMOUNT_TOKENS] = {
     {4, "sin("}, {5, "asin("},      /*TOK_SIN, TOK_SIN_INV*/
     {4, "cos("}, {5, "acos("},      /*TOK_COS, TOK_COS_INV*/
     {4, "tan("}, {5, "atan("},      /*TOK_TAN, TOK_TAN_INV*/
+    {4, "cot("}, {4, "sec("}, {4, "csc("},   /*TOK_COT, TOK_SEC, TOK_CSC*/
     {5, "sinh("}, {6, "asinh("},    /*TOK_SINH, TOK_SINH_INV*/
     {5, "cosh("}, {6, "acosh("},    /*TOK_SINH, TOK_SINH_INV*/
     {5, "tanh("}, {6, "atanh("},    /*TOK_TANH, TOK_TANH_INV*/
@@ -398,6 +400,9 @@ void translate(pcas_ast_t *e) {
     case TOK_COS_INV:    optype(e) = OP_COS_INV; break;
     case TOK_TAN:        optype(e) = OP_TAN; break;
     case TOK_TAN_INV:    optype(e) = OP_TAN_INV; break;
+    case TOK_COT:        optype(e) = OP_COT; break;
+    case TOK_SEC:        optype(e) = OP_SEC; break;
+    case TOK_CSC:        optype(e) = OP_CSC; break;
     case TOK_SINH:       optype(e) = OP_SINH; break;
     case TOK_SINH_INV:   optype(e) = OP_SINH_INV; break;
     case TOK_COSH:       optype(e) = OP_COSH; break;

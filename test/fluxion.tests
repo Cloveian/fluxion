@@ -340,3 +340,15 @@ solve; X^2_X_1=0; X; 1/2_sqrt(5)/2,1/2+sqrt(5)/2
 decimal; 100000000000000000000000000000000000000000000000000; 1E50
 decimal; 28679718602997181072337614380936720482949; 2.86797E40
 decimal; 1/1000000000000000000000000000000000000000000000; 1E-45
+
+#cot sec csc are their own functions, cot in cot out, never turned into 1/tan
+simplify; cot(X)+1; cot(X)+1
+deriv; cot(X); X; -csc(X)^2
+deriv; sec(X); X; tan(X)sec(X)
+deriv; csc(X); X; -cot(X)csc(X)
+decimal; cot(1); 0.642093
+decimal; sec(1); 1.85082
+decimal; csc(1); 1.1884
+simplify; cot(pi/4); 1
+simplify; sec(pi/3); 2
+simplify; csc(pi/6); 2

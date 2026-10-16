@@ -326,6 +326,9 @@ static unsigned _to_binary(pcas_ast_t *e, uint8_t *data, unsigned index, struct 
                 case OP_COS_INV:    add_token(TOK_COS_INV);  break;
                 case OP_TAN:        add_token(TOK_TAN);      break;
                 case OP_TAN_INV:    add_token(TOK_TAN_INV);  break;
+                case OP_COT:        add_token(TOK_COT);      break;
+                case OP_SEC:        add_token(TOK_SEC);      break;
+                case OP_CSC:        add_token(TOK_CSC);      break;
                 case OP_SINH:       add_token(TOK_SINH);     break;
                 case OP_SINH_INV:   add_token(TOK_SINH_INV); break;
                 case OP_COSH:       add_token(TOK_COSH);     break;

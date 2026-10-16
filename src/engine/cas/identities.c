@@ -120,6 +120,14 @@ pcas_id_t id_trig_constants[ID_NUM_TRIG_CONSTANTS] = {
     {"tan(pi/6", "sqrt(3)/3"},
     {"tan(pi/4", "1"},
     {"tan(pi/3", "sqrt(3)"},
+    /*Fluxion: cot sec csc, just the ones you would actually look up*/
+    {"cot(pi/4", "1"},
+    {"cot(pi/6", "sqrt(3)"},
+    {"cot(pi/3", "sqrt(3)/3"},
+    {"sec(0", "1"},
+    {"sec(pi/3", "2"},
+    {"csc(pi/2", "1"},
+    {"csc(pi/6", "2"},
     /*{"tan(pi/2", "inf"},*/
     {"tan(2pi/3", "-sqrt(3"},
     {"tan(3pi/4", "-1"},
@@ -611,6 +619,7 @@ static const struct { const char *text; OperatorType op; } text_funcs[] = {
     {"asin(", OP_SIN_INV}, {"acos(", OP_COS_INV}, {"atan(", OP_TAN_INV},
     {"sinh(", OP_SINH}, {"cosh(", OP_COSH}, {"tanh(", OP_TANH},
     {"sin(", OP_SIN}, {"cos(", OP_COS}, {"tan(", OP_TAN},
+    {"cot(", OP_COT}, {"sec(", OP_SEC}, {"csc(", OP_CSC},
     {"log(", OP_LOG}, {"int(", OP_INT}, {"abs(", OP_ABS},
     {"ln(", OP_LOG},
     {"!", OP_FACTORIAL}

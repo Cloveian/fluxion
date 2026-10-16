@@ -1154,6 +1154,10 @@ static bool key_ctl(keypress_t p) {
         will_edit(false);
         ed_clear(&ed);
         return true;
+    /* the reciprocals, [on] like the catalog says */
+    case K_SIN: will_edit(false); ed_insert(&ed, ED_FUNC, "csc"); return true;
+    case K_COS: will_edit(false); ed_insert(&ed, ED_FUNC, "sec"); return true;
+    case K_TAN: will_edit(false); ed_insert(&ed, ED_FUNC, "cot"); return true;
     default:
         return false;
     }
