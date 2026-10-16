@@ -171,6 +171,13 @@ bool comdenom(pcas_ast_t *e, bool factored);
 
 bool expand(pcas_ast_t *e, unsigned char flags);
 
+/*Fluxion: (A+B)^n is only multiplied out up to this n*/
+#define EXPAND_MAX_POWER 64
+
+/*Fluxion: multiplies out the polynomial parts of e as flat coefficient rows
+  (cas/poly.c). expand() calls it first, true if anything changed*/
+bool poly_expand(pcas_ast_t *e);
+
 /*Evaluates identities that are too basic to put in identities.c*/
 #define EVAL_BASIC_IDENTITIES   (1u << 0u)
 /*Evaluates addition and multiplication of constants*/

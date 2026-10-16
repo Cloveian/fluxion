@@ -1,8 +1,5 @@
 #include "cas.h"
 
-/*Fluxion: (A+B)^n is only multiplied out up to this n*/
-#define EXPAND_MAX_POWER 64
-
 pcas_ast_t *combine(pcas_ast_t *add, pcas_ast_t *b) {
     unsigned i, j;
     pcas_ast_t *expanded = ast_MakeOperator(OP_ADD);
@@ -202,6 +199,10 @@ bool expand(pcas_ast_t *e, unsigned char flags) {
 
     if(pcas_cancelled)
         return false;
+    /*Fluxion: the plain polynomial parts get done flat first (poly.c), the tree
+    way below is minutes on the calculator for (x+1)^8*/
+    if(flags & EXP_EXPAND_POWERS)
+        changed |= poly_expand(e);
     /*Expand powers first to make things faster*/
     if(flags & EXP_EXPAND_POWERS)
         changed |= _expand(e, EXP_EXPAND_POWERS);
