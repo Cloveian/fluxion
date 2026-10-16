@@ -15,6 +15,11 @@ static const char STR_CDOT[]  = { CH_CDOT, '\0' };
 
 static bool oom;    /* set when malloc fails; layout_build() then gives up */
 static int frac_depth;
+static bool decimal;    /* the decimal form, numbers come out as 0.333333 */
+
+void layout_decimal(bool on) {
+    decimal = on;
+}
 
 /* making boxes */
 
@@ -118,6 +123,13 @@ static char *digits(mp_int z) {
 static box_t *build_number(pcas_ast_t *e, unsigned char level) {
     mp_rat r = e->op.num;
     box_t *b;
+
+    if(decimal && !mp_rat_is_integer(r)) {
+        char s[24]; /* approx_format writes its own minus, so bail before the one below adds a second */
+
+        approx_format(r, 6, s);
+        return new_text(s, level);
+    }
 
     if(mp_rat_is_integer(r)) {
         char *s;
@@ -469,6 +481,17 @@ static box_t *build_operator(pcas_ast_t *e, unsigned char level) {
            drops a size, so the main bar stays easy to find. */
         unsigned char inner = frac_depth > 0 ? level + 1 : level;
         box_t *num, *den;
+
+        /* in decimal a/b of two plain numbers is just one number, no bar */
+        if(decimal && a->type == NODE_NUMBER && b->type == NODE_NUMBER) {
+            mp_rat q = num_Copy(a->op.num);
+            char s[24];
+
+            mp_rat_div(q, b->op.num, q);
+            approx_format(q, 6, s);
+            num_Cleanup(q);
+            return new_text(s, level);
+        }
 
         frac_depth++;
         num = build(a, inner);

@@ -78,7 +78,7 @@ Forms (`*` = needs engine work, `?` = haven't checked if PineappleCAS can):
 | decimal? | $-0.0892$ |
 
 #### Decision
-~~cycle per answer~~ a mode instead. the key switches the mode (like expanded -> factored), redraws the last answer in it, and everything after comes out that way too. doing the engine part first, haven't picked the key or the order yet
+~~cycle per answer~~ a mode instead. the key switches the mode (like expanded -> factored), redraws the last answer in it, and everything after comes out that way too. `[2nd][enter]` cycles by hand -> expanded -> factored -> decimal, `[alpha][enter]` jumps to decimal and back. the form shows in the top bar. done 10-15
 
 ### What the engine gives
 

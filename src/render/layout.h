@@ -103,6 +103,10 @@ typedef struct {
 /* builds and measures the boxes for e. returns NULL if out of memory. */
 box_t *layout_build(pcas_ast_t *e, const layout_font_t *font);
 
+/* the decimal form: numbers that aren't whole (and a/b of two numbers) come out as
+   1.25 / 0.333333 instead of fractions. stays on until it's turned off */
+void layout_decimal(bool on);
+
 void layout_free(box_t *b);
 
 /*
