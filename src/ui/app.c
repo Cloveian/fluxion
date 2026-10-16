@@ -3,6 +3,7 @@
 #include "vars.h"
 #include "mode.h"
 #include "settings.h"
+#include "geom.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -96,7 +97,7 @@ static entry_t *push_slot(void) {
 }
 
 /* always called while the editor in running still has the line that was run */
-static void push(box_t *in, box_t *out, const char *message, unsigned long ms) {
+void push(box_t *in, box_t *out, const char *message, unsigned long ms) {
     entry_t *h = push_slot();
 
     h->in = in;
@@ -348,7 +349,7 @@ static void number_first(pcas_ast_t *e) {
 
 /* one answer value, over one denominator, number first. the trig families stay
    as a sum, pi/6 + 2pi n reads better than (12pi n + pi)/6 */
-static box_t *value_box(pcas_ast_t *v) {
+box_t *value_box(pcas_ast_t *v) {
     if(!has_symbol(v, SYM_N))
         comdenom(v, false);
     simplify_canonical_form(v, canon_flags);
@@ -361,7 +362,7 @@ static box_t *value_box(pcas_ast_t *v) {
 }
 
 /* x = -5, 6 */
-static box_t *solutions_box(char var, pcas_ast_t **roots, int n) {
+box_t *solutions_box(char var, pcas_ast_t **roots, int n) {
     char name[2] = { var, '\0' };
     box_t *row = layout_box(BOX_ROW, 0);
     int i;
@@ -774,10 +775,14 @@ static bool run(editor_t *line) {
         status = "= only works in solve( and system(";
         return false;
     }
+    in = ed_layout(line, &draw_font, false);
+    if(geom_run(cmd, src, in)) {
+        free(src);
+        return true;
+    }
 
     e = parse((const uint8_t *)src, strlen(src), str_table, &err);
     free(src);
-    in = ed_layout(line, &draw_font, false);
 
     if(err != E_SUCCESS || e == NULL) {
         push(in, NULL, error_text[err], 0);
