@@ -191,6 +191,23 @@ asym; (2X^3+1)/(X^2); X; holes - | vert 0 | horiz - | slant 2X
 asym; (X^3)/(X^2+1); X; holes - | vert - | horiz - | slant X
 asym; (X^2+X)/X; X; holes 0 | vert - | horiz - | slant -
 
+#domain (domain; expression; variable; lower <x> | upper <x> | holes <x list>, o after a bound for open, - for none)
+domain; sqrt(X_2); X; lower 2 | upper - | holes -
+domain; 1/(X_1); X; lower - | upper - | holes 1
+domain; ln(X); X; lower 0o | upper - | holes -
+domain; sqrt(4_X)/(X+1); X; lower - | upper 4 | holes -1
+domain; X^2+1; X; lower - | upper - | holes -
+domain; 1/(X^2_4); X; lower - | upper - | holes -2,2
+domain; sqrt(X)/X; X; lower 0o | upper - | holes -
+domain; sqrt(X_2)/(X_1); X; lower 2 | upper - | holes -
+domain; sqrt(X_2)+sqrt(5_X); X; lower 2 | upper 5 | holes -
+domain; ln(2X+1)+sqrt(X); X; lower 0 | upper - | holes -
+domain; tan(X); X; lower - | upper - | holes pi/2+Npi
+domain; 1/ln(X); X; lower 0o | upper - | holes 1
+domain; sqrt(X^2_4); X; lower - | upper - | holes - | partial
+domain; 1/(X_X); X; unknown
+domain; sqrt(X_5)+sqrt(2_X); X; empty
+
 #linear systems (system; eq,eq,...; vars; values in var order, or false / many / unknown)
 system; 2X_Y=7,-4X+2Y=2; XY; false
 system; 2X_Y=7,X+Y=2; XY; 3,-1
