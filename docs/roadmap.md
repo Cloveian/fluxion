@@ -42,8 +42,8 @@
 - [x] GCD, LCM and prime factorisation
 - [ ] Percent
 - [ ] Defining and calling functions like f(x)
-- [ ] Domain and range
-- [ ] Factoring with more than one variable (x²−y²)
+- [x] Domain and range. domain(f,x) is in, range is not (todo)
+- [x] Factoring with more than one variable (x²−y²)
 - [ ] Nonlinear systems
 - [ ] Cubics with no rational root
 - [x] Complex roots in solve
