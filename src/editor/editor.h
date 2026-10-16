@@ -135,6 +135,17 @@ extern const char *ed_error;
 /* a copy of items [from, to) of a row, for splitting a line at the sto arrow */
 ed_row_t *ed_row_slice(const ed_row_t *r, int from, int to);
 
+/*
+    rows as bytes, for keeping the history and the stored names between runs
+    (platform/store.h). save returns how many bytes it wrote, 0 if it didn't fit
+    or the row's too long for the format (255 items per row). load builds a fresh
+    row from the first *used bytes, NULL if they're nonsense (an old appvar) or
+    out of memory. the format is editor.c's business, bump ED_FORMAT when it changes
+*/
+#define ED_FORMAT 1
+size_t ed_row_save(const ed_row_t *r, unsigned char *buf, size_t max);
+ed_row_t *ed_row_load(const unsigned char *buf, size_t n, size_t *used);
+
 /* where a character sits in a row (the arrow), -1 if it isn't there. _last for
    the comma before solve's variable */
 int ed_row_find_char(const ed_row_t *r, char c);

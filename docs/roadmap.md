@@ -2,7 +2,7 @@
 
 ## foundation thingys
 
-- [ ] Storage strategy. where persistent state lives, instead of leaning on
+- [x] Storage strategy. where persistent state lives, instead of leaning on
   the OS's own variables. going with RAM appvars, a RAM reset clearing them is fine. size gets capped,
   history drops the oldest off the end when its full
 - [x] Names. multi-letter vars and typeable functions are the same thing, one table of
@@ -11,8 +11,8 @@
 
 ## on foundations thingies
 
-- [ ] Persistent(ish) history. Store history in ram so it survives closing the app
-- [ ] Variable saving + a page to view/delete.
+- [x] Persistent(ish) history. Store history in ram so it survives closing the app
+- [x] Variable saving + a page to view/delete.
 
 ## engine maths
 

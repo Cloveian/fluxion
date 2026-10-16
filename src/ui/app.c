@@ -14,6 +14,7 @@
 #include "editor/editor.h"
 #include "render/draw.h"
 #include "platform/screen.h"
+#include "platform/store.h"
 #include "platform/keys.h"
 #include "platform/power.h"
 #include "ui/catalog.h"
@@ -76,8 +77,8 @@ static const char *const form_names[FORM_COUNT] = { "", "expanded", "factored", 
 
 /* history */
 
-/* always called while ed still has the line that was run */
-static void push(box_t *in, box_t *out, const char *message, unsigned long ms) {
+/* the next free entry, the oldest one goes when it's full */
+static entry_t *push_slot(void) {
     if(history_len == HISTORY_MAX) {
         layout_free(history[0].in);
         layout_free(history[0].out);
@@ -85,15 +86,111 @@ static void push(box_t *in, box_t *out, const char *message, unsigned long ms) {
         ed_row_free(history[0].out_row);
         memmove(&history[0], &history[1], (HISTORY_MAX - 1) * sizeof(entry_t));
         history_len--;
+        if(cleared > 0)
+            cleared--;
     }
+    return &history[history_len++];
+}
 
-    history[history_len].in = in;
-    history[history_len].out = out;
-    history[history_len].message = message;
-    history[history_len].ms = ms;
-    history[history_len].row = ed_copy_line(running);
-    history[history_len].out_row = out != NULL ? ed_from_box(out) : NULL;
-    history_len++;
+/* always called while the editor in running still has the line that was run */
+static void push(box_t *in, box_t *out, const char *message, unsigned long ms) {
+    entry_t *h = push_slot();
+
+    h->in = in;
+    h->out = out;
+    h->message = message;
+    h->ms = ms;
+    h->row = ed_copy_line(running);
+    h->out_row = out != NULL ? ed_from_box(out) : NULL;
+}
+
+/* an entry back from the store, just the two rows. the boxes get drawn from them
+   the way browsing does it. takes the rows */
+static void push_loaded(ed_row_t *row, ed_row_t *out_row) {
+    entry_t *h = push_slot();
+
+    h->in = ed_load(&view, row, true) ? ed_layout(&view, &draw_font, false) : NULL;
+    h->out = ed_load(&view, out_row, true) ? ed_layout(&view, &draw_font, false) : NULL;
+    h->message = h->out == NULL ? "(lost)" : NULL;
+    h->ms = 0;
+    h->row = row;
+    h->out_row = out_row;
+}
+
+/*
+    the history between runs (platform/store.h): a format byte, then for every
+    entry that has an answer its input row and answer row. capped, the oldest go
+    first. saved on the way out, so a crash loses the session, which is fine
+*/
+#define HISTORY_SLOT "FLXHIST"
+#define HISTORY_SAVE_MAX (12 * 1024)
+#define ENTRY_MAX 1024  /* one entry, bigger ones just don't get kept */
+
+static void history_save(void) {
+    unsigned char *buf = malloc(HISTORY_SAVE_MAX), *tmp = malloc(ENTRY_MAX);
+    size_t size[HISTORY_MAX], total = 1, at = 1;
+    int i, first = 0;
+
+    if(buf == NULL || tmp == NULL) {
+        free(buf);
+        free(tmp);
+        return;
+    }
+    /* sizes first so the cut comes off the old end, not the new */
+    for(i = 0; i < history_len; i++) {
+        size_t a = 0, b = 0;
+
+        if(history[i].row != NULL && history[i].out_row != NULL) {
+            a = ed_row_save(history[i].row, tmp, ENTRY_MAX);
+            b = a > 0 ? ed_row_save(history[i].out_row, tmp, ENTRY_MAX - a) : 0;
+        }
+        size[i] = a > 0 && b > 0 ? a + b : 0;
+    }
+    for(i = history_len - 1; i >= 0; i--) {
+        if(total + size[i] > HISTORY_SAVE_MAX)
+            break;
+        total += size[i];
+        first = i;
+    }
+    buf[0] = ED_FORMAT;
+    for(i = first; i < history_len; i++) {
+        if(size[i] == 0)
+            continue;
+        at += ed_row_save(history[i].row, buf + at, HISTORY_SAVE_MAX - at);
+        at += ed_row_save(history[i].out_row, buf + at, HISTORY_SAVE_MAX - at);
+    }
+    store_save(HISTORY_SLOT, buf, at);
+    free(buf);
+    free(tmp);
+}
+
+static void history_load(void) {
+    unsigned char *buf = malloc(HISTORY_SAVE_MAX);
+    size_t n, at = 1;
+
+    if(buf == NULL)
+        return;
+    n = store_load(HISTORY_SLOT, buf, HISTORY_SAVE_MAX);
+    if(n < 1 || n > HISTORY_SAVE_MAX || buf[0] != ED_FORMAT) {
+        free(buf);
+        return;
+    }
+    while(at < n) {
+        size_t used = 0;
+        ed_row_t *row = ed_row_load(buf + at, n - at, &used), *out;
+
+        if(row == NULL)
+            break;
+        at += used;
+        out = ed_row_load(buf + at, n - at, &used);
+        if(out == NULL) {
+            ed_row_free(row);
+            break;
+        }
+        at += used;
+        push_loaded(row, out);
+    }
+    free(buf);
 }
 
 static void clear_history(void) {
@@ -336,6 +433,8 @@ static bool run(editor_t *line) {
                 return false;
             }
             push(ed_layout(line, &draw_font, false), NULL, deleted ? "deleted" : "stored", 0);
+            if(!names_save())
+                status = "stored, but couldn't save it for next time";
             return true;
         }
     }
@@ -1744,6 +1843,7 @@ void app_run(void) {
         return;
 
     names_init();
+    history_load();
     screen_begin();
     keys_begin();
     draw_screen();
@@ -1762,6 +1862,8 @@ void app_run(void) {
 
     keys_end();
     screen_end();
+    history_save();
+    names_save();
     clear_history();
     menu_free_boxes();
     ed_free(&ed);
