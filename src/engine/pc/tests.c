@@ -303,8 +303,8 @@ static void asym_list(char *buf, unsigned size, pcas_ast_t **vals, int n) {
     }
 }
 
-/*Fluxion: asym; expression; var; holes <list> | vert <list> | horiz <y>. holes and vert
-are x values smallest first, horiz is - when there's none. unknown when asym() gives up*/
+/*Fluxion: asym; expression; var; holes <list> | vert <list> | horiz <y> | slant <y>. holes and vert
+are x values smallest first, horiz and slant are - when there's none. unknown when asym() gives up*/
 static bool test_asym(test_t *t) {
     pcas_error_t err;
     pcas_ast_t *e = parse((uint8_t*)t->arg1, strlen(t->arg1), str_table, &err);
@@ -325,6 +325,8 @@ static bool test_asym(test_t *t) {
         asym_list(got, sizeof(got), a.vert, a.nvert);
         strncat(got, " | horiz", sizeof(got) - strlen(got) - 1);
         asym_list(got, sizeof(got), &a.horiz, a.horiz != NULL);
+        strncat(got, " | slant", sizeof(got) - strlen(got) - 1);
+        asym_list(got, sizeof(got), &a.slant, a.slant != NULL);
         asym_free(&a);
     } else {
         strcpy(got, "unknown");
