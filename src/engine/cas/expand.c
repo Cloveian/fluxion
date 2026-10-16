@@ -73,6 +73,13 @@ static bool _expand(pcas_ast_t *e, unsigned char flags) {
                             if(should_expand) {
                                 pcas_ast_t *combined = combine(ichild, jchild);
 
+                                /*Fluxion: collect like terms every step, not at the very end.
+                                (X+1)^n used to build all 2^n raw terms first, ^7 took 5 min
+                                on the calculator and ^8 ran out of memory. only when asked,
+                                simplify's own expands want the shape left alone*/
+                                if(flags & EXP_COLLECT_TERMS)
+                                    simplify(combined, SIMP_NORMALIZE | SIMP_COMMUTATIVE | SIMP_RATIONAL | SIMP_EVAL | SIMP_LIKE_TERMS);
+
                                 ast_ChildAppend(e, combined);
 
                                 ast_Cleanup(ast_ChildRemove(e, ichild));

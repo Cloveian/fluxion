@@ -166,6 +166,7 @@ bool comdenom(pcas_ast_t *e, bool factored);
 #define EXP_DISTRIB_POWERS         (1u << 4u)
 /*Expand (A+B)^2 to A^2 + 2AB + B^2 */
 #define EXP_EXPAND_POWERS          (1u << 5u)
+#define EXP_COLLECT_TERMS          (1u << 6u) /*Fluxion: collects as it goes so (X+1)^n doesn't build 2^n terms first, see _expand*/
 #define EXP_ALL                    0xFF
 
 bool expand(pcas_ast_t *e, unsigned char flags);
