@@ -143,6 +143,10 @@ int ed_row_find_last(const ed_row_t *r, char c);
 /* the row inside the command when the line is one (see ed_command), else NULL */
 const ed_row_t *ed_command_row(const editor_t *ed);
 
+/* any of the commands typed out, if its brackets are the whole line, turned into
+   the picked version. true if it did. app.c calls it right before running a line */
+bool ed_fold_command(editor_t *ed);
+
 /* the letters from item `from` to the end of the row, lowercased into buf (max + 1
    long). -1 if anything there isn't a letter or there are more than max */
 int ed_row_word(const ed_row_t *r, int from, char *buf, int max);

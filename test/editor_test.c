@@ -8,7 +8,8 @@
      frac pow sqrt nroot abs logb       insert that template
      f:sin      insert a function (any engine name: sin, asin, ln, log, int, ...)
      pi E I     the constants pi, e, i
-     L R U D    arrows        bs  backspace     del  delete     clear */
+     L R U D    arrows        bs  backspace     del  delete     clear
+     fold       solve( typed out -> the command item, prints what ed_command says */
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -51,6 +52,8 @@ static bool step(editor_t *ed, const char *s) {
     if(strcmp(s, "bs") == 0)           { ed_backspace(ed); return true; }
     if(strcmp(s, "del") == 0)          { ed_delete(ed); return true; }
     if(strcmp(s, "clear") == 0)        { ed_clear(ed); return true; }
+
+    if(strcmp(s, "fold") == 0)         { bool f = ed_fold_command(ed); printf("fold: %d, command: %s\n", f, ed_command(ed) ? ed_command(ed) : "-"); return true; }
 
     fprintf(stderr, "unknown step %s\n", s);
     return false;

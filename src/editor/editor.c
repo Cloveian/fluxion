@@ -1186,6 +1186,82 @@ const ed_row_t *ed_command_row(const editor_t *ed) {
     return ed_command(ed) != NULL ? ed->root->items[0]->slot[0] : NULL;
 }
 
+/* a command typed out, solve(2x=6,x) with the brackets typed too, folded into the
+   one ED_FUNC item the folders insert, so ed_command() and the history see the
+   same thing either way. only if the brackets are the whole line */
+bool ed_fold_command(editor_t *ed) {
+    ed_row_t *r = ed->root, *slot;
+    char word[16];
+    int w = letter_run(r, 0, word, (int)sizeof word - 1), i, depth = 0, inside;
+    unsigned c;
+    ed_node_t *func;
+
+    word[w] = '\0';
+    if(w == 0 || r->len <= w)
+        return false;
+    for(c = 0; c < sizeof commands / sizeof commands[0]; c++)
+        if(strcmp(word, commands[c]) == 0)
+            break;
+    if(c == sizeof commands / sizeof commands[0])
+        return false;
+
+    /* ( makes a bracket template, so this is the usual shape: the word, then one
+       ED_PARENS holding everything. it only needs to change kind */
+    if(w + 1 == r->len && r->items[w]->kind == ED_PARENS) {
+        ed_node_t *n = r->items[w];
+
+        n->kind = ED_FUNC;
+        strncpy(n->name, commands[c], sizeof n->name - 1);
+        while(w-- > 0)
+            node_free(row_remove(r, 0));
+        ed->row = r;
+        ed->pos = r->len;
+        ed->anchor = -1;
+        return true;
+    }
+
+    /* typed brackets (pasted, or from the history) */
+    if(r->items[w]->kind != ED_CHAR || r->items[w]->ch != '('
+       || r->items[r->len - 1]->kind != ED_CHAR || r->items[r->len - 1]->ch != ')')
+        return false;
+    /* the first bracket has to be the last one's partner, expand(x)+expand(y) isn't one */
+    for(i = w; i < r->len - 1; i++) {
+        if(r->items[i]->kind != ED_CHAR)
+            continue;
+        if(r->items[i]->ch == '(')
+            depth++;
+        else if(r->items[i]->ch == ')' && --depth == 0)
+            return false;
+    }
+
+    func = node_new(ED_FUNC, 0, commands[c]);
+    if(func == NULL)
+        return false;
+    /* room for everything first, so the move can't run out halfway and leave
+       bits in two rows */
+    slot = func->slot[0];
+    inside = r->len - w - 2;
+    slot->items = malloc((inside > 0 ? inside : 1) * sizeof(ed_node_t *));
+    if(slot->items == NULL) {
+        node_free(func);
+        return false;
+    }
+    slot->cap = inside > 0 ? inside : 1;
+    while(r->len > w + 2)
+        row_insert(slot, slot->len, row_remove(r, w + 1));
+
+    /* ) before (, the other way round shifts it out from under w + 1 */
+    node_free(row_remove(r, w + 1));
+    node_free(row_remove(r, w));
+    while(w-- > 0)
+        node_free(row_remove(r, 0));
+    row_insert(r, 0, func);
+    ed->row = r;
+    ed->pos = r->len;
+    ed->anchor = -1;
+    return true;
+}
+
 int ed_row_word(const ed_row_t *r, int from, char *buf, int max) {
     int n = letter_run(r, from, buf, max);
 
