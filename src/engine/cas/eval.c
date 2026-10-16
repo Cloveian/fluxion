@@ -791,6 +791,89 @@ static bool eval_factorial(pcas_ast_t *e, unsigned short flags) {
     return false;
 }
 
+/*Fluxion: both arguments as whole numbers, or false and the node stays as it is (gcd(X,6))*/
+static bool int_args(pcas_ast_t *e, mp_int *a, mp_int *b) {
+    pcas_ast_t *x = ast_ChildGet(e, 0), *y = x != NULL ? x->next : NULL;
+
+    if(x == NULL || y == NULL || x->type != NODE_NUMBER || y->type != NODE_NUMBER
+       || !mp_rat_is_integer(x->op.num) || !mp_rat_is_integer(y->op.num))
+        return false;
+    *a = mp_rat_numer_ref(x->op.num);
+    *b = mp_rat_numer_ref(y->op.num);
+    return true;
+}
+
+/*Fluxion: imath says MP_UNDEF for gcd(0,0), 0 is what everyone means. its lcm has the sign of a*b, hence the abs*/
+static bool eval_gcd(pcas_ast_t *e) {
+    mp_int a, b;
+    mp_rat res;
+    mp_result ok;
+
+    if(!int_args(e, &a, &b) || (res = num_FromInt(0)) == NULL)
+        return false;
+
+    if(mp_int_compare_zero(a) == 0 && mp_int_compare_zero(b) == 0)
+        ok = MP_OK;
+    else if(optype(e) == OP_GCD)
+        ok = mp_int_gcd(a, b, mp_rat_numer_ref(res));
+    else
+        ok = mp_int_lcm(a, b, mp_rat_numer_ref(res));
+
+    if(ok != MP_OK) {
+        num_Cleanup(res);
+        return false;
+    }
+    mp_int_abs(mp_rat_numer_ref(res), mp_rat_numer_ref(res));
+    replace_node(e, ast_MakeNumber(res));
+    return true;
+}
+
+/*Fluxion: n(n-1)...(n-r+1), divided down as it goes for nCr, so 50 choose 2 never builds 50!.
+nCr walks the shorter side, 50 choose 48 is 2 steps too*/
+static bool eval_choose(pcas_ast_t *e) {
+    mp_int n, r, k = NULL, f = NULL;
+    mp_rat res = NULL;
+    mp_small steps, i;
+    bool done = false;
+
+    if(!int_args(e, &n, &r) || mp_int_compare_zero(r) < 0 || mp_int_compare(r, n) > 0)
+        return false;
+
+    k = mp_int_alloc();
+    f = mp_int_alloc();
+    res = num_FromInt(1);
+    if(k == NULL || f == NULL || res == NULL)
+        goto out;
+
+    mp_int_sub(n, r, k);
+    if(optype(e) == OP_NCR && mp_int_compare(k, r) < 0)
+        done = mp_int_to_int(k, &steps) == MP_OK;
+    else
+        done = mp_int_to_int(r, &steps) == MP_OK;
+
+    for(i = 0; done && i < steps; i++) {
+        if(pcas_check()) {
+            done = false;
+            break;
+        }
+        mp_int_sub_value(n, i, f);
+        mp_int_mul(mp_rat_numer_ref(res), f, mp_rat_numer_ref(res));
+        if(optype(e) == OP_NCR)
+            mp_int_div_value(mp_rat_numer_ref(res), i + 1, mp_rat_numer_ref(res), NULL);
+    }
+
+    if(done) {
+        replace_node(e, ast_MakeNumber(res));
+        res = NULL;
+    }
+
+out:
+    if(k != NULL) mp_int_free(k);
+    if(f != NULL) mp_int_free(f);
+    if(res != NULL) num_Cleanup(res);
+    return done;
+}
+
 /*Simplifies expressions like 5 + 5 to 10*/
 bool eval(pcas_ast_t *e, unsigned short flags) {
 
@@ -823,6 +906,8 @@ bool eval(pcas_ast_t *e, unsigned short flags) {
             case OP_INT: changed |= eval_int(e, flags); break;
             case OP_ABS: changed |= eval_abs(e, flags); break;
             case OP_FACTORIAL: changed |= eval_factorial(e, flags); break;
+            case OP_GCD: case OP_LCM: changed |= eval_gcd(e); break;
+            case OP_NCR: case OP_NPR: changed |= eval_choose(e); break;
             default:
                 break;
         }

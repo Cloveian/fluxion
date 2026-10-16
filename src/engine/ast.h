@@ -47,6 +47,9 @@ typedef enum {
     OP_COSH, OP_COSH_INV,
     OP_TANH, OP_TANH_INV,
 
+    /*Fluxion: two arguments, so past the unary range on purpose*/
+    OP_GCD, OP_LCM, OP_NCR, OP_NPR,
+
     AMOUNT_OPS
 } OperatorType;
 

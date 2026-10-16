@@ -20,6 +20,8 @@ struct Identifier ti_table[AMOUNT_TOKENS] = {
 
     {2, {0xEF, 0x34}},          /*TOK_LOG_BASE*/
     {1, {0x25}},                /*TOK_DERIV*/
+    {2, {0xBB, 0x09}}, {2, {0xBB, 0x08}},   /*TOK_GCD, TOK_LCM*/
+    {2, {0xBB, 0xF3}}, {2, {0xBB, 0xF4}},   /*TOK_NCR, TOK_NPR. Fluxion: made up, the TI's nCr and nPr go between the numbers*/
 
     {1, {0xB1}}, {1, {0xB2}},   /*TOK_INT, TOK_ABS*/
     {1, {0xBC}}, {1, {0xBD}},   /*TOK_SQRT, TOK_CUBED_ROOT*/
@@ -60,6 +62,8 @@ struct Identifier str_table[AMOUNT_TOKENS] = {
 
     {5, "logb("},                   /*TOK_LOG_BASE*/
     {6, "deriv("},                  /*TOK_DERIV*/
+    {4, "gcd("}, {4, "lcm("},       /*TOK_GCD, TOK_LCM*/
+    {4, "nCr("}, {4, "nPr("},       /*TOK_NCR, TOK_NPR*/
 
     {4, "int("}, {4, "abs("},       /*TOK_INT, TOK_ABS*/
     {5, "sqrt("}, {7, "cbrt("},     /*TOK_SQRT, TOK_CUBED_ROOT*/
@@ -309,6 +313,9 @@ uint8_t operand_count(TokenType type) {
     if(type == TOK_LOG_BASE)
         return 2;
 
+    if(type >= TOK_GCD && type <= TOK_NPR)
+        return 2;
+
     if(type == TOK_DERIV)
         return 3;
 
@@ -368,6 +375,10 @@ void translate(pcas_ast_t *e) {
         ast_ChildAppend(e, ast_ChildRemoveIndex(e, 0));
         break;
     case TOK_DERIV:      optype(e) = OP_DERIV; break;
+    case TOK_GCD:        optype(e) = OP_GCD; break;
+    case TOK_LCM:        optype(e) = OP_LCM; break;
+    case TOK_NCR:        optype(e) = OP_NCR; break;
+    case TOK_NPR:        optype(e) = OP_NPR; break;
     case TOK_INT:        optype(e) = OP_INT; break;
     case TOK_ABS:        optype(e) = OP_ABS; break;
     case TOK_SQRT:

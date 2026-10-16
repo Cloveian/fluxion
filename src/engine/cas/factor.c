@@ -993,11 +993,77 @@ bool comdenom(pcas_ast_t *e, bool factored) {
     return changed;
 }
 
+/*Fluxion: trial division for factor(360) stops at this prime, whatever's left after it
+stays one factor even if it isn't prime. ROOT_MAX_FACTOR in eval.c is the same idea, lower
+because that one runs on every root simplify meets*/
+#define INT_MAX_FACTOR 10000
+
+/*Fluxion: no divisor up to the cap (or up to its square root). past the cap it's a guess,
+fine for deciding there's nothing to take apart*/
+static bool int_prime_enough(mp_int z) {
+    mp_small p, rem;
+
+    if(mp_int_compare_value(z, 2) < 0)
+        return false;
+    for(p = 2; p <= INT_MAX_FACTOR && mp_int_compare_value(z, p * p) >= 0; p += p == 2 ? 1 : 2)
+        if(mp_int_div_value(z, p, NULL, &rem) == MP_OK && rem == 0)
+            return false;
+    return true;
+}
+
+/*Fluxion: 360 = 2^3*3^2*5, -12 = -1*2^2*3. primes, 0 and 1 stay as they are*/
+static bool factor_integer(pcas_ast_t *e) {
+    mp_int r, q;
+    mp_small p, rem;
+    pcas_ast_t *prod;
+    int count;
+    bool changed = false;
+
+    if(e->type != NODE_NUMBER || !mp_rat_is_integer(e->op.num))
+        return false;
+
+    r = mp_int_alloc();
+    q = mp_int_alloc();
+    mp_int_abs(mp_rat_numer_ref(e->op.num), r);
+
+    if(mp_int_compare_value(r, 1) > 0 && !int_prime_enough(r) && (prod = ast_MakeOperator(OP_MULT)) != NULL) {
+        if(mp_rat_compare_zero(e->op.num) < 0)
+            ast_ChildAppend(prod, ast_MakeNumber(num_FromInt(-1)));
+
+        for(p = 2; p <= INT_MAX_FACTOR && mp_int_compare_value(r, p * p) >= 0 && !pcas_check(); p += p == 2 ? 1 : 2) {
+            for(count = 0; mp_int_div_value(r, p, q, &rem) == MP_OK && rem == 0; count++)
+                mp_int_copy(q, r);
+            if(count > 0)
+                ast_ChildAppend(prod, power_or_self(ast_MakeNumber(num_FromInt(p)), count));
+        }
+        if(mp_int_compare_value(r, 1) > 0)
+            ast_ChildAppend(prod, int_number(r));
+
+        /*8 is just 2^3, no product around it*/
+        if(ast_ChildLength(prod) == 1) {
+            replace_node(e, ast_ChildRemoveIndex(prod, 0));
+            ast_Cleanup(prod);
+        } else {
+            replace_node(e, prod);
+        }
+        changed = !pcas_cancelled;
+    }
+
+    mp_int_free(r);
+    mp_int_free(q);
+    return changed;
+}
+
 bool factor(pcas_ast_t *e, unsigned char flags) {
     bool changed = false;
 
     if(pcas_cancelled)
         return false;
+
+    /*Fluxion: a whole number is a polynomial of degree 0, so the same flag. simplify's own
+    factor calls don't pass it and never take 12 apart*/
+    if((flags & FAC_POLYNOMIAL) && factor_integer(e))
+        return true;
 
     /*Fluxion: polynomials first. pairing up terms by their gcd would split
     X^3+X^2_8X_12 into a worse sum, so it only gets what isn't a polynomial.*/

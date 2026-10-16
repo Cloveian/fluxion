@@ -698,6 +698,7 @@ static bool run(editor_t *line) {
     pcas_ast_t *e;
     box_t *in;
     clock_t start;
+    bool primes = false;
 
     if(ed_is_empty(line))
         return false;
@@ -799,9 +800,26 @@ static bool run(editor_t *line) {
         expand(e, EXP_ALL);
         simplify(e, SIMP_BASIC | SIMP_EVAL | SIMP_LIKE_TERMS);
     } else if(cmd != NULL && strcmp(cmd, "factor") == 0) {
+        pcas_ast_t *n;
+
         simplify(e, SIMP_BASIC);
-        factor(e, FAC_ALL);
-        simplify(e, SIMP_BASIC | SIMP_EVAL);
+        /* a whole number comes back as its primes, already in order. no simplify
+           after, it'd multiply them straight back together, and no canonical form,
+           its sort puts the 5 of 2^3*3^2*5 first and 2^2*3^2 becomes (2*3)^2.
+           worked out on a copy first, -12 is still -1*12 here */
+        n = ast_Copy(e);
+        if(n != NULL)
+            simplify(n, SIMP_BASIC | SIMP_EVAL);
+        if(n != NULL && n->type == NODE_NUMBER) {
+            replace_node(e, n);
+            factor(e, FAC_ALL);
+            primes = true;
+        } else {
+            if(n != NULL)
+                ast_Cleanup(n);
+            factor(e, FAC_ALL);
+            simplify(e, SIMP_BASIC | SIMP_EVAL);
+        }
     } else if(cmd != NULL && strcmp(cmd, "eval") == 0) {
         simplify(e, simp_flags);
         eval(e, EVAL_ALL);
@@ -812,7 +830,8 @@ static bool run(editor_t *line) {
         simplify(e, simp_flags);
         apply_form(e);
     }
-    simplify_canonical_form(e, canon_flags);
+    if(!primes)
+        simplify_canonical_form(e, canon_flags);
     if(setting_angle == ANGLE_DEGREES)
         degrees_out(e);
 #ifdef COMPILE_PC
@@ -1003,11 +1022,12 @@ static bool pick_into(editor_t *into, const item_t *it, bool dry) {
         char name[8];
         size_t n = paren != NULL ? (size_t)(paren - s) : 0;
 
-        if(n == 0 || n >= sizeof name || strcmp(paren, "($)") != 0)
+        /* gcd($,$) and co are one slot too, the comma just gets typed in it */
+        if(n == 0 || n >= sizeof name || (strcmp(paren, "($)") != 0 && strcmp(paren, "($,$)") != 0))
             return false;
         memcpy(name, s, n);
         name[n] = '\0';
-        if(it->kind == ITEM_COMMAND && !ed_is_command(name))
+        if(it->kind == ITEM_COMMAND && (strcmp(paren, "($)") != 0 || !ed_is_command(name)))
             return false;
         if(!dry)
             ed_insert(into, ED_FUNC, name);

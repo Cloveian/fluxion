@@ -528,6 +528,16 @@ static box_t *build_operator(pcas_ast_t *e, unsigned char level) {
     case OP_COSH_INV: return build_call("cosh", true,  build(a, level), level);
     case OP_TANH:     return build_call("tanh", false, build(a, level), level);
     case OP_TANH_INV: return build_call("tanh", true,  build(a, level), level);
+    case OP_GCD: case OP_LCM: case OP_NCR: case OP_NPR: {
+        /* left alone when they had letters in, gcd(x,6). shown how they're typed */
+        static const char *const two[] = { "gcd", "lcm", "nCr", "nPr" };
+        box_t *args = new_box(BOX_ROW, level);
+
+        add(args, build(a, level));
+        add(args, new_text(",", level));
+        add(args, build(b, level));
+        return build_call(two[optype(e) - OP_GCD], false, args, level);
+    }
     default:
         return new_text("?", level);
     }

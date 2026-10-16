@@ -474,6 +474,28 @@ static bool test_decimal(test_t *t) {
     return passed;
 }
 
+/*Fluxion: whole numbers compare as text, see test_Run*/
+static bool factor_text(test_t *t, pcas_ast_t *e) {
+    pcas_error_t err;
+    unsigned len;
+    char *out;
+    bool passed;
+
+    factor(e, FAC_ALL);
+    out = (char*)export_to_binary(e, &len, str_table, &err);
+    if(err != E_SUCCESS || out == NULL) {
+        printf("Test failed on line %u. Error when exporting ast to text.\n", t->line);
+        free(out);
+        return false;
+    }
+
+    passed = len == strlen(t->arg2) && strncmp(out, t->arg2, len) == 0;
+    if(!passed)
+        printf("Test failed on line %u. Expected %s but got %.*s\n", t->line, t->arg2, len, out);
+    free(out);
+    return passed;
+}
+
 bool test_Run(test_t *t) {
     pcas_ast_t *a = NULL, *b = NULL, *c = NULL, *expected, *actual;
     pcas_error_t err;
@@ -578,10 +600,18 @@ bool test_Run(test_t *t) {
         expected = b;
         actual = a;
 
+        /*Fluxion: a whole number comes out as a product of numbers and simplifying the
+        expected would just multiply it back, so those compare as text, the way export
+        prints it (-12 is -2^2*3). after simplify so -12 counts, it parses as -1*12*/
+        simplify(actual, SIMP_ALL);
+        if(actual->type == NODE_NUMBER && mp_rat_is_integer(actual->op.num)) {
+            passed = factor_text(t, actual);
+            break;
+        }
+
         /*We do this to change -1 * 23 to -23 to be able to compare*/
         simplify(expected, SIMP_NORMALIZE | SIMP_COMMUTATIVE | SIMP_RATIONAL | SIMP_EVAL);
 
-        simplify(actual, SIMP_ALL);
         factor(actual, FAC_ALL);
 
         passed = check(t, actual, expected);

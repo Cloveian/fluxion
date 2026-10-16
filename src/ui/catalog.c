@@ -126,6 +126,14 @@ ITEM(it_fact,     "!",     NULL, ITEM_CHAR,     NULL, "!",        HAVE_YES, NULL
      "factorial, multiplies 1 up to n. 5! -> 120")
 ITEM(it_int,      "int",   "int", ITEM_FUNCTION, NULL, "int($)",   HAVE_YES, "floor, like the TI's int(",
      "rounds down to a whole number, like the TI's int(. int(7/2) -> 3")
+ITEM(it_gcd,      "gcd",   "gcd", ITEM_FUNCTION, NULL, "gcd($,$)", HAVE_YES, "whole numbers only, anything else stays as typed",
+     "greatest common divisor, the biggest whole number that divides both. gcd(12,18) -> 6")
+ITEM(it_lcm,      "lcm",   "lcm", ITEM_FUNCTION, NULL, "lcm($,$)", HAVE_YES, "whole numbers only, anything else stays as typed",
+     "least common multiple, the smallest whole number both divide into. lcm(4,6) -> 12")
+ITEM(it_ncr,      "nCr",   NULL, ITEM_FUNCTION, NULL, "nCr($,$)", HAVE_YES, "n first, then r. menu only, typed letters come out lowercase",
+     "combinations: ways to pick r things out of n when order doesn't matter. nCr(5,2) -> 10")
+ITEM(it_npr,      "nPr",   NULL, ITEM_FUNCTION, NULL, "nPr($,$)", HAVE_YES, "n first, then r. menu only, typed letters come out lowercase",
+     "permutations: ways to line up r things out of n. nPr(5,2) -> 20")
 
 /* Templates */
 ITEM(it_frac,     "n/d",   NULL, ITEM_TEMPLATE, "[alpha][y=]", "($)/($)", HAVE_YES, "empty fraction, cursor in the top",
@@ -203,6 +211,7 @@ const item_t *const catalog[] = {
     &it_power, &it_square, &it_recip, &it_sqrt, &it_cbrt, &it_nroot,
     &it_sin, &it_cos, &it_tan, &it_asin, &it_acos, &it_atan, &it_cot, &it_sec, &it_csc, &it_ln, &it_exp, &it_log, &it_pow10,
     &it_sinh, &it_cosh, &it_tanh, &it_asinh, &it_acosh, &it_atanh, &it_logb, &it_abs, &it_fact, &it_int,
+    &it_gcd, &it_lcm, &it_ncr, &it_npr,
     &it_frac, &it_parens, &it_piecewise,
     &it_simplify, &it_expand, &it_subst, &it_evaluate, &it_factor, &it_solve, &it_asym, &it_system,
     &it_slope, &it_dist, &it_mid, &it_par, &it_perp,
@@ -221,7 +230,8 @@ static const item_t *const calculus[] = {
 static const item_t *const functions[] = {
     &it_sin, &it_cos, &it_tan, &it_asin, &it_acos, &it_atan, &it_cot, &it_sec, &it_csc,
     &it_sinh, &it_cosh, &it_tanh, &it_asinh, &it_acosh, &it_atanh,
-    &it_ln, &it_log, &it_logb, &it_exp, &it_pow10, &it_abs, &it_fact, &it_int
+    &it_ln, &it_log, &it_logb, &it_exp, &it_pow10, &it_abs, &it_fact, &it_int,
+    &it_gcd, &it_lcm, &it_ncr, &it_npr
 };
 static const item_t *const templates[] = {
     &it_frac, &it_power, &it_sqrt, &it_cbrt, &it_nroot, &it_abs, &it_logb, &it_parens,
