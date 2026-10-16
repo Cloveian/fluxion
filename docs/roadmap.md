@@ -45,7 +45,7 @@
 - [x] Domain and range. domain(f,x) is in, range is not (todo)
 - [x] Factoring with more than one variable (x²−y²)
 - [ ] Nonlinear systems
-- [ ] Cubics with no rational root
+- [x] Cubics with no rational root
 - [x] Complex roots in solve
 - [x] Slant asymptotes
 - [ ] Unit circle display
