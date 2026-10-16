@@ -35,14 +35,11 @@ pcas_ast_t *degrees_in(pcas_ast_t *e) {
     if(e == NULL || e->type != NODE_OPERATOR || pcas_cancelled)
         return e;
 
-    for(i = 0; i < ast_ChildLength(e); i++) {
-        pcas_ast_t *c = ast_ChildGet(e, i), *fixed = degrees_in(c);
-
-        if(fixed != c) { /*it got wrapped, so swap the wrapper in*/
-            ast_ChildRemoveIndex(e, i);
-            ast_ChildInsert(e, fixed, i);
-        }
-    }
+    /*each child comes out of the list before it gets looked at. wrapping one
+      while it's still linked in put the wrapper's nodes on the parent's chain
+      and the siblings after it fell off (acos(x)+3 lost the 3, took a while)*/
+    for(i = 0; i < ast_ChildLength(e); i++)
+        ast_ChildInsert(e, degrees_in(ast_ChildRemoveIndex(e, i)), i);
 
     if(trig(e)) {
         pcas_ast_t *arg = ast_ChildRemoveIndex(e, 0);
@@ -59,8 +56,8 @@ pcas_ast_t *degrees_in(pcas_ast_t *e) {
   is (stuff pi)/d, or pi/(d stuff) when the x was under. pull the pi and scale
   by 180/d so sin(x) shows as sin(x) again and sin(2x) doesnt come back as
   sin(x pi/90). a sum goes term by term and if one term isnt that shape the
-  whole argument stays, it really has a pi in it then. the inverse ones
-  (180 asin(x)/pi) still show the long way, todo*/
+  whole argument stays, it really has a pi in it then. the inverse ones go
+  back too, (180 asin(x))/pi is asin(x)*/
 
 static bool is_pi(const pcas_ast_t *e) {
     return e->type == NODE_SYMBOL && e->op.symbol == SYM_PI;
@@ -143,6 +140,38 @@ void degrees_out(pcas_ast_t *e) {
         return;
     for(i = 0; i < ast_ChildLength(e); i++)
         degrees_out(ast_ChildGet(e, i));
+
+    /*the inverse side, (180 asin(x))/pi back to asin(x). the 180 can be a
+      multiple, 2atan(x) came through as 360atan(x)/pi*/
+    if(isoptype(e, OP_DIV) && is_pi(ast_ChildGet(e, 1)) && isoptype(ast_ChildGet(e, 0), OP_MULT)) {
+        pcas_ast_t *top = ast_ChildGet(e, 0), *n = NULL, *inv = NULL;
+        mp_small v, d;
+
+        for(i = 0; i < ast_ChildLength(top); i++) {
+            pcas_ast_t *c = ast_ChildGet(top, i);
+
+            if(c->type == NODE_NUMBER)
+                n = c;
+            else if(inverse(c))
+                inv = c;
+        }
+        if(n != NULL && inv != NULL && mp_rat_to_ints(n->op.num, &v, &d) == MP_OK && d == 1 && v % 180 == 0) {
+            ast_ChildRemoveIndex(e, 0);
+            if(v / 180 == 1)
+                ast_Cleanup(ast_ChildRemove(top, n));
+            else
+                mp_rat_set_value(n->op.num, v / 180, 1);
+            if(ast_ChildLength(top) == 1) {
+                pcas_ast_t *only = ast_ChildRemoveIndex(top, 0);
+
+                ast_Cleanup(top);
+                top = only;
+            }
+            replace_node(e, top);
+            return;
+        }
+    }
+
     if(!trig(e))
         return;
 

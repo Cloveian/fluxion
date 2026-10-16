@@ -10,6 +10,7 @@
 #include <time.h>
 
 #include "engine/ast.h"
+#include "engine/dbg.h"
 #include "engine/parser.h"
 #include "engine/cas/cas.h"
 #include "engine/cas/identities.h"
@@ -797,6 +798,11 @@ static bool run(editor_t *line) {
     simplify_canonical_form(e, canon_flags);
     if(setting_angle == ANGLE_DEGREES)
         degrees_out(e);
+#ifdef COMPILE_PC
+    /* FLX_DUMP=1 prints the tree that's about to be drawn, for poking at the pipeline */
+    if(getenv("FLX_DUMP") != NULL)
+        dbg_print_tree(e, 0);
+#endif
 
     /* cancelled (or out of memory): the tree is half simplified, nobody wants to see that lol */
     push(in, pcas_cancelled ? NULL : layout_build(e, &draw_font),
