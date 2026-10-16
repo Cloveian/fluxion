@@ -6,6 +6,7 @@
 #include "screen.h"
 
 #include <graphx.h>
+#include <sys/lcd.h>
 
 void screen_begin(void) {
     gfx_Begin();
@@ -45,6 +46,19 @@ void screen_direct(bool on) {
         gfx_SetDrawScreen();
     else
         gfx_SetDrawBuffer();
+}
+
+/* just the backlight, not the LCD controller: graphx keeps working and nothing
+   needs setting up again. 255 is darkest, the OS brightness goes back after */
+void screen_power(bool on) {
+    static unsigned char before = 0;
+
+    if(!on) {
+        before = lcd_BacklightLevel;
+        lcd_BacklightLevel = 255;
+    } else {
+        lcd_BacklightLevel = before;
+    }
 }
 
 #else

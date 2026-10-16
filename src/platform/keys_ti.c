@@ -41,6 +41,26 @@ static const map_t map[] = {
 
 static key_t held = K_NONE;
 static clock_t next_repeat;
+
+/* going dark, see keys.h */
+void (*keys_on_sleep)(bool asleep) = NULL;
+static bool asleep;
+static clock_t idle_since;
+
+static void wake(void) {
+    asleep = false;
+    idle_since = clock();
+    if(keys_on_sleep != NULL)
+        keys_on_sleep(false);
+}
+
+void keys_sleep(void) {
+    if(!asleep && keys_on_sleep != NULL) {
+        asleep = true;
+        keys_on_sleep(true);
+    }
+}
+
 static unsigned char old_mode, old_int;
 
 /* the keypad scans continuously (keys_begin), so kb_Data is always current */
@@ -101,10 +121,14 @@ keypress_t keys_wait(void) {
     keypress_t press;
     int i;
 
+    idle_since = clock();   /* idle means waiting here, a long solve isn't */
     for(;;) {
         bool changed = (kb_IntStatus & KB_DATA_CHANGED) != 0;
         bool now[3];
         key_t k;
+
+        if(!asleep && clock() - idle_since > KEYS_IDLE_OFF)
+            keys_sleep();
 
         kb_IntAcknowledge = KB_DATA_CHANGED;
         k = scan();
@@ -122,6 +146,10 @@ keypress_t keys_wait(void) {
             if(now[i]) {
                 mods[i].used = false;
             } else if(!mods[i].used) {
+                if(asleep) {    /* the tap that wakes it doesn't count as a tap */
+                    wake();
+                    continue;
+                }
                 press.key = mod_keys[i];
                 press.on = press.second = press.alpha = false;
                 return press;
@@ -146,6 +174,10 @@ keypress_t keys_wait(void) {
                the contacts bouncing would look like another press next time */
             while(clock() - pressed < SETTLE)
                 kb_IntAcknowledge = KB_DATA_CHANGED;
+            if(asleep) {    /* eaten, it only woke the screen. held, so no repeat either */
+                wake();
+                continue;
+            }
             break;
         }
 

@@ -42,6 +42,10 @@ void screen_show(void);                         /* show what's been drawn */
    buffered. false: back to drawing the next frame */
 void screen_direct(bool on);
 
+/* the backlight. off after sitting idle (keys.h) or on [2nd][alpha][on]. drawing
+   still works while its off, it's just dark. on the PC it does nothing */
+void screen_power(bool on);
+
 #ifndef __TICE__
 /* PC only */
 const unsigned char *screen_pixels(void);       /* SCREEN_W * SCREEN_H palette indexes */
