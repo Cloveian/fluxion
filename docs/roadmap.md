@@ -38,8 +38,8 @@
 - [x] Parallel and perpendicular lines
 - [ ] Transformations
 - [ ] Geometry formulas (area, perimeter, volume, angles)
-- [ ] Probability (nCr, nPr)
-- [ ] GCD, LCM and prime factorisation
+- [x] Probability (nCr, nPr)
+- [x] GCD, LCM and prime factorisation
 - [ ] Percent
 - [ ] Defining and calling functions like f(x)
 - [ ] Domain and range
