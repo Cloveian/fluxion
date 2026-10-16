@@ -29,7 +29,7 @@
 - [ ] Finish bold / italic. the draw layer does it already, italic's unused.
 - [x] Clear the screen. `[on][clear]` on an empty line scrolls the history up off the screen, nothing gets deleted
 - [x] Modifier taps while its working. they get dropped right now, 2nd / alpha / on pressed during `working...` should stick for the next key
-- [ ] Soft key menus in math print. the folder lists say `tan^-1`, they should draw the real thing like the line does
+- [x] Soft key menus in math print. the folder lists say `tan^-1`, they should draw the real thing like the line does
 - [ ] Screen off. auto after sitting idle, and `[2nd][alpha][on]` does it by hand
 - [ ] Mode menu. degrees / radians, simplify mode, the trig answer thing. simplify mode picks
   what "simplest" means since its subjective (expanded or factored? roots in the bottom?).
