@@ -670,9 +670,14 @@ static void run_domain(char *src, box_t *in) {
     }
 
     col = layout_box(BOX_COL, 0);
-    if(d.lower != NULL)
-        layout_add(col, bound_box(shown, d.lower_open ? '>' : CH_GE, d.lower));
-    if(d.upper != NULL)
+    if(d.lower != NULL && d.upper != NULL && ast_Compare(d.lower, d.upper)) {
+        /* sqrt(x-2)+sqrt(2-x), one point. open on either side and domain() already said empty */
+        layout_add(col, bound_box(shown, '=', d.lower));
+    } else {
+        if(d.lower != NULL)
+            layout_add(col, bound_box(shown, d.lower_open ? '>' : CH_GE, d.lower));
+    }
+    if(d.upper != NULL && !(d.lower != NULL && ast_Compare(d.lower, d.upper)))
         layout_add(col, bound_box(shown, d.upper_open ? '<' : CH_LE, d.upper));
     if(d.nholes > 0)
         layout_add(col, labelled("except", solutions_box(shown, d.holes, d.nholes)));
