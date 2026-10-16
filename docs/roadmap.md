@@ -27,11 +27,14 @@
 
 - [ ] Lock icons. a padlock with the A / C / 2 in negative space, in their own spots so they show at once.
 - [ ] Finish bold / italic. the draw layer does it already, italic's unused.
+- [ ] Clear the screen. `[on][clear]` on an empty line scrolls the history up off the screen, nothing gets deleted
+- [ ] Modifier taps while its working. they get dropped right now, 2nd / alpha / on pressed during `working...` should stick for the next key
 - [ ] Mode menu. degrees / radians, simplify mode, the trig answer thing. simplify mode picks
   what "simplest" means since its subjective (expanded or factored? roots in the bottom?).
   presets plus a few toggles, "by hand" is the default preset and is really just a toggle
   combo. the form key switches it, the rationalize toggle in Tools moves here
 - Optimisation. ongoing, cancel/poll is in and the slow cases are logged.
+- [x] Expand combines like terms after every step instead of at the end. (x+1)^7 was 5 min at 100% and ^8 ran out of memory, 2^n raw terms before anything got collected
 
 ## later
 

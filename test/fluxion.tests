@@ -168,6 +168,7 @@ simplify; sqrt(2^40); 1048576
 #ACT problems the engine did out of the box: Q13, Q15, Q17, Q18, Q19, Q24, Q33, Q43
 simplify; (5/13)/(5/12); 12/13
 expand; (Y+7)^3; Y^3+21Y^2+147Y+343
+expand; (X+1)^8; X^8+8X^7+28X^6+56X^5+70X^4+56X^3+28X^2+8X+1
 simplify; (X^2_Y^2)_(6X^2+4XY_Y^2); -5X^2_4XY
 simplify; sqrt(9)+sqrt(-16); 3+4i
 simplify; 7+14(25_1); 343
