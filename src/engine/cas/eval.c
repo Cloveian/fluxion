@@ -652,6 +652,25 @@ static bool eval_log(pcas_ast_t *e, unsigned short flags) {
             return true;
 
         }
+
+        /*Fluxion: log(1000) = 3, logb(8,2) = 3, exact when it works out. walks
+        base^k up to val so it's tiny k only, which is all anyone types*/
+        if(base->type == NODE_NUMBER && val->type == NODE_NUMBER
+           && mp_rat_is_integer(base->op.num) && mp_rat_is_integer(val->op.num)
+           && mp_rat_compare_value(base->op.num, 1, 1) > 0 && mp_rat_compare_value(val->op.num, 1, 1) > 0) {
+            mp_int pow = mp_int_alloc();
+            int k;
+
+            mp_int_copy(mp_rat_numer_ref(base->op.num), pow);
+            for(k = 1; k < 64 && mp_int_compare(pow, mp_rat_numer_ref(val->op.num)) < 0; k++)
+                mp_int_mul(pow, mp_rat_numer_ref(base->op.num), pow);
+            if(mp_int_compare(pow, mp_rat_numer_ref(val->op.num)) == 0) {
+                mp_int_free(pow);
+                replace_node(e, ast_MakeNumber(num_FromInt(k)));
+                return true;
+            }
+            mp_int_free(pow);
+        }
     }
 
     /*Todo evaluate log constants*/
