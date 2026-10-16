@@ -20,6 +20,7 @@
 typedef struct {
     int deg;
     pcas_ast_t *c[3];   /*coefficients of var^0, var^1, var^2; NULL = 0*/
+    pcas_ast_t *lead;   /*coefficient of var^deg, whatever deg is (asym wants it)*/
     bool numeric;       /*every coefficient (all degrees) is a number*/
 } coefs_t;
 
@@ -98,6 +99,9 @@ static void coefs_free(coefs_t *p) {
             ast_Cleanup(p->c[i]);
         p->c[i] = NULL;
     }
+    if(p->lead != NULL)
+        ast_Cleanup(p->lead);
+    p->lead = NULL;
 }
 
 static bool read_term(pcas_ast_t *term, Symbol var, coefs_t *p) {
@@ -115,8 +119,13 @@ static bool read_term(pcas_ast_t *term, Symbol var, coefs_t *p) {
     }
     simplify(coef, SIMP_SOLVE);
 
-    if(k > p->deg)
+    if(k > p->deg) {
         p->deg = k;
+        ast_Cleanup(p->lead);
+        p->lead = ast_MakeOperator(OP_ADD);
+    }
+    if(k == p->deg)
+        ast_ChildAppend(p->lead, ast_Copy(coef));
     if(coef->type != NODE_NUMBER)
         p->numeric = false;
 
@@ -138,11 +147,14 @@ static bool read_poly(pcas_ast_t *e, Symbol var, coefs_t *p) {
 
     p->deg = 0;
     p->numeric = true;
+    p->lead = ast_MakeOperator(OP_ADD);
     for(i = 0; i < 3; i++)
         p->c[i] = NULL;
 
-    if(e == NULL || pcas_cancelled) /*oom, or already unwinding*/
+    if(e == NULL || pcas_cancelled || p->lead == NULL) { /*oom, or already unwinding*/
+        coefs_free(p);
         return false;
+    }
 
     if(isoptype(e, OP_ADD)) {
         for(term = ast_ChildGet(e, 0); ok && term != NULL; term = term->next)
@@ -159,11 +171,34 @@ static bool read_poly(pcas_ast_t *e, Symbol var, coefs_t *p) {
     for(i = 0; i < 3; i++)
         if(p->c[i] != NULL)
             simplify(p->c[i], SIMP_SOLVE);
+    simplify(p->lead, SIMP_SOLVE);
     if(pcas_cancelled) { /*coefs half simplified, nobody downstream can read those*/
         coefs_free(p);
         return false;
     }
     return true;
+}
+
+int poly_degree(pcas_ast_t *expr, Symbol var, pcas_ast_t **lead) {
+    pcas_ast_t *e = ast_Copy(expr);
+    coefs_t p;
+    int deg = -1;
+
+    if(e == NULL)
+        return -1;
+    simplify(e, SIMP_SOLVE);
+    expand(e, EXP_ALL);
+    simplify(e, SIMP_SOLVE);
+    if(!pcas_cancelled && read_poly(e, var, &p)) {
+        deg = p.deg;
+        if(lead != NULL) {
+            *lead = p.lead;
+            p.lead = NULL;
+        }
+        coefs_free(&p);
+    }
+    ast_Cleanup(e);
+    return deg;
 }
 
 /*-c[0] / c[1]*/

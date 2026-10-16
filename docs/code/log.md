@@ -9,6 +9,7 @@
 - solve pulls a letter out of a quadratic now, solve(y=x^2+3, x) gives -sqrt(y-3), sqrt(y-3), and x^2+bx+c=0 gives the formula. built as a tree and simplified, with the bits simplify wont do done by hand first (a square factor out of the root, a common number out of the fraction, flipping a negative lead). y=2^x still gives up, that needs an isolate solver
 - and when the variable only turns up once it just peels the layers off: solve(y=2^x, x) is logb(y,2), sqrt(x)=2 is 4, 1/x=2 is 1/2, x^4=16 is -2, 2. five of the old "cant do this" tests became real answers
 - log(1000) is 3 now, and logb(8,2). integer logs that work out get evaluated, the others stay
+- asym(f,x), holes and asymptotes. one line each (hole x = 1 / vertical x = -2, 2 / horizontal y = 2), only the kinds it has, none if nothing. the answer is a new stacked box kind (BOX_COL) so it cant be browsed into or saved, it just goes with the session. top and bottom come straight off the tree as typed, simplify would cancel the hole out. multiplicity by differentiating until it stops being zero there. no slant asymptotes yet
 
 ## 2026-10-15 - out of memory, bold / italic, E
 

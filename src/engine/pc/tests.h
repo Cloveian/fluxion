@@ -22,6 +22,7 @@ typedef enum {
     TEST_COMDENOM,  /*Fluxion: comdenom; expression; expected. simplify, then comdenom() expanded*/
     TEST_COMDENOMF, /*Fluxion: comdenomf; expression; expected. the same, factored*/
     TEST_DECIMAL,   /*Fluxion: decimal; expression; text. approx(), then approx_format() to 6 digits*/
+    TEST_ASYM,      /*Fluxion: asym; expression; var; holes <list> | vert <list> | horiz <y>, - for none, or unknown*/
 
     TEST_INVALID
 } TestType;

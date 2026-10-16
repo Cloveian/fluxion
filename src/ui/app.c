@@ -103,7 +103,9 @@ static void push(box_t *in, box_t *out, const char *message, unsigned long ms) {
     h->message = message;
     h->ms = ms;
     h->row = ed_copy_line(running);
-    h->out_row = out != NULL ? ed_from_box(out) : NULL;
+    /* a stacked answer (asym) has no one-line editor form, so it can't be
+       browsed into or saved. it just goes when the app does */
+    h->out_row = out != NULL && out->kind != BOX_COL ? ed_from_box(out) : NULL;
 }
 
 /* an entry back from the store, just the two rows. the boxes get drawn from them
@@ -294,7 +296,19 @@ static void number_first(pcas_ast_t *e) {
     }
 }
 
-/* x = -5, 6. each root over one denominator, number first */
+/* one answer value, over one denominator, number first */
+static box_t *value_box(pcas_ast_t *v) {
+    comdenom(v, false);
+    simplify_canonical_form(v, canon_flags);
+    if(form == FORM_DECIMAL) {
+        approx(v);
+        simplify(v, SIMP_BASIC | SIMP_EVAL);
+    }
+    number_first(v);
+    return layout_build(v, &draw_font);
+}
+
+/* x = -5, 6 */
 static box_t *solutions_box(char var, pcas_ast_t **roots, int n) {
     char name[2] = { var, '\0' };
     box_t *row = layout_box(BOX_ROW, 0);
@@ -310,19 +324,36 @@ static box_t *solutions_box(char var, pcas_ast_t **roots, int n) {
             layout_add(row, layout_text(",", 0));
             layout_add(row, layout_space(2 * SPACE_BINARY));
         }
-
-        comdenom(roots[i], false);
-        simplify_canonical_form(roots[i], canon_flags);
-        if(form == FORM_DECIMAL) {
-            approx(roots[i]);
-            simplify(roots[i], SIMP_BASIC | SIMP_EVAL);
-        }
-        number_first(roots[i]);
-        layout_add(row, layout_build(roots[i], &draw_font));
+        layout_add(row, value_box(roots[i]));
     }
 
     layout_finish(row, &draw_font);
     return row;
+}
+
+/* "vertical    x = -2, 2", one line of an asym() answer. takes the values row */
+static box_t *labelled(const char *label, box_t *values) {
+    box_t *row = layout_box(BOX_ROW, 0);
+
+    layout_add(row, layout_text(label, 0));
+    layout_add(row, layout_space(3 * SPACE_BINARY));
+    layout_add(row, values);
+    return row;
+}
+
+/* the variable after the comma in solve(..., x) and asym(..., x). one letter, or theta */
+static bool read_var(const char *s, Symbol *var, char *shown) {
+    if(strcmp(s, "theta") == 0) {
+        *var = SYM_THETA;
+        *shown = CH_THETA;
+        return true;
+    }
+    if(s[0] >= 'A' && s[0] <= 'Z' && s[1] == '\0') {
+        *var = (Symbol)s[0];
+        *shown = (char)(s[0] - 'A' + 'a');
+        return true;
+    }
+    return false;
 }
 
 /*
@@ -352,13 +383,7 @@ static void run_solve(char *src, box_t *in) {
 
     if(comma != NULL) {
         *comma = '\0';
-        if(strcmp(comma + 1, "theta") == 0) {
-            var = SYM_THETA;
-            shown = CH_THETA;
-        } else if(comma[1] >= 'A' && comma[1] <= 'Z' && comma[2] == '\0') {
-            var = (Symbol)comma[1];
-            shown = (char)(comma[1] - 'A' + 'a');
-        } else {
+        if(!read_var(comma + 1, &var, &shown)) {
             push(in, NULL, "solve(equation, variable)", 0);
             return;
         }
@@ -407,6 +432,79 @@ static void run_solve(char *src, box_t *in) {
 
     for(i = 0; i < n; i++)
         ast_Cleanup(roots[i]);
+}
+
+/*
+    asym(expression, variable). holes and asymptotes, a line for each kind it
+    actually has. same comma rule as solve, and it writes into src too
+*/
+static void run_asym(char *src, box_t *in) {
+    pcas_ast_t *e;
+    asym_t a;
+    char *comma = NULL, *s, shown = 'x';
+    Symbol var = SYM_X;
+    pcas_error_t err;
+    clock_t start;
+    unsigned long ms;
+    int depth = 0;
+    bool ok;
+    box_t *col;
+
+    for(s = src; *s != '\0'; s++) {
+        if(*s == '(')
+            depth++;
+        else if(*s == ')')
+            depth--;
+        else if(depth == 0 && *s == ',')
+            comma = s;
+    }
+    if(comma != NULL) {
+        *comma = '\0';
+        if(!read_var(comma + 1, &var, &shown)) {
+            push(in, NULL, "asym(expression, variable)", 0);
+            return;
+        }
+    }
+
+    e = parse((const uint8_t *)src, strlen(src), str_table, &err);
+    if(err != E_SUCCESS || e == NULL) {
+        if(e != NULL)
+            ast_Cleanup(e);
+        push(in, NULL, error_text[err], 0);
+        return;
+    }
+    if(setting_angle == ANGLE_DEGREES)
+        e = degrees_in(e);
+
+    start = clock();
+    ok = asym(e, var, &a);
+    ms = (unsigned long)((clock() - start) * 1000 / CLOCKS_PER_SEC);
+    ast_Cleanup(e);
+
+    if(pcas_cancelled) {
+        push(in, NULL, pcas_oom ? "out of memory" : "cancelled", ms);
+        asym_free(&a);
+        return;
+    }
+    if(!ok) {
+        push(in, NULL, "can't solve where the bottom is 0", ms);
+        return;
+    }
+    if(a.nholes == 0 && a.nvert == 0 && a.horiz == NULL) {
+        push(in, word_box("none"), NULL, ms);
+        return;
+    }
+
+    col = layout_box(BOX_COL, 0);
+    if(a.nholes > 0)
+        layout_add(col, labelled(a.nholes > 1 ? "holes" : "hole", solutions_box(shown, a.holes, a.nholes)));
+    if(a.nvert > 0)
+        layout_add(col, labelled("vertical", solutions_box(shown, a.vert, a.nvert)));
+    if(a.horiz != NULL)
+        layout_add(col, labelled("horizontal", solutions_box('y', &a.horiz, 1)));
+    layout_finish(col, &draw_font);
+    push(in, col, NULL, ms);
+    asym_free(&a);
 }
 
 static void busy_start(void);
@@ -479,6 +577,11 @@ static bool run(editor_t *line) {
 
     if(cmd != NULL && strcmp(cmd, "solve") == 0) {
         run_solve(src, ed_layout(line, &draw_font, false));
+        free(src);
+        return true;
+    }
+    if(cmd != NULL && strcmp(cmd, "asym") == 0) {
+        run_asym(src, ed_layout(line, &draw_font, false));
         free(src);
         return true;
     }

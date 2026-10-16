@@ -250,4 +250,19 @@ pcas_ast_t *degrees_in(pcas_ast_t *e);
 /*Fluxion: after simplify, takes the pi/180 back out of trig arguments that stayed symbolic*/
 void degrees_out(pcas_ast_t *e);
 
+/*Fluxion: holes and asymptotes of f in var (cas/asym.c). holes and vert are the
+  x values, sorted, horiz is the y of the horizontal one or NULL for none. false
+  when a zero of the bottom couldn't be found, then out is empty. slant ones are
+  not found (todo), they come out as no horizontal*/
+typedef struct {
+    pcas_ast_t *holes[SOLVE_MAX], *vert[SOLVE_MAX], *horiz;
+    int nholes, nvert;
+} asym_t;
+bool asym(pcas_ast_t *f, Symbol var, asym_t *out);
+void asym_free(asym_t *a);
+
+/*Fluxion: degree of e (simplified and expanded) as a polynomial in var, -1 if it
+  isn't one. the leading coefficient goes in *lead if that's not NULL (new tree)*/
+int poly_degree(pcas_ast_t *e, Symbol var, pcas_ast_t **lead);
+
 #endif

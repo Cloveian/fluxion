@@ -153,6 +153,9 @@ ITEM(it_factor,   "factor", "factor", ITEM_COMMAND, NULL, "factor($)", HAVE_PART
 ITEM(it_solve,    "solve",  "solve", ITEM_COMMAND, NULL, "solve($)", HAVE_PARTLY,
      "solve(eq,x): linear (any coefficients), polynomials via factor + the quadratic formula; no systems",
      "solves linear and polynomial equations. solve(x^2-4=0,x) -> x = -2, 2. no systems")
+ITEM(it_asym,     "asymptotes", "asym", ITEM_COMMAND, NULL, "asym($)", HAVE_PARTLY,
+     "asym(f,x): holes, vertical and horizontal asymptotes of a rational function. no slant ones yet",
+     "holes and asymptotes of a fraction. asym((x^2-1)/(x-1),x) -> hole at x = 1. no slant ones yet")
 
 /* Calculus */
 ITEM(it_deriv,    "d/dx",   "deriv", ITEM_TEMPLATE, NULL, "deriv($,X,X)", HAVE_YES, "derivative with respect to x",
@@ -183,14 +186,14 @@ const item_t *const catalog[] = {
     &it_sin, &it_cos, &it_tan, &it_asin, &it_acos, &it_atan, &it_cot, &it_sec, &it_csc, &it_ln, &it_exp, &it_log, &it_pow10,
     &it_sinh, &it_cosh, &it_tanh, &it_asinh, &it_acosh, &it_atanh, &it_logb, &it_abs, &it_fact, &it_int,
     &it_frac, &it_parens, &it_piecewise,
-    &it_simplify, &it_expand, &it_subst, &it_evaluate, &it_factor, &it_solve,
+    &it_simplify, &it_expand, &it_subst, &it_evaluate, &it_factor, &it_solve, &it_asym,
     &it_deriv, &it_deriv_at, &it_integral, &it_limit,
     &it_id_basic, &it_id_trig, &it_id_hyp, &it_id_cplx, &it_id_tconst, &it_id_iconst, &it_clear
 };
 const unsigned catalog_count = sizeof catalog / sizeof catalog[0];
 
 static const item_t *const algebra[] = {
-    &it_expand, &it_factor, &it_solve, &it_subst, &it_evaluate
+    &it_expand, &it_factor, &it_solve, &it_asym, &it_subst, &it_evaluate
 };
 static const item_t *const calculus[] = {
     &it_deriv, &it_deriv_at, &it_integral, &it_limit
