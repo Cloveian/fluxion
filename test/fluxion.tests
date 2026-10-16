@@ -141,6 +141,18 @@ solve; X^2_2sqrt(2)X+2=0; X; 2^(1/2)
 solve; Y=1; X; unknown
 solve; X^2_1=0; Y; unknown
 
+#holes and asymptotes (asym; expression; variable; holes <x list> | vert <x list> | horiz <y>, - for none)
+asym; (X^2_1)/(X_1); X; holes 1 | vert - | horiz -
+asym; 1/(X_2); X; holes - | vert 2 | horiz 0
+asym; (2X^2+1)/(X^2_4); X; holes - | vert -2,2 | horiz 2
+asym; (X_1)^2/(X_1); X; holes 1 | vert - | horiz -
+asym; (X_1)/(X_1)^2; X; holes - | vert 1 | horiz 0
+asym; (X^2+3X+2)/(X^2_1); X; holes -1 | vert 1 | horiz 1
+asym; 1/X+1/(X_1); X; holes - | vert 0,1 | horiz 0
+asym; X^2+1; X; holes - | vert - | horiz -
+asym; (3X+1)/(2X_5); X; holes - | vert 5/2 | horiz 3/2
+asym; X/(X^2+1); X; holes - | vert - | horiz 0
+
 #k-th powers out of roots. ACT Q8. 2sqrt(2) merges back to 2^(3/2) as like terms: the canonical form splits it at output
 simplify; sqrt(35*108); 6sqrt(105)
 simplify; sqrt(72); 6sqrt(2)

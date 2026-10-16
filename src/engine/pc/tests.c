@@ -43,6 +43,7 @@ TestType resolve_type(char *type) {
     if(!strcmp(type, "comdenom"))   return TEST_COMDENOM;
     if(!strcmp(type, "comdenomf"))  return TEST_COMDENOMF;
     if(!strcmp(type, "decimal"))    return TEST_DECIMAL;
+    if(!strcmp(type, "asym"))       return TEST_ASYM;
 
     return TEST_INVALID;
 }
@@ -247,6 +248,67 @@ static bool test_solve(test_t *t) {
     return passed;
 }
 
+/*Fluxion: the values exported like test_solve prints its roots, joined with commas, - for none*/
+static void asym_list(char *buf, unsigned size, pcas_ast_t **vals, int n) {
+    pcas_error_t err;
+    unsigned len;
+    char *out;
+    int i;
+
+    if(n == 0)
+        strncat(buf, " -", size - strlen(buf) - 1);
+    for(i = 0; i < n; i++) {
+        strncat(buf, i == 0 ? " " : ",", size - strlen(buf) - 1);
+        out = (char*)export_to_binary(vals[i], &len, str_table, &err);
+        if(out == NULL || err != E_SUCCESS) { /*never matches, so it can't pass by accident*/
+            strncat(buf, "?", size - strlen(buf) - 1);
+        } else {
+            if(len > size - strlen(buf) - 1)
+                len = size - strlen(buf) - 1;
+            strncat(buf, out, len); /*out isn't null terminated*/
+        }
+        free(out);
+    }
+}
+
+/*Fluxion: asym; expression; var; holes <list> | vert <list> | horiz <y>. holes and vert
+are x values smallest first, horiz is - when there's none. unknown when asym() gives up*/
+static bool test_asym(test_t *t) {
+    pcas_error_t err;
+    pcas_ast_t *e = parse((uint8_t*)t->arg1, strlen(t->arg1), str_table, &err);
+    asym_t a;
+    char got[MAX_LINE] = "";
+    char *trimmed;
+    bool passed;
+
+    if(err != E_SUCCESS || e == NULL) {
+        printf("Test failed on line %u. Unable to parse %s\n", t->line, t->arg1);
+        return false;
+    }
+
+    if(asym(e, (Symbol)t->arg2[0], &a)) {
+        strcpy(got, "holes");
+        asym_list(got, sizeof(got), a.holes, a.nholes);
+        strncat(got, " | vert", sizeof(got) - strlen(got) - 1);
+        asym_list(got, sizeof(got), a.vert, a.nvert);
+        strncat(got, " | horiz", sizeof(got) - strlen(got) - 1);
+        asym_list(got, sizeof(got), &a.horiz, a.horiz != NULL);
+        asym_free(&a);
+    } else {
+        strcpy(got, "unknown");
+    }
+
+    /*the expected one lost its spaces in test_Parse*/
+    trimmed = trim(got);
+    passed = strcmp(trimmed, t->arg3) == 0;
+    free(trimmed);
+    if(!passed)
+        printf("Test failed on line %u. Expected %s but got %s\n", t->line, t->arg3, got);
+
+    ast_Cleanup(e);
+    return passed;
+}
+
 /*Fluxion: decimal; expression without variables; what approx_format() should print*/
 static bool test_decimal(test_t *t) {
     pcas_error_t err;
@@ -295,6 +357,8 @@ bool test_Run(test_t *t) {
         return test_solve(t);
     if(t->type == TEST_DECIMAL)
         return test_decimal(t);
+    if(t->type == TEST_ASYM)
+        return test_asym(t);
 
     a = parse((uint8_t*)t->arg1, strlen(t->arg1), str_table, &err);
     if(err != E_SUCCESS) {

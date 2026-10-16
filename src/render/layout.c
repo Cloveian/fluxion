@@ -607,6 +607,41 @@ static void measure(const layout_font_t *f, box_t *b) {
         break;
     }
 
+    /* origin on the last line's baseline, since the history draws an answer from
+       its baseline and the bottom line should land where a one-line answer would */
+    case BOX_COL: {
+        box_t *last = NULL;
+        int y = 0, shift;
+
+        /* y's go top down from 0 first, the last line's y isn't known till the end */
+        b->width = 0;
+        for(k = b->child; k != NULL; k = k->next) {
+            if(last != NULL)
+                y += COL_GAP + k->ascent;
+            k->y = y;
+            y += k->descent;
+            b->width = MAX(b->width, k->width);
+            last = k;
+        }
+
+        /* even an empty column is a line tall */
+        if(last == NULL) {
+            b->ascent = f->ascent[fi];
+            b->descent = f->descent[fi];
+            break;
+        }
+
+        shift = last->y;
+        for(k = b->child; k != NULL; k = k->next) {
+            k->x = b->width - k->width;
+            k->y -= shift;
+        }
+
+        b->ascent = b->child->ascent - b->child->y;
+        b->descent = last->descent;
+        break;
+    }
+
     case BOX_FRAC: {
         box_t *num = b->child, *den = num->next;
         bool outer = has_frac(num) || has_frac(den);

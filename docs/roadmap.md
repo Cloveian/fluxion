@@ -20,7 +20,7 @@
 - [x] Multi-var solve, pulling one var out, like `solve(y=7x+3,x)` -> $x=\frac{y-3}{7}$. linear, quadratic, and anything where the variable only shows up once (y=2^x, sqrt(x)=2, sin(x)=1/2). done 10-16
 - [ ] Systems (ACT Q14). its own function like the nspire's, commas, no `and`
 - [ ] Solving trig equations. general solution or an interval, that's a mode setting
-- [ ] Holes & asymptotes. zeros of the denominator. a function, answer on a few lines so it's readable.
+- [x] Holes & asymptotes. zeros of the denominator. a function, answer on a few lines so it's readable. `asym(f,x)`, done 10-16
 - [ ] Better "normal" math handling. the everyday cases that don't come out clean yet.
 
 ## polish

@@ -47,11 +47,13 @@
 #define ROOT_INDEX_W    3       /* how far the index may overlap the sign's tick */
 #define PAREN_W         5       /* each bracket, including its gap */
 #define ABS_W           3       /* each |bar|, including its gap */
+#define COL_GAP         2 /* between stacked lines */
 
 typedef enum {
     BOX_TEXT, /* text - numbers, variables, operators, function names */
     BOX_SPACE, /* empty, a fixed width */
     BOX_ROW, /* children side by side on one baseline */
+    BOX_COL, /* children stacked top to bottom, right-aligned. origin is the last line's baseline */
     BOX_FRAC, /* child is the numerator, ->next the denominator, aux the bar row */
     BOX_SUP, /* base, then ->next exponent, raised */
     BOX_SUB, /* child = base, child->next = subscript, lowered (log base) */
