@@ -17,11 +17,6 @@ factor; X^2+X+1; X^2+X+1
 #gives: -1000002+X(1+X). The coefficient is over the root search limit, so no roots are looked for
 factor; X^2+X_1000002; X^2+X_1000002
 
-#Factor: one variable only. The Nspire factors these
-#gives: X^2+Y(Y+2X)
-factor; X^2+2XY+Y^2; (X+Y)^2
-#gives: X^2_Y^2
-factor; X^2_Y^2; (X_Y)(X+Y)
 #Factor: only rational roots are found, X^4+X^2+1 = (X^2_X+1)(X^2+X+1) over the rationals
 #gives: (X_1)(X+1)(X^4+X^2+1)
 factor; X^6_1; (X_1)(X+1)(X^2_X+1)(X^2+X+1)

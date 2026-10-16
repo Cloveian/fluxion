@@ -60,6 +60,17 @@ factor; 1/(X^2_1); 1/((X_1)(X+1))
 factor; sin(X^2_1); sin(X^2_1)
 factor; sin(X)^2_1; sin(X)^2_1
 
+#More than one letter: difference of squares, perfect squares, sum and difference of cubes (the first two moved over from todo.tests)
+factor; X^2+2XY+Y^2; (X+Y)^2
+factor; X^2_Y^2; (X_Y)(X+Y)
+factor; X^2_2XY+Y^2; (X_Y)^2
+factor; 4X^2_9Y^2; (2X_3Y)(2X+3Y)
+factor; X^3+Y^3; (X+Y)(X^2_XY+Y^2)
+factor; X^3_Y^3; (X_Y)(X^2+XY+Y^2)
+factor; A^2_B^2; (A_B)(A+B)
+factor; X^2+Y^2; X^2+Y^2
+factor; 2X^2_8Y^2; 2(X_2Y)(X+2Y)
+
 #Solve over the reals (solve; equation; variable; roots smallest first, or true / false / unknown)
 #ACT Q1, Q9, Q33
 solve; (100+60+80+30+X)/5=72; X; 90
