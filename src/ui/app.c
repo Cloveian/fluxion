@@ -1917,7 +1917,7 @@ static bool handle(keypress_t p) {
         case K_LEFT:  typing_run = false; ed_select_left(&ed); return true;
         case K_RIGHT: typing_run = false; ed_select_right(&ed); return true;
         case K_ENTER: form_set(form == FORM_DECIMAL ? FORM_HAND : FORM_DECIMAL); return true;
-        case K_YEQU:  /* [alpha][y=] is n/d, like the TI */
+        case K_YEQU: case K_XT:  /* [alpha][y=] is n/d like the TI, and [alpha][x,t,θ,n] since it's right there */
             will_edit(false);
             ed_insert(&ed, ED_FRAC, NULL);
             return true;
@@ -2112,21 +2112,23 @@ static const unsigned char lock_letters[3][5] = {
     { 3, 4, 4, 4, 3 }
 };
 
-/* 9 x 11, top left at x, y. locked has the shackle shut, sticky has it popped
-   up a row and swung right, so it pokes one row above y */
+/* 9 x 11, top left at x, y. a lock is the padlock with the letter punched out
+   of it, a plain sticky press is just the letter on its own, bigger, so you can
+   tell the two apart at a glance (the open-shackle version looked locked too) */
 static void draw_padlock(int x, int y, int letter, bool locked) {
     int r, c;
 
     screen_color(COL_ACCENT);
-    if(locked) {
-        screen_hline(x + 3, y, 3);
-        screen_vline(x + 2, y + 1, 3);
-        screen_vline(x + 6, y + 1, 3);
-    } else {
-        screen_hline(x + 5, y - 1, 3);
-        screen_vline(x + 4, y, 2);
-        screen_vline(x + 8, y, 4);
+    if(!locked) {
+        for(r = 0; r < 5; r++)
+            for(c = 0; c < 3; c++)
+                if(lock_letters[letter][r] & (4 >> c))
+                    screen_fill(x + 1 + 2 * c, y + 1 + 2 * r, 2, 2);
+        return;
     }
+    screen_hline(x + 3, y, 3);
+    screen_vline(x + 2, y + 1, 3);
+    screen_vline(x + 6, y + 1, 3);
     screen_fill(x, y + 4, 9, 7);
 
     /* the letter is just holes in the body, it still reads at 1x */
