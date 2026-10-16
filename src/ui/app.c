@@ -398,8 +398,12 @@ static void run_solve(char *src, box_t *in) {
         push(in, word_box("true"), NULL, ms);
     else if(n == 0)
         push(in, word_box("false"), NULL, ms);
-    else
+    else {
+        if(setting_angle == ANGLE_DEGREES)
+            for(i = 0; i < n; i++)
+                degrees_out(roots[i]);
         push(in, solutions_box(shown, roots, n), NULL, ms);
+    }
 
     for(i = 0; i < n; i++)
         ast_Cleanup(roots[i]);
@@ -517,6 +521,8 @@ static bool run(editor_t *line) {
         apply_form(e);
     }
     simplify_canonical_form(e, canon_flags);
+    if(setting_angle == ANGLE_DEGREES)
+        degrees_out(e);
 
     /* cancelled (or out of memory): the tree is half simplified, nobody wants to see that lol */
     push(in, pcas_cancelled ? NULL : layout_build(e, &draw_font),
