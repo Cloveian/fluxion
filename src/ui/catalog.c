@@ -208,7 +208,7 @@ static const item_t *const templates[] = {
 };
 static const item_t *const tools[] = {
     &it_id_basic, &it_id_trig, &it_id_hyp, &it_id_cplx, &it_id_tconst, &it_id_iconst,
-    &it_rationalize, &it_clear
+    &it_clear
 };
 
 #define FOLDER(key, name, list) { key, name, list, sizeof list / sizeof list[0] }

@@ -96,6 +96,7 @@ basically like typing on a computer, the cursor is a line and `[on]` is Ctrl. th
 | `[alpha]` + `[enter]` | decimal form, and back | |
 | `[sto→]` | the arrow. `value [sto→] name` stores, `[sto→] name` on its own deletes (see Names below) | |
 | `[vars]` | the stored names and their values, enter deletes one | |
+| `[mode]` | angle (radians / degrees), what simplest means, rationalize. enter flips a row | |
 | `[on]` + `[sin]` `[cos]` `[tan]` | csc, sec, cot. real functions, they stay what you typed | |
 | `[2nd]` + `[alpha]` + `[on]` | screen off (the backlight). it goes off by itself after 2 min of nothing too. any key brings it back, and that key gets eaten | |
 
