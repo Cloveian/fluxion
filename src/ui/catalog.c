@@ -159,6 +159,21 @@ ITEM(it_asym,     "asymptotes", "asym", ITEM_COMMAND, NULL, "asym($)", HAVE_PART
 ITEM(it_system,   "system", "system", ITEM_COMMAND, NULL, "system($)", HAVE_PARTLY,
      "system(eq, eq, ..., x, y): linear systems by elimination, letters in the coefficients ok. nothing nonlinear yet",
      "solves equations together. system(2x-y=7,x+y=2,x,y) -> x = 3, y = -1. linear only, for now")
+ITEM(it_slope,    "slope",  "slope", ITEM_COMMAND, NULL, "slope($)", HAVE_YES,
+     "slope(x1,y1,x2,y2): (y2-y1)/(x2-x1), done in the app, a message when it's vertical",
+     "slope between two points. slope(1,2,3,4) -> 1")
+ITEM(it_dist,     "distance", "dist", ITEM_COMMAND, NULL, "dist($)", HAVE_YES,
+     "dist(x1,y1,x2,y2): sqrt((x2-x1)^2+(y2-y1)^2), exact",
+     "distance between two points. dist(0,0,3,4) -> 5")
+ITEM(it_mid,      "midpoint", "mid", ITEM_COMMAND, NULL, "mid($)", HAVE_YES,
+     "mid(x1,y1,x2,y2): both averages, shown as a point",
+     "the point halfway between two points. mid(0,0,4,2) -> (2, 1)")
+ITEM(it_par,      "parallel", "par", ITEM_COMMAND, NULL, "par($)", HAVE_YES,
+     "par(m,x1,y1): y = mx + b through the point. called par, parallel is one letter too long for a name",
+     "the line with slope m through a point. par(2,1,1) -> y = 2x - 1")
+ITEM(it_perp,     "perpendicular", "perp", ITEM_COMMAND, NULL, "perp($)", HAVE_YES,
+     "perp(m,x1,y1): slope -1/m through the point, x = x1 when m is 0",
+     "the line at right angles to slope m, through a point. perp(2,1,1) -> y = (-x+3)/2")
 
 /* Calculus */
 ITEM(it_deriv,    "d/dx",   "deriv", ITEM_TEMPLATE, NULL, "deriv($,X,X)", HAVE_YES, "derivative with respect to x",
@@ -192,13 +207,15 @@ const item_t *const catalog[] = {
     &it_sinh, &it_cosh, &it_tanh, &it_asinh, &it_acosh, &it_atanh, &it_logb, &it_abs, &it_fact, &it_int,
     &it_frac, &it_parens, &it_piecewise,
     &it_simplify, &it_expand, &it_subst, &it_evaluate, &it_factor, &it_solve, &it_asym, &it_system,
+    &it_slope, &it_dist, &it_mid, &it_par, &it_perp,
     &it_deriv, &it_deriv_at, &it_integral, &it_limit,
     &it_id_basic, &it_id_trig, &it_id_hyp, &it_id_cplx, &it_id_tconst, &it_id_iconst, &it_rationalize, &it_clear
 };
 const unsigned catalog_count = sizeof catalog / sizeof catalog[0];
 
 static const item_t *const algebra[] = {
-    &it_expand, &it_factor, &it_solve, &it_asym, &it_system, &it_subst, &it_evaluate
+    &it_expand, &it_factor, &it_solve, &it_asym, &it_system, &it_slope, &it_dist, &it_mid,
+    &it_par, &it_perp, &it_subst, &it_evaluate
 };
 static const item_t *const calculus[] = {
     &it_deriv, &it_deriv_at, &it_integral, &it_limit

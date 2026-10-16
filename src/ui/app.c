@@ -3,6 +3,7 @@
 #include "vars.h"
 #include "mode.h"
 #include "settings.h"
+#include "geom.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -96,7 +97,7 @@ static entry_t *push_slot(void) {
 }
 
 /* always called while the editor in running still has the line that was run */
-static void push(box_t *in, box_t *out, const char *message, unsigned long ms) {
+void push(box_t *in, box_t *out, const char *message, unsigned long ms) {
     entry_t *h = push_slot();
 
     h->in = in;
@@ -361,7 +362,7 @@ static bool has_sym(const pcas_ast_t *e, Symbol s) {
 
 /* one answer value, over one denominator, number first. the trig families stay
    as a sum, pi/6 + 2pi n reads better than (12pi n + pi)/6 */
-static box_t *value_box(pcas_ast_t *v) {
+box_t *value_box(pcas_ast_t *v) {
     if(!has_sym(v, SYM_N))
         comdenom(v, false);
     simplify_canonical_form(v, canon_flags);
@@ -374,7 +375,7 @@ static box_t *value_box(pcas_ast_t *v) {
 }
 
 /* x = -5, 6 */
-static box_t *solutions_box(char var, pcas_ast_t **roots, int n) {
+box_t *solutions_box(char var, pcas_ast_t **roots, int n) {
     char name[2] = { var, '\0' };
     box_t *row = layout_box(BOX_ROW, 0);
     int i;
@@ -762,7 +763,8 @@ static bool run(editor_t *line) {
 
     /* no nesting commands yet, expand(...) has to be the whole line (todo, ugh) */
     if(strstr(src, "expand(") || strstr(src, "factor(") || strstr(src, "eval(") || strstr(src, "solve(")
-       || strstr(src, "asym(") || strstr(src, "system(")) {
+       || strstr(src, "asym(") || strstr(src, "system(") || strstr(src, "slope(") || strstr(src, "dist(")
+       || strstr(src, "mid(") || strstr(src, "par(") || strstr(src, "perp(")) {
         free(src);
         status = "commands have to be the whole line (for now)";
         return false;
@@ -788,10 +790,14 @@ static bool run(editor_t *line) {
         status = "= only works in solve( and system(";
         return false;
     }
+    in = ed_layout(line, &draw_font, false);
+    if(geom_run(cmd, src, in)) {
+        free(src);
+        return true;
+    }
 
     e = parse((const uint8_t *)src, strlen(src), str_table, &err);
     free(src);
-    in = ed_layout(line, &draw_font, false);
 
     if(err != E_SUCCESS || e == NULL) {
         push(in, NULL, error_text[err], 0);
@@ -1038,7 +1044,9 @@ static bool pick_into(editor_t *into, const item_t *it, bool dry) {
             return false;
         if(it->kind == ITEM_COMMAND && strcmp(s, "expand($)") != 0 &&
            strcmp(s, "factor($)") != 0 && strcmp(s, "eval($)") != 0 && strcmp(s, "solve($)") != 0
-           && strcmp(s, "asym($)") != 0 && strcmp(s, "system($)") != 0)
+           && strcmp(s, "asym($)") != 0 && strcmp(s, "system($)") != 0 && strcmp(s, "slope($)") != 0
+           && strcmp(s, "dist($)") != 0 && strcmp(s, "mid($)") != 0 && strcmp(s, "par($)") != 0
+           && strcmp(s, "perp($)") != 0)
             return false;
         if(!dry) {
             memcpy(name, s, n);
