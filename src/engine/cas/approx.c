@@ -193,6 +193,13 @@ void approx_format(mp_rat r, int digits, char *buf) {
     char s[24];
     int exp, len, i;
 
+    /*out of memory: the run's being thrown away, and a garbage r can send exp off
+    to -20000 and sit there computing 10^20000 (the sweep found that one)*/
+    if(pcas_oom) {
+        *buf = '\0';
+        goto done;
+    }
+
     if(mp_rat_compare_zero(r) == 0) {
         strcpy(buf, "0");
         goto done;
@@ -208,9 +215,9 @@ void approx_format(mp_rat r, int digits, char *buf) {
     every digit*/
     /*OwO*/
     exp = (int)mp_int_string_len(n, 10) - (int)mp_int_string_len(d, 10);
-    while(compare_pow10(n, d, exp) < 0)
+    while(!pcas_oom && compare_pow10(n, d, exp) < 0)
         exp--;
-    while(compare_pow10(n, d, exp + 1) >= 0)
+    while(!pcas_oom && compare_pow10(n, d, exp + 1) >= 0)
         exp++;
 
     /*digits significant digits, m in [10^(digits-1), 10^digits). rounding can

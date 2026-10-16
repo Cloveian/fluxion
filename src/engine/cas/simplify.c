@@ -47,6 +47,14 @@ bool simplify_commutative(pcas_ast_t *e) {
 /*Change a to b and delete b*/
 void replace_node(pcas_ast_t *a, pcas_ast_t *b) {
 
+    if(pcas_cancelled) { /*Fluxion: stop here, the answer's being thrown away. b is ours to free*/
+        ast_Cleanup(b);
+        return;
+    }
+
+    if(a == NULL || b == NULL) /*Fluxion: oom*/
+        return;
+
     if(a->type == NODE_OPERATOR) {
 
         while(opbase(a) != NULL) {
@@ -65,9 +73,8 @@ void replace_node(pcas_ast_t *a, pcas_ast_t *b) {
     free(b);
 }
 
-/*Fluxion: see cas.h*/
+/*Fluxion: see cas.h. pcas_cancelled lives in error.c now, out of memory sets it too*/
 bool (*pcas_poll)(void) = NULL;
-bool pcas_cancelled = false;
 
 bool pcas_check(void) {
     if(!pcas_cancelled && pcas_poll != NULL && pcas_poll())
@@ -80,11 +87,19 @@ bool simplify_rational(pcas_ast_t *e) {
     unsigned i;
     bool changed = false;
 
+    if(pcas_cancelled) /*Fluxion: stop here, the answer's being thrown away*/
+        return false;
+
+    if(e == NULL) /*Fluxion: oom*/
+        return false;
+
     if(e->type != NODE_OPERATOR)
         return false;
 
     for(i = 0; i < ast_ChildLength(e); i++) {
         pcas_ast_t *child = ast_ChildGet(e, i);
+        if(pcas_cancelled) /*Fluxion: replace_node does nothing now, the i-- below would spin forever*/
+            break;
 
         if(isoptype(child, OP_DIV)) {
             pcas_ast_t *child_num, *child_den;
@@ -179,6 +194,9 @@ bool simplify_normalize(pcas_ast_t *e) {
     pcas_ast_t *child;
     bool changed = false;
 
+    if(pcas_cancelled) /*Fluxion: stop here, the answer's being thrown away*/
+        return false;
+
     if(e->type == NODE_OPERATOR) {
 
         for(child = opbase(e); child != NULL; child = child->next)
@@ -235,6 +253,9 @@ bool has_imaginary_node(pcas_ast_t *e) {
 
 /*Expects everything to be completely simplified*/
 bool is_negative_for_sure(pcas_ast_t *a) {
+    if(a == NULL) /*Fluxion: oom*/
+        return false;
+
     if(a->type == NODE_NUMBER && mp_rat_compare_zero(a->op.num) < 0)
         return true;
 
@@ -252,6 +273,9 @@ bool is_negative_for_sure(pcas_ast_t *a) {
 
 /*Returns true if changed. Expects completely simplified.*/
 bool absolute_val(pcas_ast_t *e) {
+    if(e == NULL) /*Fluxion: oom*/
+        return false;
+
     if(e->type == NODE_NUMBER && mp_rat_compare_zero(e->op.num) < 0) {
         mp_rat_abs(e->op.num, e->op.num);
         return true;
@@ -273,6 +297,12 @@ bool absolute_val(pcas_ast_t *e) {
 int compare(pcas_ast_t *a, pcas_ast_t *b, bool add) {
     pcas_ast_t *temp;
     int multiplier = 1;
+
+    if(pcas_cancelled) /*Fluxion: stop here, the answer's being thrown away*/
+        return 0;
+
+    if(a == NULL || b == NULL) /*Fluxion: oom*/
+        return 0;
 
     if(isoptype(b, OP_MULT)) {
         temp = a;
@@ -764,6 +794,9 @@ bool simplify_periodic(pcas_ast_t *e) {
 
 bool simplify_identities(pcas_ast_t *e, unsigned short flags) {
     bool changed = false;
+
+    if(pcas_cancelled) /*Fluxion: stop here, the answer's being thrown away*/
+        return false;
 
     if(flags & SIMP_ID_GENERAL)
         changed |= id_ExecuteTable(e, id_general, ID_NUM_GENERAL, true);

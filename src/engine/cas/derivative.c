@@ -36,6 +36,12 @@ pcas_id_t id_deriv_product_rule = {"deriv(AB,X,T", "Aderiv(B,X,T)+Bderiv(A,X,T"}
 
 bool is_constant(pcas_ast_t *e, pcas_ast_t *respect_to) {
 
+    if(pcas_cancelled) /*Fluxion: stop here, the answer's being thrown away*/
+        return false;
+
+    if(e == NULL) /*Fluxion: oom. true so every caller takes its cheap branch*/
+        return true;
+
     if(ast_Compare(e, respect_to))
         return false;
 
@@ -55,6 +61,9 @@ bool eval_derivative_nodes(pcas_ast_t *e) {
     pcas_ast_t *child;
 
     bool changed = false;
+
+    if(pcas_cancelled) /*Fluxion: stop here, the answer's being thrown away*/
+        return false;
 
     if(e->type != NODE_OPERATOR)
         return false;
@@ -134,6 +143,11 @@ bool eval_derivative_nodes(pcas_ast_t *e) {
 
 void derivative(pcas_ast_t *e, pcas_ast_t *respect_to, pcas_ast_t *eval_at) {
     pcas_ast_t *deriv_node = ast_MakeOperator(OP_DERIV);
+
+    if(pcas_cancelled) { /*Fluxion: stop here, the answer's being thrown away*/
+        ast_Cleanup(deriv_node);
+        return;
+    }
 
     ast_ChildAppend(deriv_node, ast_Copy(e));           /*value to take the derivative of*/
     ast_ChildAppend(deriv_node, ast_Copy(respect_to));  /*variable in respect to*/

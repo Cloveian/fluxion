@@ -104,6 +104,10 @@ static bool read_term(pcas_ast_t *term, Symbol var, coefs_t *p) {
     pcas_ast_t *coef = ast_MakeOperator(OP_MULT);
     int k = 0;
 
+    if(pcas_cancelled || coef == NULL) { /*oom, or already unwinding*/
+        ast_Cleanup(coef);
+        return false;
+    }
     ast_ChildAppend(coef, number(1));
     if(!split_term(term, var, coef, &k)) {
         ast_Cleanup(coef);
@@ -137,6 +141,9 @@ static bool read_poly(pcas_ast_t *e, Symbol var, coefs_t *p) {
     for(i = 0; i < 3; i++)
         p->c[i] = NULL;
 
+    if(e == NULL || pcas_cancelled) /*oom, or already unwinding*/
+        return false;
+
     if(isoptype(e, OP_ADD)) {
         for(term = ast_ChildGet(e, 0); ok && term != NULL; term = term->next)
             ok = read_term(term, var, p);
@@ -152,6 +159,10 @@ static bool read_poly(pcas_ast_t *e, Symbol var, coefs_t *p) {
     for(i = 0; i < 3; i++)
         if(p->c[i] != NULL)
             simplify(p->c[i], SIMP_SOLVE);
+    if(pcas_cancelled) { /*coefs half simplified, nobody downstream can read those*/
+        coefs_free(p);
+        return false;
+    }
     return true;
 }
 
@@ -184,12 +195,28 @@ static pcas_ast_t *quadratic_root(mp_rat mid, mp_rat q, int sign) {
     return r;
 }
 
+/*out[n] = r, unless r never got made (oom). the sweep found sort_roots tripping on
+a NULL in the middle of the list*/
+static int add_root(pcas_ast_t **out, int n, pcas_ast_t *r) {
+    if(r != NULL)
+        out[n++] = r;
+    return n;
+}
+
 /*real roots of a*X^2 + b*X + c, all numbers, added at out[n]. returns the new count.*/
 static int solve_quadratic(coefs_t *p, pcas_ast_t **out, int n) {
-    mp_rat a = num_Copy(p->c[2]->op.num);
-    mp_rat b = is_zero(p->c[1]) ? num_FromInt(0) : num_Copy(p->c[1]->op.num);
-    mp_rat c = is_zero(p->c[0]) ? num_FromInt(0) : num_Copy(p->c[0]->op.num);
-    mp_rat mid = num_FromInt(0), q = num_FromInt(0), t = num_FromInt(0);
+    mp_rat a, b, c, mid, q, t;
+
+    /*if read_poly got cut short (cancel, oom) the coefs are still sums, and
+    op.num off an operator node is a garbage pointer. the sweep found that one*/
+    if(pcas_cancelled)
+        return SOLVE_UNKNOWN;
+    a = num_Copy(p->c[2]->op.num);
+    b = is_zero(p->c[1]) ? num_FromInt(0) : num_Copy(p->c[1]->op.num);
+    c = is_zero(p->c[0]) ? num_FromInt(0) : num_Copy(p->c[0]->op.num);
+    mid = num_FromInt(0);
+    q = num_FromInt(0);
+    t = num_FromInt(0);
 
     /*mid = -b/2a, q = mid^2 - c/a (= (b^2 - 4ac)/4a^2)*/
     mp_rat_set_value(t, -2, 1);
@@ -200,10 +227,10 @@ static int solve_quadratic(coefs_t *p, pcas_ast_t **out, int n) {
     mp_rat_sub(q, t, q);
 
     if(mp_rat_compare_zero(q) == 0) {
-        out[n++] = quadratic_root(mid, q, 0);
+        n = add_root(out, n, quadratic_root(mid, q, 0));
     } else if(mp_rat_compare_zero(q) > 0) {
-        out[n++] = quadratic_root(mid, q, -1);     /*smallest first*/
-        out[n++] = quadratic_root(mid, q, 1);
+        n = add_root(out, n, quadratic_root(mid, q, -1)); /*smallest first*/
+        n = add_root(out, n, quadratic_root(mid, q, 1));
     }
 
     num_Cleanup(a);
@@ -220,6 +247,9 @@ new count, or SOLVE_UNKNOWN.*/
 static int solve_factor(pcas_ast_t *f, Symbol var, pcas_ast_t **out, int n) {
     pcas_ast_t *child;
     coefs_t p;
+
+    if(pcas_cancelled || f == NULL) /*oom, or already unwinding*/
+        return SOLVE_UNKNOWN;
 
     if(!has_var(f, var))
         return n;
@@ -238,7 +268,7 @@ static int solve_factor(pcas_ast_t *f, Symbol var, pcas_ast_t **out, int n) {
         return SOLVE_UNKNOWN;
 
     if(p.deg == 1)
-        out[n++] = linear_root(&p);
+        n = add_root(out, n, linear_root(&p));
     else if(p.deg == 2 && p.numeric)
         n = solve_quadratic(&p, out, n);
     else
@@ -267,9 +297,16 @@ int solve(pcas_ast_t *expr, Symbol var, pcas_ast_t **out) {
     coefs_t p;
     int n = SOLVE_UNKNOWN, i;
 
+    if(e == NULL) /*Fluxion: oom*/
+        return SOLVE_UNKNOWN;
+
     simplify(e, SIMP_SOLVE);
     expand(e, EXP_ALL);
     simplify(e, SIMP_SOLVE);
+    if(pcas_cancelled) { /*half expanded, don't read it as a polynomial*/
+        ast_Cleanup(e);
+        return SOLVE_UNKNOWN;
+    }
 
     if(read_poly(e, var, &p)) {
         if(p.deg == 0) {
@@ -286,6 +323,9 @@ int solve(pcas_ast_t *expr, Symbol var, pcas_ast_t **out) {
         }
         coefs_free(&p);
     }
+
+    if(pcas_cancelled) /*half a root list isn't an answer either*/
+        n = SOLVE_UNKNOWN;
 
     if(n == SOLVE_UNKNOWN) {
         /*roots found before giving up aren't all of them*/

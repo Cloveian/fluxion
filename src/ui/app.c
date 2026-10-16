@@ -286,7 +286,7 @@ static void run_solve(char *src, box_t *in) {
     ast_Cleanup(e);
 
     if(pcas_cancelled)
-        push(in, NULL, "cancelled", ms);
+        push(in, NULL, pcas_oom ? "out of memory" : "cancelled", ms);
     else if(n == SOLVE_UNKNOWN)
         push(in, NULL, "can't solve this one yet", ms);
     else if(n == SOLVE_ALL)
@@ -373,8 +373,9 @@ static bool run(editor_t *line) {
     }
     simplify_canonical_form(e, canon_flags);
 
-    /* cancelled: the tree is half simplified, nobody wants to see that lol */
-    push(in, pcas_cancelled ? NULL : layout_build(e, &draw_font), pcas_cancelled ? "cancelled" : NULL,
+    /* cancelled (or out of memory): the tree is half simplified, nobody wants to see that lol */
+    push(in, pcas_cancelled ? NULL : layout_build(e, &draw_font),
+         !pcas_cancelled ? NULL : pcas_oom ? "out of memory" : "cancelled",
          (unsigned long)((clock() - start) * 1000 / CLOCKS_PER_SEC));
     ast_Cleanup(e);
     return true;
@@ -1563,6 +1564,7 @@ static bool busy_poll(void) {
 
 static void busy_start(void) {
     pcas_cancelled = false;
+    pcas_oom = false;
     busy_frame = 0;
     busy_next = clock() + CLOCKS_PER_SEC / 10;
     draw_working();

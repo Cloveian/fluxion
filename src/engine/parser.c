@@ -112,7 +112,11 @@ mp_rat read_num(const uint8_t *equation, unsigned index, unsigned length, struct
         else break;
     }
 
-    buffer = malloc(size + 1);
+    buffer = pcas_malloc(size + 1);
+    if(buffer == NULL) { /*Fluxion: oom. a NULL num is caught when the node gets made*/
+        *consumed = size; /*the counting pass in _tokenize adds this blind (found the hard way)*/
+        return NULL;
+    }
 
     /*Copy digits, but replace Ti's '.' with ascii '.'*/
     for (i = 0; i < size; i++) {
@@ -244,7 +248,9 @@ pcas_error_t tokenize(tokenizer_t *t, const uint8_t *equation, unsigned length, 
         return err;
 
     /*Malloc and fill tokens*/
-    t->tokens = malloc(t->amount * sizeof(token_t));
+    t->tokens = pcas_malloc(t->amount * sizeof(token_t));
+    if(t->tokens == NULL) /*Fluxion: oom*/
+        return E_OUT_OF_MEMORY;
     err = _tokenize(t->tokens, equation, length, &t->amount, lookup);
 
     return err;
@@ -309,6 +315,9 @@ uint8_t operand_count(TokenType type) {
 
 /*Changes the TokenType into the OperatorType and fixes operands*/
 void translate(pcas_ast_t *e) {
+
+    if(e == NULL) /*Fluxion: oom, collapse_precedence bails right after*/
+        return;
 
     switch((int)optype(e)) {
     case TOK_PLUS:       optype(e) = OP_ADD; break;
@@ -427,6 +436,8 @@ bool collapse_precedence(pcas_stack_t *operators, pcas_stack_t *expressions, Tok
         /*Store the token type into the operand type. This will
         Be fixed in make_operator*/
         collapsed = ast_MakeOperator((OperatorType) op->type);
+        if(collapsed == NULL) /*Fluxion: oom. operands stay on the stack so parse_assert frees them*/
+            return false;
         for(i = 0; i < operand_count(op->type); i++) {
             pcas_ast_t *operand = stack_Pop(expressions);
 
@@ -467,7 +478,8 @@ bool collapse_all(pcas_stack_t *operators, pcas_stack_t *expressions) {
                                                             \
     free(tokenizer.tokens);                                 \
                                                             \
-    *e = err;                                               \
+    /*Fluxion: a failed check is usually oom's fault if it's set*/\
+    *e = pcas_oom ? E_OUT_OF_MEMORY : (err);                \
     return NULL;                                            \
 }
 
@@ -497,11 +509,12 @@ pcas_ast_t *parse(const uint8_t *equation, unsigned length, struct Identifier *l
             stack_Push(&operators, tok);
         } else if(tok->type == TOK_NUMBER || tok->type == TOK_SYMBOL) {
 
-            if(tok->type == TOK_NUMBER) {
-                stack_Push(&expressions, ast_MakeNumber(tok->op.num));
-            } else {
-                stack_Push(&expressions, ast_MakeSymbol(tok->op.symbol));
-            }
+            /*Fluxion: never push a NULL, the cleanup loop in parse_assert would
+            stop at it and leak everything under it*/
+            pcas_ast_t *node = tok->type == TOK_NUMBER ? ast_MakeNumber(tok->op.num)
+                                                       : ast_MakeSymbol(tok->op.symbol);
+            parse_assert(node != NULL, E_OUT_OF_MEMORY);
+            stack_Push(&expressions, node);
 
             if(should_multiply_by_next_token(&tokenizer, i)) {
                 parse_assert(collapse_precedence(&operators, &expressions, TOK_MULTIPLY), E_PARSE_BAD_OPERATOR);
@@ -552,6 +565,9 @@ pcas_ast_t *parse(const uint8_t *equation, unsigned length, struct Identifier *l
     it with the rest (1,2 and logb(X,2,3) leaked it)*/
     parse_assert(operators.top == 0, E_GENERIC);
     parse_assert(expressions.top <= 1, E_GENERIC);
+    /*Fluxion: a NULL from oom can get absorbed on the way (ChildInsert skips it),
+    leaving a tree that looks fine but isn't*/
+    parse_assert(!pcas_oom, E_OUT_OF_MEMORY);
 
     root = stack_Pop(&expressions);
 

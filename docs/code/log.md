@@ -1,5 +1,15 @@
 # Log
 
+## 2026-10-15 - out of memory, bold / italic, E
+
+- running out of memory doesn't crash anymore. every malloc in the engine goes through `pcas_malloc`, a NULL sets `pcas_oom` and the cancel flag, so it all unwinds like a cancel and the app says "out of memory". imath hands out a static number instead of NULL: the cas code makes scratch numbers and feeds them to imath straight away, so that was ~400 crash sites in one go
+- found the rest with fault injection, `PCAS_FAIL_ALLOC=n` fails the nth allocation on the PC. first sweep was 12600 runs: 22 crash sites, 420 imath asserts, and one heap overflow that was my own bug (`read_num` bailed before setting `*consumed`, oof). guarded the sites, then made every recursive function return early once the flag's set, which cas.h always claimed they did. had to, some inputs allocate 16000+ times and guarding derefs one at a time was never going to end
+- +834 bytes on the calculator. haven't timed the extra checks on it yet
+- `[2nd][,]` types E, `2E3` -> 2000
+- the form key: `[2nd][enter]` cycles by hand -> expanded -> factored -> decimal, `[alpha][enter]` jumps to decimal and back. it's a mode, it redoes the last answer (runs its input again from the scratch editor, so a half typed line is left alone) and shows in the top bar. decimal is `approx()` plus the layout printing numbers as 0.333333. that's the last four form rows on the scoreboard, 18 of 19 now
+- bold and italic in the draw layer (`draw_text_styled`, `box_t.style`). nothing uses them yet and widths aren't synced, so styled text is a pixel or two off. `[2nd][clear]` clears the line like `[on][clear]`
+- roadmap written up with the decisions so far: names (multi-letter vars and typeable functions are one thing, bold = has a value), RAM appvars for storage, the by-hand default, cot/sec/csc as real functions
+
 ## 2026-10-15 - math popup, catalog, history browsing
 
 - holding 2nd / alpha with another key works on the calculator now. the scan only finds the first key down and those two come first, so holding alpha hid the arrow. they're read on their own like `[on]` now, a tap counts on release

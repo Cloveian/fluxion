@@ -23,6 +23,10 @@ static uint8_t precedence_type(OperatorType type) {
 }
 
 static uint8_t precedence(pcas_ast_t *e) {
+    if(pcas_cancelled) /*Fluxion: stop here, the answer's being thrown away*/
+        return 0;
+    if(e == NULL) /*Fluxion: oom*/
+        return 0;
     if(e->type == NODE_OPERATOR)
         return precedence_type(optype(e));
     return 255;
@@ -70,12 +74,21 @@ pcas_ast_t *leftmost(pcas_ast_t *e) {
 /*Returns length of buffer. Writes to buffer is buffer != NULL*/
 static unsigned _to_binary(pcas_ast_t *e, uint8_t *data, unsigned index, struct Identifier *lookup, pcas_error_t *err) {
 
+    if(pcas_cancelled) /*Fluxion: stop here, the answer's being thrown away*/
+        return index;
+
+    if(e == NULL) /*Fluxion: oom*/
+        return index;
+
     switch(e->type) {
     case NODE_NUMBER: {
         char *buffer;
         unsigned i;
 
         buffer = num_ToString(e->op.num, 6);
+
+        if(buffer == NULL) /*Fluxion: oom*/
+            break;
 
         for(i = 0; i < strlen(buffer); i++) {
             uint8_t c = (uint8_t)buffer[i];
@@ -107,10 +120,15 @@ static unsigned _to_binary(pcas_ast_t *e, uint8_t *data, unsigned index, struct 
             pcas_ast_t *child;
             pcas_ast_t *e_copy = ast_Copy(e);
 
+            if(e_copy == NULL) /*Fluxion: oom*/
+                break;
+
             for(i = 0; i < ast_ChildLength(e_copy) - 1; i++) {
                 pcas_ast_t *next;
 
                 child = ast_ChildGet(e_copy, i);
+                if(child == NULL) /*Fluxion: oom*/
+                    break;
                 next = child->next;
 
                 if(need_paren(e_copy, child)) add_token(TOK_OPEN_PAR);
@@ -142,6 +160,8 @@ static unsigned _to_binary(pcas_ast_t *e, uint8_t *data, unsigned index, struct 
                 pcas_ast_t *next;
 
                 child = ast_ChildGet(e, i);
+                if(child == NULL) /*Fluxion: oom*/
+                    break;
                 next = child->next;
 
                 /*Always put parentheses around root operator unless it is sqrt(
@@ -172,6 +192,8 @@ static unsigned _to_binary(pcas_ast_t *e, uint8_t *data, unsigned index, struct 
             }
 
             child = ast_ChildGetLast(e);
+            if(child == NULL) /*Fluxion: oom*/
+                break;
             root_special_case = isoptype(child, OP_ROOT) && !is_ast_int(ast_ChildGet(child, 0), 2);
 
             if(!is_ast_int(child, 1)) {
@@ -187,6 +209,9 @@ static unsigned _to_binary(pcas_ast_t *e, uint8_t *data, unsigned index, struct 
 
             a = ast_ChildGet(e, 0);
             b = ast_ChildGet(e, 1);
+
+            if(a == NULL || b == NULL) /*Fluxion: oom*/
+                break;
 
             if(need_paren(e, a)) add_token(TOK_OPEN_PAR);
             index = _to_binary(a, data, index, lookup, err);
@@ -204,6 +229,9 @@ static unsigned _to_binary(pcas_ast_t *e, uint8_t *data, unsigned index, struct 
 
             a = ast_ChildGet(e, 0);
             b = ast_ChildGet(e, 1);
+
+            if(a == NULL || b == NULL) /*Fluxion: oom*/
+                break;
 
             if(is_ast_int(a, 2)) {
                 add_token(TOK_SQRT);
@@ -232,6 +260,9 @@ static unsigned _to_binary(pcas_ast_t *e, uint8_t *data, unsigned index, struct 
 
             a = ast_ChildGet(e, 0);
             b = ast_ChildGet(e, 1);
+
+            if(a == NULL || b == NULL) /*Fluxion: oom*/
+                break;
 
             if(a->type == NODE_SYMBOL && a->op.symbol == SYM_EULER) {
                 add_token(TOK_LN);
@@ -273,6 +304,9 @@ static unsigned _to_binary(pcas_ast_t *e, uint8_t *data, unsigned index, struct 
             pcas_ast_t *a;
 
             a = ast_ChildGet(e, 0);
+
+            if(a == NULL) /*Fluxion: oom*/
+                break;
 
             if(need_paren(e, a)) add_token(TOK_OPEN_PAR);
             index = _to_binary(a, data, index, lookup, err);
@@ -325,7 +359,12 @@ uint8_t *export_to_binary(pcas_ast_t *e, unsigned *len, struct Identifier *looku
         return NULL;
     }
 
-    data = malloc(*len);
+    data = pcas_malloc(*len);
+    if(data == NULL) { /*Fluxion: oom*/
+        *len = 0;
+        *err = E_OUT_OF_MEMORY;
+        return NULL;
+    }
     _to_binary(e, data, 0, lookup, err);
 
     return data;

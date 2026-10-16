@@ -209,6 +209,12 @@ void dict_Cleanup(Dictionary dict) {
 bool divide_numerical_constants(pcas_ast_t *id, pcas_ast_t *e) {
     pcas_ast_t *child;
 
+    if(pcas_cancelled) /*Fluxion: stop here, the answer's being thrown away*/
+        return false;
+
+    if(id == NULL || e == NULL) /*Fluxion: oom*/
+        return false;
+
     if(!isoptype(id, OP_MULT))
         return false;
 
@@ -233,6 +239,12 @@ bool divide_numerical_constants(pcas_ast_t *id, pcas_ast_t *e) {
 /*Fills in id->to with discovered values from dictionary */
 void fill(pcas_ast_t *to, Dictionary dict) {
 
+    if(pcas_cancelled) /*Fluxion: stop here, the answer's being thrown away*/
+        return;
+
+    if(to == NULL) /*Fluxion: oom*/
+        return;
+
     if(to->type == NODE_SYMBOL) {
         if(dict_Get(dict, to) != NULL)
             replace_node(to, ast_Copy(dict_Get(dict, to)));
@@ -246,6 +258,9 @@ void fill(pcas_ast_t *to, Dictionary dict) {
 }
 
 bool matches(pcas_ast_t *id, pcas_ast_t *e, Dictionary dict) {
+
+    if(pcas_cancelled) /*Fluxion: stop here, the answer's being thrown away*/
+        return false;
 
     if(id->type == NODE_SYMBOL && id->op.symbol < SYM_IMAG) {
         if(id->op.symbol == 'N') {
@@ -284,6 +299,13 @@ bool matches(pcas_ast_t *id, pcas_ast_t *e, Dictionary dict) {
 
             id_copy = ast_Copy(id);
             e_copy = ast_Copy(e);
+
+            if(id_copy == NULL || e_copy == NULL) { /*Fluxion: oom*/
+                dict_Cleanup(dict_copy);
+                ast_Cleanup(id_copy);
+                ast_Cleanup(e_copy);
+                return false;
+            }
 
             /*Divide numerical constants from each side.*/
             while(divide_numerical_constants(id_copy, e_copy));
@@ -343,8 +365,16 @@ bool matches(pcas_ast_t *id, pcas_ast_t *e, Dictionary dict) {
 
             /*Loop through all children and match them and record which children got matched.*/
 
-            matched_e_children = calloc(ast_ChildLength(e_copy), sizeof(bool));
-            matched_id_children = calloc(ast_ChildLength(id_copy), sizeof(bool));
+            matched_e_children = pcas_calloc(ast_ChildLength(e_copy), sizeof(bool));
+            matched_id_children = pcas_calloc(ast_ChildLength(id_copy), sizeof(bool));
+            if(matched_e_children == NULL || matched_id_children == NULL) { /*Fluxion: oom*/
+                free(matched_e_children);
+                free(matched_id_children);
+                dict_Cleanup(dict_copy);
+                ast_Cleanup(id_copy);
+                ast_Cleanup(e_copy);
+                return false;
+            }
 
             do {
                 matched = false;
@@ -484,6 +514,9 @@ bool id_Execute(pcas_ast_t *e, pcas_id_t *id, bool recursive) {
     pcas_ast_t *dict[AMOUNT_SYMBOLS] = {0};
     bool changed = false;
 
+    if(pcas_cancelled) /*Fluxion: stop here, the answer's being thrown away*/
+        return false;
+
     if(id->from == NULL || id->to == NULL) {
         if(!id_Load(id)) {
             LOG(("Could not parse identity. from=%s to=%s", id->from_text, id->to_text));
@@ -611,6 +644,9 @@ bool id_ExecuteTable(pcas_ast_t *e, pcas_id_t *table, unsigned table_len, bool r
     unsigned i;
     bool changed = false;
     unsigned long have;
+
+    if(pcas_cancelled) /*Fluxion: stop here, the answer's being thrown away*/
+        return false;
 
     /*Fluxion: upstream re-simplified after every identity, even ones that didn't
     match (2X+X+X*X took ~15 s on the calculator, oof). for efficiency, simplfy once up front,
