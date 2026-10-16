@@ -259,6 +259,27 @@ static int nodes(const pcas_ast_t *e) {
     return n;
 }
 
+/* would anyone multiply this out by hand. a cube at most, and not a page of it.
+   (x+1)^7 was minutes on the calculator before expand collected as it went,
+   and it'd be silly to pay that just to find out it didn't get smaller */
+static bool worth_expanding(const pcas_ast_t *e) {
+    const pcas_ast_t *k;
+
+    if(e->type != NODE_OPERATOR)
+        return true;
+    if(optype(e) == OP_POW) {
+        const pcas_ast_t *base = e->op.operator.base, *exp = base != NULL ? base->next : NULL;
+
+        if(base != NULL && base->type == NODE_OPERATOR && exp != NULL && exp->type == NODE_NUMBER
+           && mp_rat_compare_value(exp->op.num, 3, 1) > 0)
+            return false;
+    }
+    for(k = e->op.operator.base; k != NULL; k = k->next)
+        if(!worth_expanding(k))
+            return false;
+    return true;
+}
+
 /* the form on top of a plain simplify, the same steps the commands take */
 static void apply_form(pcas_ast_t *e) {
     switch(form) {
@@ -279,8 +300,11 @@ static void apply_form(pcas_ast_t *e) {
         /* by hand. (x+1)^2 - (x-1)^2 is 4x and (x+2)(x-2) is x^2 - 4, but (x+1)^2
            stays as it is: multiply out, keep it only if it got smaller. the
            nspire does about the same thing */
-        pcas_ast_t *x = ast_Copy(e);
+        pcas_ast_t *x;
 
+        if(nodes(e) > 60 || !worth_expanding(e))
+            break;
+        x = ast_Copy(e);
         if(x == NULL)
             break;
         expand(x, EXP_ALL);
