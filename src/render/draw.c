@@ -13,16 +13,24 @@ const font_t *draw_label_font(void) {
     return draw_font_for(draw_font.base > 0 ? draw_font.base - 1 : 0);
 }
 
-int draw_text_width(const char *text, const font_t *font) {
+/* bold smears a pixel right so every glyph gets one more, italic hangs the top
+   row out past the end. same sums draw_text_styled moves by, so the boxes fit */
+int draw_text_width_styled(const char *text, const font_t *font, font_style_t style) {
     int w = 0;
 
     for(; *text != '\0'; text++)
-        w += font->advance[(unsigned char)*text & 0x7F];
+        w += font->advance[(unsigned char)*text & 0x7F] + (style & STYLE_BOLD ? 1 : 0);
+    if(style & STYLE_ITALIC)
+        w += font->ascent / 3;
     return w;
 }
 
-static int text_width(const char *text, unsigned char size) {
-    return draw_text_width(text, draw_font_for(size));
+int draw_text_width(const char *text, const font_t *font) {
+    return draw_text_width_styled(text, font, STYLE_NORMAL);
+}
+
+static int text_width(const char *text, unsigned char size, unsigned char style) {
+    return draw_text_width_styled(text, draw_font_for(size), (font_style_t)style);
 }
 
 layout_font_t draw_font = {
@@ -54,8 +62,8 @@ void draw_text(int x, int top, const char *text, const font_t *font) {
 /* each glyph row as runs of horizontal lines (way faster than per-pixel, dont touch).
    bold ORs each row onto itself shifted a pixel, same trick bdf2c bakes into the
    constant e/i. italic shears each row by how far it is from the baseline, so the top
-   leans right and descenders lean left. advances don't change, so a styled run can
-   come out a touch wide (not chasing that pixel yet) */
+   leans right and descenders lean left. bold moves on one more per glyph and
+   draw_text_width_styled counts the same, so the boxes fit */
 void draw_text_styled(int x, int top, const char *text, const font_t *font, font_style_t style) {
     int height = font->ascent + font->descent;
 
@@ -89,7 +97,7 @@ void draw_text_styled(int x, int top, const char *text, const font_t *font, font
             }
         }
 
-        x += font->advance[code];
+        x += font->advance[code] + (style & STYLE_BOLD ? 1 : 0);
     }
 }
 

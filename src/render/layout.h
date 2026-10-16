@@ -94,7 +94,7 @@ typedef struct box {
 #define LAYOUT_MAX_SIZES 8
 
 typedef struct {
-    int (*text_width)(const char *text, unsigned char size);
+    int (*text_width)(const char *text, unsigned char size, unsigned char style); /* style: a draw.h font_style_t, bold is wider */
     unsigned char sizes; /* how many sizes there are, 0 being smallest */
     unsigned char base; /* the normal-math size, nothing nested */
     unsigned char ascent[LAYOUT_MAX_SIZES], descent[LAYOUT_MAX_SIZES];
