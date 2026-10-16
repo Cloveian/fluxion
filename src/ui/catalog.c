@@ -137,7 +137,7 @@ ITEM(it_npr,      "nPr",   NULL, ITEM_FUNCTION, NULL, "nPr($,$)", HAVE_YES, "n f
 
 /* Templates */
 ITEM(it_frac,     "n/d",   NULL, ITEM_TEMPLATE, "[alpha][y=]", "($)/($)", HAVE_YES, "empty fraction, cursor in the top",
-     "an empty fraction. type the top, then move down to type the bottom")
+     "an empty fraction. type the top, then move down to type the bottom. [alpha][x,t,theta,n] does it too")
 ITEM(it_parens,   "( )",   NULL, ITEM_TEMPLATE, NULL, "($)",       HAVE_YES, NULL,
      "A pair of parentheses with the cursor inside, to group things")
 ITEM(it_piecewise, "piecewise", NULL, ITEM_TEMPLATE, NULL, NULL,   HAVE_NO, "no conditions in the engine",

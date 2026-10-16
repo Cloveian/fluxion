@@ -9,6 +9,9 @@
                                    quadratic by the formula, or a cubic by cardano / the
                                    cos form. a quartic or higher factor left over means
                                    it can't be solved (yet), never a partial answer.
+                                   one exception, a cardano cubic only gives its real
+                                   root even with complex on, the pair is too slow to
+                                   draw on the calculator for now.
 
     Your mom
 */
