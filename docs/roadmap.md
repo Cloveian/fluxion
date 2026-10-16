@@ -32,11 +32,31 @@
 
 ## later
 
+- [ ] Inequalities
+- [ ] Slope, distance and midpoint commands
+- [ ] Parallel and perpendicular lines
+- [ ] Transformations
+- [ ] Geometry formulas (area, perimeter, volume, angles)
+- [ ] Probability (nCr, nPr)
+- [ ] GCD, LCM and prime factorisation
+- [ ] Percent
+- [ ] Defining and calling functions like f(x)
+- [ ] Domain and range
+- [ ] Factoring with more than one variable (x²−y²)
+- [ ] Nonlinear systems
+- [ ] Cubics with no rational root
+- [ ] Complex roots in solve
+- [ ] Slant asymptotes
+- [ ] Unit circle display
+- [ ] Triangle solver
+- [ ] Show-the-work steps
+
+## more-later
+
 - [ ] Sets `{}`.
 - [ ] Matrices `[]`.
 - [ ] Expanding formula-based functions into formulas.
 - [ ] Unit conversion.
 - [ ] Wizards.
-- [ ] Geometry stuff (visuals?). needs breaking into real formulas (area, distance, slope...).
 - [ ] Graphs.
 - [ ] Steps to solve. show the work..
