@@ -35,7 +35,6 @@
 
 #define MARGIN      4
 #define GAP         4
-#define BAR_H       15          /* soft-key labels */
 #define HISTORY_MAX 16          /* enough for now, old ones just scroll off the top */
 
 typedef struct {
@@ -1295,7 +1294,26 @@ static bool cat_pick(int i) {
     return true;
 }
 
-static page_t catalog_page = { "Catalog", 0, cat_label, cat_keys, cat_help, cat_pick, cat_header };
+/* the soft keys jump to a section. Keys gets no key, five's all there is, and
+   it's the one you'd scroll through anyway */
+static const char *const cat_softkeys[5] = { "Algebra", "Calculus", "Functions", "Templates", "All" };
+
+/* first row of the k-th section, Keys not counted */
+static int cat_jump(int k) {
+    int i, seen = 0;
+
+    for(i = 0; i < cat_count; i++) {
+        if(!cat_header(i) || cat_order[i] == CAT_KEYS)
+            continue;
+        if(seen++ == k)
+            return i + 1 < cat_count && !cat_header(i + 1) ? i + 1 : -1;
+    }
+    return -1;
+}
+
+static page_t catalog_page = {
+    "Catalog", 0, cat_label, cat_keys, cat_help, cat_pick, cat_header, cat_softkeys, cat_jump
+};
 
 /* where an item sits in catalog[], folders only have the pointers */
 static int cat_index(const item_t *it) {
@@ -1901,22 +1919,12 @@ static int cursor_x(const box_t *b, int x) {
 }
 
 static void draw_bar(void) {
-    const font_t *font = draw_font_for(0);     /* smallest, five names have to fit somehow */
-    int i, w = SCREEN_W / FOLDER_COUNT, top = SCREEN_H - BAR_H;
+    const char *names[FOLDER_COUNT];
+    int i;
 
-    for(i = 0; i < FOLDER_COUNT; i++) {
-        const char *name = folders[i].name;
-        int x = i * w + (w - draw_text_width(name, font)) / 2;
-
-        if(i == menu) {
-            screen_color(COL_ACCENT);
-            screen_fill(i * w + 1, top, w - 2, BAR_H);
-            screen_color(COL_BG);
-        } else {
-            screen_color(COL_DIM);
-        }
-        draw_text(x, top + (BAR_H - font->ascent - font->descent) / 2, name, font);
-    }
+    for(i = 0; i < FOLDER_COUNT; i++)
+        names[i] = folders[i].name;
+    draw_softkeys(names, menu);
 }
 
 static void draw_menu(void) {

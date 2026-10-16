@@ -62,7 +62,7 @@ static bool mode_pick(int i) {
     return false;
 }
 
-static const page_t mode_page = { "mode", ROW_COUNT, mode_label, mode_value, mode_help, mode_pick, NULL };
+static const page_t mode_page = { "mode", ROW_COUNT, mode_label, mode_value, mode_help, mode_pick, NULL, NULL, NULL };
 
 void mode_open(void) {
     page_open(&mode_page);
