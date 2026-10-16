@@ -21,6 +21,7 @@ typedef struct {
     const char *(*value)(int i); /* NULL for none, on the page or for a row */
     const char *(*help)(int i); /* same */
     bool (*pick)(int i); /* [enter], true closes the page */
+    bool (*header)(int i); /* section title rows the cursor hops over, NULL if none */
 } page_t;
 
 void page_open(const page_t *page);
