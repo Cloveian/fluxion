@@ -5,11 +5,12 @@
 #include "settings.h"
 
 /* rows, in the order they show */
-enum { ROW_ANGLE, ROW_FORM, ROW_RATIONALIZE, ROW_COUNT };
+enum { ROW_ANGLE, ROW_TRIG, ROW_FORM, ROW_RATIONALIZE, ROW_COUNT };
 
 static const char *mode_label(int i) {
     switch(i) {
     case ROW_ANGLE:       return "angle";
+    case ROW_TRIG:        return "trig answers";
     case ROW_FORM:        return "simplest";
     case ROW_RATIONALIZE: return "rationalize";
     }
@@ -19,6 +20,10 @@ static const char *mode_label(int i) {
 static const char *mode_value(int i) {
     switch(i) {
     case ROW_ANGLE:       return setting_angle == ANGLE_DEGREES ? "degrees" : "radians";
+    case ROW_TRIG:
+        if(setting_trig == TRIG_GENERAL)
+            return "general";
+        return setting_angle == ANGLE_DEGREES ? "0 to 360" : "0 to 2pi";
     case ROW_FORM:        return app_form_name();
     case ROW_RATIONALIZE: return app_rationalize() ? "on" : "off";
     }
@@ -29,6 +34,8 @@ static const char *mode_help(int i) {
     switch(i) {
     case ROW_ANGLE:
         return "degrees puts a pi/180 on every trig argument before it runs, so it's exact: sin(30) is still 1/2";
+    case ROW_TRIG:
+        return "solve(sin(x)=1/2,x). general is pi/6 + 2pi n and 5pi/6 + 2pi n, the other keeps the ones in one turn";
     case ROW_FORM:
         return "what enter gives. [2nd][enter] cycles it from the line too, [alpha][enter] is decimal";
     case ROW_RATIONALIZE:
@@ -41,6 +48,7 @@ static const char *mode_help(int i) {
 static bool mode_pick(int i) {
     switch(i) {
     case ROW_ANGLE:       setting_angle = setting_angle == ANGLE_DEGREES ? ANGLE_RADIANS : ANGLE_DEGREES; break;
+    case ROW_TRIG:        setting_trig = setting_trig == TRIG_GENERAL ? TRIG_ONE_TURN : TRIG_GENERAL; break;
     case ROW_FORM:        app_next_form(); break;
     case ROW_RATIONALIZE: app_toggle_rationalize(); break;
     }

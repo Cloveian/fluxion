@@ -11,6 +11,7 @@
 - log(1000) is 3 now, and logb(8,2). integer logs that work out get evaluated, the others stay
 - asym(f,x), holes and asymptotes. one line each (hole x = 1 / vertical x = -2, 2 / horizontal y = 2), only the kinds it has, none if nothing. the answer is a new stacked box kind (BOX_COL) so it cant be browsed into or saved, it just goes with the session. top and bottom come straight off the tree as typed, simplify would cancel the hole out. multiplicity by differentiating until it stops being zero there. no slant asymptotes yet
 - system(eq, eq, ..., x, y), linear systems. gauss-jordan over the engine trees, coefficients read off with d/dx (the coefficient of x in a linear thing is just the derivative, and the constant is what you get with every letter set to 0, then one check that the leftovers are 0). letters in the coefficients work, x = b/(a+1). no letters named and it takes the ones it finds. false when there is none, a message when they overlap. nonlinear ones say so, substitution is a todo. the last scoreboard row, 19 of 19
+- solve does trig equations now. solve(sin(x)=1/2,x) is pi/6 + 2pi n, 5pi/6 + 2pi n like the nspire (cos gets the +-, tan every pi, sin(x)=0 is just pi n), n being the plain letter n. a "trig answers" row on the mode page switches to one turn, 0 up to 2pi (360 in degrees): the general ones get small integers plugged in for n and whatever lands in range stays, sorted. that works for sin(2x) and shifted arguments for free. in degrees it comes out as 360n + 30, or 30, 150
 
 ## 2026-10-15 - out of memory, bold / italic, E
 

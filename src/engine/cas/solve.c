@@ -24,14 +24,14 @@ typedef struct {
     bool numeric;       /*every coefficient (all degrees) is a number*/
 } coefs_t;
 
-static bool has_var(pcas_ast_t *e, Symbol var) {
-    pcas_ast_t *child;
+bool has_symbol(const pcas_ast_t *e, Symbol s) {
+    const pcas_ast_t *child;
 
     if(e->type == NODE_SYMBOL)
-        return e->op.symbol == var;
+        return e->op.symbol == s;
     if(e->type == NODE_OPERATOR)
-        for(child = ast_ChildGet(e, 0); child != NULL; child = child->next)
-            if(has_var(child, var))
+        for(child = e->op.operator.base; child != NULL; child = child->next)
+            if(has_symbol(child, s))
                 return true;
     return false;
 }
@@ -50,7 +50,7 @@ sin(X), 1/X, X^Y.*/
 static bool split_term(pcas_ast_t *e, Symbol var, pcas_ast_t *coef, int *k) {
     pcas_ast_t *child;
 
-    if(!has_var(e, var)) {
+    if(!has_symbol(e, var)) {
         ast_ChildAppend(coef, ast_Copy(e));
         return true;
     }
@@ -67,7 +67,7 @@ static bool split_term(pcas_ast_t *e, Symbol var, pcas_ast_t *coef, int *k) {
         return true;
     }
 
-    if(isoptype(e, OP_DIV) && !has_var(ast_ChildGet(e, 1), var)) {
+    if(isoptype(e, OP_DIV) && !has_symbol(ast_ChildGet(e, 1), var)) {
         pcas_ast_t *top = ast_MakeOperator(OP_MULT);
         bool ok;
 
@@ -391,7 +391,7 @@ static int solve_factor(pcas_ast_t *f, Symbol var, pcas_ast_t **out, int n) {
     if(pcas_cancelled || f == NULL) /*oom, or already unwinding*/
         return SOLVE_UNKNOWN;
 
-    if(!has_var(f, var))
+    if(!has_symbol(f, var))
         return n;
 
     if(isoptype(f, OP_MULT)) {
@@ -400,7 +400,7 @@ static int solve_factor(pcas_ast_t *f, Symbol var, pcas_ast_t **out, int n) {
         return n;
     }
     if(isoptype(f, OP_DIV))
-        return has_var(ast_ChildGet(f, 1), var) ? SOLVE_UNKNOWN : solve_factor(ast_ChildGet(f, 0), var, out, n);
+        return has_symbol(ast_ChildGet(f, 1), var) ? SOLVE_UNKNOWN : solve_factor(ast_ChildGet(f, 0), var, out, n);
     if(isoptype(f, OP_POW))
         return solve_factor(ast_ChildGet(f, 0), var, out, n);   /*(X+2)^2: X+2 = 0*/
 
@@ -453,6 +453,8 @@ static bool even_number(pcas_ast_t *e) {
     return e->type == NODE_NUMBER && mp_rat_to_ints(e->op.num, &n, &den) == MP_OK && den == 1 && n % 2 == 0;
 }
 
+static pcas_ast_t *turns(int k);
+
 static int isolate(pcas_ast_t *e, Symbol var, pcas_ast_t **out) {
     pcas_ast_t *side = e, *other[SOLVE_MAX];
     int m = 1, i;
@@ -461,6 +463,7 @@ static int isolate(pcas_ast_t *e, Symbol var, pcas_ast_t **out) {
     while(side->type != NODE_SYMBOL && !pcas_cancelled) {
         pcas_ast_t *a, *b, *in = NULL, *c;
         OperatorType op;
+        bool half = false;
 
         if(side->type != NODE_OPERATOR)
             goto nope;
@@ -468,7 +471,7 @@ static int isolate(pcas_ast_t *e, Symbol var, pcas_ast_t **out) {
         a = ast_ChildGet(side, 0);
         b = ast_ChildGet(side, 1);
         for(c = a; c != NULL; c = c->next)
-            if(has_var(c, var))
+            if(has_symbol(c, var))
                 in = c;
         if(in == NULL)
             goto nope;
@@ -486,9 +489,21 @@ static int isolate(pcas_ast_t *e, Symbol var, pcas_ast_t **out) {
                 break;
             case OP_ROOT: if(in == b) t = ast_MakeBinary(OP_POW, o, ast_Copy(a)); break;
             case OP_LOG:  if(in == b) t = ast_MakeBinary(OP_POW, ast_Copy(a), o); break;
-            case OP_SIN:  t = ast_MakeUnary(OP_SIN_INV, o); break;
-            case OP_COS:  t = ast_MakeUnary(OP_COS_INV, o); break;
-            case OP_TAN:  t = ast_MakeUnary(OP_TAN_INV, o); break;
+            /*the whole family, not just the principal one. the second one for
+              sin and cos gets added after the loop, unless the two are half a
+              turn apart (sin = 0, cos = 0), then it's one family every pi*/
+            case OP_SIN: case OP_COS: case OP_TAN: {
+                pcas_ast_t *inv = ast_MakeUnary(op == OP_SIN ? OP_SIN_INV : op == OP_COS ? OP_COS_INV : OP_TAN_INV, o);
+
+                simplify(inv, SIMP_ALL);
+                if(op == OP_SIN && is_zero(inv))
+                    half = true;
+                if(op == OP_COS && isoptype(inv, OP_DIV) && is_ast_int(ast_ChildGet(inv, 1), 2)
+                   && ast_ChildGet(inv, 0)->type == NODE_SYMBOL && ast_ChildGet(inv, 0)->op.symbol == SYM_PI)
+                    half = true;
+                t = ast_MakeBinary(OP_ADD, inv, turns(op == OP_TAN || half ? 1 : 2));
+                break;
+            }
             case OP_SIN_INV: t = ast_MakeUnary(OP_SIN, o); break;
             case OP_COS_INV: t = ast_MakeUnary(OP_COS, o); break;
             case OP_TAN_INV: t = ast_MakeUnary(OP_TAN, o); break;
@@ -503,6 +518,17 @@ static int isolate(pcas_ast_t *e, Symbol var, pcas_ast_t **out) {
 
             for(i = 0; i < k && m < SOLVE_MAX; i++)
                 other[m++] = ast_MakeBinary(OP_MULT, number(-1), ast_Copy(other[i]));
+        }
+        if((op == OP_SIN || op == OP_COS) && !half) {
+            /*sin: pi - asin(v), cos: -acos(v), each plus the turns again. the
+              asin is the first child of what the switch just built*/
+            int k = m;
+
+            for(i = 0; i < k && m < SOLVE_MAX; i++) {
+                pcas_ast_t *neg = ast_MakeBinary(OP_MULT, number(-1), ast_Copy(ast_ChildGet(other[i], 0)));
+
+                other[m++] = ast_MakeBinary(OP_ADD, op == OP_SIN ? ast_MakeBinary(OP_ADD, ast_MakeSymbol(SYM_PI), neg) : neg, turns(2));
+            }
         }
         side = in;
     }
@@ -519,6 +545,117 @@ nope:
     for(i = 0; i < m; i++)
         ast_Cleanup(other[i]);
     return SOLVE_UNKNOWN;
+}
+
+/*k pi n, the trig families' integer. n is just the letter n, so an equation
+  with its own n in it is going to get confusing (the nspire has n1, n2.. todo)*/
+static pcas_ast_t *turns(int k) {
+    pcas_ast_t *t = ast_MakeOperator(OP_MULT);
+
+    if(t == NULL)
+        return NULL;
+    ast_ChildAppend(t, number(k));
+    ast_ChildAppend(t, ast_MakeSymbol(SYM_PI));
+    ast_ChildAppend(t, ast_MakeSymbol(SYM_N));
+    return t;
+}
+
+/*e as a decimal, a NUMBER node. approx() gives rationals but normalize splits
+  them straight back into a/b trees, so this puts the fraction back together.
+  NULL if there's still a letter in it*/
+static pcas_ast_t *decimal(pcas_ast_t *e) {
+    pcas_ast_t *a = ast_Copy(e), *r = NULL;
+
+    if(a == NULL)
+        return NULL;
+    approx(a);
+    simplify(a, SIMP_SOLVE);
+    if(a->type == NODE_NUMBER) {
+        r = a;
+        a = NULL;
+    } else if(isoptype(a, OP_DIV) && ast_ChildGet(a, 0)->type == NODE_NUMBER && ast_ChildGet(a, 1)->type == NODE_NUMBER
+              && !is_zero(ast_ChildGet(a, 1))) {
+        r = number(0);
+        if(r != NULL && mp_rat_div(ast_ChildGet(a, 0)->op.num, ast_ChildGet(a, 1)->op.num, r->op.num) != MP_OK) {
+            ast_Cleanup(r);
+            r = NULL;
+        }
+    }
+    ast_Cleanup(a);
+    return r;
+}
+
+int solve_in_range(pcas_ast_t **roots, int n, pcas_ast_t *hi) {
+    pcas_ast_t *keep[SOLVE_MAX], *val[SOLVE_MAX], *h = decimal(hi), *sym = ast_MakeSymbol(SYM_N);
+    int kept = 0, i, j, k;
+
+    if(h == NULL || sym == NULL || pcas_cancelled) {
+        ast_Cleanup(h);
+        ast_Cleanup(sym);
+        return n;
+    }
+
+    for(i = 0; i < n; i++) {
+        if(!has_symbol(roots[i], SYM_N)) {
+            if(kept < SOLVE_MAX) {
+                keep[kept] = roots[i];
+                val[kept++] = NULL;
+            } else {
+                ast_Cleanup(roots[i]);
+            }
+            continue;
+        }
+        /*-4..4 covers up to sin(4x) in a turn, past that you get what you get*/
+        for(k = -4; k <= 4 && !pcas_cancelled; k++) {
+            pcas_ast_t *c = ast_Copy(roots[i]), *v = number(k), *a;
+            bool in = false, dup = false;
+
+            if(c == NULL || v == NULL) {
+                ast_Cleanup(c);
+                ast_Cleanup(v);
+                continue;
+            }
+            substitute(c, sym, v);
+            ast_Cleanup(v);
+            simplify(c, SIMP_ALL);
+            a = decimal(c);
+            if(a != NULL)
+                in = mp_rat_compare_zero(a->op.num) >= 0 && mp_rat_compare(a->op.num, h->op.num) < 0;
+            /*sin(x) = 1 gives pi/2 from both families, keep one*/
+            for(j = 0; in && j < kept; j++)
+                if(val[j] != NULL && mp_rat_compare(val[j]->op.num, a->op.num) == 0)
+                    dup = true;
+            if(in && !dup && kept < SOLVE_MAX) {
+                keep[kept] = c;
+                val[kept++] = a;
+            } else {
+                ast_Cleanup(c);
+                ast_Cleanup(a);
+            }
+        }
+        ast_Cleanup(roots[i]);
+    }
+
+    /*smallest first, by the decimal. the ones without a value (no n in them) stay put*/
+    for(i = 1; i < kept; i++) {
+        pcas_ast_t *r = keep[i], *rv = val[i];
+
+        for(j = i; j > 0 && rv != NULL && val[j - 1] != NULL && mp_rat_compare(val[j - 1]->op.num, rv->op.num) > 0; j--) {
+            keep[j] = keep[j - 1];
+            val[j] = val[j - 1];
+        }
+        keep[j] = r;
+        val[j] = rv;
+    }
+    for(i = 0; i < kept; i++) {
+        roots[i] = keep[i];
+        ast_Cleanup(val[i]);
+    }
+    for(i = kept; i < n; i++)
+        roots[i] = NULL;
+    ast_Cleanup(h);
+    ast_Cleanup(sym);
+    return kept;
 }
 
 /*smallest first, where both are numbers. others keep their order.*/

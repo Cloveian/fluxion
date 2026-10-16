@@ -24,6 +24,7 @@ typedef enum {
     TEST_DECIMAL,   /*Fluxion: decimal; expression; text. approx(), then approx_format() to 6 digits*/
     TEST_ASYM,      /*Fluxion: asym; expression; var; holes <list> | vert <list> | horiz <y>, - for none, or unknown*/
     TEST_SYSTEM,    /*Fluxion: system; eq,eq,...; vars; values in var order, or false / many / unknown*/
+    TEST_TURN,      /*Fluxion: turn; equation; var; like solve, but the roots from 0 up to 2pi*/
 
     TEST_INVALID
 } TestType;

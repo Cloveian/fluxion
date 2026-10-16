@@ -296,9 +296,11 @@ static void number_first(pcas_ast_t *e) {
     }
 }
 
-/* one answer value, over one denominator, number first */
+/* one answer value, over one denominator, number first. the trig families stay
+   as a sum, pi/6 + 2pi n reads better than (12pi n + pi)/6 */
 static box_t *value_box(pcas_ast_t *v) {
-    comdenom(v, false);
+    if(!has_symbol(v, SYM_N))
+        comdenom(v, false);
     simplify_canonical_form(v, canon_flags);
     if(form == FORM_DECIMAL) {
         approx(v);
@@ -412,6 +414,14 @@ static void run_solve(char *src, box_t *in) {
         e = degrees_in(e);
     start = clock();
     n = solve(e, var, roots);
+    if(n > 0 && setting_trig == TRIG_ONE_TURN) {
+        pcas_ast_t *hi = setting_angle == ANGLE_DEGREES
+                         ? ast_MakeNumber(num_FromInt(360))
+                         : ast_MakeBinary(OP_MULT, ast_MakeNumber(num_FromInt(2)), ast_MakeSymbol(SYM_PI));
+
+        n = solve_in_range(roots, n, hi);
+        ast_Cleanup(hi);
+    }
     ms = (unsigned long)((clock() - start) * 1000 / CLOCKS_PER_SEC);
     ast_Cleanup(e);
 

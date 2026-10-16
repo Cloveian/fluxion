@@ -132,7 +132,7 @@ solve; X^3+X=0; X; 0
 
 #Mostly solved on 10-16 now (only the unknown ones are still cant). was: no rational roots above degree 2, not a polynomial in the variable, other variables or roots in the coefficients
 solve; X^3_2=0; X; 2^(1/3)
-solve; sin(X)=0; X; 0
+solve; sin(X)=0; X; piN
 solve; e^X=1; X; 0
 solve; sqrt(X)=2; X; 4
 solve; 1/X=2; X; 1/2
@@ -163,6 +163,14 @@ system; 3X+2Y=1/2,X_4Y=3; XY; 4/7,-17/28
 system; AX+Y=B,X_Y=0; XY; B/(1+A),B/(1+A)
 system; X^2+Y=1,X+Y=1; XY; unknown
 system; 5X=10,Y_X=1; XY; 2,3
+
+#trig solve, just one turn (turn; equation; var; roots from 0 up to 2pi, sorted)
+turn; sin(X)=1/2; X; pi/6,(5pi)/6
+turn; cos(2X)=0; X; pi/4,(3pi)/4,(5pi)/4,(7pi)/4
+turn; sin(X)=1; X; pi/2
+turn; sin(X)=0; X; 0,pi
+turn; tan(X)=1; X; pi/4,(5pi)/4
+turn; X^2=4; X; -2,2
 
 #k-th powers out of roots. ACT Q8. 2sqrt(2) merges back to 2^(3/2) as like terms: the canonical form splits it at output
 simplify; sqrt(35*108); 6sqrt(105)
@@ -391,7 +399,10 @@ solve; ln(X)=2; X; e^2
 solve; 2^(3X+1)=Y; X; -1/3+logb(Y,2)/3
 solve; X^4=16; X; -2, 2
 solve; e^(2X)=5; X; ln(5)/2
-solve; sin(X)=1/2; X; pi/6
+solve; sin(X)=1/2; X; pi/6+2piN,2piN+(5pi)/6
+solve; cos(X)=0; X; pi/2+piN
+solve; tan(X)=1; X; pi/4+piN
+solve; cos(2X)=1/2; X; pi/6+Npi,(-pi)/6+Npi
 
 #integer logs come out exact
 simplify; log(1000)+logb(8,2); 6
