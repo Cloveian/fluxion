@@ -582,7 +582,9 @@ static int isolate(pcas_ast_t *e, Symbol var, pcas_ast_t **out) {
         goto nope;
 
     for(i = 0; i < m; i++) {
-        simplify(other[i], SIMP_ALL);   /*the works, so asin(1/2) ends up pi/6*/
+        /*the works, so asin(1/2) ends up pi/6. tried the light one for the trig
+          families, it leaves pi - pi/6 and (pi/3 + 2pi n)/2 alone, so no*/
+        simplify(other[i], SIMP_ALL);
         out[i] = other[i];
     }
     return m;
@@ -631,6 +633,37 @@ static pcas_ast_t *decimal(pcas_ast_t *e) {
     return r;
 }
 
+/*the family with one integer in for n, simplified the light way. it's a sum of
+  a few pi's (or plain numbers in degrees), the identity passes have nothing to
+  do there and they're the slow part. NULL when oom*/
+static pcas_ast_t *at_n(pcas_ast_t *root, pcas_ast_t *sym, int k) {
+    pcas_ast_t *c = ast_Copy(root), *v = number(k);
+
+    if(c == NULL || v == NULL) {
+        ast_Cleanup(c);
+        ast_Cleanup(v);
+        return NULL;
+    }
+    substitute(c, sym, v);
+    ast_Cleanup(v);
+    simplify(c, SIMP_SOLVE);
+    return c;
+}
+
+/*r towards zero, as a long. 0 if imath can't*/
+static long whole_part(mp_rat r) {
+    mp_int q = mp_int_alloc();
+    mp_small v = 0;
+
+    if(q == NULL)
+        return 0;
+    mp_int_init(q);
+    if(mp_int_div(mp_rat_numer_ref(r), mp_rat_denom_ref(r), q, NULL) == MP_OK)
+        mp_int_to_int(q, &v);
+    mp_int_free(q);
+    return (long)v;
+}
+
 int solve_in_range(pcas_ast_t **roots, int n, pcas_ast_t *hi) {
     pcas_ast_t *keep[SOLVE_MAX], *val[SOLVE_MAX], *h = decimal(hi), *sym = ast_MakeSymbol(SYM_N);
     int kept = 0, i, j, k;
@@ -651,33 +684,71 @@ int solve_in_range(pcas_ast_t **roots, int n, pcas_ast_t *hi) {
             }
             continue;
         }
-        /*-4..4 covers up to sin(4x) in a turn, past that you get what you get*/
-        for(k = -4; k <= 4 && !pcas_cancelled; k++) {
-            pcas_ast_t *c = ast_Copy(roots[i]), *v = number(k), *a;
-            bool in = false, dup = false;
+        /*n = 0 and n = 1 give the period, and from that which n's can land in
+          range at all (one past each end to be safe). plugging in -4..4 and
+          simplifying the lot was 5 ms on the PC, half a minute on the calculator*/
+        {
+            pcas_ast_t *c0 = at_n(roots[i], sym, 0), *c1 = at_n(roots[i], sym, 1);
+            pcas_ast_t *v0 = c0 != NULL ? decimal(c0) : NULL, *v1 = c1 != NULL ? decimal(c1) : NULL;
+            long lo = -4, up = 4; /*if theres no period to go on, the old spread*/
 
-            if(c == NULL || v == NULL) {
-                ast_Cleanup(c);
-                ast_Cleanup(v);
-                continue;
+            if(v0 != NULL && v1 != NULL) {
+                mp_rat p = num_FromInt(0), t = num_FromInt(0);
+
+                if(p != NULL && t != NULL) {
+                    mp_rat_sub(v1->op.num, v0->op.num, p);
+                    if(mp_rat_compare_zero(p) > 0) {
+                        mp_rat_neg(v0->op.num, t);
+                        mp_rat_div(t, p, t);
+                        lo = whole_part(t) - 1;
+                        mp_rat_sub(h->op.num, v0->op.num, t);
+                        mp_rat_div(t, p, t);
+                        up = whole_part(t) + 1;
+                        if(up - lo > 16) /*sin(100x), no*/
+                            up = lo + 16;
+                    }
+                }
+                num_Cleanup(p);
+                num_Cleanup(t);
             }
-            substitute(c, sym, v);
-            ast_Cleanup(v);
-            simplify(c, SIMP_ALL);
-            a = decimal(c);
-            if(a != NULL)
-                in = mp_rat_compare_zero(a->op.num) >= 0 && mp_rat_compare(a->op.num, h->op.num) < 0;
-            /*sin(x) = 1 gives pi/2 from both families, keep one*/
-            for(j = 0; in && j < kept; j++)
-                if(val[j] != NULL && mp_rat_compare(val[j]->op.num, a->op.num) == 0)
-                    dup = true;
-            if(in && !dup && kept < SOLVE_MAX) {
-                keep[kept] = c;
-                val[kept++] = a;
-            } else {
-                ast_Cleanup(c);
-                ast_Cleanup(a);
+
+            for(k = (int)lo; k <= up && !pcas_cancelled; k++) {
+                pcas_ast_t *c, *a;
+                bool in = false, dup = false;
+
+                if(k == 0 && c0 != NULL) {
+                    c = c0;
+                    a = v0;
+                    c0 = NULL;
+                    v0 = NULL;
+                } else if(k == 1 && c1 != NULL) {
+                    c = c1;
+                    a = v1;
+                    c1 = NULL;
+                    v1 = NULL;
+                } else {
+                    c = at_n(roots[i], sym, k);
+                    a = c != NULL ? decimal(c) : NULL;
+                }
+                if(a != NULL)
+                    in = mp_rat_compare_zero(a->op.num) >= 0 && mp_rat_compare(a->op.num, h->op.num) < 0;
+                /*sin(x) = 1 gives pi/2 from both families, keep one*/
+                for(j = 0; in && j < kept; j++)
+                    if(val[j] != NULL && mp_rat_compare(val[j]->op.num, a->op.num) == 0)
+                        dup = true;
+                if(in && !dup && kept < SOLVE_MAX) {
+                    simplify(c, SIMP_ALL); /*the full one only for the keepers, pi/4 + pi/2 wants to be 3pi/4*/
+                    keep[kept] = c;
+                    val[kept++] = a;
+                } else {
+                    ast_Cleanup(c);
+                    ast_Cleanup(a);
+                }
             }
+            ast_Cleanup(c0);
+            ast_Cleanup(c1);
+            ast_Cleanup(v0);
+            ast_Cleanup(v1);
         }
         ast_Cleanup(roots[i]);
     }
