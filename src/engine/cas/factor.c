@@ -164,8 +164,107 @@ static pcas_ast_t *gcd_pow(pcas_ast_t *pow, pcas_ast_t *b) {
     return ast_MakeNumber(num_FromInt(1));
 }
 
+/*Fluxion: the fast gcd for monomials, a whole number times letters to whole powers. compare()
+does a gcd for every pair it sorts and the general one recurses with a simplify at every step,
+66ms of the 71 in expand((X+Y+Z+1)^4) was the canonical sort*/
+#define GM_MAX 8
+
+typedef struct {
+    pcas_ast_t *num; /*NULL is 1*/
+    Symbol sym[GM_MAX];
+    mp_small pow[GM_MAX];
+    int count;
+} gm_t;
+
+static bool gm_letter(Symbol s) {
+    return (s >= SYM_A && s <= SYM_Z) || s == SYM_THETA; /*i has its own power rules, pi and e can go the slow way*/
+}
+
+static bool gm_term(gm_t *m, pcas_ast_t *e) {
+    pcas_ast_t *base = e;
+    mp_small p = 1;
+    int i;
+
+    if(e->type == NODE_NUMBER) {
+        if(m->num != NULL || !mp_rat_is_integer(e->op.num))
+            return false;
+        m->num = e;
+        return true;
+    }
+
+    if(isoptype(e, OP_POW)) {
+        pcas_ast_t *power = ast_ChildGet(e, 1);
+
+        base = ast_ChildGet(e, 0);
+        if(power == NULL || power->type != NODE_NUMBER || !mp_rat_is_integer(power->op.num)
+            || mp_int_to_int(&power->op.num->num, &p) != MP_OK || p < 1)
+            return false;
+    }
+
+    if(base == NULL || base->type != NODE_SYMBOL || !gm_letter(base->op.symbol) || m->count == GM_MAX)
+        return false;
+    for(i = 0; i < m->count; i++)
+        if(m->sym[i] == base->op.symbol)
+            return false; /*XX isn't simplified yet, not my problem*/
+
+    m->sym[m->count] = base->op.symbol;
+    m->pow[m->count++] = p;
+    return true;
+}
+
+static bool gm_read(pcas_ast_t *e, gm_t *m) {
+    pcas_ast_t *child;
+
+    m->num = NULL;
+    m->count = 0;
+    if(!isoptype(e, OP_MULT))
+        return gm_term(m, e);
+    for(child = ast_ChildGet(e, 0); child != NULL; child = child->next)
+        if(!gm_term(m, child))
+            return false;
+    return true;
+}
+
+/*number gcd (a missing number is 1, so only when both have one), then each shared letter
+to the smaller power. same simplify at the end as gcd() so the tree comes out the same*/
+static pcas_ast_t *gm_gcd(gm_t *a, gm_t *b) {
+    pcas_ast_t *ret = ast_MakeOperator(OP_MULT);
+    int i, j;
+
+    if(a->num != NULL && b->num != NULL && mp_rat_compare(a->num->op.num, b->num->op.num) == 0) {
+        ast_ChildAppend(ret, ast_Copy(a->num)); /*the slow one's equal-trees shortcut keeps the sign, gcd(-X,-1) is -1*/
+    } else if(a->num != NULL && b->num != NULL) {
+        mp_rat g = num_FromInt(1);
+
+        mp_int_gcd(&a->num->op.num->num, &b->num->op.num->num, &g->num);
+        ast_ChildAppend(ret, ast_MakeNumber(g));
+    }
+
+    for(i = 0; i < a->count; i++)
+        for(j = 0; j < b->count; j++) {
+            mp_small p;
+
+            if(a->sym[i] != b->sym[j])
+                continue;
+            p = a->pow[i] < b->pow[j] ? a->pow[i] : b->pow[j];
+            if(p == 1)
+                ast_ChildAppend(ret, ast_MakeSymbol(a->sym[i]));
+            else
+                ast_ChildAppend(ret, ast_MakeBinary(OP_POW, ast_MakeSymbol(a->sym[i]), ast_MakeNumber(num_FromInt(p))));
+        }
+
+    if(ast_ChildLength(ret) == 0) {
+        ast_Cleanup(ret);
+        return ast_MakeNumber(num_FromInt(1));
+    }
+
+    simplify(ret, SIMP_ALL ^ SIMP_ID_ALL);
+    return ret;
+}
+
 pcas_ast_t *gcd(pcas_ast_t *a, pcas_ast_t *b) {
     pcas_ast_t *ret = NULL;
+    gm_t ga, gb;
 
     if(pcas_cancelled) /*Fluxion: stop here, the answer's being thrown away*/
         return NULL;
@@ -186,6 +285,9 @@ pcas_ast_t *gcd(pcas_ast_t *a, pcas_ast_t *b) {
             return ast_MakeNumber(gcd);
         }
     }
+
+    if(gm_read(a, &ga) && gm_read(b, &gb)) /*Fluxion: monomials skip the recursion, see gm_gcd*/
+        return gm_gcd(&ga, &gb);
 
     if(isoptype(a, OP_MULT))
         ret = gcd_mult(a, b);
@@ -213,6 +315,22 @@ pcas_ast_t *gcd(pcas_ast_t *a, pcas_ast_t *b) {
     return ast_MakeNumber(num_FromInt(1));
 }
 
+/*Fluxion: which letters are in e, one bit each mod 32. two letters on one bit just
+makes masks match more often, so different masks still means different letters*/
+static unsigned long letters(pcas_ast_t *e) {
+    unsigned long mask = 0;
+    pcas_ast_t *child;
+
+    if(e == NULL)
+        return 0;
+    if(e->type == NODE_SYMBOL)
+        return 1UL << ((unsigned)e->op.symbol % 32);
+    if(e->type == NODE_OPERATOR)
+        for(child = ast_ChildGet(e, 0); child != NULL; child = child->next)
+            mask |= letters(child);
+    return mask;
+}
+
 bool factor_addition(pcas_ast_t *e, unsigned char flags) {
     pcas_ast_t *child;
     bool changed = false;
@@ -229,11 +347,20 @@ bool factor_addition(pcas_ast_t *e, unsigned char flags) {
         unsigned i, j;
         pcas_ast_t *g;
 
+        /*Fluxion: like terms only (simplify's pass) wants a/g and b/g both numbers, so a and
+        b need the same letters. checking that first skips the gcd, and the whole simplify
+        the gcd does on its answer, for most pairs. 16 terms took 118ms on the PC*/
+        bool like_only = !(flags & FAC_SIMPLE_ADDITION_NONEVALUATEABLE);
+
         for(i = 0; i < ast_ChildLength(e) && !pcas_check(); i++) {
             pcas_ast_t *a = ast_ChildGet(e, i);
+            unsigned long amask = like_only ? letters(a) : 0;
 
             for(j = i + 1; j < ast_ChildLength(e) && !pcas_check(); j++) {
                 pcas_ast_t *b = ast_ChildGet(e, j);
+
+                if(like_only && letters(b) != amask)
+                    continue;
 
                 g = gcd(a, b);
 
