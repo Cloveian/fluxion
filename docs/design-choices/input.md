@@ -94,6 +94,7 @@ basically like typing on a computer, the cursor is a line and `[on]` is Ctrl. th
 | `[enter]` | simplify | |
 | `[2nd]` + `[enter]` | next form (by hand, expanded, factored, decimal). redoes the last answer and sticks | |
 | `[alpha]` + `[enter]` | decimal form, and back | |
+| `[alpha]` + `[y=]` or `[x,t,θ,n]` | empty fraction. y= is where the TI has it, the other one's just right there | |
 | `[sto→]` | the arrow. `value [sto→] name` stores, `[sto→] name` on its own deletes (see Names below) | |
 | `[vars]` | the stored names and their values, enter deletes one | |
 | `[mode]` | angle (radians / degrees), trig answers, what simplest means, rationalize, dark / light theme. enter flips a row | |
@@ -114,7 +115,7 @@ with something selected: typing replaces it, `(` `÷` `√` `sin` etc go *around
 ### Popups and pages
 
 - `[math]`: a grid at the cursor with = ≠ < > ≤ ≥ ! ∞ ° θ, arrows + `[enter]` or `1`-`9` `0`
-- `[2nd][0]`: the catalog, everything a-z with what it does. `[alpha]` + letter jumps, `[enter]` types it, `[clear]` closes
+- `[2nd][0]`: the catalog, split into algebra, calculus, functions, templates, keys and an all list a-z. the five keys under the screen jump to a section, names in the bar at the bottom like the editor. `[alpha]` + letter jumps, `[enter]` types it, `[clear]` closes
 
 ### Not done yet
 
