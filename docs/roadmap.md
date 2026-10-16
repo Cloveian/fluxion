@@ -27,14 +27,15 @@
 - [x] 'Soft' key menus in math print.
 - [x] Screen off. auto after sitting idle, and `[2nd][alpha][on]` does it by hand
 - [x] Mode menu. degrees / radians, simplify mode... etc.
-- Optimisation. (never gonna check this one off)
+- [ ] Optimisation. (never gonna check this one off)
 - [x] Expand combines like terms after every step instead of at the end. (x+1)^7 was 5 min at 100% and ^8 ran out of memory, 2^n raw terms before anything got collected
 
 ## later
 
+- [ ] Display mode option for wrap/scroll (for long answers)
 - [ ] Inequalities
-- [ ] Slope, distance and midpoint commands
-- [ ] Parallel and perpendicular lines
+- [x] Slope, distance and midpoint commands
+- [x] Parallel and perpendicular lines
 - [ ] Transformations
 - [ ] Geometry formulas (area, perimeter, volume, angles)
 - [ ] Probability (nCr, nPr)
@@ -45,8 +46,8 @@
 - [ ] Factoring with more than one variable (x²−y²)
 - [ ] Nonlinear systems
 - [ ] Cubics with no rational root
-- [ ] Complex roots in solve
-- [ ] Slant asymptotes
+- [x] Complex roots in solve
+- [x] Slant asymptotes
 - [ ] Unit circle display
 - [ ] Triangle solver
 - [ ] Show-the-work steps
