@@ -261,6 +261,13 @@ typedef struct {
 bool asym(pcas_ast_t *f, Symbol var, asym_t *out);
 void asym_free(asym_t *a);
 
+/*Fluxion: linear systems (cas/system.c). n expressions that are = 0, in the n
+  vars. out[i] gets the value of vars[i] (all NULL going in). returns n, or 0 for
+  no solution, SOLVE_ALL when they're dependent (infinitely many), SOLVE_UNKNOWN
+  when it isn't linear in those or something gave up*/
+#define SYSTEM_MAX 4
+int solve_system(pcas_ast_t **eqs, int n, const Symbol *vars, pcas_ast_t **out);
+
 /*Fluxion: degree of e (simplified and expanded) as a polynomial in var, -1 if it
   isn't one. the leading coefficient goes in *lead if that's not NULL (new tree)*/
 int poly_degree(pcas_ast_t *e, Symbol var, pcas_ast_t **lead);

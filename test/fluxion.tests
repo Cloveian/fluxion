@@ -153,6 +153,17 @@ asym; X^2+1; X; holes - | vert - | horiz -
 asym; (3X+1)/(2X_5); X; holes - | vert 5/2 | horiz 3/2
 asym; X/(X^2+1); X; holes - | vert - | horiz 0
 
+#linear systems (system; eq,eq,...; vars; values in var order, or false / many / unknown)
+system; 2X_Y=7,-4X+2Y=2; XY; false
+system; 2X_Y=7,X+Y=2; XY; 3,-1
+system; X+Y=10,X_Y=4; XY; 7,3
+system; 2X+3Y=12,4X+6Y=24; XY; many
+system; X+Y+Z=6,X_Y=0,X+2Z=9; XYZ; 1,1,4
+system; 3X+2Y=1/2,X_4Y=3; XY; 4/7,-17/28
+system; AX+Y=B,X_Y=0; XY; B/(1+A),B/(1+A)
+system; X^2+Y=1,X+Y=1; XY; unknown
+system; 5X=10,Y_X=1; XY; 2,3
+
 #k-th powers out of roots. ACT Q8. 2sqrt(2) merges back to 2^(3/2) as like terms: the canonical form splits it at output
 simplify; sqrt(35*108); 6sqrt(105)
 simplify; sqrt(72); 6sqrt(2)

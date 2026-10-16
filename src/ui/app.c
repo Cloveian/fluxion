@@ -507,6 +507,123 @@ static void run_asym(char *src, box_t *in) {
     asym_free(&a);
 }
 
+/*
+    system(eq, eq, ..., x, y). the pieces between the top level commas with an =
+    are equations, the rest are the variables. no variables given, it takes the
+    letters it finds, a to z. writes into src like the other two
+*/
+static void run_system(char *src, box_t *in) {
+    pcas_ast_t *eqs[SYSTEM_MAX] = { NULL }, *out[SYSTEM_MAX] = { NULL }, *rhs;
+    char *piece[2 * SYSTEM_MAX], *s, shown[SYSTEM_MAX];
+    Symbol vars[SYSTEM_MAX];
+    pcas_error_t err = E_SUCCESS;
+    clock_t start;
+    unsigned long ms;
+    int depth = 0, pieces = 1, n = 0, nvars = 0, i, got;
+    bool too_many = false;
+    box_t *row;
+
+    piece[0] = src;
+    for(s = src; *s != '\0'; s++) {
+        if(*s == '(')
+            depth++;
+        else if(*s == ')')
+            depth--;
+        else if(depth == 0 && *s == ',') {
+            if(pieces == 2 * SYSTEM_MAX) {
+                too_many = true;
+                break;
+            }
+            *s = '\0';
+            piece[pieces++] = s + 1;
+        }
+    }
+
+    for(i = 0; i < pieces; i++) {
+        char *eq = strchr(piece[i], '=');
+
+        if(eq == NULL) {
+            if(nvars == SYSTEM_MAX || !read_var(piece[i], &vars[nvars], &shown[nvars]))
+                break;
+            nvars++;
+            continue;
+        }
+        if(n == SYSTEM_MAX) {
+            too_many = true;
+            break;
+        }
+        *eq = '\0';
+        eqs[n] = parse((const uint8_t *)piece[i], strlen(piece[i]), str_table, &err);
+        rhs = err == E_SUCCESS ? parse((const uint8_t *)eq + 1, strlen(eq + 1), str_table, &err) : NULL;
+        if(err != E_SUCCESS || eqs[n] == NULL || rhs == NULL) {
+            ast_Cleanup(rhs);
+            break;
+        }
+        eqs[n] = ast_MakeBinary(OP_ADD, eqs[n], ast_MakeBinary(OP_MULT, ast_MakeNumber(num_FromInt(-1)), rhs));
+        n++;
+    }
+
+    /* nothing named, so whatever letters turn up. alphabetical, not the order they're typed in */
+    if(i == pieces && nvars == 0) {
+        bool seen[26] = { false };
+        char c;
+
+        /* the pieces are still one buffer, just with zeros where the commas were */
+        for(s = src; s < piece[pieces - 1] + strlen(piece[pieces - 1]); s++)
+            if(*s >= 'A' && *s <= 'Z')
+                seen[*s - 'A'] = true;
+        for(c = 'A'; c <= 'Z' && nvars < SYSTEM_MAX; c++)
+            if(seen[c - 'A']) {
+                vars[nvars] = (Symbol)c;
+                shown[nvars++] = (char)(c - 'A' + 'a');
+            }
+    }
+
+    if(i < pieces || n == 0 || n != nvars) {
+        for(i = 0; i < n; i++)
+            ast_Cleanup(eqs[i]);
+        push(in, NULL, err != E_SUCCESS ? error_text[err]
+                       : too_many ? "4 equations is the most it does"
+                       : "system(eq, eq, x, y), as many letters as equations", 0);
+        return;
+    }
+
+    start = clock();
+    got = solve_system(eqs, n, vars, out);
+    ms = (unsigned long)((clock() - start) * 1000 / CLOCKS_PER_SEC);
+    for(i = 0; i < n; i++)
+        ast_Cleanup(eqs[i]);
+
+    if(pcas_cancelled)
+        push(in, NULL, pcas_oom ? "out of memory" : "cancelled", ms);
+    else if(got == SOLVE_UNKNOWN)
+        push(in, NULL, "can't solve this one yet (linear only)", ms);
+    else if(got == SOLVE_ALL)
+        push(in, NULL, "infinitely many, they say the same thing", ms);
+    else if(got == 0)
+        push(in, word_box("false"), NULL, ms);
+    else {
+        row = layout_box(BOX_ROW, 0);
+        for(i = 0; i < n; i++) {
+            char name[2] = { shown[i], '\0' };
+
+            if(i > 0) {
+                layout_add(row, layout_text(",", 0));
+                layout_add(row, layout_space(2 * SPACE_BINARY));
+            }
+            layout_add(row, layout_text(name, 0));
+            layout_add(row, layout_space(LAYOUT_SPACE(0)));
+            layout_add(row, layout_text("=", 0));
+            layout_add(row, layout_space(LAYOUT_SPACE(0)));
+            layout_add(row, value_box(out[i]));
+        }
+        layout_finish(row, &draw_font);
+        push(in, row, NULL, ms);
+    }
+    for(i = 0; i < n; i++)
+        ast_Cleanup(out[i]);
+}
+
 static void busy_start(void);
 
 /* parse what's in line, run the command or a simplify with the form on top, push
@@ -570,7 +687,7 @@ static bool run(editor_t *line) {
 
     /* no nesting commands yet, expand(...) has to be the whole line (todo, ugh) */
     if(strstr(src, "expand(") || strstr(src, "factor(") || strstr(src, "eval(") || strstr(src, "solve(")
-       || strstr(src, "asym(")) {
+       || strstr(src, "asym(") || strstr(src, "system(")) {
         free(src);
         status = "commands have to be the whole line (for now)";
         return false;
@@ -586,9 +703,14 @@ static bool run(editor_t *line) {
         free(src);
         return true;
     }
+    if(cmd != NULL && strcmp(cmd, "system") == 0) {
+        run_system(src, ed_layout(line, &draw_font, false));
+        free(src);
+        return true;
+    }
     if(strchr(src, '=') != NULL) {
         free(src);
-        status = "= only works in solve( for now";
+        status = "= only works in solve( and system(";
         return false;
     }
 
@@ -836,7 +958,7 @@ static bool pick_into(editor_t *into, const item_t *it, bool dry) {
             return false;
         if(it->kind == ITEM_COMMAND && strcmp(s, "expand($)") != 0 &&
            strcmp(s, "factor($)") != 0 && strcmp(s, "eval($)") != 0 && strcmp(s, "solve($)") != 0
-           && strcmp(s, "asym($)") != 0)
+           && strcmp(s, "asym($)") != 0 && strcmp(s, "system($)") != 0)
             return false;
         if(!dry) {
             memcpy(name, s, n);

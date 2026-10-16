@@ -10,6 +10,7 @@
 - and when the variable only turns up once it just peels the layers off: solve(y=2^x, x) is logb(y,2), sqrt(x)=2 is 4, 1/x=2 is 1/2, x^4=16 is -2, 2. five of the old "cant do this" tests became real answers
 - log(1000) is 3 now, and logb(8,2). integer logs that work out get evaluated, the others stay
 - asym(f,x), holes and asymptotes. one line each (hole x = 1 / vertical x = -2, 2 / horizontal y = 2), only the kinds it has, none if nothing. the answer is a new stacked box kind (BOX_COL) so it cant be browsed into or saved, it just goes with the session. top and bottom come straight off the tree as typed, simplify would cancel the hole out. multiplicity by differentiating until it stops being zero there. no slant asymptotes yet
+- system(eq, eq, ..., x, y), linear systems. gauss-jordan over the engine trees, coefficients read off with d/dx (the coefficient of x in a linear thing is just the derivative, and the constant is what you get with every letter set to 0, then one check that the leftovers are 0). letters in the coefficients work, x = b/(a+1). no letters named and it takes the ones it finds. false when there is none, a message when they overlap. nonlinear ones say so, substitution is a todo. the last scoreboard row, 19 of 19
 
 ## 2026-10-15 - out of memory, bold / italic, E
 

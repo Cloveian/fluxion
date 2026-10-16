@@ -218,6 +218,20 @@ bool simplify_normalize(pcas_ast_t *e) {
 
             changed = true;
         }
+
+        /*Fluxion: a minus on the bottom goes up top, 17/-28 is -17/28. the
+          fraction code keeps the sign wherever the arithmetic left it*/
+        if(optype(e) == OP_DIV && ast_ChildGet(e, 1)->type == NODE_NUMBER
+           && mp_rat_compare_zero(ast_ChildGet(e, 1)->op.num) < 0) {
+            pcas_ast_t *num = ast_ChildGet(e, 0), *den = ast_ChildGet(e, 1);
+
+            mp_rat_neg(den->op.num, den->op.num);
+            if(num->type == NODE_NUMBER)
+                mp_rat_neg(num->op.num, num->op.num);
+            else
+                replace_node(num, ast_MakeBinary(OP_MULT, ast_MakeNumber(num_FromInt(-1)), ast_Copy(num)));
+            changed = true;
+        }
     } else if(e->type == NODE_NUMBER && !mp_rat_is_integer(e->op.num)) {
         mp_rat num, den;
 
