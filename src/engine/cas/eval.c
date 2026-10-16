@@ -542,6 +542,71 @@ static bool eval_pow(pcas_ast_t *e, unsigned short flags) {
 
         }
     }
+    /*Fluxion: p/q over 1 goes through the root too, 27^(2/3) = 3^2 and 12^(3/2) = 2^3*3^(3/2).
+    lowest terms only. the r^(p/q) left over has no q-th powers in it so it stops there*/
+    else if((flags & EVAL_POWERS_SMALL || flags & EVAL_POWERS_FULL) && a->type == NODE_NUMBER && isoptype(b, OP_DIV)
+            && ast_ChildGet(b, 0)->type == NODE_NUMBER && ast_ChildGet(b, 1)->type == NODE_NUMBER) {
+        pcas_ast_t *top = ast_ChildGet(b, 0), *bottom = ast_ChildGet(b, 1), *tmp;
+        mp_small p, q, x, y, t;
+        mp_int answer, check;
+
+        if(!mp_rat_is_integer(a->op.num) || mp_rat_compare_zero(a->op.num) <= 0
+           || !mp_rat_is_integer(top->op.num) || !mp_rat_is_integer(bottom->op.num)
+           || mp_int_to_int(&top->op.num->num, &p) != MP_OK || mp_int_to_int(&bottom->op.num->num, &q) != MP_OK
+           || p <= 1 || q <= 1)
+            return false;
+
+        for(x = p, y = q; y != 0; x = t) {
+            t = y;
+            y = x % y;
+        }
+        if(x != 1)
+            return false;
+
+        answer = mp_int_alloc();
+        check = mp_int_alloc();
+
+        mp_int_root(&a->op.num->num, q, answer);
+        mp_int_expt(answer, q, check);
+
+        if(mp_int_compare(check, &a->op.num->num) == 0) {
+            /*Fluxion: root^p as a power, the integer case above decides if it's small enough to work out*/
+            mp_rat ret = num_FromInt(1);
+
+            mp_int_copy(answer, &ret->num);
+            replace_node(e, ast_MakeBinary(OP_POW, ast_MakeNumber(ret), ast_MakeNumber(num_FromInt(p))));
+            changed = true;
+        } else {
+            tmp = ast_MakeBinary(OP_POW, ast_Copy(a),
+                        ast_MakeBinary(OP_DIV, ast_MakeNumber(num_FromInt(1)), ast_MakeNumber(num_FromInt(q))));
+
+            /*Fluxion: tmp is s * r^(1/q) now, raise both halves to p*/
+            if(tmp != NULL && eval_root_factors(tmp, &a->op.num->num, q, ast_ChildGet(tmp, 1))) {
+                pcas_ast_t *r = ast_ChildGet(ast_ChildGet(tmp, 1), 0), *rest;
+
+                /*Fluxion: r^(p/q) with p > q comes apart here and not in canonical form,
+                that one leaves 8*(3*sqrt(3)) nested and it prints as 83sqrt(3)*/
+                if(p > q)
+                    rest = ast_MakeBinary(OP_MULT,
+                                ast_MakeBinary(OP_POW, ast_Copy(r), ast_MakeNumber(num_FromInt(p / q))),
+                                ast_MakeBinary(OP_POW, ast_Copy(r),
+                                    ast_MakeBinary(OP_DIV, ast_MakeNumber(num_FromInt(p % q)), ast_MakeNumber(num_FromInt(q)))));
+                else
+                    rest = ast_MakeBinary(OP_POW, ast_Copy(r), ast_Copy(b));
+
+                replace_node(e, ast_MakeBinary(OP_MULT,
+                                    ast_MakeBinary(OP_POW, ast_Copy(ast_ChildGet(tmp, 0)), ast_MakeNumber(num_FromInt(p))),
+                                    rest
+                                ));
+                changed = true;
+            }
+
+            ast_Cleanup(tmp);
+        }
+
+        mp_int_free(check);
+        mp_int_free(answer);
+    }
 
     return changed;
 }

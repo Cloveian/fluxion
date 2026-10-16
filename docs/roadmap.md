@@ -17,7 +17,7 @@
 - [x] Systems solveing
 - [x] Solving trig equations.
 - [x] Holes & asymptotes. zeros of the denominator.
-- [ ] Better "normal" math handling.
+- [x] Better "normal" math handling. (a sweep 10-16, todo.tests has whats left)
 
 ## polish
 

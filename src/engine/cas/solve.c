@@ -91,6 +91,25 @@ static bool split_term(pcas_ast_t *e, Symbol var, pcas_ast_t *coef, int *k) {
     return false;
 }
 
+/*a/b with both numbers becomes the one rational. normalize splits every
+  rational into a/b, so right after a simplify is where this is needed*/
+static void fold_fraction(pcas_ast_t *e) {
+    pcas_ast_t *a, *b, *r;
+
+    if(!isoptype(e, OP_DIV))
+        return;
+    a = ast_ChildGet(e, 0);
+    b = ast_ChildGet(e, 1);
+    if(a->type != NODE_NUMBER || b->type != NODE_NUMBER || is_zero(b))
+        return;
+    r = number(0);
+    if(r == NULL || mp_rat_div(a->op.num, b->op.num, r->op.num) != MP_OK) {
+        ast_Cleanup(r);
+        return;
+    }
+    replace_node(e, r);
+}
+
 static void coefs_free(coefs_t *p) {
     int i;
 
@@ -118,6 +137,7 @@ static bool read_term(pcas_ast_t *term, Symbol var, coefs_t *p) {
         return false;
     }
     simplify(coef, SIMP_SOLVE);
+    fold_fraction(coef); /*1/2 is a number, not a tree, or x^2/2 isn't "numeric"*/
 
     if(k > p->deg) {
         p->deg = k;
@@ -455,6 +475,32 @@ static bool even_number(pcas_ast_t *e) {
 
 static pcas_ast_t *turns(int k);
 
+/*x^2/2 - x/2 - 15 = 0 times 2, so factor() gets whole numbers to work with (it
+  can't read a fraction node as a coefficient). lcm of the number denominators
+  of the terms, then expand the lot. the roots don't change, it's = 0*/
+static void clear_denominators(pcas_ast_t **e) {
+    pcas_ast_t *x = *e, *term, *scaled;
+    mp_rat l = num_FromInt(1);
+
+    if(l == NULL)
+        return;
+    for(term = isoptype(x, OP_ADD) ? ast_ChildGet(x, 0) : x; term != NULL; term = term == x ? NULL : term->next) {
+        pcas_ast_t *den = isoptype(term, OP_DIV) ? ast_ChildGet(term, 1) : NULL;
+
+        if(den != NULL && den->type == NODE_NUMBER && mp_rat_is_integer(den->op.num))
+            mp_int_lcm(&l->num, &den->op.num->num, &l->num);
+    }
+    if(mp_rat_compare_value(l, 1, 1) > 0) {
+        scaled = ast_MakeBinary(OP_MULT, ast_MakeNumber(num_Copy(l)), *e);
+        if(scaled != NULL) {
+            *e = scaled;
+            expand(*e, EXP_ALL);
+            simplify(*e, SIMP_SOLVE);
+        }
+    }
+    num_Cleanup(l);
+}
+
 static int isolate(pcas_ast_t *e, Symbol var, pcas_ast_t **out) {
     pcas_ast_t *side = e, *other[SOLVE_MAX];
     int m = 1, i;
@@ -658,18 +704,27 @@ int solve_in_range(pcas_ast_t **roots, int n, pcas_ast_t *hi) {
     return kept;
 }
 
-/*smallest first, where both are numbers. others keep their order.*/
+/*smallest first, by the decimal. letters stay where they are*/
 static void sort_roots(pcas_ast_t **out, int n) {
+    pcas_ast_t *val[SOLVE_MAX];
     int i, j;
 
+    /*by the decimal, so 1/2 and sqrt(2) sort too. letters stay where they are*/
+    for(i = 0; i < n; i++)
+        val[i] = decimal(out[i]);
     for(i = 1; i < n; i++) {
-        pcas_ast_t *r = out[i];
+        pcas_ast_t *r = out[i], *rv = val[i];
 
-        for(j = i; j > 0 && r->type == NODE_NUMBER && out[j - 1]->type == NODE_NUMBER
-                   && mp_rat_compare(out[j - 1]->op.num, r->op.num) > 0; j--)
+        for(j = i; j > 0 && rv != NULL && val[j - 1] != NULL
+                   && mp_rat_compare(val[j - 1]->op.num, rv->op.num) > 0; j--) {
             out[j] = out[j - 1];
+            val[j] = val[j - 1];
+        }
         out[j] = r;
+        val[j] = rv;
     }
+    for(i = 0; i < n; i++)
+        ast_Cleanup(val[i]);
 }
 
 int solve(pcas_ast_t *expr, Symbol var, pcas_ast_t **out) {
@@ -683,6 +738,7 @@ int solve(pcas_ast_t *expr, Symbol var, pcas_ast_t **out) {
     simplify(e, SIMP_SOLVE);
     expand(e, EXP_ALL);
     simplify(e, SIMP_SOLVE);
+    clear_denominators(&e);
     if(pcas_cancelled) { /*half expanded, don't read it as a polynomial*/
         ast_Cleanup(e);
         return SOLVE_UNKNOWN;

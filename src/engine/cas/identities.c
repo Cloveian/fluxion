@@ -73,6 +73,11 @@ pcas_id_t id_trig_identities[ID_NUM_TRIG_IDENTITIES] = {
     {"Atan(X)cos(X", "Asin(X"},
     {"Asin(X)/(Btan(X", "Acos(X)/B"},
 
+    /*Fluxion: the reciprocals against their own function, sec(x)cos(x) is 1*/
+    {"Asec(X)cos(X", "A"},
+    {"Acsc(X)sin(X", "A"},
+    {"Acot(X)tan(X", "A"},
+
     {"cos(asin(X", "sqrt(1_X^2"},
     {"cos(atan(X", "1/sqrt(1+X^2"},
     {"sin(acos(X", "sqrt(1_X^2"},

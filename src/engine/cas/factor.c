@@ -77,6 +77,31 @@ static pcas_ast_t *gcd_div(pcas_ast_t *div, pcas_ast_t *b) {
     return ast_MakeBinary(OP_DIV, num_g, den_g);
 }
 
+/*Fluxion: a power as a fraction, or NULL. 3^(1/2) keeps its power as a div of two
+numbers, not a number node, so sqrt(3) and 3^(3/2) never got a gcd*/
+static mp_rat pow_value(pcas_ast_t *p) {
+    pcas_ast_t *num, *den;
+    mp_rat r;
+
+    if(p->type == NODE_NUMBER)
+        return num_Copy(p->op.num);
+
+    if(!isoptype(p, OP_DIV))
+        return NULL;
+
+    num = ast_ChildGet(p, 0);
+    den = ast_ChildGet(p, 1);
+
+    if(num == NULL || den == NULL || num->type != NODE_NUMBER || den->type != NODE_NUMBER
+        || mp_rat_compare_zero(den->op.num) == 0)
+        return NULL;
+
+    r = num_FromInt(0);
+    if(r != NULL)
+        mp_rat_div(num->op.num, den->op.num, r);
+    return r;
+}
+
 /*gcd of both bases, raised to smallest power*/
 static pcas_ast_t *gcd_pow(pcas_ast_t *pow, pcas_ast_t *b) {
     pcas_ast_t *base1, *power1;
@@ -95,6 +120,7 @@ static pcas_ast_t *gcd_pow(pcas_ast_t *pow, pcas_ast_t *b) {
 
     if(isoptype(b, OP_POW)) {
         pcas_ast_t *power2, *base2;
+        mp_rat value1, value2;
 
         power1 = ast_ChildGet(pow, 1);
         base2 = ast_ChildGet(b, 0);
@@ -103,16 +129,24 @@ static pcas_ast_t *gcd_pow(pcas_ast_t *pow, pcas_ast_t *b) {
         if(base2 == NULL || power2 == NULL) /*Fluxion: oom*/
             return NULL;
 
-        if(power1->type == NODE_NUMBER && power2->type == NODE_NUMBER) {
+        value1 = pow_value(power1); /*Fluxion: was number nodes only*/
+        value2 = pow_value(power2);
+
+        if(value1 != NULL && value2 != NULL) {
             bool use_first;
             pcas_ast_t *current_gcd;
 
-            use_first = mp_rat_compare(power1->op.num, power2->op.num) < 0;
+            use_first = mp_rat_compare(value1, value2) < 0;
+            num_Cleanup(value1);
+            num_Cleanup(value2);
 
             current_gcd = gcd(base1, base2);
 
             return ast_MakeBinary(OP_POW, current_gcd, use_first ? ast_Copy(power1) : ast_Copy(power2));
         }
+
+        num_Cleanup(value1);
+        num_Cleanup(value2);
 
     } else if(power1->type == NODE_NUMBER && mp_rat_compare_value(power1->op.num, 1, 1) >= 0 && ast_Compare(base1, b)) {
         return ast_Copy(b);
