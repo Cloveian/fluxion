@@ -385,6 +385,107 @@ static int solve_factor(pcas_ast_t *f, Symbol var, pcas_ast_t **out, int n) {
     return n;
 }
 
+/*not a polynomial in the variable, but it only turns up once: y = 2^x, sqrt(x) = 2,
+1/x = 2. so peel whatever's wrapped round it, one layer at a time, mirroring each
+layer onto the other side. an even power gives both signs. trig gives the first
+answer only, the rest of those is the trig solving item*/
+
+static int count_var(pcas_ast_t *e, Symbol var) {
+    pcas_ast_t *c;
+    int n = 0;
+
+    if(e->type == NODE_SYMBOL)
+        return e->op.symbol == var;
+    if(e->type == NODE_OPERATOR)
+        for(c = ast_ChildGet(e, 0); c != NULL; c = c->next)
+            n += count_var(c, var);
+    return n;
+}
+
+/*the other children of e, copied, as a sum or a product*/
+static pcas_ast_t *rest_of(pcas_ast_t *e, pcas_ast_t *skip, OperatorType op) {
+    pcas_ast_t *r = ast_MakeOperator(op), *c;
+
+    for(c = ast_ChildGet(e, 0); c != NULL; c = c->next)
+        if(c != skip)
+            ast_ChildAppend(r, ast_Copy(c));
+    return r;
+}
+
+static bool even_number(pcas_ast_t *e) {
+    mp_small n, den;
+
+    return e->type == NODE_NUMBER && mp_rat_to_ints(e->op.num, &n, &den) == MP_OK && den == 1 && n % 2 == 0;
+}
+
+static int isolate(pcas_ast_t *e, Symbol var, pcas_ast_t **out) {
+    pcas_ast_t *side = e, *other[SOLVE_MAX];
+    int m = 1, i;
+
+    other[0] = number(0);
+    while(side->type != NODE_SYMBOL && !pcas_cancelled) {
+        pcas_ast_t *a, *b, *in = NULL, *c;
+        OperatorType op;
+
+        if(side->type != NODE_OPERATOR)
+            goto nope;
+        op = optype(side);
+        a = ast_ChildGet(side, 0);
+        b = ast_ChildGet(side, 1);
+        for(c = a; c != NULL; c = c->next)
+            if(has_var(c, var))
+                in = c;
+        if(in == NULL)
+            goto nope;
+
+        for(i = 0; i < m; i++) {
+            pcas_ast_t *o = other[i], *t = NULL;
+
+            switch(op) {
+            case OP_ADD:  t = ast_MakeBinary(OP_ADD, o, ast_MakeBinary(OP_MULT, number(-1), rest_of(side, in, OP_ADD))); break;
+            case OP_MULT: t = ast_MakeBinary(OP_DIV, o, rest_of(side, in, OP_MULT)); break;
+            case OP_DIV:  t = in == a ? ast_MakeBinary(OP_MULT, o, ast_Copy(b)) : ast_MakeBinary(OP_DIV, ast_Copy(a), o); break;
+            case OP_POW:  /*the root of it, or a log of it*/
+                t = in == a ? ast_MakeBinary(OP_POW, o, ast_MakeBinary(OP_DIV, number(1), ast_Copy(b)))
+                            : ast_MakeBinary(OP_LOG, ast_Copy(a), o);
+                break;
+            case OP_ROOT: if(in == b) t = ast_MakeBinary(OP_POW, o, ast_Copy(a)); break;
+            case OP_LOG:  if(in == b) t = ast_MakeBinary(OP_POW, ast_Copy(a), o); break;
+            case OP_SIN:  t = ast_MakeUnary(OP_SIN_INV, o); break;
+            case OP_COS:  t = ast_MakeUnary(OP_COS_INV, o); break;
+            case OP_TAN:  t = ast_MakeUnary(OP_TAN_INV, o); break;
+            case OP_SIN_INV: t = ast_MakeUnary(OP_SIN, o); break;
+            case OP_COS_INV: t = ast_MakeUnary(OP_COS, o); break;
+            case OP_TAN_INV: t = ast_MakeUnary(OP_TAN, o); break;
+            default: break;
+            }
+            if(t == NULL)
+                goto nope;
+            other[i] = t;
+        }
+        if(op == OP_POW && in == a && even_number(b)) {
+            int k = m;
+
+            for(i = 0; i < k && m < SOLVE_MAX; i++)
+                other[m++] = ast_MakeBinary(OP_MULT, number(-1), ast_Copy(other[i]));
+        }
+        side = in;
+    }
+    if(pcas_cancelled)
+        goto nope;
+
+    for(i = 0; i < m; i++) {
+        simplify(other[i], SIMP_ALL);   /*the works, so asin(1/2) ends up pi/6*/
+        out[i] = other[i];
+    }
+    return m;
+
+nope:
+    for(i = 0; i < m; i++)
+        ast_Cleanup(other[i]);
+    return SOLVE_UNKNOWN;
+}
+
 /*smallest first, where both are numbers. others keep their order.*/
 static void sort_roots(pcas_ast_t **out, int n) {
     int i, j;
@@ -432,6 +533,9 @@ int solve(pcas_ast_t *expr, Symbol var, pcas_ast_t **out) {
         }
         coefs_free(&p);
     }
+
+    if(n == SOLVE_UNKNOWN && !pcas_cancelled && count_var(e, var) == 1)
+        n = isolate(e, var, out);   /*not a polynomial in it, but it's only there once*/
 
     if(pcas_cancelled) /*half a root list isn't an answer either*/
         n = SOLVE_UNKNOWN;
