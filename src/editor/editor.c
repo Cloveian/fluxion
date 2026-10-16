@@ -1262,6 +1262,129 @@ bool ed_fold_command(editor_t *ed) {
     return true;
 }
 
+/* rows as bytes (editor.h). a row is its length then its items, an item is its
+   kind, a character for ED_CHAR, the name for ED_FUNC (length first), then each
+   slot as a row. nothing clever, it's a few hundred bytes a line */
+
+typedef struct {
+    unsigned char *p;
+    size_t left;
+    bool bad;
+} bytes_t;
+
+static void put_byte(bytes_t *b, unsigned char c) {
+    if(b->left == 0) {
+        b->bad = true;
+        return;
+    }
+    *b->p++ = c;
+    b->left--;
+}
+
+static void save_row(bytes_t *b, const ed_row_t *r) {
+    int i, s;
+
+    if(r->len > 255) {
+        b->bad = true;
+        return;
+    }
+    put_byte(b, (unsigned char)r->len);
+    for(i = 0; i < r->len && !b->bad; i++) {
+        const ed_node_t *n = r->items[i];
+
+        put_byte(b, (unsigned char)n->kind);
+        if(n->kind == ED_CHAR) {
+            put_byte(b, (unsigned char)n->ch);
+        } else if(n->kind == ED_FUNC) {
+            size_t len = strlen(n->name);
+
+            put_byte(b, (unsigned char)len);
+            for(s = 0; s < (int)len; s++)
+                put_byte(b, (unsigned char)n->name[s]);
+        }
+        for(s = 0; s < n->slots; s++)
+            save_row(b, n->slot[s]);
+    }
+}
+
+size_t ed_row_save(const ed_row_t *r, unsigned char *buf, size_t max) {
+    bytes_t b = { buf, max, false };
+
+    save_row(&b, r);
+    return b.bad ? 0 : (size_t)(b.p - buf);
+}
+
+typedef struct {
+    const unsigned char *p;
+    size_t left;
+} reader_t;
+
+/* -1 when the bytes run out, so a cut-off appvar can't walk off the end */
+static int get_byte(reader_t *rd) {
+    if(rd->left == 0)
+        return -1;
+    rd->left--;
+    return *rd->p++;
+}
+
+/* fills r (made by the caller) from the bytes. false on anything off, the caller
+   frees what got built */
+static bool load_row(reader_t *rd, ed_row_t *r) {
+    int len = get_byte(rd), i, s;
+
+    if(len < 0)
+        return false;
+    for(i = 0; i < len; i++) {
+        int kind = get_byte(rd), ch = 0;
+        char name[sizeof ((ed_node_t *)0)->name] = { 0 };
+        ed_node_t *n;
+
+        if(kind < 0 || kind > ED_LOGB)
+            return false;
+        if(kind == ED_CHAR) {
+            ch = get_byte(rd);
+            if(ch <= 0)
+                return false;
+        } else if(kind == ED_FUNC) {
+            int nl = get_byte(rd);
+
+            if(nl <= 0 || nl >= (int)sizeof name)
+                return false;
+            for(s = 0; s < nl; s++) {
+                int c = get_byte(rd);
+
+                if(c <= 0)
+                    return false;
+                name[s] = (char)c;
+            }
+        }
+        n = node_new((ed_kind_t)kind, (char)ch, kind == ED_FUNC ? name : NULL);
+        if(n == NULL || !row_insert(r, r->len, n)) {
+            node_free(n);
+            return false;
+        }
+        for(s = 0; s < n->slots; s++)
+            if(!load_row(rd, n->slot[s]))
+                return false;
+    }
+    return true;
+}
+
+ed_row_t *ed_row_load(const unsigned char *buf, size_t n, size_t *used) {
+    reader_t rd = { buf, n };
+    ed_row_t *r = row_new(NULL, 0);
+
+    if(r == NULL)
+        return NULL;
+    if(!load_row(&rd, r)) {
+        row_free(r);
+        return NULL;
+    }
+    if(used != NULL)
+        *used = n - rd.left;
+    return r;
+}
+
 int ed_row_word(const ed_row_t *r, int from, char *buf, int max) {
     int n = letter_run(r, from, buf, max);
 

@@ -15,8 +15,13 @@
 #define NAMES_MAX 32 /* stored at once. its RAM, not forever */
 #define NAME_LEN  8 /* letters, same as a TI variable (and an appvar, later) */
 
-/* plug the editor's lookup in. call once at startup */
+/* plug the editor's lookup in and bring back whats saved. call once at startup */
 void names_init(void);
+
+/* to the store (platform/store.h). the app calls it after a store or delete and
+   on the way out. false if it didn't fit or couldn't be written */
+#define NAMES_SAVE_MAX 4096
+bool names_save(void);
 
 /* the stored ones */
 int names_count(void);

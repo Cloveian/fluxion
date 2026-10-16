@@ -55,6 +55,19 @@ static bool step(editor_t *ed, const char *s) {
 
     if(strcmp(s, "fold") == 0)         { bool f = ed_fold_command(ed); printf("fold: %d, command: %s\n", f, ed_command(ed) ? ed_command(ed) : "-"); return true; }
 
+    if(strcmp(s, "roundtrip") == 0) {    /* save the line as bytes, load it back, compare what the engine would get */
+        unsigned char buf[512];
+        size_t n = ed_row_save(ed->root, buf, sizeof buf), used = 0;
+        ed_row_t *r = ed_row_load(buf, n, &used);
+        char *a = ed_row_to_engine(ed->root), *b = r != NULL ? ed_row_to_engine(r) : NULL;
+
+        printf("roundtrip: %u bytes, %s\n", (unsigned)n, a != NULL && b != NULL && strcmp(a, b) == 0 && used == n ? "same" : "DIFFERENT");
+        free(a);
+        free(b);
+        ed_row_free(r);
+        return true;
+    }
+
     fprintf(stderr, "unknown step %s\n", s);
     return false;
 }

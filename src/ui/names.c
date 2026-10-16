@@ -1,5 +1,6 @@
 #include "names.h"
 #include "catalog.h"
+#include "platform/store.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -118,8 +119,75 @@ static bool lookup(const char *s, int n, ed_name_t *out) {
     return true;
 }
 
+/* saving. one appvar, a format byte then count, then name length, name, row */
+
+#define SLOT "FLXNAMES"
+
+bool names_save(void) {
+    unsigned char *buf = malloc(NAMES_SAVE_MAX);
+    size_t at = 2;
+    int i;
+    bool ok = buf != NULL;
+
+    if(!ok)
+        return false;
+    buf[0] = ED_FORMAT;
+    buf[1] = (unsigned char)count;
+    for(i = 0; i < count && ok; i++) {
+        size_t nl = strlen(vars[i].name), n;
+
+        if(at + 1 + nl >= NAMES_SAVE_MAX) {
+            ok = false;
+            break;
+        }
+        buf[at++] = (unsigned char)nl;
+        memcpy(buf + at, vars[i].name, nl);
+        at += nl;
+        n = ed_row_save(vars[i].row, buf + at, NAMES_SAVE_MAX - at);
+        ok = n > 0;
+        at += n;
+    }
+    ok = ok && store_save(SLOT, buf, at);
+    free(buf);
+    return ok;
+}
+
+static void load(void) {
+    unsigned char *buf = malloc(NAMES_SAVE_MAX);
+    size_t n, at = 2;
+    int want, i;
+
+    if(buf == NULL)
+        return;
+    n = store_load(SLOT, buf, NAMES_SAVE_MAX);
+    /* an older format, or more than fits: ignore it rather than guess */
+    if(n < 2 || n > NAMES_SAVE_MAX || buf[0] != ED_FORMAT) {
+        free(buf);
+        return;
+    }
+    want = buf[1];
+    for(i = 0; i < want && i < NAMES_MAX && at < n; i++) {
+        size_t nl = buf[at++], used = 0;
+        ed_row_t *row;
+
+        if(nl == 0 || nl > NAME_LEN || at + nl > n)
+            break;
+        memcpy(vars[count].name, buf + at, nl);
+        vars[count].name[nl] = '\0';
+        at += nl;
+        row = ed_row_load(buf + at, n - at, &used);
+        if(row == NULL)
+            break;
+        vars[count].row = row;
+        count++;
+        at += used;
+    }
+    free(buf);
+}
+
 void names_init(void) {
     ed_name_lookup = lookup;
+    load();
 }
 
 /* storing */

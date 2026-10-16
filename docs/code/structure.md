@@ -14,7 +14,7 @@ fluxion/
 │   │   ├── cas/   simplify, expand, factor, derivative, identities, solve
 │   │   ├── imath/  big-number + rational maths
 │   │   └── pc/  PC-only command line + test runner (empty on the calculator)
-│   ├── platform/  screen.h / keys.h: *_ti.c = graphx + keypadc, *_pc.c = framebuffer + SDL
+│   ├── platform/  screen.h / keys.h / store.h: *_ti.c = graphx + keypadc + appvars, *_pc.c = framebuffer + SDL + files in build-pc/store
 │   ├── render/
 │   │   ├── layout.c    expression tree -> boxes with sizes + positions (no drawing)
 │   │   ├── draw.c  boxes -> lines and text, through screen.h
