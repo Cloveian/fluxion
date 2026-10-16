@@ -499,7 +499,7 @@ static bool setting_on(const item_t *it) {
     what picking an item does, worked out from its engine syntax (catalog.c).
     returns false if the editor can't do it yet. with dry set, only checks.
 */
-static bool pick(const item_t *it, bool dry) {
+static bool pick_into(editor_t *into, const item_t *it, bool dry) {
     const char *s = it->engine;
 
     if(it->have == HAVE_NO)
@@ -535,7 +535,7 @@ static bool pick(const item_t *it, bool dry) {
         if(c == 0)
             return false;
         if(!dry)
-            ed_insert_char(&ed, c);
+            ed_insert_char(into, c);
         return true;
     }
 
@@ -549,7 +549,7 @@ static bool pick(const item_t *it, bool dry) {
         for(i = 0; i < sizeof shapes / sizeof shapes[0]; i++) {
             if(strcmp(s, shapes[i].engine) == 0) {
                 if(!dry)
-                    ed_insert(&ed, shapes[i].kind, NULL);
+                    ed_insert(into, shapes[i].kind, NULL);
                 return true;
             }
         }
@@ -557,10 +557,10 @@ static bool pick(const item_t *it, bool dry) {
 
     if(strcmp(s, "($)root($)") == 0) {
         if(!dry) {
-            ed_insert(&ed, ED_NROOT, NULL);
+            ed_insert(into, ED_NROOT, NULL);
             if(strcmp(it->label, "cbrt") == 0) {
-                ed_insert_char(&ed, '3');
-                ed_down(&ed);
+                ed_insert_char(into, '3');
+                ed_down(into);
             }
         }
         return true;
@@ -568,18 +568,18 @@ static bool pick(const item_t *it, bool dry) {
     if(strcmp(s, "e^($)") == 0 || strcmp(s, "10^($)") == 0) {
         if(!dry) {
             if(s[0] == 'e') {
-                ed_insert_char(&ed, CH_EULER);
+                ed_insert_char(into, CH_EULER);
             } else {
-                ed_insert_char(&ed, '1');
-                ed_insert_char(&ed, '0');
+                ed_insert_char(into, '1');
+                ed_insert_char(into, '0');
             }
-            ed_insert(&ed, ED_POW, NULL);
+            ed_insert(into, ED_POW, NULL);
         }
         return true;
     }
     if(strcmp(s, "deriv($,X,X)") == 0) {
         if(!dry)
-            ed_insert(&ed, ED_FUNC, "deriv");
+            ed_insert(into, ED_FUNC, "deriv");
         return true;
     }
 
@@ -597,16 +597,71 @@ static bool pick(const item_t *it, bool dry) {
         if(!dry) {
             memcpy(name, s, n);
             name[n] = '\0';
-            ed_insert(&ed, ED_FUNC, name);
+            ed_insert(into, ED_FUNC, name);
         }
         return true;
     }
 }
 
+static bool pick(const item_t *it, bool dry) {
+    return pick_into(&ed, it, dry);
+}
+
+/* the rows drawn as whatever picking them would put in the line. goes through
+   pick_into on a scratch editor so the preview cant drift from what enter
+   actually inserts, and one size under normal math so it still reads as a menu.
+   built on open, freed on close */
+static editor_t preview;
+static box_t *menu_boxes[32];
+static int menu_box_count;
+
+static void menu_free_boxes(void) {
+    int i;
+
+    for(i = 0; i < menu_box_count; i++) {
+        layout_free(menu_boxes[i]);
+        menu_boxes[i] = NULL;
+    }
+    menu_box_count = 0;
+}
+
+static void menu_build_boxes(void) {
+    const folder_t *f = &folders[menu];
+    layout_font_t small = draw_font;
+    unsigned i;
+
+    if(small.base > 0)
+        small.base--;
+    if(preview.root == NULL && !ed_init(&preview))
+        return;
+    for(i = 0; i < f->count && i < sizeof menu_boxes / sizeof menu_boxes[0]; i++) {
+        const item_t *it = f->items[i];
+
+        menu_boxes[i] = NULL;
+        if(it->kind == ITEM_SETTING || !pick(it, true))
+            continue; /* settings and the greyed out ones stay text */
+        /* the power's base is whatever's left of it, so alone it's just a
+           floating slot. "x^n" says it better */
+        if(strcmp(it->engine, "($)^($)") == 0)
+            continue;
+        ed_clear(&preview);
+        if(pick_into(&preview, it, false))
+            menu_boxes[i] = ed_layout(&preview, &small, false);
+    }
+    menu_box_count = (int)i;
+}
+
+static void menu_close(void) {
+    menu_free_boxes();
+    menu = -1;
+}
+
 static void menu_open(int folder) {
+    menu_free_boxes();
     menu = folder;
     menu_sel = 0;
     menu_top = 0;
+    menu_build_boxes();
 }
 
 static void menu_choose(int i) {
@@ -620,7 +675,7 @@ static void menu_choose(int i) {
     }
     /* settings stay open so several can be toggled */
     if(it->kind != ITEM_SETTING)
-        menu = -1;
+        menu_close();
 }
 
 static void menu_key(keypress_t p) {
@@ -632,12 +687,12 @@ static void menu_key(keypress_t p) {
     case K_LEFT:  menu_open((menu + FOLDER_COUNT - 1) % FOLDER_COUNT); break;
     case K_RIGHT: menu_open((menu + 1) % FOLDER_COUNT); break;
     case K_ENTER: menu_choose(menu_sel); break;
-    case K_CLEAR: menu = -1; break;
+    case K_CLEAR: menu_close(); break;
 
     case K_YEQU: case K_WINDOW: case K_ZOOM: case K_TRACE: case K_GRAPH: {
         int f = (int)(p.key - K_YEQU);
         if(f == menu)
-            menu = -1;
+            menu_close();
         else
             menu_open(f);
         break;
@@ -1247,12 +1302,22 @@ static void draw_menu(void) {
     int rows = (int)f->count, max_rows = (bottom - 4) / row_h;
     int width = 0, x, top, i;
 
+    /* rows are as wide and as tall as the biggest preview (a fraction makes the
+       whole folder taller, fine) */
     for(i = 0; i < rows; i++) {
-        int w = draw_text_width(f->items[i]->label, font);
+        const box_t *b = i < menu_box_count ? menu_boxes[i] : NULL;
+        int w = b != NULL ? b->width : draw_text_width(f->items[i]->label, font);
+        int h = b != NULL ? b->ascent + b->descent + 2 : 0;
+
+        if(f->items[i]->kind == ITEM_SETTING)
+            w += draw_text_width("[x] ", font); /* its drawn with the box in front so measure that too */
         if(w > width)
             width = w;
+        if(h > row_h)
+            row_h = h;
     }
     width += 34;    /* for the "1:" plus room for a * or [x] */
+    max_rows = (bottom - 4) / row_h;
 
     if(rows > max_rows)
         rows = max_rows;
@@ -1294,9 +1359,15 @@ static void draw_menu(void) {
 
         if(n < 9) {
             char num[3] = { (char)('1' + n), ':', '\0' };
-            draw_text(x + 3, y, num, font);
+            draw_text(x + 3, y + (row_h - 2 - font->ascent - font->descent) / 2, num, font);
         }
-        draw_text(x + 18, y, label, font);
+        if(n < menu_box_count && menu_boxes[n] != NULL) {
+            const box_t *b = menu_boxes[n];
+
+            draw_box(b, x + 18, y + (row_h - 2 - b->ascent - b->descent) / 2 + b->ascent);
+        } else {
+            draw_text(x + 18, y + (row_h - 2 - font->ascent - font->descent) / 2, label, font);
+        }
     }
 }
 
@@ -1673,6 +1744,9 @@ void app_run(void) {
     keys_end();
     screen_end();
     clear_history();
+    menu_free_boxes();
     ed_free(&ed);
+    if(preview.root != NULL)
+        ed_free(&preview);
     id_UnloadAll();
 }
