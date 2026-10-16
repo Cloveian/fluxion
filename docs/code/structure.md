@@ -11,7 +11,7 @@ fluxion/
 │   ├── main.c  calculator start: app_run()
 │   ├── main_pc.c  the same app on the PC (window, or scripted keys -> PNG)
 │   ├── engine/   PineappleCAS engine (MIT, see its README for what's changed)
-│   │   ├── cas/   simplify, expand, factor, derivative, identities, solve
+│   │   ├── cas/   simplify, expand, factor, derivative, identities, solve, approx (decimal), degrees
 │   │   ├── imath/  big-number + rational maths
 │   │   └── pc/  PC-only command line + test runner (empty on the calculator)
 │   ├── platform/  screen.h / keys.h / store.h: *_ti.c = graphx + keypadc + appvars, *_pc.c = framebuffer + SDL + files in build-pc/store
@@ -23,7 +23,12 @@ fluxion/
 │   │   └── editor.c    the input line: rows, templates, cursor; to engine string / boxes
 │   └── ui/
 │       ├── app.c    history, input line, soft-key folders, running the engine
-│       └── catalog.c  everything you can type or pick, and what the engine can do
+│       ├── catalog.c  everything you can type or pick, and what the engine can do. its words are the name table too
+│       ├── page.c  full screen list pages (catalog, vars, mode)
+│       ├── names.c  stored names and the typed-word lookup the editor asks
+│       ├── vars.c   the [vars] page
+│       ├── mode.c  the [mode] page
+│       └── settings.c  the angle mode, and saving the lot
 ├── test/
 │   ├── pcas.tests   PineappleCAS's 256 engine tests
 │   ├── fluxion.tests   Fluxion's engine tests (factor, solve, cancel, roots, forms)

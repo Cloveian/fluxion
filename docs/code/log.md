@@ -1,5 +1,15 @@
 # Log
 
+## 2026-10-16 - it remembers, cot sec csc, mode menu, solve grew up
+
+- it remembers now. the history and the stored names go into RAM appvars on the way out (FLXHIST, FLXNAMES, files under build-pc/store on the PC) and come back at start. rows go to bytes with a tiny format in editor.c, a format byte up front so an old one gets ignored instead of read wrong. history capped at 12 KB, oldest dropped, names 4 KB. a RAM reset loses them and thats the deal
+- bold measures as wide as it draws now (one more per glyph, the layout callback takes the style), so stored names stopped having their letters touch. italic hangs its top out by the same amount it leans, still nothing uses it
+- cot, sec and csc are real functions now, parser to printer, with derivatives, decimals and a few exact values (cot(pi/4) is 1). `[on]` + sin / cos / tan types them. nothing turns them into 1/tan, which was the whole point
+- the mode menu, on `[mode]`: angle (degrees is a pi/180 on every trig argument before it runs, exact, so sin(30) is 1/2 and asin(1/2) is 30), what simplest means (the form, same thing as 2nd+enter), and rationalize, which moved out of Tools. settings dont survive a restart yet. the trig answer form waits for trig solving to exist
+- solve pulls a letter out of a quadratic now, solve(y=x^2+3, x) gives -sqrt(y-3), sqrt(y-3), and x^2+bx+c=0 gives the formula. built as a tree and simplified, with the bits simplify wont do done by hand first (a square factor out of the root, a common number out of the fraction, flipping a negative lead). y=2^x still gives up, that needs an isolate solver
+- and when the variable only turns up once it just peels the layers off: solve(y=2^x, x) is logb(y,2), sqrt(x)=2 is 4, 1/x=2 is 1/2, x^4=16 is -2, 2. five of the old "cant do this" tests became real answers
+- log(1000) is 3 now, and logb(8,2). integer logs that work out get evaluated, the others stay
+
 ## 2026-10-15 - out of memory, bold / italic, E
 
 - running out of memory doesn't crash anymore. every malloc in the engine goes through `pcas_malloc`, a NULL sets `pcas_oom` and the cancel flag, so it all unwinds like a cancel and the app says "out of memory". imath hands out a static number instead of NULL: the cas code makes scratch numbers and feeds them to imath straight away, so that was ~400 crash sites in one go
@@ -14,13 +24,6 @@
 - the folder menus draw what each row would type, laid out like the line does it, so its a real sin^-1 and a stacked n/d instead of text. built into a scratch editor when the folder opens, one size under normal math
 - the screen goes dark after 2 min of nothing (just the backlight, graphx keeps running) and `[2nd][alpha][on]` does it by hand. the key that wakes it gets eaten like the TI does. the idle clock lives in keys_wait and starts when it's entered, so a long solve isn't idling. the OS's own APD never fires while we're running since we don't use GetKey, so this was needed anyway
 - `solve(` typed out works now. on enter the word plus its bracket template get folded into the command item the folder would have inserted, so ed_command and the history see the same thing. a `fold` step in editor-test for it
-- it remembers now. the history and the stored names go into RAM appvars on the way out (FLXHIST, FLXNAMES, files under build-pc/store on the PC) and come back at start. rows go to bytes with a tiny format in editor.c, a format byte up front so an old one gets ignored instead of read wrong. history capped at 12 KB, oldest dropped, names 4 KB. a RAM reset loses them and thats the deal
-- bold measures as wide as it draws now (one more per glyph, the layout callback takes the style), so stored names stopped having their letters touch. italic hangs its top out by the same amount it leans, still nothing uses it
-- cot, sec and csc are real functions now, parser to printer, with derivatives, decimals and a few exact values (cot(pi/4) is 1). `[on]` + sin / cos / tan types them. nothing turns them into 1/tan, which was the whole point
-- the mode menu, on `[mode]`: angle (degrees is a pi/180 on every trig argument before it runs, exact, so sin(30) is 1/2 and asin(1/2) is 30), what simplest means (the form, same thing as 2nd+enter), and rationalize, which moved out of Tools. settings dont survive a restart yet. the trig answer form waits for trig solving to exist
-- solve pulls a letter out of a quadratic now, solve(y=x^2+3, x) gives -sqrt(y-3), sqrt(y-3), and x^2+bx+c=0 gives the formula. built as a tree and simplified, with the bits simplify wont do done by hand first (a square factor out of the root, a common number out of the fraction, flipping a negative lead). y=2^x still gives up, that needs an isolate solver
-- and when the variable only turns up once it just peels the layers off: solve(y=2^x, x) is logb(y,2), sqrt(x)=2 is 4, 1/x=2 is 1/2, x^4=16 is -2, 2. five of the old "cant do this" tests became real answers
-- log(1000) is 3 now, and logb(8,2). integer logs that work out get evaluated, the others stay
 - bold and italic in the draw layer (`draw_text_styled`, `box_t.style`). nothing uses them yet and widths aren't synced, so styled text is a pixel or two off. `[2nd][clear]` clears the line like `[on][clear]`
 - roadmap written up with the decisions so far: names (multi-letter vars and typeable functions are one thing, bold = has a value), RAM appvars for storage, the by-hand default, cot/sec/csc as real functions
 
