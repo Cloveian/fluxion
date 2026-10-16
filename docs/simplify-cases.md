@@ -38,7 +38,7 @@ Real cases where the nspire's answer wasn't what i wanted. This is the spec for 
 | 37 | simplify | `(X^3+X^2_8X_12)/(X_3)` | $x^2+4x+4$ | four separate fractions | **fixed** 10-14: $(x+2)^2$ (smallest; expanded is a form) |
 | 1 | solve | `(100+60+80+30+X)/5=72` | $x=90$ | – | **fixed** 10-13: $x = 90$ |
 | 9 | solve for X | `6Y=5X_1` | $\frac{6y+1}{5}$ | – | **fixed** 10-13: $x = \frac{6y+1}{5}$ |
-| 14 | solve system | `2X_Y=7`, `-4X+2Y=2` | no solution | – | **solve** |
+| 14 | solve system | `2X_Y=7`, `-4X+2Y=2` | no solution | – | **fixed** 10-16: false, with system() |
 | 33 | solve | `2(3X+5)+2(X+3)=360` | $x=43$ | `8X+16` for the left side | **fixed** 10-13: $x = 43$ |
 
 as of 10-14, 14 of the 19 rows work now. left: the 4 form ones and systems (Q14)
@@ -46,6 +46,8 @@ as of 10-14, 14 of the 19 rows work now. left: the 4 form ones and systems (Q14)
 later on 10-14 the engine does the form ones too, they just need the form key. so only systems left (Q14)
 
 10-15: the form key's in (`[2nd][enter]` cycles, `[alpha][enter]` is decimal), so those four work on the calculator now. 18 of 19, just systems left
+
+10-16: system(eq, eq, x, y) is in, Q14 says false. 19 of 19
 
 when i first went through it:
 - 7 of the 16 just worked already (the plain simplify / expand / substitute ones)

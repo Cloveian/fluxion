@@ -44,6 +44,7 @@ TestType resolve_type(char *type) {
     if(!strcmp(type, "comdenomf"))  return TEST_COMDENOMF;
     if(!strcmp(type, "decimal"))    return TEST_DECIMAL;
     if(!strcmp(type, "asym"))       return TEST_ASYM;
+    if(!strcmp(type, "system"))     return TEST_SYSTEM;
 
     return TEST_INVALID;
 }
@@ -309,6 +310,99 @@ static bool test_asym(test_t *t) {
     return passed;
 }
 
+/*Fluxion: system; eq,eq,...; vars; expected. each eq is A=B, or A for A=0. vars run
+together (XY), one letter each. expected is the values in var order, or false / many / unknown*/
+static bool test_system(test_t *t) {
+    pcas_ast_t *eqs[SYSTEM_MAX] = {0}, *vals[SYSTEM_MAX] = {0}, *e, *rhs;
+    Symbol vars[SYSTEM_MAX];
+    char got[MAX_LINE] = "";
+    char *s, *start, *eq, *trimmed;
+    pcas_error_t err;
+    int n = 0, nvars = (int)strlen(t->arg2), r = SOLVE_UNKNOWN, i;
+    bool passed = true, last;
+
+    if(nvars < 1 || nvars > SYSTEM_MAX) {
+        printf("Test failed on line %u. Need 1 to %d variables, got %s\n", t->line, SYSTEM_MAX, t->arg2);
+        return false;
+    }
+    for(i = 0; i < nvars; i++)
+        vars[i] = (Symbol)t->arg2[i];
+
+    /*one equation per comma, the = turned into A+(-1)B like test_solve*/
+    for(start = s = t->arg1; passed; s++) {
+        if(*s != ',' && *s != '\0')
+            continue;
+
+        last = *s == '\0';
+        *s = '\0';
+        if(n == SYSTEM_MAX) {
+            printf("Test failed on line %u. More than %d equations\n", t->line, SYSTEM_MAX);
+            passed = false;
+            break;
+        }
+
+        rhs = NULL;
+        eq = strchr(start, '=');
+        if(eq != NULL)
+            *eq = '\0';
+        e = parse((uint8_t*)start, strlen(start), str_table, &err);
+        if(err == E_SUCCESS && eq != NULL)
+            rhs = parse((uint8_t*)eq + 1, strlen(eq + 1), str_table, &err);
+        if(err != E_SUCCESS || e == NULL || (eq != NULL && rhs == NULL)) {
+            printf("Test failed on line %u. Unable to parse equation %d\n", t->line, n + 1);
+            passed = false;
+            break;
+        }
+        if(rhs != NULL)
+            e = ast_MakeBinary(OP_ADD, e, ast_MakeBinary(OP_MULT, ast_MakeNumber(num_FromInt(-1)), rhs));
+        if(e == NULL) {
+            printf("Test failed on line %u. Out of memory building equation %d\n", t->line, n + 1);
+            passed = false;
+            break;
+        }
+        eqs[n++] = e;
+
+        if(last)
+            break;
+        start = s + 1;
+    }
+
+    if(passed && n != nvars) {
+        printf("Test failed on line %u. %d equations but %d variables\n", t->line, n, nvars);
+        passed = false;
+    }
+
+    if(passed) {
+        r = solve_system(eqs, n, vars, vals);
+
+        if(r == 0)
+            strcpy(got, "false");
+        else if(r == SOLVE_ALL)
+            strcpy(got, "many");
+        else if(r == SOLVE_UNKNOWN)
+            strcpy(got, "unknown");
+        else if(r == n)
+            asym_list(got, sizeof(got), vals, r);
+        else /*shouldn't happen, but say what it was*/
+            sprintf(got, "solve_system() returned %d", r);
+
+        /*the expected one lost its spaces in test_Parse*/
+        trimmed = trim(got);
+        passed = strcmp(trimmed, t->arg3) == 0;
+        free(trimmed);
+        if(!passed) /*asym_list starts with a space*/
+            printf("Test failed on line %u. Expected %s but got %s\n", t->line, t->arg3, got[0] == ' ' ? got + 1 : got);
+    }
+
+    for(i = 0; i < SYSTEM_MAX; i++) {
+        if(vals[i] != NULL)
+            ast_Cleanup(vals[i]);
+        if(eqs[i] != NULL)
+            ast_Cleanup(eqs[i]);
+    }
+    return passed;
+}
+
 /*Fluxion: decimal; expression without variables; what approx_format() should print*/
 static bool test_decimal(test_t *t) {
     pcas_error_t err;
@@ -359,6 +453,8 @@ bool test_Run(test_t *t) {
         return test_decimal(t);
     if(t->type == TEST_ASYM)
         return test_asym(t);
+    if(t->type == TEST_SYSTEM)
+        return test_system(t);
 
     a = parse((uint8_t*)t->arg1, strlen(t->arg1), str_table, &err);
     if(err != E_SUCCESS) {

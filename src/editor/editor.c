@@ -1026,7 +1026,7 @@ static void put_node(out_t *o, const ed_node_t *n, bool first) {
     }
 }
 
-/* a stored equation only makes sense as solve's argument, put_row says no elsewhere */
+/* a stored equation only makes sense as solve's or system's argument, put_row says no elsewhere */
 static bool allow_equations;
 
 static bool row_has_equals(const ed_row_t *r) {
@@ -1062,7 +1062,7 @@ static void put_row(out_t *o, const ed_row_t *r) {
                 if(row_has_equals(nm.row)) {
                     if(!allow_equations) {
                         memcpy(error_buf, letters + k, (size_t)nm.len);
-                        strcpy(error_buf + nm.len, " is an equation, only solve takes those");
+                        strcpy(error_buf + nm.len, " is an equation, only solve and system take those");
                         ed_error = error_buf;
                         o->bad = true;
                         return;
@@ -1107,7 +1107,7 @@ char *ed_row_to_engine(const ed_row_t *r) {
     return o.s;
 }
 
-static const char *const commands[] = { "expand", "factor", "eval", "solve", "asym" };
+static const char *const commands[] = { "expand", "factor", "eval", "solve", "asym", "system" };
 
 const char *ed_command(const editor_t *ed) {
     const ed_node_t *n;
@@ -1145,12 +1145,13 @@ bool ed_has_command(const char *s) {
 
 char *ed_command_arg(const editor_t *ed) {
     out_t o = { NULL, 0, 0, false };
+    const char *cmd = ed_command(ed);
 
-    if(ed_command(ed) == NULL)
+    if(cmd == NULL)
         return NULL;
 
     ed_error = NULL;
-    allow_equations = strcmp(ed_command(ed), "solve") == 0;
+    allow_equations = strcmp(cmd, "solve") == 0 || strcmp(cmd, "system") == 0;
     put_row(&o, ed->root->items[0]->slot[0]);
     allow_equations = false;
     if(o.bad) {
