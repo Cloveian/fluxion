@@ -1,6 +1,8 @@
 #include "app.h"
 #include "names.h"
 #include "vars.h"
+#include "mode.h"
+#include "settings.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -381,6 +383,8 @@ static void run_solve(char *src, box_t *in) {
     if(rhs != NULL)
         e = ast_MakeBinary(OP_ADD, e, ast_MakeBinary(OP_MULT, ast_MakeNumber(num_FromInt(-1)), rhs));
 
+    if(setting_angle == ANGLE_DEGREES)
+        e = degrees_in(e);
     start = clock();
     n = solve(e, var, roots);
     ms = (unsigned long)((clock() - start) * 1000 / CLOCKS_PER_SEC);
@@ -488,6 +492,8 @@ static bool run(editor_t *line) {
         push(in, NULL, error_text[err], 0);
         return true;
     }
+    if(setting_angle == ANGLE_DEGREES)
+        e = degrees_in(e);
 
     start = clock();
 
@@ -551,15 +557,31 @@ static void form_set(form_t f) {
     }
 }
 
+/* the mode page's side of things (app.h) */
+const char *app_form_name(void) {
+    return form == FORM_HAND ? "by hand" : form_names[form];
+}
+
+void app_next_form(void) {
+    form_set((form_t)((form + 1) % FORM_COUNT));
+}
+
+bool app_rationalize(void) {
+    return (canon_flags & CANONICAL_RATIONALIZE) != 0;
+}
+
+void app_toggle_rationalize(void) {
+    canon_flags ^= CANONICAL_RATIONALIZE;
+}
+
 /* -- menus -- */
 
 static const item_t *menu_item(int i) {
     return folders[menu].items[i];
 }
 
-/* Tools - which flag each setting maps to */
-static bool setting(const item_t *it, unsigned short **simp, unsigned short *bit,
-                    unsigned char **canon, unsigned char *cbit) {
+/* Tools - which simp_flags bit each setting maps to, 0 if it isnt one */
+static unsigned short setting(const item_t *it) {
     static const struct { const char *label; unsigned short bit; } ids[] = {
         { "basic identities",       SIMP_ID_GENERAL },
         { "trig identities",        SIMP_ID_TRIG },
@@ -570,30 +592,14 @@ static bool setting(const item_t *it, unsigned short **simp, unsigned short *bit
     };
     unsigned i;
 
-    *simp = NULL;
-    *canon = NULL;
-    for(i = 0; i < sizeof ids / sizeof ids[0]; i++) {
-        if(strcmp(it->label, ids[i].label) == 0) {
-            *simp = &simp_flags;
-            *bit = ids[i].bit;
-            return true;
-        }
-    }
-    if(strcmp(it->label, "rationalize") == 0) {
-        *canon = &canon_flags;
-        *cbit = CANONICAL_RATIONALIZE;
-        return true;
-    }
-    return false;
+    for(i = 0; i < sizeof ids / sizeof ids[0]; i++)
+        if(strcmp(it->label, ids[i].label) == 0)
+            return ids[i].bit;
+    return 0;
 }
 
 static bool setting_on(const item_t *it) {
-    unsigned short *simp, bit = 0;
-    unsigned char *canon, cbit = 0;
-
-    if(!setting(it, &simp, &bit, &canon, &cbit))
-        return false;
-    return simp != NULL ? (*simp & bit) != 0 : (*canon & cbit) != 0;
+    return (simp_flags & setting(it)) != 0;
 }
 
 /*
@@ -607,22 +613,17 @@ static bool pick_into(editor_t *into, const item_t *it, bool dry) {
         return false;
 
     if(it->kind == ITEM_SETTING) {
-        unsigned short *simp, bit = 0;
-        unsigned char *canon, cbit = 0;
+        unsigned short bit = setting(it);
 
         if(strcmp(it->label, "clear history") == 0) {
             if(!dry)
                 clear_history();
             return true;
         }
-        if(!setting(it, &simp, &bit, &canon, &cbit))
+        if(bit == 0)
             return false;
-        if(!dry) {
-            if(simp != NULL)
-                *simp ^= bit;
-            else
-                *canon ^= cbit;
-        }
+        if(!dry)
+            simp_flags ^= bit;
         return true;
     }
 
@@ -990,7 +991,7 @@ static bool key_plain(keypress_t p) {
     switch(p.key) {
     case K_LEFT: case K_RIGHT: case K_UP: case K_DOWN: case K_ENTER:
     case K_YEQU: case K_WINDOW: case K_ZOOM: case K_TRACE: case K_GRAPH:
-    case K_QUIT: case K_MATH: case K_VARS:
+    case K_QUIT: case K_MATH: case K_VARS: case K_MODE:
         typing_run = false;     /* not an edit (enter saves its own step) */
         break;
     case K_DOT: case K_NEG: case K_ADD: case K_SUB: case K_MUL: case K_DIV:
@@ -1062,6 +1063,7 @@ static bool key_plain(keypress_t p) {
         break;
     case K_MATH:   popup = 0; break;
     case K_VARS:   vars_open(); break;  /* the stored names, like the TI's vars */
+    case K_MODE:   mode_open(); break;
 
     default:
         break;

@@ -31,7 +31,7 @@
 - [x] Modifier taps while its working. they get dropped right now, 2nd / alpha / on pressed during `working...` should stick for the next key
 - [x] Soft key menus in math print. the folder lists say `tan^-1`, they should draw the real thing like the line does
 - [x] Screen off. auto after sitting idle, and `[2nd][alpha][on]` does it by hand
-- [ ] Mode menu. degrees / radians, simplify mode, the trig answer thing. simplify mode picks
+- [x] Mode menu. degrees / radians, simplify mode, the trig answer thing. simplify mode picks
   what "simplest" means since its subjective (expanded or factored? roots in the bottom?).
   presets plus a few toggles, "by hand" is the default preset and is really just a toggle
   combo. the form key switches it, the rationalize toggle in Tools moves here

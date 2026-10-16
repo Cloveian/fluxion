@@ -171,8 +171,6 @@ ITEM(it_id_hyp,   "hyperbolic identities", NULL, ITEM_SETTING, NULL, NULL, HAVE_
 ITEM(it_id_cplx,  "complex identities", NULL, ITEM_SETTING, NULL, NULL, HAVE_YES, "SIMP_ID_COMPLEX", NULL)
 ITEM(it_id_tconst, "trig constants",  NULL, ITEM_SETTING, NULL, NULL, HAVE_YES, "SIMP_ID_TRIG_CONSTANTS", NULL)
 ITEM(it_id_iconst, "inverse trig constants", NULL, ITEM_SETTING, NULL, NULL, HAVE_YES, "SIMP_ID_TRIG_INV_CONSTANTS", NULL)
-ITEM(it_rationalize, "rationalize", NULL, ITEM_SETTING, NULL, NULL, HAVE_YES,
-     "CANONICAL_RATIONALIZE; off by default is still undecided", NULL)
 ITEM(it_clear,    "clear history", NULL, ITEM_SETTING, NULL, NULL, HAVE_YES, NULL, NULL)
 
 /* the lists */
@@ -187,7 +185,7 @@ const item_t *const catalog[] = {
     &it_frac, &it_parens, &it_piecewise,
     &it_simplify, &it_expand, &it_subst, &it_evaluate, &it_factor, &it_solve,
     &it_deriv, &it_deriv_at, &it_integral, &it_limit,
-    &it_id_basic, &it_id_trig, &it_id_hyp, &it_id_cplx, &it_id_tconst, &it_id_iconst, &it_rationalize, &it_clear
+    &it_id_basic, &it_id_trig, &it_id_hyp, &it_id_cplx, &it_id_tconst, &it_id_iconst, &it_clear
 };
 const unsigned catalog_count = sizeof catalog / sizeof catalog[0];
 
@@ -208,7 +206,7 @@ static const item_t *const templates[] = {
 };
 static const item_t *const tools[] = {
     &it_id_basic, &it_id_trig, &it_id_hyp, &it_id_cplx, &it_id_tconst, &it_id_iconst,
-    &it_rationalize, &it_clear
+    &it_clear
 };
 
 #define FOLDER(key, name, list) { key, name, list, sizeof list / sizeof list[0] }

@@ -244,4 +244,8 @@ bool is_negative_for_sure(pcas_ast_t *a);
 /*Returns true if changed. Expects completely simplified. Removes the negative in the multiplier or number.*/
 bool absolute_val(pcas_ast_t *e);
 
+/*Fluxion: degree mode (cas/degrees.c). gives back the tree to use, which is a new
+root when the whole thing was an inverse trig*/
+pcas_ast_t *degrees_in(pcas_ast_t *e);
+
 #endif

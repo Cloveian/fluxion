@@ -2,8 +2,8 @@
 #define FLUXION_PAGE_H
 
 /*
-    full screen pages over the main screen: the catalog now, a mode menu and
-    whatever else later. a page is a titled list, each row has a label, maybe a
+    full screen pages over the main screen: the catalog, the mode menu, the
+    stored names. a page is a titled list, each row has a label, maybe a
     value on the right (a setting's state, the keys that type it) and a help
     text that shows under the list for the highlighted row.
 
