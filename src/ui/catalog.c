@@ -88,6 +88,12 @@ ITEM(it_acos,     "cos^-1", "acos", ITEM_FUNCTION, "[2nd][cos]", "acos($)", HAVE
      "inverse cosine: the angle with this cosine, in radians. cos^-1(0) -> pi/2")
 ITEM(it_atan,     "tan^-1", "atan", ITEM_FUNCTION, "[2nd][tan]", "atan($)", HAVE_YES, NULL,
      "inverse tangent: the angle with this tangent, in radians. tan^-1(1) -> pi/4")
+ITEM(it_cot,      "cot",   "cot", ITEM_FUNCTION, "[on][tan]",   "cot($)",  HAVE_YES, NULL,
+     "cotangent, 1/tan. cot(pi/4) -> 1")
+ITEM(it_sec,      "sec",   "sec", ITEM_FUNCTION, "[on][cos]",   "sec($)",  HAVE_YES, NULL,
+     "secant, 1/cos. sec(0) -> 1")
+ITEM(it_csc,      "csc",   "csc", ITEM_FUNCTION, "[on][sin]",   "csc($)",  HAVE_YES, NULL,
+     "cosecant, 1/sin. csc(pi/2) -> 1")
 ITEM(it_ln,       "ln",    "ln", ITEM_FUNCTION, "[ln]",        "ln($)",   HAVE_YES, NULL,
      "natural logarithm, base e. ln(e^2) -> 2")
 ITEM(it_exp,      "e^x",   NULL, ITEM_TEMPLATE, "[2nd][ln]",   "e^($)",   HAVE_YES, NULL,
@@ -176,7 +182,7 @@ const item_t *const catalog[] = {
     &it_plus, &it_minus, &it_times, &it_divide, &it_open, &it_close, &it_comma, &it_equals,
     &it_x, &it_letters, &it_pi, &it_e, &it_i, &it_theta,
     &it_power, &it_square, &it_recip, &it_sqrt, &it_cbrt, &it_nroot,
-    &it_sin, &it_cos, &it_tan, &it_asin, &it_acos, &it_atan, &it_ln, &it_exp, &it_log, &it_pow10,
+    &it_sin, &it_cos, &it_tan, &it_asin, &it_acos, &it_atan, &it_cot, &it_sec, &it_csc, &it_ln, &it_exp, &it_log, &it_pow10,
     &it_sinh, &it_cosh, &it_tanh, &it_asinh, &it_acosh, &it_atanh, &it_logb, &it_abs, &it_fact, &it_int,
     &it_frac, &it_parens, &it_piecewise,
     &it_simplify, &it_expand, &it_subst, &it_evaluate, &it_factor, &it_solve,
@@ -192,7 +198,7 @@ static const item_t *const calculus[] = {
     &it_deriv, &it_deriv_at, &it_integral, &it_limit
 };
 static const item_t *const functions[] = {
-    &it_sin, &it_cos, &it_tan, &it_asin, &it_acos, &it_atan,
+    &it_sin, &it_cos, &it_tan, &it_asin, &it_acos, &it_atan, &it_cot, &it_sec, &it_csc,
     &it_sinh, &it_cosh, &it_tanh, &it_asinh, &it_acosh, &it_atanh,
     &it_ln, &it_log, &it_logb, &it_exp, &it_pow10, &it_abs, &it_fact, &it_int
 };

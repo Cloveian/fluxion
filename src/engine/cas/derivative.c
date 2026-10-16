@@ -15,6 +15,9 @@ pcas_id_t id_derivative[ID_NUM_DERIV] = {
     {"deriv(sin(A,X,T", "cos(A)deriv(A,X,T"},
     {"deriv(cos(A,X,T", "-sin(A)deriv(A,X,T"},
     {"deriv(tan(A,X,T", "deriv(A,X,T)/cos(A)^2"},
+    {"deriv(cot(A,X,T", "-deriv(A,X,T)csc(A)^2"},
+    {"deriv(sec(A,X,T", "deriv(A,X,T)sec(A)tan(A"},
+    {"deriv(csc(A,X,T", "-deriv(A,X,T)csc(A)cot(A"},
 
     {"deriv(asin(A,X,T", "deriv(A,X,T)/sqrt(1_A^2"},
     {"deriv(acos(A,X,T", "-deriv(A,X,T)/sqrt(1_A^2"},
