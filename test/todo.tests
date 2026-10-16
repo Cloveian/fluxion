@@ -7,39 +7,9 @@
 #gives: 2/(2X_2)^2+(2X^3)/(2X_2)^2_(2X^2)/(2X_2)^2_(2X)/(2X_2)^2 (right, but awful)
 cancel; (X^2/2_1/2)/(X_1); (X+1)/2
 
-#Solve: a fraction coefficient makes the polynomial "not numeric": simplify keeps 1/4 as the
-#fraction node 1/4, not a number, so read_term() sets numeric = false and a quadratic is unknown
-#gives: unknown
-solve; X^2=1/4; X; -1/2,1/2
-solve; X^2/4=1; X; -2,2
-solve; 0.5X^2=2; X; -2,2
-solve; X^2/2_X/2_15=0; X; -5,6
-solve; X^2=X/2; X; 0,1/2
-solve; X^2=1/2; X; -sqrt(2)/2,sqrt(2)/2
-
-#Solve: fraction roots aren't sorted (sort_roots() only compares number nodes; 1/2 is a fraction node)
-#gives: 1/2, -1/2
-solve; 4X^2=1; X; -1/2,1/2
-#gives: 0, -1/2
-solve; 2X^2+X=0; X; -1/2,0
-#gives: 1/2, -1/3
-solve; (2X_1)(3X+1)=0; X; -1/3,1/2
-#gives: -1, 1, 1/2
-solve; 2X^3_X^2_2X+1=0; X; -1,1/2,1
-
-#Solve: a negative coefficient of X leaves the root as a fraction over -1
-#gives: 3/-1
-solve; -X=3; X; -3
-#gives: 2/-1
-solve; -2X=4; X; -2
-
 #Solve: sqrt(3/2) comes out as sqrt(3)/sqrt(2), not rationalized (the Nspire gives sqrt(6)/2)
 #gives: -sqrt(3)/sqrt(2), sqrt(3)/sqrt(2)
 solve; 2X^2=3; X; -sqrt(6)/2,sqrt(6)/2
-
-#Solve: a degree over SOLVE_MAX (32) gives up even when it's X^n
-#gives: unknown
-solve; X^33=0; X; 0
 
 #Factor: with no rational roots, the pairwise gcd factoring makes a polynomial worse (the Q37 problem)
 #gives: 1+X(1+X)

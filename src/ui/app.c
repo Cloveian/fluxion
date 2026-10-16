@@ -247,6 +247,17 @@ static void line_done(void) {
 
 #define SIMP_BASIC (SIMP_NORMALIZE | SIMP_COMMUTATIVE | SIMP_RATIONAL)
 
+/* how big a tree is, for "did that get simpler" */
+static int nodes(const pcas_ast_t *e) {
+    const pcas_ast_t *k;
+    int n = 1;
+
+    if(e->type == NODE_OPERATOR)
+        for(k = e->op.operator.base; k != NULL; k = k->next)
+            n += nodes(k);
+    return n;
+}
+
 /* the form on top of a plain simplify, the same steps the commands take */
 static void apply_form(pcas_ast_t *e) {
     switch(form) {
@@ -263,8 +274,22 @@ static void apply_form(pcas_ast_t *e) {
         approx(e);
         simplify(e, SIMP_BASIC | SIMP_EVAL);
         break;
-    default:
+    default: {
+        /* by hand. (x+1)^2 - (x-1)^2 is 4x and (x+2)(x-2) is x^2 - 4, but (x+1)^2
+           stays as it is: multiply out, keep it only if it got smaller. the
+           nspire does about the same thing */
+        pcas_ast_t *x = ast_Copy(e);
+
+        if(x == NULL)
+            break;
+        expand(x, EXP_ALL);
+        simplify(x, SIMP_BASIC | SIMP_EVAL | SIMP_LIKE_TERMS);
+        if(!pcas_cancelled && nodes(x) < nodes(e))
+            replace_node(e, x);
+        else
+            ast_Cleanup(x);
         break;
+    }
     }
 }
 
