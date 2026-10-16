@@ -1,4 +1,5 @@
 #include "editor.h"
+#include "render/draw.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -901,6 +902,36 @@ void ed_delete(editor_t *ed) {
         node_free(row_remove(ed->row, ed->pos));
 }
 
+/* names, see editor.h */
+
+bool (*ed_name_lookup)(const char *letters, int n, ed_name_t *out) = NULL;
+const char *ed_error = NULL;
+static char error_buf[64];
+
+static bool is_letter(char c) {
+    return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
+}
+
+/* the letters starting at item i, lowercased into buf. 0 if items[i] isn't one */
+static int letter_run(const ed_row_t *r, int i, char *buf, int max) {
+    int n = 0;
+
+    while(i + n < r->len && n < max && r->items[i + n]->kind == ED_CHAR && is_letter(r->items[i + n]->ch)) {
+        buf[n] = (char)(r->items[i + n]->ch | 0x20);
+        n++;
+    }
+    return n;
+}
+
+/* the name at the start of the run. with nothing plugged in, or no match, it's one
+   plain letter (len 1 and the rest zero) */
+static void next_name(const char *letters, int n, ed_name_t *nm) {
+    if(ed_name_lookup == NULL || !ed_name_lookup(letters, n, nm) || nm->len <= 0) {
+        memset(nm, 0, sizeof *nm);
+        nm->len = 1;
+    }
+}
+
 /* turning the tree into an engine string */
 
 typedef struct {
@@ -942,6 +973,10 @@ static void put_char(out_t *o, char c) {
     case CH_EULER:  put(o, "e");     return;
     case CH_IMAG:   put(o, "i");     return;
     case ED_SCI:    put(o, "[E]");   return;
+    case CH_STO:    /* the app catches store lines before this, so it's in the wrong place */
+        ed_error = "the arrow goes at the end: value -> name";
+        o->bad = true;
+        return;
     default:
         break;
     }
@@ -991,19 +1026,80 @@ static void put_node(out_t *o, const ed_node_t *n, bool first) {
     }
 }
 
+/* a stored equation only makes sense as solve's argument, put_row says no elsewhere */
+static bool allow_equations;
+
+static bool row_has_equals(const ed_row_t *r) {
+    int i;
+
+    for(i = 0; i < r->len; i++)
+        if(r->items[i]->kind == ED_CHAR && r->items[i]->ch == '=')
+            return true;
+    return false;
+}
+
 static void put_row(out_t *o, const ed_row_t *r) {
     int i;
 
     if(r->len == 0)
         o->bad = true;
-    for(i = 0; i < r->len; i++)
-        put_node(o, r->items[i], i == 0);
+    for(i = 0; i < r->len; ) {
+        char letters[32];
+        int n = letter_run(r, i, letters, (int)sizeof letters), k;
+        ed_name_t nm;
+
+        if(n == 0) {
+            put_node(o, r->items[i], i == 0);
+            i++;
+            continue;
+        }
+
+        /* a run of letters goes out as its names, longest from the left (editor.h) */
+        for(k = 0; k < n; k += nm.len) {
+            next_name(letters + k, n - k, &nm);
+            if(nm.row != NULL) {
+                /* a stored value in its place. read the same way, so it's live */
+                if(row_has_equals(nm.row)) {
+                    if(!allow_equations) {
+                        memcpy(error_buf, letters + k, (size_t)nm.len);
+                        strcpy(error_buf + nm.len, " is an equation, only solve takes those");
+                        ed_error = error_buf;
+                        o->bad = true;
+                        return;
+                    }
+                    put_row(o, nm.row);
+                } else {
+                    put(o, "(");
+                    put_row(o, nm.row);
+                    put(o, ")");
+                }
+            } else if(nm.engine != NULL) {
+                put(o, nm.engine);
+            } else {
+                put_char(o, r->items[i + k]->ch);
+            }
+        }
+        i += n;
+    }
 }
 
 char *ed_to_engine(const editor_t *ed) {
     out_t o = { NULL, 0, 0, false };
 
+    ed_error = NULL;
     put_row(&o, ed->root);
+    if(o.bad) {
+        free(o.s);
+        return NULL;
+    }
+    return o.s;
+}
+
+char *ed_row_to_engine(const ed_row_t *r) {
+    out_t o = { NULL, 0, 0, false };
+
+    ed_error = NULL;
+    put_row(&o, r);
     if(o.bad) {
         free(o.s);
         return NULL;
@@ -1053,12 +1149,78 @@ char *ed_command_arg(const editor_t *ed) {
     if(ed_command(ed) == NULL)
         return NULL;
 
+    ed_error = NULL;
+    allow_equations = strcmp(ed_command(ed), "solve") == 0;
     put_row(&o, ed->root->items[0]->slot[0]);
+    allow_equations = false;
     if(o.bad) {
         free(o.s);
         return NULL;
     }
     return o.s;
+}
+
+ed_row_t *ed_row_slice(const ed_row_t *r, int from, int to) {
+    return row_copy(r, from, to, NULL, 0, NULL, NULL);
+}
+
+int ed_row_find_char(const ed_row_t *r, char c) {
+    int i;
+
+    for(i = 0; i < r->len; i++)
+        if(r->items[i]->kind == ED_CHAR && r->items[i]->ch == c)
+            return i;
+    return -1;
+}
+
+int ed_row_find_last(const ed_row_t *r, char c) {
+    int i;
+
+    for(i = r->len - 1; i >= 0; i--)
+        if(r->items[i]->kind == ED_CHAR && r->items[i]->ch == c)
+            return i;
+    return -1;
+}
+
+const ed_row_t *ed_command_row(const editor_t *ed) {
+    return ed_command(ed) != NULL ? ed->root->items[0]->slot[0] : NULL;
+}
+
+int ed_row_word(const ed_row_t *r, int from, char *buf, int max) {
+    int n = letter_run(r, from, buf, max);
+
+    if(from + n != r->len)
+        return -1;
+    buf[n] = '\0';
+    return n;
+}
+
+bool ed_row_reaches(const ed_row_t *r, const ed_row_t *target) {
+    int i;
+
+    for(i = 0; i < r->len; ) {
+        char letters[32];
+        int n = letter_run(r, i, letters, (int)sizeof letters), k;
+        ed_name_t nm;
+
+        if(n == 0) {
+            const ed_node_t *node = r->items[i];
+            int s;
+
+            for(s = 0; s < node->slots; s++)
+                if(node->slot[s] != NULL && ed_row_reaches(node->slot[s], target))
+                    return true;
+            i++;
+            continue;
+        }
+        for(k = 0; k < n; k += nm.len) {
+            next_name(letters + k, n - k, &nm);
+            if(nm.row != NULL && (nm.row == target || ed_row_reaches(nm.row, target)))
+                return true;
+        }
+        i += n;
+    }
+    return false;
 }
 
 /* drawing */
@@ -1104,7 +1266,7 @@ static box_t *lay_char(char c, unsigned char level) {
     char s[2] = { c, '\0' };
 
     switch(c) {
-    case '+': case ED_SUB: case '=': case '<': case '>': case CH_LE: case CH_GE: case CH_NE:
+    case '+': case ED_SUB: case '=': case '<': case '>': case CH_LE: case CH_GE: case CH_NE: case CH_STO:
         return spaced(s, level);
     case ED_NEG:
         s[0] = CH_MINUS;
@@ -1208,27 +1370,90 @@ static box_t *lay_node(lay_t *l, const ed_node_t *n, box_t *row, unsigned char l
     return NULL;
 }
 
+/* one item with its cursor and highlight. pulled out so a name that's showing as
+   letters again can draw them one by one */
+static void lay_item(lay_t *l, const ed_row_t *r, int i, box_t *row, unsigned char level, bool here) {
+    box_t *item;
+
+    if(here && l->ed->pos == i)
+        layout_add(row, layout_box(BOX_CURSOR, level));
+    item = lay_node(l, r->items[i], row, level);
+
+    /* each selected item gets its own highlight, so an exponent still finds
+       its base as the last box in the row */
+    if(here && ed_has_selection(l->ed) && i >= sel_start(l->ed) && i < sel_end(l->ed)) {
+        box_t *sel = layout_box(BOX_SELECT, level);
+
+        layout_add(sel, item);
+        item = sel;
+    }
+    layout_add(row, item);
+}
+
+/* strictly, the cursor sitting on either edge of a name doesn't open it up */
+static bool between(int x, int from, int to) {
+    return x > from && x < to;
+}
+
 static box_t *lay_row(lay_t *l, const ed_row_t *r, unsigned char level) {
     box_t *row = layout_box(BOX_ROW, level);
     bool here = l->cursor && l->ed->row == r;
+    bool sel = here && ed_has_selection(l->ed);
     int i;
 
-    for(i = 0; i < r->len; i++) {
-        box_t *item;
+    for(i = 0; i < r->len; ) {
+        char letters[32];
+        int n = letter_run(r, i, letters, (int)sizeof letters), k;
+        ed_name_t nm;
 
-        if(here && l->ed->pos == i)
-            layout_add(row, layout_box(BOX_CURSOR, level));
-        item = lay_node(l, r->items[i], row, level);
-
-        /* each selected item gets its own highlight, so an exponent still finds
-           its base as the last box in the row */
-        if(here && ed_has_selection(l->ed) && i >= sel_start(l->ed) && i < sel_end(l->ed)) {
-            box_t *sel = layout_box(BOX_SELECT, level);
-
-            layout_add(sel, item);
-            item = sel;
+        if(n == 0) {
+            lay_item(l, r, i, row, level, here);
+            i++;
+            continue;
         }
-        layout_add(row, item);
+
+        /* a run of letters is drawn as its names, each one a single box, bold if it
+           has a value. with the cursor or a selection edge inside a name it's
+           letters again, so you can see where you are (on the way to sin it goes
+           through "si" with a bold i, whatever) */
+        for(k = 0; k < n; k += nm.len) {
+            int from = i + k, to, j;
+            char text[32];
+            box_t *b;
+
+            next_name(letters + k, n - k, &nm);
+            to = from + nm.len;
+            if(nm.len == 1 && nm.shown == NULL && !nm.bold) {
+                lay_item(l, r, from, row, level, here);   /* just a letter */
+                continue;
+            }
+            if(here && (between(l->ed->pos, from, to)
+                        || (sel && (between(sel_start(l->ed), from, to) || between(sel_end(l->ed), from, to))))) {
+                for(j = from; j < to; j++)
+                    lay_item(l, r, j, row, level, here);
+                continue;
+            }
+
+            if(here && l->ed->pos == from)
+                layout_add(row, layout_box(BOX_CURSOR, level));
+            if(nm.shown != NULL) {
+                strcpy(text, nm.shown);
+            } else {
+                memcpy(text, letters + k, (size_t)nm.len);
+                text[nm.len] = '\0';
+            }
+            b = layout_text(text, level);
+            if(b != NULL && nm.bold)
+                b->style = STYLE_BOLD;
+            if(b != NULL && sel && from >= sel_start(l->ed) && to <= sel_end(l->ed)) {
+                box_t *s = layout_box(BOX_SELECT, level);
+
+                layout_add(s, b);
+                b = s;
+            }
+            layout_add(row, b);
+        }
+        i += n;
     }
 
     if(here && l->ed->pos == r->len)

@@ -1,4 +1,5 @@
 # converts X11 misc-fixed BDF fonts (public domain) into src/render/fonts.c + fonts.h.
+# the .bdf files are xorg's font-misc-misc-1.1.3 tarball, nothing fancier.
 #
 #   python3 tools/bdf2c.py <dir with the .bdf files> src/render 5x7 6x10 8x13 ...
 #
@@ -19,6 +20,7 @@ SPECIAL = {          # Fluxion code -> Unicode
     0x12: 0x2260,    # CH_NE     not equal
     0x13: 0x221E,    # CH_INF    infinity
     0x14: 0x00B0,    # CH_DEG    degree sign
+    0x15: 0x2192,    # CH_STO    store arrow
 }
 
 # constants that share a letter with a variable: drawn bold, so the constant e and a
@@ -28,7 +30,7 @@ BOLD = {             # Fluxion code -> the letter to thicken
     6: ord('i'),     # CH_IMAG   i = sqrt(-1)
 }
 LABELS = {1: 'pi', 2: 'theta', 3: 'minus', 4: 'cdot', 5: 'euler e', 6: 'imaginary i',
-          0x10: 'le', 0x11: 'ge', 0x12: 'ne', 0x13: 'infinity', 0x14: 'degree'}
+          0x10: 'le', 0x11: 'ge', 0x12: 'ne', 0x13: 'infinity', 0x14: 'degree', 0x15: 'sto arrow'}
 
 def parse_bdf(path):
     props, glyphs = {}, {}
@@ -112,7 +114,7 @@ def main():
          '#ifndef FLUXION_FONTS_H', '#define FLUXION_FONTS_H', '',
          '/* a bitmap font: rows[code * height + row], bit 15 = leftmost pixel.',
          '   codes 32-126 are ASCII, 1-4 are the special characters in layout.h,',
-         '   0x10-0x14 the ones in editor.h. */',
+         '   0x10-0x15 the ones in editor.h. */',
          'typedef struct {',
          '    const char *name;',
          '    unsigned char ascent, descent;      /* rows above / below the baseline */',
