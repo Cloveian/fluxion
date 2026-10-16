@@ -18,6 +18,7 @@
 - bold measures as wide as it draws now (one more per glyph, the layout callback takes the style), so stored names stopped having their letters touch. italic hangs its top out by the same amount it leans, still nothing uses it
 - cot, sec and csc are real functions now, parser to printer, with derivatives, decimals and a few exact values (cot(pi/4) is 1). `[on]` + sin / cos / tan types them. nothing turns them into 1/tan, which was the whole point
 - the mode menu, on `[mode]`: angle (degrees is a pi/180 on every trig argument before it runs, exact, so sin(30) is 1/2 and asin(1/2) is 30), what simplest means (the form, same thing as 2nd+enter), and rationalize, which moved out of Tools. settings dont survive a restart yet. the trig answer form waits for trig solving to exist
+- solve pulls a letter out of a quadratic now, solve(y=x^2+3, x) gives -sqrt(y-3), sqrt(y-3), and x^2+bx+c=0 gives the formula. built as a tree and simplified, with the bits simplify wont do done by hand first (a square factor out of the root, a common number out of the fraction, flipping a negative lead). y=2^x still gives up, that needs an isolate solver
 - bold and italic in the draw layer (`draw_text_styled`, `box_t.style`). nothing uses them yet and widths aren't synced, so styled text is a pixel or two off. `[2nd][clear]` clears the line like `[on][clear]`
 - roadmap written up with the decisions so far: names (multi-letter vars and typeable functions are one thing, bold = has a value), RAM appvars for storage, the by-hand default, cot/sec/csc as real functions
 

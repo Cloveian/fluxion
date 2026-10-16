@@ -136,8 +136,8 @@ solve; sin(X)=0; X; unknown
 solve; e^X=1; X; unknown
 solve; sqrt(X)=2; X; unknown
 solve; 1/X=2; X; unknown
-solve; X^2=Y; X; unknown
-solve; X^2_2sqrt(2)X+2=0; X; unknown
+solve; X^2=Y; X; -Y^(1/2), Y^(1/2)
+solve; X^2_2sqrt(2)X+2=0; X; 2^(1/2)
 solve; Y=1; X; unknown
 solve; X^2_1=0; Y; unknown
 
@@ -352,3 +352,11 @@ decimal; csc(1); 1.1884
 simplify; cot(pi/4); 1
 simplify; sec(pi/3); 2
 simplify; csc(pi/6); 2
+
+#solve for a letter when the others stay letters, the quadratic formula as a tree
+solve; Y=X^2+3; X; -(-3+Y)^(1/2), (-3+Y)^(1/2)
+solve; A=pi*R^2; R; (-A^(1/2))/pi^(1/2), A^(1/2)/pi^(1/2)
+solve; X^2+BX+C=0; X; (-B_(B^2_4C)^(1/2))/2, (-B+(B^2_4C)^(1/2))/2
+solve; Y=X^2; X; -Y^(1/2), Y^(1/2)
+solve; Y=2X^2+4X+1; X; (-2_(2+2Y)^(1/2))/2, (-2+(2+2Y)^(1/2))/2
+solve; 3X^2=Y; X; (-Y^(1/2))/3^(1/2), Y^(1/2)/3^(1/2)
