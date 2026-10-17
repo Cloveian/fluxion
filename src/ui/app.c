@@ -893,7 +893,7 @@ static bool run(editor_t *line) {
     if(strstr(src, "expand(") || strstr(src, "factor(") || strstr(src, "eval(") || strstr(src, "solve(")
        || strstr(src, "asym(") || strstr(src, "system(") || strstr(src, "slope(") || strstr(src, "dist(")
        || strstr(src, "mid(") || strstr(src, "par(") || strstr(src, "perp(") || strstr(src, "domain(")
-       || strstr(src, "roots(") || strstr(src, "fromrts(") || strstr(src, "inverse(")
+       || strstr(src, "roots(") || strstr(src, "fromroots(") || strstr(src, "inverse(")
        || strstr(src, "triangle(") || strstr(src, "amplitude(") || strstr(src, "pand(") || strstr(src, "por(")
        || strstr(src, "ellipse(") || strstr(src, "hyperbola(")) {
         free(src);
@@ -1206,7 +1206,7 @@ static bool pick_into(editor_t *into, const item_t *it, bool dry) {
            && strcmp(s, "asym($)") != 0 && strcmp(s, "system($)") != 0 && strcmp(s, "slope($)") != 0
            && strcmp(s, "dist($)") != 0 && strcmp(s, "mid($)") != 0 && strcmp(s, "par($)") != 0
            && strcmp(s, "perp($)") != 0 && strcmp(s, "domain($)") != 0 && strcmp(s, "roots($)") != 0
-           && strcmp(s, "fromrts($)") != 0 && strcmp(s, "inverse($)") != 0 && strcmp(s, "triangle($)") != 0
+           && strcmp(s, "fromroots($)") != 0 && strcmp(s, "inverse($)") != 0 && strcmp(s, "triangle($)") != 0
            && strcmp(s, "amplitude($)") != 0 && strcmp(s, "pand($)") != 0 && strcmp(s, "por($)") != 0
            && strcmp(s, "ellipse($)") != 0 && strcmp(s, "hyperbola($)") != 0)
             return false;
