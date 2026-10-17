@@ -13,7 +13,7 @@
 #include "render/draw.h"
 
 /*
-    fromrts( and inverse(, run by the app like geom's. same deal: the line gets
+    fromroots( and inverse(, run by the app like geom's. same deal: the line gets
     cut at the top level commas and each piece parsed on its own. roots( isn't
     here, it's just solve( with a different name so app.c sends it to run_solve
 */
@@ -175,13 +175,13 @@ bool polyfn_run(const char *cmd, char *src, box_t *in) {
 
     if(cmd == NULL)
         return false;
-    if(strcmp(cmd, "fromrts") == 0)
+    if(strcmp(cmd, "fromroots") == 0)
         inv = false;
     else if(strcmp(cmd, "inverse") == 0)
         inv = true;
     else
         return false;
-    usage = inv ? "inverse(f, x)" : "fromrts(root, root, ..., x)";
+    usage = inv ? "inverse(f, x)" : "fromroots(root, root, ..., x)";
 
     n = read_args(src, a, &err);
     if(n < 1 || (inv && (n > 2 || (n == 2 && !is_var(a[1]))))) {

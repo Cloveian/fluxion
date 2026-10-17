@@ -191,9 +191,9 @@ ITEM(it_perp,     "perpendicular", "perp", ITEM_COMMAND, NULL, "perp($)", HAVE_Y
 ITEM(it_roots,    "roots",  "roots", ITEM_COMMAND, NULL, "roots($)", HAVE_PARTLY,
      "roots(p,x): solve(p=0,x) under another name, complex roots on, same limits as solve",
      "where a polynomial is 0, complex ones too. roots(x^2+1,x) -> x = -i, i")
-ITEM(it_fromrts,  "from roots", "fromrts", ITEM_COMMAND, NULL, "fromrts($)", HAVE_YES,
-     "fromrts(r1,r2,...,x): (x-r1)(x-r2)... expanded. a letter at the end is the variable. fromroots is two letters too long for a name",
-     "the polynomial with those roots. fromrts(2,-3) -> x^2+x-6")
+ITEM(it_fromroots,  "from roots", "fromroots", ITEM_COMMAND, NULL, "fromroots($)", HAVE_YES,
+     "fromroots(r1,r2,...,x): (x-r1)(x-r2)... expanded. a letter at the end is the variable",
+     "the polynomial with those roots. fromroots(2,-3) -> x^2+x-6")
 ITEM(it_inverse,  "inverse", "inverse", ITEM_COMMAND, NULL, "inverse($)", HAVE_PARTLY,
      "inverse(f,x): solves y = f(x) for x over the reals and puts x back for y. as far as solve gets",
      "the inverse function. inverse(2x+3) -> (x-3)/2, inverse(x^2) -> -sqrt(x), sqrt(x)")
@@ -244,7 +244,7 @@ const item_t *const catalog[] = {
     &it_gcd, &it_lcm, &it_ncr, &it_npr, &it_amplitude,
     &it_frac, &it_parens, &it_piecewise,
     &it_simplify, &it_expand, &it_subst, &it_evaluate, &it_factor, &it_solve, &it_asym, &it_domain, &it_system,
-    &it_slope, &it_dist, &it_mid, &it_par, &it_perp, &it_roots, &it_fromrts, &it_inverse,
+    &it_slope, &it_dist, &it_mid, &it_par, &it_perp, &it_roots, &it_fromroots, &it_inverse,
     &it_triangle, &it_pand, &it_por,
     &it_ellipse, &it_hyperbola,
     &it_deriv, &it_deriv_at, &it_integral, &it_limit,
@@ -254,7 +254,7 @@ const unsigned catalog_count = sizeof catalog / sizeof catalog[0];
 
 static const item_t *const algebra[] = {
     &it_expand, &it_factor, &it_solve, &it_asym, &it_domain, &it_system, &it_slope, &it_dist, &it_mid,
-    &it_par, &it_perp, &it_roots, &it_fromrts, &it_inverse, &it_triangle, &it_pand, &it_por,
+    &it_par, &it_perp, &it_roots, &it_fromroots, &it_inverse, &it_triangle, &it_pand, &it_por,
     &it_ellipse, &it_hyperbola,
     &it_subst, &it_evaluate
 };
