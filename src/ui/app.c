@@ -9,6 +9,7 @@
 #include "ineq.h"
 #include "conic.h"
 #include "piece.h"
+#include "shapes.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -962,7 +963,7 @@ static bool run(editor_t *line) {
     }
     in = ed_layout(line, &draw_font, false);
     if(geom_run(cmd, src, in) || polyfn_run(cmd, src, in) || tri_run(cmd, src, in)
-       || conic_run(cmd, src, in) || piece_run(cmd, src, in)) {
+       || conic_run(cmd, src, in) || piece_run(cmd, src, in) || shapes_run(cmd, src, in)) {
         free(src);
         return true;
     }
@@ -1337,12 +1338,12 @@ static void menu_key(keypress_t p) {
    types it */
 
 /* catalog indexes, plus 200+k for folder k's header, 255 for the keys one and
-   254 for All. ~140 rows today, All has everything a second time */
+   254 for All. ~190 rows today, All has everything a second time */
 #define CAT_FOLDER  200
 #define CAT_ALL     254
 #define CAT_KEYS    255
 
-static unsigned char cat_order[160];
+static unsigned char cat_order[224];
 static int cat_count;
 
 static bool cat_header(int i) {
