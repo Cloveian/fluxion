@@ -201,6 +201,36 @@ ITEM(it_inverse,  "inverse", "inverse", ITEM_COMMAND, NULL, "inverse($)", HAVE_P
 ITEM(it_triangle, "triangle", "triangle", ITEM_COMMAND, NULL, "triangle($)", HAVE_YES,
      "triangle(a,b,c,ab,bc,ca): sss, sas, asa, aas and ssa (both when there are two), floats in the app, angle mode for the angles",
      "solves a triangle from 3 of its sides and angles, empty or 0 for the rest. ab is the angle between a and b. triangle(3,4,5,,,) -> ab = 90")
+ITEM(it_circle,   "circle", "circle", ITEM_COMMAND, NULL, "circle($)", HAVE_YES,
+     "circle(r): area, circumference, diameter",
+     "area and the rest from the radius. circle(3) -> area = 9pi")
+ITEM(it_rect,     "rectangle", "rect", ITEM_COMMAND, NULL, "rect($)", HAVE_YES,
+     "rect(l,w): area, perimeter, diagonal",
+     "a rectangle, length then width. rect(3,4) -> area = 12, diagonal = 5")
+ITEM(it_squareshape, "square", "square", ITEM_COMMAND, NULL, "square($)", HAVE_YES,
+     "square(s): area, perimeter, diagonal",
+     "rect with both sides the same. square(2) -> area = 4, diagonal = 2sqrt(2)")
+ITEM(it_trap,     "trapezoid", "trap", ITEM_COMMAND, NULL, "trap($)", HAVE_YES,
+     "trap(a,b,h): area, a and b the parallel sides",
+     "trapezoid area, the two parallel sides then the height. trap(3,5,2) -> area = 8")
+ITEM(it_sphere,   "sphere", "sphere", ITEM_COMMAND, NULL, "sphere($)", HAVE_YES,
+     "sphere(r): volume, surface area",
+     "volume and surface from the radius. sphere(3) -> volume = 36pi")
+ITEM(it_cyl,      "cylinder", "cyl", ITEM_COMMAND, NULL, "cyl($)", HAVE_YES,
+     "cyl(r,h): volume, surface area, side area",
+     "cylinder, radius then height. side area is without the two ends. cyl(2,5) -> volume = 20pi, surface area = 28pi")
+ITEM(it_cone,     "cone", "cone", ITEM_COMMAND, NULL, "cone($)", HAVE_YES,
+     "cone(r,h): volume, slant, surface area",
+     "a right cone, radius then height. cone(3,4) -> volume = 12pi, slant = 5")
+ITEM(it_cube,     "cube", "cube", ITEM_COMMAND, NULL, "cube($)", HAVE_YES,
+     "cube(s): volume, surface area, diagonal",
+     "diagonal is corner to corner through the middle. cube(2) -> volume = 8, diagonal = 2sqrt(3)")
+ITEM(it_box,      "box", "box", ITEM_COMMAND, NULL, "box($)", HAVE_YES,
+     "box(l,w,h): volume, surface area, diagonal",
+     "a rectangular box, l w h. box(2,3,6) -> volume = 36, diagonal = 7")
+ITEM(it_polygon,  "polygon", "polygon", ITEM_COMMAND, NULL, "polygon($)", HAVE_YES,
+     "polygon(n): angle sum, interior and exterior angle (regular), diagonals. angle mode for the angles",
+     "n sides, the angles each are for a regular one. polygon(6) -> angle sum = 720, interior = 120, diagonals = 9")
 ITEM(it_pand,     "P(A and B)", "pand", ITEM_COMMAND, NULL, "pand($)", HAVE_YES,
      "pand(pa,pb): pa*pb, exact. assumes independent events",
      "chance both happen, for independent events. pand(1/2,1/3) -> 1/6")
@@ -248,7 +278,8 @@ const item_t *const catalog[] = {
     &it_frac, &it_parens, &it_piecewise,
     &it_simplify, &it_expand, &it_subst, &it_evaluate, &it_factor, &it_solve, &it_asym, &it_domain, &it_system,
     &it_slope, &it_dist, &it_mid, &it_par, &it_perp, &it_roots, &it_fromroots, &it_inverse,
-    &it_triangle, &it_pand, &it_por,
+    &it_triangle, &it_circle, &it_rect, &it_squareshape, &it_trap, &it_sphere, &it_cyl, &it_cone,
+    &it_cube, &it_box, &it_polygon, &it_pand, &it_por,
     &it_ellipse, &it_hyperbola,
     &it_deriv, &it_deriv_at, &it_integral, &it_limit,
     &it_id_basic, &it_id_trig, &it_id_hyp, &it_id_cplx, &it_id_tconst, &it_id_iconst, &it_rationalize, &it_clear
@@ -257,7 +288,9 @@ const unsigned catalog_count = sizeof catalog / sizeof catalog[0];
 
 static const item_t *const algebra[] = {
     &it_expand, &it_factor, &it_solve, &it_asym, &it_domain, &it_system, &it_slope, &it_dist, &it_mid,
-    &it_par, &it_perp, &it_roots, &it_fromroots, &it_inverse, &it_triangle, &it_pand, &it_por,
+    &it_par, &it_perp, &it_roots, &it_fromroots, &it_inverse, &it_triangle,
+    &it_circle, &it_rect, &it_squareshape, &it_trap, &it_sphere, &it_cyl, &it_cone, &it_cube, &it_box,
+    &it_polygon, &it_pand, &it_por,
     &it_ellipse, &it_hyperbola,
     &it_subst, &it_evaluate
 };

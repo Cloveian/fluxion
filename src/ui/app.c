@@ -9,6 +9,7 @@
 #include "ineq.h"
 #include "conic.h"
 #include "piece.h"
+#include "shapes.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -953,7 +954,10 @@ static bool run(editor_t *line) {
        || strstr(src, "mid(") || strstr(src, "par(") || strstr(src, "perp(") || strstr(src, "domain(")
        || strstr(src, "roots(") || strstr(src, "fromroots(") || strstr(src, "inverse(")
        || strstr(src, "triangle(") || strstr(src, "amplitude(") || strstr(src, "pand(") || strstr(src, "por(")
-       || strstr(src, "ellipse(") || strstr(src, "hyperbola(") || strstr(src, "piecewise(")) {
+       || strstr(src, "ellipse(") || strstr(src, "hyperbola(") || strstr(src, "piecewise(")
+       || strstr(src, "circle(") || strstr(src, "rect(") || strstr(src, "square(") || strstr(src, "trap(")
+       || strstr(src, "sphere(") || strstr(src, "cyl(") || strstr(src, "cone(") || strstr(src, "cube(")
+       || strstr(src, "box(") || strstr(src, "polygon(")) {
         free(src);
         status = "commands have to be the whole line (for now)";
         return false;
@@ -991,7 +995,7 @@ static bool run(editor_t *line) {
     }
     in = ed_layout(line, &draw_font, false);
     if(geom_run(cmd, src, in) || polyfn_run(cmd, src, in) || tri_run(cmd, src, in)
-       || conic_run(cmd, src, in) || piece_run(cmd, src, in)) {
+       || conic_run(cmd, src, in) || piece_run(cmd, src, in) || shapes_run(cmd, src, in)) {
         free(src);
         return true;
     }
@@ -1277,7 +1281,11 @@ static bool pick_into(editor_t *into, const item_t *it, bool dry) {
            && strcmp(s, "perp($)") != 0 && strcmp(s, "domain($)") != 0 && strcmp(s, "roots($)") != 0
            && strcmp(s, "fromroots($)") != 0 && strcmp(s, "inverse($)") != 0 && strcmp(s, "triangle($)") != 0
            && strcmp(s, "amplitude($)") != 0 && strcmp(s, "pand($)") != 0 && strcmp(s, "por($)") != 0
-           && strcmp(s, "ellipse($)") != 0 && strcmp(s, "hyperbola($)") != 0 && strcmp(s, "piecewise($)") != 0)
+           && strcmp(s, "ellipse($)") != 0 && strcmp(s, "hyperbola($)") != 0 && strcmp(s, "piecewise($)") != 0
+           && strcmp(s, "circle($)") != 0 && strcmp(s, "rect($)") != 0 && strcmp(s, "square($)") != 0
+           && strcmp(s, "trap($)") != 0 && strcmp(s, "sphere($)") != 0 && strcmp(s, "cyl($)") != 0
+           && strcmp(s, "cone($)") != 0 && strcmp(s, "cube($)") != 0 && strcmp(s, "box($)") != 0
+           && strcmp(s, "polygon($)") != 0)
             return false;
         if(!dry) {
             memcpy(name, s, n);
@@ -1396,12 +1404,12 @@ static void menu_key(keypress_t p) {
    types it */
 
 /* catalog indexes, plus 200+k for folder k's header, 255 for the keys one and
-   254 for All. ~140 rows today, All has everything a second time */
+   254 for All. ~190 rows today, All has everything a second time */
 #define CAT_FOLDER  200
 #define CAT_ALL     254
 #define CAT_KEYS    255
 
-static unsigned char cat_order[160];
+static unsigned char cat_order[224];
 static int cat_count;
 
 static bool cat_header(int i) {
