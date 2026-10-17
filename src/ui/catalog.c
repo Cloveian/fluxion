@@ -143,8 +143,9 @@ ITEM(it_frac,     "n/d",   NULL, ITEM_TEMPLATE, "[alpha][y=]", "($)/($)", HAVE_Y
      "an empty fraction. type the top, then move down to type the bottom. [alpha][x,t,theta,n] does it too")
 ITEM(it_parens,   "( )",   NULL, ITEM_TEMPLATE, NULL, "($)",       HAVE_YES, NULL,
      "A pair of parentheses with the cursor inside, to group things")
-ITEM(it_piecewise, "piecewise", NULL, ITEM_TEMPLATE, NULL, NULL,   HAVE_NO, "no conditions in the engine",
-     "A function with a different rule for different values of x. not in Fluxion yet")
+ITEM(it_piecewise, "piecewise", "piecewise", ITEM_COMMAND, NULL, "piecewise($)", HAVE_PARTLY,
+     "piecewise(f1,c1,f2,c2,...,x=v): done in the app, the engine has no conditions. conditions are < > <= >= != chains in one letter, from [math]. no brace yet",
+     "a different rule for different x. piecewise(x^2,x<0,2x+1,x>=0) shows the pieces, add x=3 at the end -> 7, the first piece whose condition holds. 1<x<=3 chains work")
 
 /* Algebra (commands) */
 ITEM(it_simplify, "simplify", NULL, ITEM_COMMAND, "[enter]", NULL, HAVE_YES,
