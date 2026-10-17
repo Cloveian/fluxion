@@ -249,6 +249,10 @@ gcd(X(X+1)^2, AX) = X
 gcd(6AX, 10X) = 2X*/
 pcas_ast_t *gcd(pcas_ast_t *a, pcas_ast_t *b);
 
+/*Fluxion: a/g already simplified, when both are a whole number times letters to whole powers,
+g's number is positive and it divides. NULL otherwise. compare() uses it to skip a simplify per sorted pair*/
+pcas_ast_t *gm_div(pcas_ast_t *a, pcas_ast_t *g);
+
 /*Helper functions*/
 
 /*Cleanup a. Copy a to b and cleanup b.*/
