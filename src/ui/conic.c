@@ -20,8 +20,9 @@
     small numbers in for x and y, a quadratic in two letters only has those 6
     numbers in it. first a walk over the tree makes sure it is one (degree 2 at
     most, plain numbers in front). the reading is done in imath fractions and not
-    with simplify, because simplify has (1+4/9)/2+1/9 as 119/18 right now and
-    that's exactly the shape the averages come out in. completing the square
+    with simplify, simplify had (1+4/9)/2+1/9 as 119/18 when this went in and
+    that's exactly the shape the averages come out in (fixed since, but plain
+    fractions are quicker anyway). completing the square
     from there is the usual h = -D/2A, k = -E/2C
 */
 
