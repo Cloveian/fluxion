@@ -13,6 +13,14 @@ got a list of 16 things with a deadline, so five workers on their own branches, 
 - solve(3e^x=12,x) running out of memory i cant reproduce, ln(4) on the PC and 24 KB of heap. probably an old build on the calc, waiting to hear
 - the app grew a lot, the program's second appvar went 44 -> 63 KB and the installer is 6 appvars now (345 KB, most of the difference to the program is the relocation table flash apps carry)
 
+later, back on the roadmap
+
+- inequalities. solve(x^2-4<0,x) is -2 < x < 2, by a sign chart: roots of the top and bottom sorted by their decimals, one test point per gap, the ends in or out by the sign and whether it's a hole. no trig ones, the families would need an n in the chart
+- range(f,x). no limits in the engine so domain() and asym() cut x into pieces, and each piece spans its turning points (f' = 0) and what its ends do. heading off to infinity is a numeric poke, steps that don't fade = it blows up (ln grows slow but steady, 1/x 10x a poke). 1/x is y < 0 or y > 0, x e^-x is y <= 1/e. trig says no
+- circle( rect( square( trap( sphere( cyl( cone( cube( box( polygon(, each one shows every formula for that shape, letters fine. the catalog's All list was already chopping off its last ~10 items at 160 rows, now 224
+- solve with x under the fraction bar, (3x-y)/(x+y) = 5/8 is x = 13y/19 (an ACT question). over one denominator, top solved, roots that zero the bottom dropped. found a NULL deref in comdenom on the way when it all cancels. and solve(1/x^2=0) said 1/0, e^x = 0 said ln(0), isolate undoes powers without asking. those get dropped now
+- the program (not the app) is 3 appvars now
+
 ## 2026-10-16 - it remembers, cot sec csc, mode menu, solve grew up
 
 - it remembers now. the history and the stored names go into RAM appvars on the way out (FLXHIST, FLXNAMES, files under build-pc/store on the PC) and come back at start. rows go to bytes with a tiny format in editor.c, a format byte up front so an old one gets ignored instead of read wrong. history capped at 12 KB, oldest dropped, names 4 KB. a RAM reset loses them and thats the deal
