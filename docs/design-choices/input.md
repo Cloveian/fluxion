@@ -94,7 +94,10 @@ basically like typing on a computer, the cursor is a line and `[on]` is Ctrl. th
 | `[enter]` | simplify | |
 | `[2nd]` + `[enter]` | next form (by hand, expanded, factored, decimal). redoes the last answer and sticks | |
 | `[alpha]` + `[enter]` | decimal form, and back | |
-| `[alpha]` + `[y=]` or `[x,t,θ,n]` | empty fraction. y= is where the TI has it, the other one's just right there | |
+| `[alpha]` + `[y=]` or `[x,t,θ,n]` | fraction. y= is where the TI has it, the other one's just right there. the term before the cursor goes on top and you're in the bottom (`5+9` -> `5+` 9 over ▯), back to the last `+` `-` `=` `,` or open `(`, so `2x`, `(a+b)` and `sin(x)` all go up whole. nothing there (or a `*` `/` `(-)` right before it) = empty, cursor on top | |
+| `(` | just a bracket. its `)` shows up grey at the end of the slot you're in till you type a real one, and if you never do it closes there anyway, so `2(x+1` is 2(x+1) | |
+| `)` | closes the last `(` that's still open. none open: steps out of the bracket / function you're in, like before | |
+| `[+]` `[-]` `[*]` `[÷]` `[^]` on an empty line | puts `ans` in front, the last answer (like the TI). `ans` is bold like a stored name and typing it out works too. not `[(-)]`, that's a new number. no answer yet = nothing gets added | |
 | `[sto→]` | the arrow. `value [sto→] name` stores, `[sto→] name` on its own deletes (see Names below) | |
 | `[vars]` | the stored names and their values, enter deletes one | |
 | `[mode]` | angle (radians / degrees), trig answers, what simplest means, rationalize, dark / light theme. enter flips a row | |

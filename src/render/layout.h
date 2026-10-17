@@ -74,7 +74,7 @@ typedef struct box {
     */
     int x, y; /* origin, relative to the parent's */
     int width, ascent, descent;
-    int aux; /* BOX_FRAC/BOX_ROOT, the bar's row relative to the origin */
+    int aux; /* BOX_FRAC/BOX_ROOT, the bar's row relative to the origin. BOX_PARENS: 1 = the ) is a ghost (editor) */
 
     unsigned char level; /* nesting. 0 normal, 1 exponent, 2 an exponent's exponent... */
     unsigned char size; /* the font size it ended up at (see layout_font_t), 0 = smallest */
