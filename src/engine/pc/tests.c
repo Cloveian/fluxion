@@ -392,14 +392,15 @@ static bool test_domain(test_t *t) {
 }
 
 /*Fluxion: system; eq,eq,...; vars; expected. each eq is A=B, or A for A=0. vars run
-together (XY), one letter each. expected is the values in var order, or false / many / unknown*/
+together (XY), one letter each. expected is the values in var order, solution sets
+split by |, or false / many / unknown*/
 static bool test_system(test_t *t) {
-    pcas_ast_t *eqs[SYSTEM_MAX] = {0}, *vals[SYSTEM_MAX] = {0}, *e, *rhs;
+    pcas_ast_t *eqs[SYSTEM_MAX] = {0}, *vals[SYSTEM_SETS][SYSTEM_MAX] = {{0}}, *e, *rhs;
     Symbol vars[SYSTEM_MAX];
     char got[MAX_LINE] = "";
     char *s, *start, *eq, *trimmed;
     pcas_error_t err;
-    int n = 0, nvars = (int)strlen(t->arg2), r = SOLVE_UNKNOWN, i;
+    int n = 0, nvars = (int)strlen(t->arg2), r = SOLVE_UNKNOWN, i, k;
     bool passed = true, last;
 
     if(nvars < 1 || nvars > SYSTEM_MAX) {
@@ -462,8 +463,12 @@ static bool test_system(test_t *t) {
             strcpy(got, "many");
         else if(r == SOLVE_UNKNOWN)
             strcpy(got, "unknown");
-        else if(r == n)
-            asym_list(got, sizeof(got), vals, r);
+        else if(r > 0 && r <= SYSTEM_SETS)
+            for(k = 0; k < r; k++) {
+                if(k > 0)
+                    strncat(got, " |", sizeof(got) - strlen(got) - 1);
+                asym_list(got, sizeof(got), vals[k], n);
+            }
         else /*shouldn't happen, but say what it was*/
             sprintf(got, "solve_system() returned %d", r);
 
@@ -476,8 +481,9 @@ static bool test_system(test_t *t) {
     }
 
     for(i = 0; i < SYSTEM_MAX; i++) {
-        if(vals[i] != NULL)
-            ast_Cleanup(vals[i]);
+        for(k = 0; k < SYSTEM_SETS; k++)
+            if(vals[k][i] != NULL)
+                ast_Cleanup(vals[k][i]);
         if(eqs[i] != NULL)
             ast_Cleanup(eqs[i]);
     }

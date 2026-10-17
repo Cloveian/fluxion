@@ -1002,7 +1002,7 @@ static pcas_ast_t *turns(int k) {
 /*e as a decimal, a NUMBER node. approx() gives rationals but normalize splits
   them straight back into a/b trees, so this puts the fraction back together.
   NULL if there's still a letter in it*/
-static pcas_ast_t *decimal(pcas_ast_t *e) {
+pcas_ast_t *approx_number(pcas_ast_t *e) {
     pcas_ast_t *a = ast_Copy(e), *r = NULL;
 
     if(a == NULL)
@@ -1056,7 +1056,7 @@ static long whole_part(mp_rat r) {
 }
 
 int solve_in_range(pcas_ast_t **roots, int n, pcas_ast_t *hi) {
-    pcas_ast_t *keep[SOLVE_MAX], *val[SOLVE_MAX], *h = decimal(hi), *sym = ast_MakeSymbol(SYM_N);
+    pcas_ast_t *keep[SOLVE_MAX], *val[SOLVE_MAX], *h = approx_number(hi), *sym = ast_MakeSymbol(SYM_N);
     int kept = 0, i, j, k;
 
     if(h == NULL || sym == NULL || pcas_cancelled) {
@@ -1080,7 +1080,7 @@ int solve_in_range(pcas_ast_t **roots, int n, pcas_ast_t *hi) {
           simplifying the lot was 5 ms on the PC, half a minute on the calculator*/
         {
             pcas_ast_t *c0 = at_n(roots[i], sym, 0), *c1 = at_n(roots[i], sym, 1);
-            pcas_ast_t *v0 = c0 != NULL ? decimal(c0) : NULL, *v1 = c1 != NULL ? decimal(c1) : NULL;
+            pcas_ast_t *v0 = c0 != NULL ? approx_number(c0) : NULL, *v1 = c1 != NULL ? approx_number(c1) : NULL;
             long lo = -4, up = 4; /*if theres no period to go on, the old spread*/
 
             if(v0 != NULL && v1 != NULL) {
@@ -1119,7 +1119,7 @@ int solve_in_range(pcas_ast_t **roots, int n, pcas_ast_t *hi) {
                     v1 = NULL;
                 } else {
                     c = at_n(roots[i], sym, k);
-                    a = c != NULL ? decimal(c) : NULL;
+                    a = c != NULL ? approx_number(c) : NULL;
                 }
                 if(a != NULL)
                     in = mp_rat_compare_zero(a->op.num) >= 0 && mp_rat_compare(a->op.num, h->op.num) < 0;
@@ -1173,7 +1173,7 @@ static void sort_roots(pcas_ast_t **out, int n) {
 
     /*by the decimal, so 1/2 and sqrt(2) sort too. letters stay where they are*/
     for(i = 0; i < n; i++)
-        val[i] = decimal(out[i]);
+        val[i] = approx_number(out[i]);
     for(i = 1; i < n; i++) {
         pcas_ast_t *r = out[i], *rv = val[i];
 
