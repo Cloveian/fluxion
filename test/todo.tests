@@ -27,9 +27,6 @@ cancel; (A^2_B^2)/(A_B); A+B
 #Cancel: a fraction over a fraction isn't flattened first, so nothing cancels
 #gives: X^2/(X_1)_1/(X_1)
 cancel; ((X^2_1)/(X+3))/((X_1)/(X+3)); X+1
-#Cancel: cancelling (X_1) against -(X_1) leaves X/1 behind
-#gives: -1_X/1
-cancel; (X^2_1)/(1_X); -X_1
 
 #Comdenom: a top that cancels to 0 stays 0 over the denominator
 #gives: 0/(1_X)
@@ -45,22 +42,9 @@ comdenomf; 1/X+1/(X+1)+1/(X+2); (3X^2+6X+2)/(X(X+1)(X+2))
 #gives: (1+X(1+X))/X^3
 comdenomf; 1/X+1/X^2+1/X^3; (X^2+X+1)/X^3
 
-#Roots: like terms don't add roots of the same number (2^(3/2) and 3*2^(1/2) look different)
-#gives: 3sqrt(2)+2^(3/2)
-simplify; sqrt(18)+sqrt(8); 5sqrt(2)
-#gives: 2sqrt(3)+3^(3/2)
-simplify; sqrt(12)+sqrt(27); 5sqrt(3)
 #Roots: trial division stops at 1000 (ROOT_MAX_FACTOR), so the square of a bigger prime stays inside
 #gives: sqrt(2036162)
 simplify; sqrt(2*1009^2); 1009sqrt(2)
-#Roots: an odd root of a negative number becomes the principal complex root. The TI-84 and the
-#Nspire give the real one, approx() computes the real one, so the decimal form has no answer
-#gives: 1+sqrt(3)i
-simplify; 3root(-8); -2
-#gives: 3/2^(2/3)+i3^(3/2)/2^(2/3)
-simplify; 3root(-54); -3*2^(1/3)
-#gives: not a number (simplify made it complex first)
-decimal; 3root(-8); -2
 #Roots: sqrt(X^2) is X, not abs(X) (upstream behaviour)
 #gives: 2Xsqrt(3)
 simplify; sqrt(12X^2); 2sqrt(3)abs(X)

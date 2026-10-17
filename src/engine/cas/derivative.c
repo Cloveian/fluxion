@@ -27,9 +27,9 @@ pcas_id_t id_derivative[ID_NUM_DERIV] = {
     {"deriv(cosh(A,X,T", "deriv(A,X,T)sinh(A"},
     {"deriv(tanh(A,X,T", "deriv(A,X,T)/cosh(A)^2"},
 
-    {"deriv(asinh(A,X,T", "deriv(A,X,T)/sqrt(X^2+1"},
-    {"deriv(acosh(A,X,T", "deriv(A,X,T)/sqrt(X^2_1"},
-    {"deriv(atanh(A,X,T", "deriv(A,X,T)/(1_X^2"},
+    {"deriv(asinh(A,X,T", "deriv(A,X,T)/sqrt(A^2+1"},
+    {"deriv(acosh(A,X,T", "deriv(A,X,T)/sqrt(A^2_1"},
+    {"deriv(atanh(A,X,T", "deriv(A,X,T)/(1_A^2"},
 };
 
 /*Identities we have to check manually because we have to check for constants*/

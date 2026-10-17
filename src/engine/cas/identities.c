@@ -174,6 +174,13 @@ pcas_id_t id_hyperbolic[ID_NUM_HYPERBOLIC] = {
     {"cosh(X)_sinh(X)", "e^(-X"},
     {"sinh(X)/cosh(X", "tanh(X"},
     {"cosh(X)^2_sinh(X)^2+C", "1+C"},
+    /*Fluxion: the values at 0, the catalog always said these worked*/
+    {"sinh(0", "0"},
+    {"cosh(0", "1"},
+    {"tanh(0", "0"},
+    {"asinh(0", "0"},
+    {"acosh(1", "0"},
+    {"atanh(0", "0"},
 };
 
 pcas_id_t id_complex[ID_NUM_COMPLEX] = {
