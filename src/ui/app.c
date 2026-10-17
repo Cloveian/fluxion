@@ -6,6 +6,7 @@
 #include "geom.h"
 #include "polyfn.h"
 #include "tri.h"
+#include "conic.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -410,7 +411,7 @@ box_t *solutions_box(char var, pcas_ast_t **roots, int n) {
 }
 
 /* "vertical    x = -2, 2", one line of an asym() answer. takes the values row */
-static box_t *labelled(const char *label, box_t *values) {
+box_t *labelled(const char *label, box_t *values) {
     box_t *row = layout_box(BOX_ROW, 0);
 
     layout_add(row, layout_text(label, 0));
@@ -893,7 +894,8 @@ static bool run(editor_t *line) {
        || strstr(src, "asym(") || strstr(src, "system(") || strstr(src, "slope(") || strstr(src, "dist(")
        || strstr(src, "mid(") || strstr(src, "par(") || strstr(src, "perp(") || strstr(src, "domain(")
        || strstr(src, "roots(") || strstr(src, "fromrts(") || strstr(src, "inverse(")
-       || strstr(src, "triangle(") || strstr(src, "amplitude(") || strstr(src, "pand(") || strstr(src, "por(")) {
+       || strstr(src, "triangle(") || strstr(src, "amplitude(") || strstr(src, "pand(") || strstr(src, "por(")
+       || strstr(src, "ellipse(") || strstr(src, "hyperbola(")) {
         free(src);
         status = "commands have to be the whole line (for now)";
         return false;
@@ -920,13 +922,16 @@ static bool run(editor_t *line) {
         free(src);
         return true;
     }
-    if(strchr(src, '=') != NULL) {
+    /* ellipse( and hyperbola( take one too, they're let through to conic_run */
+    if(strchr(src, '=') != NULL
+       && (cmd == NULL || (strcmp(cmd, "ellipse") != 0 && strcmp(cmd, "hyperbola") != 0))) {
         free(src);
         status = "= only works in solve( and system(";
         return false;
     }
     in = ed_layout(line, &draw_font, false);
-    if(geom_run(cmd, src, in) || polyfn_run(cmd, src, in) || tri_run(cmd, src, in)) {
+    if(geom_run(cmd, src, in) || polyfn_run(cmd, src, in) || tri_run(cmd, src, in)
+       || conic_run(cmd, src, in)) {
         free(src);
         return true;
     }
@@ -1202,7 +1207,8 @@ static bool pick_into(editor_t *into, const item_t *it, bool dry) {
            && strcmp(s, "dist($)") != 0 && strcmp(s, "mid($)") != 0 && strcmp(s, "par($)") != 0
            && strcmp(s, "perp($)") != 0 && strcmp(s, "domain($)") != 0 && strcmp(s, "roots($)") != 0
            && strcmp(s, "fromrts($)") != 0 && strcmp(s, "inverse($)") != 0 && strcmp(s, "triangle($)") != 0
-           && strcmp(s, "amplitude($)") != 0 && strcmp(s, "pand($)") != 0 && strcmp(s, "por($)") != 0)
+           && strcmp(s, "amplitude($)") != 0 && strcmp(s, "pand($)") != 0 && strcmp(s, "por($)") != 0
+           && strcmp(s, "ellipse($)") != 0 && strcmp(s, "hyperbola($)") != 0)
             return false;
         if(!dry) {
             memcpy(name, s, n);

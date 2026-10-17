@@ -206,6 +206,12 @@ ITEM(it_pand,     "P(A and B)", "pand", ITEM_COMMAND, NULL, "pand($)", HAVE_YES,
 ITEM(it_por,      "P(A or B)", "por", ITEM_COMMAND, NULL, "por($)", HAVE_YES,
      "por(pa,pb): pa+pb-pa*pb, exact. assumes independent events",
      "chance at least one happens, for independent events. por(1/2,1/3) -> 2/3")
+ITEM(it_ellipse,  "ellipse", "ellipse", ITEM_COMMAND, NULL, "ellipse($)", HAVE_PARTLY,
+     "ellipse(eq): center, vertices, co-vertices, foci by completing the square. ellipse(h,k,vx,vy,fx,fy): the equation, b^2 = a^2 - c^2. no tilted ones (no xy)",
+     "ellipse(4x^2+9y^2=36) -> center, vertices, co-vertices, foci. ellipse(h,k,vx,vy,fx,fy), center + a vertex + a focus -> the equation. lined up with the axes only")
+ITEM(it_hyperbola, "hyperbola", "hyperbola", ITEM_COMMAND, NULL, "hyperbola($)", HAVE_PARTLY,
+     "hyperbola(eq): center, vertices, foci, asymptotes y = k +- (b/a)(x-h). hyperbola(h,k,vx,vy,fx,fy): the equation, b^2 = c^2 - a^2. no tilted ones (no xy)",
+     "hyperbola(x^2/9-y^2/16=1) -> center, vertices, foci, asymptotes. hyperbola(h,k,vx,vy,fx,fy), center + a vertex + a focus -> the equation. lined up with the axes only")
 
 /* Calculus */
 ITEM(it_deriv,    "d/dx",   "deriv", ITEM_TEMPLATE, NULL, "deriv($,X,X)", HAVE_YES, "derivative with respect to x",
@@ -242,6 +248,7 @@ const item_t *const catalog[] = {
     &it_simplify, &it_expand, &it_subst, &it_evaluate, &it_factor, &it_solve, &it_asym, &it_domain, &it_system,
     &it_slope, &it_dist, &it_mid, &it_par, &it_perp, &it_roots, &it_fromrts, &it_inverse,
     &it_triangle, &it_pand, &it_por,
+    &it_ellipse, &it_hyperbola,
     &it_deriv, &it_deriv_at, &it_integral, &it_limit,
     &it_id_basic, &it_id_trig, &it_id_hyp, &it_id_cplx, &it_id_tconst, &it_id_iconst, &it_rationalize, &it_clear
 };
@@ -250,6 +257,7 @@ const unsigned catalog_count = sizeof catalog / sizeof catalog[0];
 static const item_t *const algebra[] = {
     &it_expand, &it_factor, &it_solve, &it_asym, &it_domain, &it_system, &it_slope, &it_dist, &it_mid,
     &it_par, &it_perp, &it_roots, &it_fromrts, &it_inverse, &it_triangle, &it_pand, &it_por,
+    &it_ellipse, &it_hyperbola,
     &it_subst, &it_evaluate
 };
 static const item_t *const calculus[] = {
