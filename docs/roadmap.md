@@ -37,7 +37,7 @@
 - [x] Slope, distance and midpoint commands
 - [x] Parallel and perpendicular lines
 - [ ] Transformations
-- [ ] Geometry formulas (area, perimeter, volume, angles)
+- [x] Geometry formulas (area, perimeter, volume, angles). circle( box( polygon( etc, angles from triangle and polygon
 - [x] Probability (nCr, nPr, and pand / por for independent events)
 - [x] GCD, LCM and prime factorisation
 - [ ] Percent
