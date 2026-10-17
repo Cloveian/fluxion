@@ -6,6 +6,7 @@
 #include "geom.h"
 #include "polyfn.h"
 #include "tri.h"
+#include "ineq.h"
 #include "conic.h"
 #include "piece.h"
 
@@ -486,7 +487,7 @@ static bool read_var(const char *s, Symbol *var, char *shown) {
 */
 static void run_solve(char *src, box_t *in) {
     pcas_ast_t *roots[SOLVE_MAX] = { NULL }, *e, *rhs = NULL;
-    char *eq = NULL, *comma = NULL, *s, shown = 'x';
+    char *eq = NULL, *comma = NULL, *s, shown = 'x', rel = 0;
     Symbol var = SYM_X;
     pcas_error_t err;
     clock_t start;
@@ -498,7 +499,15 @@ static void run_solve(char *src, box_t *in) {
             depth++;
         else if(*s == ')')
             depth--;
-        else if(depth == 0 && *s == '=' && eq == NULL)
+        else if(depth == 0 && eq == NULL && (*s == '<' || *s == '>' || *s == CH_LE || *s == CH_GE)) {
+            /* an inequality, ineq.c does those. < then = typed as two counts as <= */
+            rel = *s;
+            if((*s == '<' || *s == '>') && s[1] == '=') {
+                rel = *s == '<' ? CH_LE : CH_GE;
+                *s++ = ' '; /* the left side gets a space at the end, the = is where it splits */
+            }
+            eq = s;
+        } else if(depth == 0 && *s == '=' && eq == NULL)
             eq = s;
         else if(depth == 0 && *s == ',')
             comma = s;
@@ -533,6 +542,11 @@ static void run_solve(char *src, box_t *in) {
 
     if(setting_angle == ANGLE_DEGREES)
         e = degrees_in(e);
+    if(rel != 0) {
+        ineq_run(e, var, shown, rel, in);
+        ast_Cleanup(e);
+        return;
+    }
     start = clock();
     n = solve_ex(e, var, roots, true);
     if(n > 0 && setting_trig == TRIG_ONE_TURN) {

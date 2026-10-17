@@ -163,8 +163,8 @@ ITEM(it_factor,   "factor", "factor", ITEM_COMMAND, NULL, "factor($)", HAVE_PART
      "one variable over the rationals; not x^2-y^2, not irrational roots (factor(x^2-2,x))",
      "writes it as a product. factor(x^2-1) -> (x-1)(x+1). one variable only")
 ITEM(it_solve,    "solve",  "solve", ITEM_COMMAND, NULL, "solve($)", HAVE_PARTLY,
-     "solve(eq,x): linear (any coefficients), polynomials via factor + the quadratic formula + cubics (cos form or cardano), trig families, one letter at a time. systems have their own command",
-     "solves linear and polynomial equations. solve(x^2-4=0,x) -> x = -2, 2. no systems")
+     "solve(eq,x): linear (any coefficients), polynomials via factor + the quadratic formula + cubics (cos form or cardano), trig families, one letter at a time. < > <= >= go through a sign chart (not trig yet). systems have their own command",
+     "solves equations and inequalities. solve(x^2-4=0,x) -> x = -2, 2. solve(x^2-4<0,x) -> -2 < x < 2")
 ITEM(it_asym,     "asymptotes", "asym", ITEM_COMMAND, NULL, "asym($)", HAVE_PARTLY,
      "asym(f,x): holes, vertical and horizontal asymptotes of a rational function. no slant ones yet",
      "holes and asymptotes of a fraction. asym((x^2-1)/(x-1),x) -> hole at x = 1. no slant ones yet")
