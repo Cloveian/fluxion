@@ -42,7 +42,7 @@
 - [x] GCD, LCM and prime factorisation
 - [ ] Percent
 - [ ] Defining and calling functions like f(x)
-- [x] Domain and range. domain(f,x) is in, range is not (todo)
+- [x] Domain and range. range(f,x) does pieces between holes and asymptotes, no trig yet
 - [x] Factoring with more than one variable (x²−y²)
 - [x] Nonlinear systems. two equations, two letters, by substitution
 - [x] Cubics with no rational root

@@ -1207,7 +1207,7 @@ char *ed_row_to_engine(const ed_row_t *r) {
     return o.s;
 }
 
-static const char *const commands[] = { "expand", "factor", "eval", "solve", "asym", "domain", "system",
+static const char *const commands[] = { "expand", "factor", "eval", "solve", "asym", "domain", "range", "system",
                                         "slope", "dist", "mid", "par", "perp", "roots", "fromroots", "inverse",
                                         "triangle", "amplitude", "pand", "por",
                                         "ellipse", "hyperbola", "piecewise",

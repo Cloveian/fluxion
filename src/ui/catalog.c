@@ -171,6 +171,9 @@ ITEM(it_asym,     "asymptotes", "asym", ITEM_COMMAND, NULL, "asym($)", HAVE_PART
 ITEM(it_domain,   "domain", "domain", ITEM_COMMAND, NULL, "domain($)", HAVE_PARTLY,
      "domain(f,x): zeros of bottoms, even roots and logs of ax+b, tan at pi/2+pi n. worse inside a root or log just says (and maybe more)",
      "where it's defined. domain(sqrt(x-2),x) -> x >= 2. a root or log of more than ax+b is only partly done")
+ITEM(it_range,    "range",  "range", ITEM_COMMAND, NULL, "range($)", HAVE_PARTLY,
+     "range(f,x): domain and asym cut it into pieces, each one spans its turning points (f' = 0) and ends. no trig yet",
+     "the y values it takes. range(x^2+1,x) -> y >= 1, range(1/x,x) -> y < 0 or y > 0")
 ITEM(it_system,   "system", "system", ITEM_COMMAND, NULL, "system($)", HAVE_PARTLY,
      "system(eq, eq, ..., x, y): linear systems by elimination, letters in the coefficients ok. nothing nonlinear yet",
      "solves equations together. system(2x-y=7,x+y=2,x,y) -> x = 3, y = -1. linear only, for now")
@@ -274,7 +277,7 @@ const item_t *const catalog[] = {
     &it_sinh, &it_cosh, &it_tanh, &it_asinh, &it_acosh, &it_atanh, &it_logb, &it_abs, &it_fact, &it_int,
     &it_gcd, &it_lcm, &it_ncr, &it_npr, &it_amplitude,
     &it_frac, &it_parens, &it_piecewise,
-    &it_simplify, &it_expand, &it_subst, &it_evaluate, &it_factor, &it_solve, &it_asym, &it_domain, &it_system,
+    &it_simplify, &it_expand, &it_subst, &it_evaluate, &it_factor, &it_solve, &it_asym, &it_domain, &it_range, &it_system,
     &it_slope, &it_dist, &it_mid, &it_par, &it_perp, &it_roots, &it_fromroots, &it_inverse,
     &it_triangle, &it_circle, &it_rect, &it_squareshape, &it_trap, &it_sphere, &it_cyl, &it_cone,
     &it_cube, &it_box, &it_polygon, &it_pand, &it_por,
@@ -285,7 +288,7 @@ const item_t *const catalog[] = {
 const unsigned catalog_count = sizeof catalog / sizeof catalog[0];
 
 static const item_t *const algebra[] = {
-    &it_expand, &it_factor, &it_solve, &it_asym, &it_domain, &it_system, &it_slope, &it_dist, &it_mid,
+    &it_expand, &it_factor, &it_solve, &it_asym, &it_domain, &it_range, &it_system, &it_slope, &it_dist, &it_mid,
     &it_par, &it_perp, &it_roots, &it_fromroots, &it_inverse, &it_triangle,
     &it_circle, &it_rect, &it_squareshape, &it_trap, &it_sphere, &it_cyl, &it_cone, &it_cube, &it_box,
     &it_polygon, &it_pand, &it_por,

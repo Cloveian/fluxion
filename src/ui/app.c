@@ -10,6 +10,7 @@
 #include "conic.h"
 #include "piece.h"
 #include "shapes.h"
+#include "range.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -570,7 +571,7 @@ static void run_solve(char *src, box_t *in) {
     outside brackets (writes into src), parsed, in radians. NULL once it's pushed
     what went wrong, usage is the line for a bad variable
 */
-static pcas_ast_t *read_f(char *src, box_t *in, const char *usage, Symbol *var, char *shown) {
+pcas_ast_t *read_f(char *src, box_t *in, const char *usage, Symbol *var, char *shown) {
     pcas_ast_t *e;
     pcas_error_t err;
     char *comma = NULL, *s;
@@ -963,7 +964,8 @@ static bool run(editor_t *line) {
     }
     in = ed_layout(line, &draw_font, false);
     if(geom_run(cmd, src, in) || polyfn_run(cmd, src, in) || tri_run(cmd, src, in)
-       || conic_run(cmd, src, in) || piece_run(cmd, src, in) || shapes_run(cmd, src, in)) {
+       || conic_run(cmd, src, in) || piece_run(cmd, src, in) || shapes_run(cmd, src, in)
+       || range_run(cmd, src, in)) {
         free(src);
         return true;
     }

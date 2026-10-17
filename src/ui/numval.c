@@ -25,3 +25,26 @@ bool num_float(const pcas_ast_t *e, float *x) {
     }
     return true;
 }
+
+/* f at a decimal x, NAN when it isn't a plain number there. the engine has no
+   floats so x goes in as a fraction over 65536, close enough for the test points
+   ineq and range poke f at */
+float num_at(pcas_ast_t *f, Symbol var, float x) {
+    pcas_ast_t *e = ast_Copy(f), *sym = ast_MakeSymbol(var), *v;
+    float y = NAN;
+
+    if(fabsf(x) < 30000)
+        v = ast_MakeNumber(num_FromFraction((mp_small)lroundf(x * 65536), 65536));
+    else
+        v = ast_MakeNumber(num_FromInt((mp_small)lroundf(x)));
+    substitute(e, sym, v);
+    approx(e);
+    simplify(e, SIMP_NORMALIZE | SIMP_COMMUTATIVE | SIMP_RATIONAL | SIMP_EVAL);
+    if(!num_float(e, &y) || !isfinite(y))
+        y = NAN;
+
+    ast_Cleanup(e);
+    ast_Cleanup(sym);
+    ast_Cleanup(v);
+    return y;
+}

@@ -78,29 +78,13 @@ static int by_x(const void *a, const void *b) {
     return x < y ? -1 : x > y;
 }
 
-/* the sign of f at x, -1 0 or 1, 2 when it can't tell (an i, another letter).
-   the engine has no floats so x goes in as a fraction over 65536, close enough
-   for a test point in the middle of a gap */
+/* the sign of f at x, -1 0 or 1, 2 when it can't tell (an i, another letter) */
 static int sign_at(pcas_ast_t *f, Symbol var, float x) {
-    pcas_ast_t *e = ast_Copy(f), *sym = ast_MakeSymbol(var), *v;
-    float y;
-    int s = 2;
+    float y = num_at(f, var, x);
 
-    if(fabsf(x) < 30000)
-        v = ast_MakeNumber(num_FromFraction((mp_small)lroundf(x * 65536), 65536));
-    else
-        v = ast_MakeNumber(num_FromInt((mp_small)lroundf(x)));
-
-    substitute(e, sym, v);
-    approx(e);
-    simplify(e, SIMP_NORMALIZE | SIMP_COMMUTATIVE | SIMP_RATIONAL | SIMP_EVAL);
-    if(num_float(e, &y) && isfinite(y))
-        s = y > 0 ? 1 : y < 0 ? -1 : 0;
-
-    ast_Cleanup(e);
-    ast_Cleanup(sym);
-    ast_Cleanup(v);
-    return s;
+    if(isnan(y))
+        return 2;
+    return y > 0 ? 1 : y < 0 ? -1 : 0;
 }
 
 /* where to test the gap before edge i (i = n is the one after the last edge).
@@ -134,7 +118,7 @@ static void put_value(box_t *row, pcas_ast_t *v) {
 }
 
 /* one piece: lo < x < hi, x <= hi, x > lo or x = c. NULL for no end on a side */
-static box_t *piece_row(char shown, pcas_ast_t *lo, bool lo_in, pcas_ast_t *hi, bool hi_in) {
+box_t *ineq_row(char shown, pcas_ast_t *lo, bool lo_in, pcas_ast_t *hi, bool hi_in) {
     char name[2] = { shown, '\0' }, lt[2] = { '<', '\0' }, le[2] = { CH_LE, '\0' };
     box_t *row = layout_box(BOX_ROW, 0);
 
@@ -232,7 +216,7 @@ void ineq_run(pcas_ast_t *f, Symbol var, char shown, char rel, box_t *in) {
             }
             if(runs++ > 0)
                 layout_add(col, layout_text("or", 0));
-            layout_add(col, piece_row(shown, lo, p % 2 == 1, hi, q % 2 == 1));
+            layout_add(col, ineq_row(shown, lo, p % 2 == 1, hi, q % 2 == 1));
             p = q;
         }
         if(runs == 0) {
