@@ -485,6 +485,9 @@ simplify; cot(X)+1; cot(X)+1
 deriv; cot(X); X; -csc(X)^2
 deriv; sec(X); X; tan(X)sec(X)
 deriv; csc(X); X; -cot(X)csc(X)
+deriv; asinh(2X); X; (2sqrt(4X^2+1))/(4X^2+1)
+deriv; acosh(X^2); X; (2Xsqrt(X^4_1))/(X^4_1)
+deriv; atanh(X^2); X; (2X)/(1_X^4)
 decimal; cot(1); 0.642093
 decimal; sec(1); 1.85082
 decimal; csc(1); 1.1884
@@ -524,3 +527,12 @@ simplify; (2/3)/4; 1/6
 simplify; (1+1/2)/(1_1/2); 3
 simplify; 3/4+(1/2)/3; 11/12
 simplify; (X/2+1/3)/2; X/4+1/6
+simplify; sinh(0)+cosh(0)+tanh(0); 1
+simplify; asinh(0)+acosh(1)+atanh(0); 0
+#were in todo.tests, pass now (2026-10-17)
+cancel; (X^2_1)/(1_X); -X_1
+simplify; sqrt(18)+sqrt(8); 5sqrt(2)
+simplify; sqrt(12)+sqrt(27); 5sqrt(3)
+simplify; 3root(-8); -2
+simplify; 3root(-54); -3*2^(1/3)
+decimal; 3root(-8); -2
