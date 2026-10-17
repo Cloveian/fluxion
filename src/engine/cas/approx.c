@@ -12,7 +12,7 @@
 room. float on the PC too so the tests get the same ~7 digits the CE does*/
 typedef float real;
 
-static real int_value(mp_int z) {
+float approx_int(mp_int z) {
     real v = 0;
     mp_size i;
 
@@ -31,7 +31,7 @@ static bool value(pcas_ast_t *e, real *x) {
     real a = 0, b = 0, c, d, t;
 
     if(e->type == NODE_NUMBER) {
-        *x = int_value(mp_rat_numer_ref(e->op.num)) / int_value(mp_rat_denom_ref(e->op.num));
+        *x = approx_int(mp_rat_numer_ref(e->op.num)) / approx_int(mp_rat_denom_ref(e->op.num));
         return true;
     }
     if(e->type == NODE_SYMBOL) {

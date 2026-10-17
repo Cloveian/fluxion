@@ -243,6 +243,8 @@ bool approx(pcas_ast_t *e);
 /*Fluxion: r as a decimal with digits significant digits: 1.25, 0.333333, 2.28892E7.
 plain from 0.001 up to 10^digits. buf needs digits + 10 chars*/
 void approx_format(mp_rat r, int digits, char *buf);
+/*Fluxion: z as a float. the app's numval.c reads numbers with it too*/
+float approx_int(mp_int z);
 
 /*Replaces all instances of from ast to to ast in e*/
 bool substitute(pcas_ast_t *e, pcas_ast_t *from, pcas_ast_t *to);

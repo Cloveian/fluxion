@@ -1,6 +1,7 @@
 #include "tri.h"
 
 #include "app.h"
+#include "numval.h"
 #include "settings.h"
 
 #include <math.h>
@@ -91,38 +92,6 @@ static bool read_var(const char *s, Symbol *var) {
 
 /* triangle */
 
-static float int_value(mp_int z) {
-    float v = 0;
-    mp_size i;
-
-    for(i = MP_USED(z); i > 0; i--)
-        v = ldexpf(v, (int)MP_DIGIT_BIT) + (float)MP_DIGITS(z)[i - 1];
-    return MP_SIGN(z) == MP_NEG ? -v : v;
-}
-
-/* what's left after approx: numbers, and simplify likes 5.01 as 501/100 in a
-   DIV node, so the + * / of them too */
-static bool float_of(const pcas_ast_t *e, float *x) {
-    const pcas_ast_t *k;
-    float y;
-
-    if(e->type == NODE_NUMBER) {
-        *x = int_value(mp_rat_numer_ref(e->op.num)) / int_value(mp_rat_denom_ref(e->op.num));
-        return true;
-    }
-    if(!isoptype(e, OP_ADD) && !isoptype(e, OP_MULT) && !isoptype(e, OP_DIV))
-        return false;
-    for(k = e->op.operator.base; k != NULL; k = k->next) {
-        if(!float_of(k, &y))
-            return false;
-        if(k == e->op.operator.base)
-            *x = y;
-        else
-            *x = isoptype(e, OP_ADD) ? *x + y : isoptype(e, OP_MULT) ? *x * y : *x / y;
-    }
-    return true;
-}
-
 /* a piece as a plain number. pi/3 and sqrt(2) are fine, x isn't */
 static bool number_of(const char *s, float *x, pcas_error_t *err) {
     pcas_ast_t *e = read_piece(s, err);
@@ -134,7 +103,7 @@ static bool number_of(const char *s, float *x, pcas_error_t *err) {
         e = degrees_in(e);
     simplify(e, SIMP_ALL);
     approx(e);
-    ok = float_of(e, x) && isfinite(*x);
+    ok = num_float(e, x) && isfinite(*x);
     ast_Cleanup(e);
     return ok;
 }
@@ -464,7 +433,7 @@ static pcas_ast_t *amplitude(pcas_ast_t *f, Symbol var) {
         i = coef[0] == NULL || (coef[1] != NULL && is_ast_int(coef[0], 0));
         v = ast_Copy(coef[i]);
         approx(v);
-        if(float_of(v, &x))
+        if(num_float(v, &x))
             e = x < 0 ? ast_MakeBinary(OP_MULT, ast_MakeNumber(num_FromInt(-1)), coef[i]) : coef[i];
         else {
             absolute_val(coef[i]);
@@ -538,7 +507,7 @@ bool tri_run(const char *cmd, char *src, box_t *in) {
                 /* letters are fine, 3/2 isn't a probability of anything */
                 v = ast_Copy(a[i]);
                 approx(v);
-                if(float_of(v, &x) && (x < -EPS || x > 1 + EPS))
+                if(num_float(v, &x) && (x < -EPS || x > 1 + EPS))
                     message = "probabilities go from 0 to 1";
                 ast_Cleanup(v);
             }

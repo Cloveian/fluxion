@@ -1,6 +1,7 @@
 #include "piece.h"
 
 #include "app.h"
+#include "numval.h"
 #include "settings.h"
 
 #include <math.h>
@@ -104,37 +105,6 @@ static unsigned long letters(const pcas_ast_t *e) {
     return m;
 }
 
-/* copied from tri.c, the float of what's left after approx */
-static float int_value(mp_int z) {
-    float v = 0;
-    mp_size i;
-
-    for(i = MP_USED(z); i > 0; i--)
-        v = ldexpf(v, (int)MP_DIGIT_BIT) + (float)MP_DIGITS(z)[i - 1];
-    return MP_SIGN(z) == MP_NEG ? -v : v;
-}
-
-static bool float_of(const pcas_ast_t *e, float *x) {
-    const pcas_ast_t *k;
-    float y;
-
-    if(e->type == NODE_NUMBER) {
-        *x = int_value(mp_rat_numer_ref(e->op.num)) / int_value(mp_rat_denom_ref(e->op.num));
-        return true;
-    }
-    if(!isoptype(e, OP_ADD) && !isoptype(e, OP_MULT) && !isoptype(e, OP_DIV))
-        return false;
-    for(k = e->op.operator.base; k != NULL; k = k->next) {
-        if(!float_of(k, &y))
-            return false;
-        if(k == e->op.operator.base)
-            *x = y;
-        else
-            *x = isoptype(e, OP_ADD) ? *x + y : isoptype(e, OP_MULT) ? *x * y : *x / y;
-    }
-    return true;
-}
-
 static bool is_rel(char c) {
     return c == '<' || c == '>' || c == CH_LE || c == CH_GE || c == CH_NE || c == '=';
 }
@@ -209,7 +179,7 @@ static int holds(const cond_t *c, pcas_ast_t *var, pcas_ast_t *v) {
         substitute(e, var, v);
         simplify(e, SIMP_ALL);
         approx(e);
-        ok = float_of(e, &x[k]) && isfinite(x[k]);
+        ok = num_float(e, &x[k]) && isfinite(x[k]);
         ast_Cleanup(e);
         if(!ok)
             return -1;
