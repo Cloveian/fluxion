@@ -110,6 +110,10 @@ solve; 1/X+1/(X+1)=1; X; 1/2_(5^(1/2))/2,1/2+(5^(1/2))/2
 solve; X/(X_1)=1/(X_1); X; false
 solve; (X^2_1)/(X_1)=0; X; -1
 solve; 2/X=4; X; 1/2
+#isolate undid the power and said 1/0, ln(0)
+solve; 1/X^2=0; X; false
+solve; 1/(2*X^(1/2))=0; X; false
+solve; E^X=0; X; false
 #odd roots of a negative stay real, these came back with an i in them (inverse(x^3+1) did)
 solve; X^3+1_Y=0; X; -(1_Y)^(1/3)
 simplify; (-8)^(1/3); -2
