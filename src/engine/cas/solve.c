@@ -1193,6 +1193,41 @@ int solve(pcas_ast_t *expr, Symbol var, pcas_ast_t **out) {
     return solve_ex(expr, var, out, false);
 }
 
+/*Fluxion: a /0, a 0^(negative) or a log of 0 somewhere in it*/
+static bool undefined(pcas_ast_t *e) {
+    pcas_ast_t *k;
+
+    if(e == NULL || e->type != NODE_OPERATOR)
+        return false;
+    if(isoptype(e, OP_DIV) && is_zero(ast_ChildGet(e, 1)))
+        return true;
+    if(isoptype(e, OP_LOG) && (is_zero(ast_ChildGet(e, 0)) || is_zero(ast_ChildGet(e, 1))))
+        return true; /*e^x = 0 came back as x = ln(0)*/
+    if(isoptype(e, OP_POW) && is_zero(ast_ChildGet(e, 0)) && is_negative_for_sure(ast_ChildGet(e, 1)))
+        return true;
+    for(k = ast_ChildGet(e, 0); k != NULL; k = k->next)
+        if(undefined(k))
+            return true;
+    return false;
+}
+
+/*Fluxion: isolate undoes powers without asking, 1/x^2 = 0 came back as x = 1/0, -1/0. those go,
+and when nothing's left there was no root*/
+static int drop_undefined(pcas_ast_t **out, int n) {
+    int i, k;
+
+    for(i = k = 0; i < n; i++) {
+        simplify(out[i], SIMP_NORMALIZE | SIMP_COMMUTATIVE | SIMP_RATIONAL | SIMP_EVAL);
+        if(undefined(out[i]))
+            ast_Cleanup(out[i]);
+        else
+            out[k++] = out[i];
+    }
+    for(i = k; i < n; i++)
+        out[i] = NULL;
+    return n > 0 ? k : n;
+}
+
 /*Fluxion: var under a fraction bar, (3x-y)/(x+y) = 5/8. clear_denominators only takes numbers off,
 so it goes over one denominator here and the top gets solved. a root that makes the bottom 0
 was never a root (x/x = 0 has none)*/
@@ -1276,8 +1311,10 @@ int solve_ex(pcas_ast_t *expr, Symbol var, pcas_ast_t **out, bool complex) {
         coefs_free(&p);
     }
 
-    if(n == SOLVE_UNKNOWN && !pcas_cancelled && count_var(e, var) == 1)
+    if(n == SOLVE_UNKNOWN && !pcas_cancelled && count_var(e, var) == 1) {
         n = isolate(e, var, out);   /*not a polynomial in it, but it's only there once*/
+        n = drop_undefined(out, n);
+    }
 
     if(n == SOLVE_UNKNOWN && !pcas_cancelled)
         n = solve_over(expr, var, out, complex);
