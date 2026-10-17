@@ -33,7 +33,7 @@
 ## later
 
 - [ ] Display mode option for wrap/scroll (for long answers)
-- [ ] Inequalities
+- [x] Inequalities. solve with < > ≤ ≥, sign chart. no trig ones yet
 - [x] Slope, distance and midpoint commands
 - [x] Parallel and perpendicular lines
 - [ ] Transformations
