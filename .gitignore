@@ -18,3 +18,4 @@ convimg.yaml.lst
 /PineappleCAS/
 /.claude
 __pycache__/
+.playwright-mcp/
