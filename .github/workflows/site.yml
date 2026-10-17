@@ -1,6 +1,7 @@
-# builds the docs and puts them on GitHub Pages
+# builds the site and puts it on GitHub Pages: the showcase page (web/, with fluxion compiled
+# to wasm) at the root and the mkdocs design notes under docs/
 # (Settings -> Pages -> Source has to be "GitHub Actions")
-name: Docs
+name: Site
 
 on:
   push:
@@ -9,7 +10,10 @@ on:
       - "docs/**"
       - "mkdocs.yml"
       - "requirements.txt"
-      - ".github/workflows/docs.yml"
+      - "web/**"
+      - "src/**"
+      - "pc.makefile"
+      - ".github/workflows/site.yml"
   workflow_dispatch:
 
 permissions:
@@ -35,7 +39,17 @@ jobs:
       - run: pip install -r requirements.txt
 
       # fails on broken links
-      - run: mkdocs build --strict
+      - run: mkdocs build --strict --site-dir site/docs
+
+      # same version as it gets built with locally
+      - uses: mymindstorm/setup-emsdk@v14
+        with:
+          version: 6.0.12
+
+      - run: make -f pc.makefile web -j4
+
+      # the page and what it loads, not the two test pages
+      - run: rsync -a --exclude calc.html --exclude live.html web/ site/
 
       - uses: actions/configure-pages@v5
 

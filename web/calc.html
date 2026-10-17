@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>calc test</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo+Narrow:wght@700&display=swap">
+    <style>
+        body { background: #101114; color: #ccd; font-family: sans-serif; display: grid; place-items: center; gap: 1rem; margin: 2rem 1rem; }
+        #pad { width: min(380px, 100%); }
+        #pad svg { display: block; width: 100%; }
+        #log { font-family: monospace; min-height: 1.5em; }
+    </style>
+</head>
+<body>
+    <!-- just for poking at the calc, the real page is somewhere else -->
+    <div id="pad"></div>
+    <div id="log"></div>
+    <script type="module">
+        import { calculator } from "./calc.js";
+        const log = document.getElementById("log");
+        let n = 0;
+        calculator(document.getElementById("pad"), (name, held) =>
+            log.textContent = `${++n}: ${Object.keys(held).filter(m => held[m]).map(m => m + "+").join("")}${name}`);
+    </script>
+</body>
+</html>

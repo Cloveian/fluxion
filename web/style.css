@@ -1,0 +1,332 @@
+:root {
+    --bg: #0d0e12;
+    --panel: rgb(22 23 29 / .88);
+    --line: #2b2e3a;
+    --ink: #e9e9ef;
+    --muted: #9ba1b5;
+    --accent: #8ab4ff; /* same as a lit key */
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font: 400 17px/1.55 Archivo, system-ui, sans-serif;
+}
+a { color: var(--accent); }
+
+/* the wall of screens behind everything, one image from tools/wall.py that tiles without a
+   seam. 1x or 2x by the screen's density, and shown bigger on bigger screens so a wide
+   monitor doesn't see the same screens over and over. sliding up by exactly one image
+   height lands back where it started */
+.wall { position: fixed; inset: 0; overflow: hidden; z-index: -1; }
+.wall::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse at 65% 45%, rgb(13 14 18 / .5), rgb(13 14 18 / .93) 75%);
+}
+.wall-inner {
+    --w: 1835px;
+    --h: 1408px;
+    height: calc(100% + var(--h));
+    background: url(wall/wall-1x.png) 0 0 / var(--w) var(--h);
+    background-image: image-set(url(wall/wall-1x.png) 1x, url(wall/wall-2x.png) 2x);
+    opacity: .6;
+    animation: drift 225s linear infinite;
+}
+@keyframes drift { to { transform: translateY(calc(-1 * var(--h))); } }
+@media (min-width: 1800px) { .wall-inner { --w: 2293px; --h: 1760px; } }
+@media (min-width: 2400px) { .wall-inner { --w: 2752px; --h: 2112px; } }
+@media (prefers-reduced-motion: reduce) { .wall-inner { animation: none; } }
+
+main { max-width: 1180px; margin: 0 auto; padding: 0 16px; }
+
+/* the calc gets its own column for the whole page and stays put, so clicking a feature way
+   down still shows it. the pitch is a full screen on its own like the old top was */
+.layout {
+    display: grid;
+    grid-template-columns: 1fr minmax(300px, 470px);
+    grid-template-areas: "pitch device" "rest device";
+    column-gap: 56px;
+}
+.pitch { grid-area: pitch; min-height: 100vh; display: flex; flex-direction: column; justify-content: center; }
+.device {
+    grid-area: device;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+.rest { grid-area: rest; }
+h1 { margin: 0; font-size: clamp(3rem, 7vw, 5.5rem); font-weight: 800; line-height: 1; letter-spacing: -.02em; }
+h2 { font-weight: 800; }
+/* the title's the icon's ƒµ worked into the name. still "Fluxion" for screen readers and search */
+h1 .mu { color: #6eaaff; }
+.tagline { margin: .5rem 0 1.4rem; color: var(--accent); font-size: 1.25rem; font-weight: 600; }
+/* a panel behind the pitch, the wall right behind it made the paragraph hard work to read */
+.panel {
+    padding: 32px 36px 24px;
+    border: 1px solid var(--line);
+    border-radius: 24px;
+    background: rgb(13 14 18 / .78);
+    backdrop-filter: blur(6px);
+}
+.intro > p { max-width: 34em; color: #b4b9cb; }
+
+/* the three links on the left, try it on its own on the right pointing at the calc */
+.buttons { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 30px 0 4px; }
+.button.quiet { padding: .5em 1.05em; font-size: .92rem; }
+/* by the panel's width, not the window's: in between sizes the row didn't fit and try it
+   wrapped onto its own line pushed right. too narrow for one row -> try it full width under them */
+.intro { container-type: inline-size; }
+@container (max-width: 470px) {
+    #try { width: 100%; justify-content: center; margin: 4px 0 0; }
+    .button.quiet { flex: 1; padding: .5em .4em; text-align: center; white-space: nowrap; }
+}
+button, .button {
+    padding: .7em 1.4em;
+    border: 1px solid #3a3d4a;
+    border-radius: 999px;
+    background: var(--panel);
+    color: var(--ink);
+    font: 600 1rem Archivo, sans-serif;
+    text-decoration: none;
+    cursor: pointer;
+}
+button:hover, .button:hover { border-color: var(--accent); }
+.primary { background: var(--accent); border-color: var(--accent); color: var(--bg); }
+.primary:hover { filter: brightness(1.1); }
+/* page.js TIPS, only shows when there's text in it */
+#try { position: relative; display: inline-flex; align-items: center; gap: .55em; margin-left: auto; padding: .75em 1.5em; }
+/* the arrow (play triangle once it's theirs), a mask so it takes the text colour */
+#try::after {
+    content: "";
+    width: 1em;
+    height: 1em;
+    background: currentColor;
+    -webkit-mask: var(--icon) center / contain no-repeat;
+    mask: var(--icon) center / contain no-repeat;
+    transition: transform .15s;
+    --icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M2 8h11M9 3.5 13.5 8 9 12.5' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+#try:hover::after { transform: translateX(3px); }
+#try.mine::after {
+    --icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M4.5 2.8v10.4L13 8z' fill='black' stroke='black' stroke-width='1.5' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+#try.mine:hover::after { transform: none; }
+#try[data-tip]:not([data-tip=""])::before {
+    content: attr(data-tip);
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    width: max-content;
+    max-width: min(260px, 80vw);
+    padding: 6px 10px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: #1b1d25;
+    color: var(--ink);
+    font: 400 .85rem/1.4 Archivo, sans-serif;
+    text-align: left;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity .15s;
+    z-index: 2;
+}
+#try:hover::before, #try:focus-visible::before { opacity: 1; }
+
+/* the key help, its own panel under the intro. a <details> so it stays shut till it's opened */
+.keys { margin-top: 16px; padding: 18px 28px; color: var(--muted); font-size: .95rem; }
+.keys summary { color: var(--accent); font-weight: 600; cursor: pointer; }
+.keys[open] { padding-bottom: 12px; }
+/* keyboard -> calc keys next to what you want -> calc keys, stacked when the panel's narrow */
+.keys { container-type: inline-size; }
+/* each table in its own bubble, side by side when they fit, stacked when they don't */
+.key-tables { display: grid; grid-template-columns: max-content; justify-content: center; gap: 12px; margin-top: 12px; } /* stacked: as wide as the wider one, centred */
+@container (min-width: 540px) { .key-tables { grid-template-columns: auto 1fr; justify-content: stretch; } }
+/* a size down in here so the two bubbles fit next to each other in the pitch column */
+.key-tables { font-size: .88rem; }
+.key-tables kbd { height: 1.45rem; min-width: 1.45rem; padding: 0 5px; }
+.key-tables > div { padding: 2px 12px 6px; border: 1px solid var(--line); border-radius: 16px; background: rgb(255 255 255 / .03); }
+.keys h4 { margin: 14px 0 0; color: var(--ink); font-size: .9rem; font-weight: 600; }
+/* fixed row height so the two tables' rows line up across the panel */
+.keys dl { display: grid; grid-template-columns: max-content 1fr; grid-auto-rows: 2.1rem; column-gap: 10px; margin: 6px 0 4px; }
+.keys dt, .keys dd { display: flex; align-items: center; gap: 4px; margin: 0; }
+.keys dd { margin: 0; color: var(--ink); }
+/* the first key in every row the same width (alpha's), so the +'s and the second keys stack
+   in straight columns instead of wandering with how long "on" or "alpha" is */
+.keys dd > kbd:first-child { min-width: 2.6rem; }
+.keys .sep { width: .6rem; text-align: center; }
+/* computer keys get chunky keycaps */
+kbd {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    height: 1.6rem; /* same outside height for both kinds so a row of them sits level */
+    min-width: 1.6rem;
+    padding: 0 7px;
+    vertical-align: middle;
+    border: 1px solid #505565;
+    border-bottom-width: 3px;
+    border-radius: 6px;
+    background: #2a2c35;
+    color: var(--ink);
+    font: 600 .82em Archivo, sans-serif;
+}
+/* the calculator's keys, same look as the keypad (calc.js), narrow and flat with the grey edge */
+kbd.calc {
+    padding: 0 8px;
+    border: 1px solid #808080;
+    border-radius: 4px;
+    background: #1d1d1d;
+    color: #eeeeee;
+    font: 700 .85em "Archivo Narrow", "Arial Narrow", sans-serif;
+}
+kbd.calc.light { background: #eeeeee; color: #191919; }
+/* a bit darker than the keypad's so the white text reads at this size, plus a little shadow */
+kbd.calc.second { background: #6fa3d8; text-shadow: 0 1px 1px rgb(0 0 0 / .45); }
+/* "any key", a placeholder rather than a real one */
+kbd.any, kbd.calc.any { border-style: dashed; border-bottom-width: 1px; background: transparent; color: var(--muted); font-style: italic; font-weight: 400; }
+kbd.calc.alpha { background: #84a816; text-shadow: 0 1px 1px rgb(0 0 0 / .45); }
+
+/* the whole calc fits on screen, it's 162 x 367 and the note wants a bit under it */
+#calc {
+    width: min(100%, calc((100vh - 90px) * 162 / 367));
+    margin: 0 auto;
+    filter: drop-shadow(0 30px 60px rgb(0 0 0 / .6));
+}
+#calc svg { display: block; width: 100%; height: auto; }
+.note { margin-top: 14px; color: var(--muted); font-size: .85rem; text-align: center; }
+/* the explanation's in a tooltip so the line under the calc stays one short sentence */
+.tip { position: relative; border-bottom: 1px dotted var(--muted); cursor: help; outline: none; }
+.tip:hover, .tip:focus { color: var(--ink); border-color: var(--accent); }
+.tip::after {
+    content: attr(data-tip);
+    position: absolute;
+    bottom: calc(100% + 8px);
+    left: 50%;
+    width: min(300px, 80vw);
+    transform: translateX(-50%);
+    padding: 8px 12px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: #1b1d25;
+    color: var(--ink);
+    font-size: .85rem;
+    line-height: 1.45;
+    text-align: left;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity .15s;
+    z-index: 2;
+}
+.tip:hover::after, .tip:focus::after { opacity: 1; }
+
+.install { margin: 40px 0; padding: 8px 32px 20px; border: 1px solid var(--line); border-radius: 20px; background: var(--panel); }
+.install li { margin: .5em 0; }
+code { padding: .1em .35em; border-radius: 4px; background: #22242c; font-size: .9em; }
+
+footer { padding: 8px 0 48px; color: var(--muted); font-size: .9rem; }
+
+/* the feature cards, in two columns that each stack on their own (features.js deals them out
+   so the top still reads in the doc's order) */
+.features { margin: 40px 0; }
+.hint { position: relative; margin-top: -8px; color: var(--muted); }
+.gotcha {
+    position: absolute;
+    left: 0;
+    bottom: calc(100% + 6px);
+    padding: 6px 11px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: #1b1d25;
+    color: var(--ink);
+    font-size: .9rem;
+    white-space: nowrap;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity .15s;
+}
+.gotcha.shown { opacity: 1; }
+.cards { display: flex; gap: 16px; align-items: flex-start; }
+.column { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 16px; }
+.card {
+    margin: 0;
+    padding: 14px 18px 10px;
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    background: var(--panel);
+}
+.card h3 { margin: 0 0 6px; color: var(--accent); font-size: 1rem; font-weight: 600; }
+.card ul { margin: 0; padding: 0; list-style: none; }
+.card li { display: flex; gap: 8px; align-items: center; margin: 0 -8px; padding: 3px 8px; border-radius: 8px; }
+.card li::before { content: "\2713"; color: var(--accent); font-weight: 800; }
+/* line-height 1 or the ? sits off centre, the body's 1.55 is taller than the circle */
+.why {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+    width: 1.3em;
+    height: 1.3em;
+    margin-left: 3px;
+    line-height: 1;
+    vertical-align: super;
+    border: 1px solid var(--muted);
+    border-radius: 50%;
+    color: var(--muted);
+    font-size: .52em;
+    font-weight: 600;
+    cursor: help;
+}
+.why:hover, .why:focus { border-color: var(--accent); color: var(--accent); outline: none; }
+/* tooltip comes from data-tip so the text lives in feature-demos.txt */
+.why::after {
+    content: attr(data-tip);
+    position: absolute;
+    bottom: calc(100% + 6px);
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 4px 9px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: #1b1d25;
+    color: var(--ink);
+    font-size: .95rem;
+    font-weight: 400;
+    width: max-content;
+    max-width: 240px;
+    line-height: 1.4;
+    text-align: left;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity .15s;
+    z-index: 2;
+}
+.why:hover::after, .why:focus::after { opacity: 1; }
+.card li.demo { cursor: pointer; }
+.card li.demo::after { content: "\25B6"; margin-left: auto; color: var(--accent); font-size: .7em; opacity: 0; }
+.card li.demo:hover, .card li.demo:focus-visible { background: rgb(138 180 255 / .12); outline: none; }
+.card li.demo:hover::after, .card li.playing::after { opacity: 1; }
+.card li.playing { background: rgb(138 180 255 / .22); }
+.not-yet { color: var(--muted); }
+
+.facts { display: grid; grid-template-columns: max-content 1fr; gap: 4px 16px; margin: 8px 0 18px; }
+.facts dt { color: var(--muted); }
+.facts dd { margin: 0; }
+
+/* phones and narrow windows: one column, calc under the pitch */
+@media (max-width: 860px) {
+    .layout { grid-template-columns: 1fr; grid-template-areas: "pitch" "device" "rest"; }
+    .pitch { min-height: 0; padding: 40px 0 16px; }
+    .device { position: static; height: auto; width: 100%; max-width: 440px; margin: 0 auto; }
+    .wall-inner { --w: 1376px; --h: 1056px; }
+    .install { padding: 4px 18px 14px; }
+}

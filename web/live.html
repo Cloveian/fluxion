@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>live test</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo+Narrow:wght@700&display=swap">
+    <style>
+        body { background: #101114; color: #ccd; font-family: sans-serif; display: grid; place-items: center; gap: 1rem; margin: 2rem 1rem; }
+        #pad { width: min(480px, 100%); }
+        #pad svg { display: block; width: 100%; }
+        #log { font-family: monospace; min-height: 1.5em; }
+    </style>
+</head>
+<body>
+    <!-- the real thing running, for poking at, the real page is somewhere else -->
+    <div id="pad"></div>
+    <button id="try">try it</button>
+    <script type="module">
+        import { live, keyboard } from "./live.js";
+        import { autoplay, load } from "./demo.js";
+        window.fx = await live(document.getElementById("pad"));
+        const demo = autoplay(fx, await load()), button = document.getElementById("try");
+        let off = null;
+        demo.start();
+        // try it: stop typing, wipe the half typed line and the screen, keys are yours
+        button.onclick = () => {
+            if (off) {
+                off();
+                off = null;
+                button.textContent = "try it";
+                fx.press("clear");
+                fx.press("clear", { on: true });
+                demo.start();
+                return;
+            }
+            demo.stop();
+            fx.press("clear");
+            fx.press("clear", { on: true });
+            off = keyboard(fx);
+            button.textContent = "watch again";
+        };
+    </script>
+</body>
+</html>

@@ -1,0 +1,65 @@
+# one tile per line, name: keys (key names from src/platform/keys_pc.c). python3 tools/wall.py
+fractions: alpha xt 6 x down x + 1 right - alpha xt 5 down x + 1 right enter alpha xt x x^2 - 1 down x - 1 right enter
+sqrt: 2nd x^2 3 5 * 1 0 8 right enter 2nd x^2 7 2 right + 2nd x^2 5 0 right enter
+factor: f a c t o r ( x ^ 3 right + x x^2 - 8 x - 1 2 ) enter f a c t o r ( x ^ 4 right - 5 x x^2 + 4 ) enter
+expand: e x p a n d ( ( x + 2 ) ^ 5 right ) enter e x p a n d ( ( x - 1 ) ( x + 1 ) ( x x^2 + 1 ) ) enter
+solve: s o l v e ( 5 x x^2 + 6 x 2nd math 3 , x ) enter s o l v e ( x ^ 3 right - 6 x x^2 + 1 1 x - 6 2nd math 0 , x ) enter
+solve-letters: s o l v e ( alpha xt 3 x - y down x + y right 2nd math alpha xt 5 down 8 right , x ) enter
+solve-trig: s o l v e ( 2 sin x right x^2 2nd math 1 , x ) enter
+inequalities: s o l v e ( x x^2 - 4 math 3 0 , x ) enter s o l v e ( alpha xt x - 1 down x + 2 right math 6 0 , x ) enter
+complex: ( 7 + 4 2nd . ) x^2 enter ( 2 + 2nd . ) ( 3 - 2nd . ) enter ( 1 + 2nd . ) ^ 8 right enter
+derivatives: d e r i v ( x x^2 sin x right , x , x ) enter d e r i v ( alpha xt ln x right down x right , x , x ) enter
+identities: sin x right x^2 + cos x right x^2 enter tan x right cos x right enter
+degrees: mode enter clear sin 3 0 right + cos 6 0 right enter 2nd tan 2nd x^2 3 right right enter
+logs: l n ( 2nd / ^ 5 right ) + l o g ( 1 0 0 0 ) enter 2nd sin alpha xt 1 down 2 right ) enter
+range-domain: r a n g e ( x x^2 + 1 , x ) enter d o m a i n ( alpha xt 1 down x - 2 right , x ) enter
+asymptotes: a s y m ( alpha xt x x^2 + 3 x + 2 down x - 1 right , x ) enter
+inverse: i n v e r s e ( alpha xt 2 x + 3 down x - 1 right , x ) enter
+roots: r o o t s ( x ^ 4 right - 1 , x ) enter f r o m r o o t s ( 2 , ~ 3 , 5 ) enter
+amplitude: a m p l i t u d e ( 3 sin 2 x right + 4 cos 2 x right , x ) enter a m p l i t u d e ( ~ 2 cos alpha xt x down 3 right right + 1 , x ) enter
+piecewise: p i e c e w i s e ( x x^2 , x math 3 0 , 2 x + 1 , x math 6 0 ) enter p i e c e w i s e ( x x^2 , x math 3 0 , 2 x + 1 , x math 6 0 , x 2nd math 3 ) enter
+ellipse: e l l i p s e ( 4 x x^2 + 9 y x^2 2nd math 3 6 ) enter
+hyperbola: h y p e r b o l a ( alpha xt x x^2 down 9 right - alpha xt y x^2 down 1 6 right 2nd math 1 ) enter
+circle-line: s y s t e m ( x x^2 + y x^2 2nd math 2 5 , y 2nd math x + 1 , x , y ) enter
+systems: s y s t e m ( x + y + z 2nd math 6 , x - y 2nd math 0 , x + 2 z 2nd math 9 , x , y , z ) enter s y s t e m ( x y 2nd math 6 , x + y 2nd math 5 , x , y ) enter
+triangle: mode enter clear t r i a n g l e ( 3 , 4 , 5 , , , ) enter
+shapes: c i r c l e ( 3 ) enter c o n e ( 3 , 4 ) enter
+numbers: f a c t o r ( 3 6 0 ) enter g c d ( 8 4 , 1 2 0 ) enter l c m ( 8 4 , 1 2 0 ) enter
+lines: d i s t ( 1 , 2 , 4 , 8 ) enter p e r p ( 2 , 1 , 1 ) enter
+big-numbers: e v a l ( 2 ^ 1 0 0 right ) enter e v a l ( 2 5 math 7 ) enter
+ncr-npr: zoom up up up enter 1 0 , 3 right enter zoom up up enter 1 0 , 3 right enter
+exp-equations: s o l v e ( 3 ^ 2 x - 1 right 2nd math 2 4 3 , x ) enter s o l v e ( l n ( x + 1 ) 2nd math 2 , x ) enter
+cubic-cos: s o l v e ( x ^ 3 right - 3 x + 1 2nd math 0 , x ) enter
+stored-x: 3 sto x enter x ^ 3 right - 2 x + 1 enter
+decimal-once: alpha xt 2 2 down 7 right - 2nd ^ enter alpha enter 2nd / ^ 2nd ^ right - 2nd ^ enter alpha enter
+primes: f a c t o r ( 1 0 0 1 ) enter f a c t o r ( 4 2 9 4 9 6 7 2 9 7 ) enter
+frac-equations: s o l v e ( alpha xt x down 3 right + alpha xt x down 4 right 2nd math 7 , x ) enter s o l v e ( alpha xt 1 down x right + alpha xt 1 down x + 1 right 2nd math 1 , x ) enter
+nth-roots: trace 5 4 right 4 8 right enter trace 4 1 6 right enter
+nested-fraction: alpha xt 1 + alpha xt 1 down x right down 1 - alpha xt 1 down x x^2 right right enter
+lens-formula: s o l v e ( alpha xt 1 down f right 2nd math alpha xt 1 down a right + alpha xt 1 down b right , f ) enter
+cancel-fractions: alpha xt x x^2 - 9 down x x^2 + 5 x + 6 right enter alpha xt x ^ 3 right - 1 down x - 1 right enter
+quadratic-formula: s o l v e ( x x^2 + b x + c 2nd math 0 , x ) enter
+complex-roots: r o o t s ( x x^2 + 2 x + 5 , x ) enter r o o t s ( x ^ 3 right - 8 , x ) enter
+cubic-inequality: s o l v e ( x ^ 3 right - 4 x math 4 0 , x ) enter s o l v e ( 5 - 2 x math 5 1 1 , x ) enter
+imaginary: 2nd x^2 neg 1 6 right + 2nd x^2 neg 9 right enter 2nd . ^ 2 0 2 6 right enter
+log-bases: trace 7 2 right 3 2 right + trace 7 3 right 8 1 right enter l n ( 2nd x^2 2nd / right ) enter
+factored-form: x ^ 3 right - 3 x - 2 enter 2nd enter 2nd enter
+factor-letters: f a c t o r ( 2 x x^2 - 8 y x^2 ) enter f a c t o r ( x ^ 3 right - 2 7 ) enter
+folder-algebra: m i d ( ~ 1 , 4 , 5 , ~ 2 ) enter s l o p e ( ~ 1 , 4 , 5 , ~ 2 ) enter y= down down
+folder-calculus: p a n d ( alpha xt 1 down 2 right , alpha xt 1 down 3 right ) enter p o r ( alpha xt 1 down 2 right , alpha xt 1 down 3 right ) enter window
+folder-functions: on+cos alpha xt 2nd ^ down 3 right right enter on+sin alpha xt 2nd ^ down 6 right right enter zoom down down down
+folder-templates: s o l v e ( trace
+catalog-calculus: 2nd 0 window down
+asym-holes: a s y m ( alpha xt x x^2 - 1 down x - 1 right , x ) enter a s y m ( alpha xt 1 down x x^2 - 4 right , x ) enter
+vars-stored: 3 sto r enter 5 sto h enter 2 x + 1 sto f enter 1 2 sto r a t e enter vars
+solids: s p h e r e ( 3 ) enter c y l ( 2 , 5 ) enter
+chain-rule: d e r i v ( 2nd ln x x^2 right right , x , x ) enter d e r i v ( sin x right ^ 3 right , x , x ) enter
+quotient-rule: d e r i v ( alpha xt x x^2 down x + 1 right , x , x ) enter d e r i v ( tan x right , x , x ) enter
+higher-derivs: d e r i v ( d e r i v ( x ^ 4 right , x , x ) , x , x ) enter d e r i v ( x ^ 3 right - 2 x , x , 2 ) enter
+inverse-trig: 2nd sin alpha xt 2nd x^2 2 right down 2 right right enter 2nd cos neg alpha xt 1 down 2 right right enter
+hyperbolic: c o s h ( x ) x^2 - s i n h ( x ) x^2 enter d e r i v ( s i n h ( x x^2 ) , x , x ) enter
+solve-degrees: mode enter clear s o l v e ( 2 cos x right 2nd math 1 , x ) enter
+domain-log-tan: d o m a i n ( ln x - 3 right , x ) enter d o m a i n ( tan x right , x ) enter
+triangle-sas: mode enter clear t r i a n g l e ( 5 , 7 , , 6 0 , , ) enter
+conics-from-points: e l l i p s e ( 1 , 2 , 6 , 2 , 4 , 2 ) enter h y p e r b o l a ( 0 , 0 , 0 , 3 , 0 , 5 ) enter
+systems-more: s y s t e m ( a x + y 2nd math 1 , x - y 2nd math 2 , x , y ) enter s y s t e m ( y 2nd math x x^2 - 1 , y 2nd math x + 1 , x , y ) enter
