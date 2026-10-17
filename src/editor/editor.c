@@ -7,7 +7,7 @@
 struct ed_node {
     ed_kind_t kind;
     char ch; /* ED_CHAR */
-    char name[8];
+    char name[12]; /* amplitude, the longest command */
     int slots;
     ed_row_t *slot[2];
     ed_row_t *in;   /* the row this node lives in */
@@ -1208,7 +1208,8 @@ char *ed_row_to_engine(const ed_row_t *r) {
 }
 
 static const char *const commands[] = { "expand", "factor", "eval", "solve", "asym", "domain", "system",
-                                        "slope", "dist", "mid", "par", "perp", "roots", "fromrts", "inverse" };
+                                        "slope", "dist", "mid", "par", "perp", "roots", "fromrts", "inverse",
+                                        "triangle", "amplitude", "pand", "por" };
 
 const char *ed_command(const editor_t *ed) {
     const ed_node_t *n;

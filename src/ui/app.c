@@ -5,6 +5,7 @@
 #include "settings.h"
 #include "geom.h"
 #include "polyfn.h"
+#include "tri.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -899,7 +900,7 @@ static bool run(editor_t *line) {
         return false;
     }
     in = ed_layout(line, &draw_font, false);
-    if(geom_run(cmd, src, in) || polyfn_run(cmd, src, in)) {
+    if(geom_run(cmd, src, in) || polyfn_run(cmd, src, in) || tri_run(cmd, src, in)) {
         free(src);
         return true;
     }
@@ -1141,7 +1142,7 @@ static bool pick_into(editor_t *into, const item_t *it, bool dry) {
     /* name($), the functions plus the commands the app runs itself */
     {
         const char *paren = strchr(s, '(');
-        char name[8];
+        char name[12];
         size_t n = paren != NULL ? (size_t)(paren - s) : 0;
 
         /* gcd($,$) and co are one slot too, the comma just gets typed in it */

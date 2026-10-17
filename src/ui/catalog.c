@@ -134,6 +134,9 @@ ITEM(it_ncr,      "nCr",   NULL, ITEM_FUNCTION, NULL, "nCr($,$)", HAVE_YES, "n f
      "combinations: ways to pick r things out of n when order doesn't matter. nCr(5,2) -> 10")
 ITEM(it_npr,      "nPr",   NULL, ITEM_FUNCTION, NULL, "nPr($,$)", HAVE_YES, "n first, then r. menu only, typed letters come out lowercase",
      "permutations: ways to line up r things out of n. nPr(5,2) -> 20")
+ITEM(it_amplitude, "amplitude", "amplitude", ITEM_COMMAND, NULL, "amplitude($)", HAVE_PARTLY,
+     "amplitude(f,x): |A| of A*sin(Bx+C)+D or cos, sqrt(a^2+b^2) for a*sin(u)+b*cos(u). anything else is a message",
+     "how far a sine or cosine wave goes from its middle. amplitude(3sin(2x)+1,x) -> 3")
 
 /* Templates */
 ITEM(it_frac,     "n/d",   NULL, ITEM_TEMPLATE, "[alpha][y=]", "($)/($)", HAVE_YES, "empty fraction, cursor in the top",
@@ -194,6 +197,15 @@ ITEM(it_fromrts,  "from roots", "fromrts", ITEM_COMMAND, NULL, "fromrts($)", HAV
 ITEM(it_inverse,  "inverse", "inverse", ITEM_COMMAND, NULL, "inverse($)", HAVE_PARTLY,
      "inverse(f,x): solves y = f(x) for x over the reals and puts x back for y. as far as solve gets",
      "the inverse function. inverse(2x+3) -> (x-3)/2, inverse(x^2) -> -sqrt(x), sqrt(x)")
+ITEM(it_triangle, "triangle", "triangle", ITEM_COMMAND, NULL, "triangle($)", HAVE_YES,
+     "triangle(a,b,c,ab,bc,ca): sss, sas, asa, aas and ssa (both when there are two), floats in the app, angle mode for the angles",
+     "solves a triangle from 3 of its sides and angles, empty or 0 for the rest. ab is the angle between a and b. triangle(3,4,5,,,) -> ab = 90")
+ITEM(it_pand,     "P(A and B)", "pand", ITEM_COMMAND, NULL, "pand($)", HAVE_YES,
+     "pand(pa,pb): pa*pb, exact. assumes independent events",
+     "chance both happen, for independent events. pand(1/2,1/3) -> 1/6")
+ITEM(it_por,      "P(A or B)", "por", ITEM_COMMAND, NULL, "por($)", HAVE_YES,
+     "por(pa,pb): pa+pb-pa*pb, exact. assumes independent events",
+     "chance at least one happens, for independent events. por(1/2,1/3) -> 2/3")
 
 /* Calculus */
 ITEM(it_deriv,    "d/dx",   "deriv", ITEM_TEMPLATE, NULL, "deriv($,X,X)", HAVE_YES, "derivative with respect to x",
@@ -223,10 +235,11 @@ const item_t *const catalog[] = {
     &it_power, &it_square, &it_recip, &it_sqrt, &it_cbrt, &it_nroot,
     &it_sin, &it_cos, &it_tan, &it_asin, &it_acos, &it_atan, &it_cot, &it_sec, &it_csc, &it_ln, &it_exp, &it_log, &it_pow10,
     &it_sinh, &it_cosh, &it_tanh, &it_asinh, &it_acosh, &it_atanh, &it_logb, &it_abs, &it_fact, &it_int,
-    &it_gcd, &it_lcm, &it_ncr, &it_npr,
+    &it_gcd, &it_lcm, &it_ncr, &it_npr, &it_amplitude,
     &it_frac, &it_parens, &it_piecewise,
     &it_simplify, &it_expand, &it_subst, &it_evaluate, &it_factor, &it_solve, &it_asym, &it_domain, &it_system,
     &it_slope, &it_dist, &it_mid, &it_par, &it_perp, &it_roots, &it_fromrts, &it_inverse,
+    &it_triangle, &it_pand, &it_por,
     &it_deriv, &it_deriv_at, &it_integral, &it_limit,
     &it_id_basic, &it_id_trig, &it_id_hyp, &it_id_cplx, &it_id_tconst, &it_id_iconst, &it_clear
 };
@@ -234,7 +247,8 @@ const unsigned catalog_count = sizeof catalog / sizeof catalog[0];
 
 static const item_t *const algebra[] = {
     &it_expand, &it_factor, &it_solve, &it_asym, &it_domain, &it_system, &it_slope, &it_dist, &it_mid,
-    &it_par, &it_perp, &it_roots, &it_fromrts, &it_inverse, &it_subst, &it_evaluate
+    &it_par, &it_perp, &it_roots, &it_fromrts, &it_inverse, &it_triangle, &it_pand, &it_por,
+    &it_subst, &it_evaluate
 };
 static const item_t *const calculus[] = {
     &it_deriv, &it_deriv_at, &it_integral, &it_limit
@@ -243,7 +257,7 @@ static const item_t *const functions[] = {
     &it_sin, &it_cos, &it_tan, &it_asin, &it_acos, &it_atan, &it_cot, &it_sec, &it_csc,
     &it_sinh, &it_cosh, &it_tanh, &it_asinh, &it_acosh, &it_atanh,
     &it_ln, &it_log, &it_logb, &it_exp, &it_pow10, &it_abs, &it_fact, &it_int,
-    &it_gcd, &it_lcm, &it_ncr, &it_npr
+    &it_gcd, &it_lcm, &it_ncr, &it_npr, &it_amplitude
 };
 static const item_t *const templates[] = {
     &it_frac, &it_power, &it_sqrt, &it_cbrt, &it_nroot, &it_abs, &it_logb, &it_parens,
