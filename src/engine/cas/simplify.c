@@ -900,6 +900,34 @@ static bool expand_complex_powers(pcas_ast_t *e) {
     return changed;
 }
 
+/*Fluxion: an odd root of something negative stays real, like the nspire in real mode. (-8)^(1/3)
+is -2, the (-A)^(X/Y) identity made it 1+isqrt(3), and solve(x^3+1=y,x) came back complex too*/
+static bool real_odd_roots(pcas_ast_t *e) {
+    pcas_ast_t *child, *base, *power, *pos;
+    mp_small p, q;
+    bool changed = false;
+
+    if(e == NULL || e->type != NODE_OPERATOR)
+        return false;
+    for(child = ast_ChildGet(e, 0); child != NULL; child = child->next)
+        changed |= real_odd_roots(child);
+
+    if(!isoptype(e, OP_POW))
+        return changed;
+    base = ast_ChildGet(e, 0);
+    power = ast_ChildGet(e, 1);
+    if(!small_fraction(power, &p, &q) || q < 3 || q % 2 == 0 || !is_negative_for_sure(base))
+        return changed;
+
+    pos = ast_Copy(base);
+    absolute_val(pos);
+    pos = ast_MakeBinary(OP_POW, pos, ast_Copy(power));
+    if(p % 2 != 0)
+        pos = ast_MakeBinary(OP_MULT, ast_MakeNumber(num_FromInt(-1)), pos);
+    replace_node(e, pos);
+    return true;
+}
+
 bool simplify(pcas_ast_t *e, unsigned short flags) {
     bool did_change = false, intermediate_change, expand_changed;
 
@@ -930,11 +958,14 @@ bool simplify(pcas_ast_t *e, unsigned short flags) {
         at least one id flag is set. The expression remains in the expanded state at the end of simplify().*/
 
         if(flags & SIMP_ID_ALL) {
-            if(expand_complex_powers(e)) { /*Fluxion: before the identities get to it*/
+            bool pre = real_odd_roots(e); /*Fluxion: both before the identities get to it*/
+
+            if(expand_complex_powers(e) || pre) {
                 simplify(e, SIMP_COMMUTATIVE | SIMP_EVAL | SIMP_LIKE_TERMS);
                 intermediate_change = did_change = true;
             }
             factor(e, FAC_SIMPLE_ADDITION_EVALUATEABLE | FAC_SIMPLE_ADDITION_NONEVALUATEABLE);
+            intermediate_change |= real_odd_roots(e); /*Fluxion: factor just pulled the -1 back out of y-1*/
 
             intermediate_change |= simplify_identities(e, flags);
             did_change |= intermediate_change;
