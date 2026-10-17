@@ -1,0 +1,13 @@
+# autoplay scripts for the showcase, name: keys (same key names as web/wall/scripts.txt, alpha+ is alpha held). verified with build-pc/fluxion-app
+fractions: 6 xt alpha xt xt + 1 right - 5 alpha xt xt + 1 enter
+sqrt: 2nd x^2 3 5 * 1 0 8 enter
+solve: y= 3 5 xt x^2 + 6 xt 2nd math 3 , xt enter
+copy-paste: y= 1 ( xt + 2 ) ^ 3 enter y= 2 up enter enter
+cubic: y= 3 xt ^ 3 right - 3 xt + 1 enter
+solve-letters: y= 3 alpha xt 3 xt - alpha 1 down xt + alpha 1 right 2nd math 5 alpha xt 8 right , xt enter
+inequality: y= 3 xt x^2 - 4 math 3 0 , xt enter
+roots: alpha+* alpha+7 alpha+7 alpha+4 alpha+ln ( xt ^ 4 right - 1 , xt enter
+derivative: window 1 ln xt right alpha xt xt enter
+circle-line: y= 7 xt x^2 + alpha 1 x^2 2nd math 2 5 , alpha 1 2nd math xt + 1 enter
+range: y= 6 xt x^2 + 1 , xt enter
+hyperbola: y= up up up enter xt x^2 alpha xt 9 right - alpha 1 x^2 alpha xt 1 6 right 2nd math 1 enter

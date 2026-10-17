@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Fluxion</title>
+    <meta name="description" content="A CAS for the TI-84 Plus CE. Exact answers, stacked fractions, solve with letters, right on the calculator you already have.">
+    <link rel="icon" type="image/svg+xml" href="icon.svg">
+    <!-- what a shared link shows. preview.png is this page at 1200x630, ~14 s in so the demo's
+         answered a few, with #keys and the "not an emulator" note hidden -->
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="Fluxion">
+    <meta property="og:description" content="A CAS for the TI-84 Plus CE. Exact answers, stacked fractions, solve with letters, right on the calculator you already have. Try it in your browser.">
+    <meta property="og:url" content="https://cloveian.github.io/fluxion/">
+    <meta property="og:image" content="https://cloveian.github.io/fluxion/preview.png">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta name="twitter:card" content="summary_large_image">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;800&family=Archivo+Narrow:wght@700&display=swap">
+    <link rel="stylesheet" href="style.css">
+    <script type="module" src="page.js"></script>
+</head>
+<body>
+    <!-- real screens, tools/wall.py puts them all in wall/wall-1x.png (and the 2x one) -->
+    <div class="wall" aria-hidden="true"><div class="wall-inner"></div></div>
+
+    <!-- three blocks so the calc can sit in its own column and stay put while the rest scrolls,
+         and still land between the pitch and the rest on a phone -->
+    <main class="layout">
+        <div class="pitch">
+            <div class="panel intro">
+                <h1 aria-label="Fluxion"><span aria-hidden="true"><span class="f">ƒ</span>l<span class="mu">µ</span>xion</span></h1>
+                <p class="tagline">A CAS for the TI-84 Plus CE</p>
+                <p>Algebra on the calculator you already have. Exact answers, stacked fractions, roots, solving with letters in it, factoring, systems, all typed the way it looks on paper. I'm trying to make it simplify better than the Nspire does.</p>
+                <div class="buttons">
+                    <a class="button quiet" href="#features">Features</a>
+                    <a class="button quiet" href="#install">Install</a>
+                    <a class="button quiet" href="https://github.com/Cloveian/fluxion">Source</a>
+                    <button id="try" class="primary">Try it</button>
+                </div>
+            </div>
+            <!-- the keyboard map is keys_pc.c's. closed until someone opens it -->
+            <details id="keys" class="panel keys">
+                <summary>Key mappings</summary>
+                <div class="key-tables">
+                    <div>
+                        <h4>Keyboard</h4>
+                        <dl>
+                            <dt><kbd>Shift</kbd></dt><dd><kbd class="calc alpha">alpha</kbd></dd>
+                            <dt><kbd>Alt</kbd></dt><dd><kbd class="calc second">2nd</kbd></dd>
+                            <dt><kbd>Ctrl</kbd></dt><dd><kbd class="calc">on</kbd></dd>
+                            <dt><kbd>=</kbd></dt><dd><kbd class="calc second">2nd</kbd><span class="sep">+</span><kbd class="calc">math</kbd></dd>
+                            <dt><kbd>Backspace</kbd></dt><dd><kbd class="calc">clear</kbd></dd>
+                            <dt><kbd>Delete</kbd></dt><dd><kbd class="calc">del</kbd></dd>
+                            <dt><kbd>Esc</kbd></dt><dd><kbd class="calc second">2nd</kbd><span class="sep">+</span><kbd class="calc">mode</kbd></dd>
+                            <dt><kbd>F1</kbd>-<kbd>F5</kbd></dt><dd><kbd class="calc light">y=</kbd><span class="sep">...</span><kbd class="calc light">graph</kbd></dd>
+                            <dt><kbd>Shift</kbd> + <kbd>arrows</kbd></dt><dd><kbd class="calc alpha">alpha</kbd><span class="sep">+</span><kbd class="calc light">←</kbd> <kbd class="calc light">→</kbd></dd>
+                            <dt><kbd>Alt</kbd> + <kbd class="any">key</kbd></dt><dd><kbd class="calc second">2nd</kbd><span class="sep">+</span><kbd class="calc any">key</kbd></dd>
+                            <dt><kbd>Ctrl</kbd> + <kbd class="any">key</kbd></dt><dd><kbd class="calc">on</kbd><span class="sep">+</span><kbd class="calc any">key</kbd></dd>
+                        </dl>
+                    </div>
+                    <div>
+                        <h4>Calculator</h4>
+                        <dl>
+                            <dt>Fraction</dt><dd><kbd class="calc alpha">alpha</kbd><span class="sep">+</span><kbd class="calc">X,T,θ,n</kbd></dd>
+                            <dt>=</dt><dd><kbd class="calc second">2nd</kbd><span class="sep">+</span><kbd class="calc">math</kbd></dd>
+                            <dt>&lt; &gt; ≤ ≥</dt><dd><kbd class="calc">math</kbd></dd>
+                            <dt>Answer forms</dt><dd><kbd class="calc second">2nd</kbd><span class="sep">+</span><kbd class="calc light">enter</kbd></dd>
+                            <dt>Decimal, once</dt><dd><kbd class="calc alpha">alpha</kbd><span class="sep">+</span><kbd class="calc light">enter</kbd></dd>
+                            <dt>Reuse an answer</dt><dd><kbd class="calc light">↑</kbd><span class="sep"></span><kbd class="calc light">enter</kbd></dd>
+                            <dt>Select</dt><dd><kbd class="calc alpha">alpha</kbd><span class="sep">+</span><kbd class="calc light">←</kbd> <kbd class="calc light">→</kbd></dd>
+                            <dt>Cut, copy, paste</dt><dd><kbd class="calc">on</kbd><span class="sep">+</span><kbd class="calc light">1</kbd> <kbd class="calc light">2</kbd> <kbd class="calc light">3</kbd></dd>
+                            <dt>Undo</dt><dd><kbd class="calc">on</kbd><span class="sep">+</span><kbd class="calc">sto→</kbd></dd>
+                            <dt>Clear the screen</dt><dd><kbd class="calc">on</kbd><span class="sep">+</span><kbd class="calc">clear</kbd></dd>
+                            <dt>Stop a slow one</dt><dd><kbd class="calc">on</kbd><span class="sep">+</span><kbd class="calc">mode</kbd></dd>
+                        </dl>
+                    </div>
+                </div>
+            </details>
+        </div>
+
+        <div class="device">
+            <div id="calc"></div>
+            <p class="note"><span class="tip" tabindex="0" data-tip="It's Fluxion's own C code, the same code that runs on the calculator, compiled for your browser. There's no TI OS or ROM anywhere. On the real calculator it's slower, but still very useable.">This is not an emulator</span></p>
+        </div>
+
+        <div class="rest">
+            <section id="features" class="features">
+                <h2>Features</h2>
+                <p class="hint">Click for example</p>
+                <!-- filled from docs/features.md and feature-demos.txt by page.js -->
+                <div id="cards" class="cards"></div>
+                <p id="not-yet" class="not-yet"></p>
+            </section>
+
+            <section id="install" class="install">
+                <h2>Install</h2>
+                <dl id="facts" class="facts"></dl>
+                <ol>
+                    <li>If you're on OS 5.5 or newer, jailbreak it with <a href="https://yvantt.github.io/arTIfiCE/">arTIfiCE</a>, and get a shell like <a href="https://github.com/mateoconlechuga/cesium">Cesium</a>.</li>
+                    <li>Send the <a href="https://github.com/CE-Programming/libraries/releases">CE C libraries</a> (<code>clibs.8xg</code>).</li>
+                    <li>From <a href="https://github.com/Cloveian/fluxion/releases">releases</a>, send <code>FLUXINST.8xp</code> and all the <code>FLUXAPP</code> files, then run <code>FLUXINST</code> once. Fluxion shows up under apps.</li>
+                </ol>
+            </section>
+
+            <footer>
+                <p>Made by <a href="https://github.com/Cloveian">Cloveian</a>. The math engine started as <a href="https://github.com/nathanfarlow/PineappleCAS">PineappleCAS</a> by Nathan Farlow, big numbers are <a href="https://github.com/creachadair/imath">imath</a>, the installer is <a href="https://github.com/RoccoLoxPrograms/CEaShell-Installer">CEaShell's</a>, and the keypad up there was measured off <a href="https://github.com/CE-Programming/CEmu">CEmu</a>'s.</p>
+                <p><a href="docs/">Design notes</a> · not made by or affiliated with Texas Instruments</p>
+            </footer>
+        </div>
+    </main>
+</body>
+</html>
