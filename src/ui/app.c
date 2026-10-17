@@ -1033,6 +1033,15 @@ static void form_set(form_t f) {
     }
 }
 
+/* [alpha][enter]. the last answer as a decimal just this once, the next one comes
+   out in whatever form was on before (or exact once, if decimal is the form) */
+static void decimal_once(void) {
+    form_t keep = form;
+
+    form_set(keep == FORM_DECIMAL ? FORM_HAND : FORM_DECIMAL);
+    form = keep;
+}
+
 /* the mode page's side of things (app.h) */
 const char *app_form_name(void) {
     return form == FORM_HAND ? "by hand" : form_names[form];
@@ -1980,7 +1989,7 @@ static bool handle(keypress_t p) {
         switch(p.key) {
         case K_LEFT:  typing_run = false; ed_select_left(&ed); return true;
         case K_RIGHT: typing_run = false; ed_select_right(&ed); return true;
-        case K_ENTER: form_set(form == FORM_DECIMAL ? FORM_HAND : FORM_DECIMAL); return true;
+        case K_ENTER: decimal_once(); return true;
         case K_YEQU: case K_XT:  /* [alpha][y=] is n/d like the TI, and [alpha][x,t,θ,n] since it's right there */
             will_edit(false);
             ed_insert(&ed, ED_FRAC, NULL);
