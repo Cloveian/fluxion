@@ -93,7 +93,7 @@ basically like typing on a computer, the cursor is a line and `[on]` is Ctrl. th
 | `[on]` + `[sto→]` | undo (a run of typing is one step) | Ctrl+Z |
 | `[enter]` | simplify | |
 | `[2nd]` + `[enter]` | next form (by hand, expanded, factored, decimal). redoes the last answer and sticks | |
-| `[alpha]` + `[enter]` | decimal form, and back | |
+| `[alpha]` + `[enter]` | the last answer as a decimal, just that once. the next answer is back in the normal form | |
 | `[alpha]` + `[y=]` or `[x,t,θ,n]` | fraction. y= is where the TI has it, the other one's just right there. the term before the cursor goes on top and you're in the bottom (`5+9` -> `5+` 9 over ▯), back to the last `+` `-` `=` `,` or open `(`, so `2x`, `(a+b)` and `sin(x)` all go up whole. nothing there (or a `*` `/` `(-)` right before it) = empty, cursor on top | |
 | `(` | just a bracket. its `)` shows up grey at the end of the slot you're in till you type a real one, and if you never do it closes there anyway, so `2(x+1` is 2(x+1) | |
 | `)` | closes the last `(` that's still open. none open: steps out of the bracket / function you're in, like before | |

@@ -40,7 +40,7 @@ static const char *mode_help(int i) {
     case ROW_TRIG:
         return "solve(sin(x)=1/2,x). general is pi/6 + 2pi n and 5pi/6 + 2pi n, the other keeps the ones in one turn";
     case ROW_FORM:
-        return "what enter gives. [2nd][enter] cycles it from the line too, [alpha][enter] is decimal";
+        return "what enter gives. [2nd][enter] cycles it from the line too, [alpha][enter] is a decimal just once";
     case ROW_RATIONALIZE:
         return "roots off the bottom, 1/sqrt(2) -> sqrt(2)/2. off keeps them where you wrote them";
     case ROW_THEME:
