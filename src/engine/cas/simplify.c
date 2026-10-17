@@ -876,6 +876,30 @@ bool simplify_identities(pcas_ast_t *e, unsigned short flags) {
 
     Returns true if ast was changed
 */
+/*Fluxion: (a+bi)^n with n whole gets multiplied out before the identities see it. they turn it
+into e^(n ln(a+bi)), which came back as 65cos(2atan(4/7))+65isin(2atan(4/7)) for (7+4i)^2, and the
+app ran out of memory drawing that. 33+56i*/
+static bool expand_complex_powers(pcas_ast_t *e) {
+    pcas_ast_t *child, *base, *power;
+    bool changed = false;
+
+    if(e == NULL || e->type != NODE_OPERATOR)
+        return false;
+    for(child = ast_ChildGet(e, 0); child != NULL; child = child->next)
+        changed |= expand_complex_powers(child);
+
+    if(!isoptype(e, OP_POW))
+        return changed;
+    base = ast_ChildGet(e, 0);
+    power = ast_ChildGet(e, 1);
+    if(isoptype(base, OP_ADD) && has_imaginary_node(base) && power->type == NODE_NUMBER && mp_rat_is_integer(power->op.num)
+        && mp_rat_compare_value(power->op.num, 2, 1) >= 0 && mp_rat_compare_value(power->op.num, EXPAND_MAX_POWER, 1) <= 0) {
+        expand(e, EXP_ALL);
+        changed = true;
+    }
+    return changed;
+}
+
 bool simplify(pcas_ast_t *e, unsigned short flags) {
     bool did_change = false, intermediate_change, expand_changed;
 
@@ -906,6 +930,10 @@ bool simplify(pcas_ast_t *e, unsigned short flags) {
         at least one id flag is set. The expression remains in the expanded state at the end of simplify().*/
 
         if(flags & SIMP_ID_ALL) {
+            if(expand_complex_powers(e)) { /*Fluxion: before the identities get to it*/
+                simplify(e, SIMP_COMMUTATIVE | SIMP_EVAL | SIMP_LIKE_TERMS);
+                intermediate_change = did_change = true;
+            }
             factor(e, FAC_SIMPLE_ADDITION_EVALUATEABLE | FAC_SIMPLE_ADDITION_NONEVALUATEABLE);
 
             intermediate_change |= simplify_identities(e, flags);
