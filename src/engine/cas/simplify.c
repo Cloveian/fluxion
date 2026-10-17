@@ -332,11 +332,17 @@ int compare(pcas_ast_t *a, pcas_ast_t *b, bool add) {
             pcas_ast_t *newa, *newb;
             int val;
 
-            newa = ast_MakeBinary(OP_DIV, ast_Copy(a), ast_Copy(g));
-            newb = ast_MakeBinary(OP_DIV, ast_Copy(b), ast_Copy(g));
-
-            simplify(newa, SIMP_NORMALIZE | SIMP_RATIONAL | SIMP_EVAL);
-            simplify(newb, SIMP_NORMALIZE | SIMP_RATIONAL | SIMP_EVAL);
+            /*Fluxion: monomials divide directly, see gm_div*/
+            newa = gm_div(a, g);
+            newb = gm_div(b, g);
+            if(newa == NULL) {
+                newa = ast_MakeBinary(OP_DIV, ast_Copy(a), ast_Copy(g));
+                simplify(newa, SIMP_NORMALIZE | SIMP_RATIONAL | SIMP_EVAL);
+            }
+            if(newb == NULL) {
+                newb = ast_MakeBinary(OP_DIV, ast_Copy(b), ast_Copy(g));
+                simplify(newb, SIMP_NORMALIZE | SIMP_RATIONAL | SIMP_EVAL);
+            }
 
             val = compare(newa, newb, add);
 

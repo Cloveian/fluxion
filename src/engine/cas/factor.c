@@ -262,6 +262,75 @@ static pcas_ast_t *gm_gcd(gm_t *a, gm_t *b) {
     return ret;
 }
 
+/*a/g for compare(), when both are monomials and it comes out whole. NULL and compare
+does the divide and simplify itself, that was the other 20ms of the sort*/
+pcas_ast_t *gm_div(pcas_ast_t *a, pcas_ast_t *g) {
+    gm_t ma, mg;
+    pcas_ast_t *ret;
+    mp_rat q;
+    int i, j, left = 0;
+
+    if(pcas_cancelled || a == NULL || g == NULL || !gm_read(a, &ma) || !gm_read(g, &mg))
+        return NULL;
+
+    /*a letter of g that a doesnt have (or has lower) leaves a negative power, not a monomial anymore*/
+    for(j = 0; j < mg.count; j++) {
+        for(i = 0; i < ma.count && ma.sym[i] != mg.sym[j]; i++)
+            ;
+        if(i == ma.count || ma.pow[i] < mg.pow[j])
+            return NULL;
+    }
+
+    q = num_FromInt(1);
+    if(ma.num != NULL)
+        mp_rat_copy(ma.num->op.num, q);
+    /*a negative g comes out of the slow one as -1*(-1*Y^3), not copying that, it can go the slow way*/
+    if(mg.num != NULL && (mp_rat_compare_zero(mg.num->op.num) <= 0 || mp_rat_div(q, mg.num->op.num, q) != MP_OK)) {
+        num_Cleanup(q);
+        return NULL;
+    }
+    if(!mp_rat_is_integer(q)) {
+        num_Cleanup(q);
+        return NULL;
+    }
+
+    ret = ast_MakeOperator(OP_MULT);
+    if(mp_rat_compare_value(q, 1, 1) != 0) {
+        ast_ChildAppend(ret, ast_MakeNumber(q));
+        left++;
+    } else {
+        num_Cleanup(q);
+    }
+
+    for(i = 0; i < ma.count; i++) {
+        mp_small p = ma.pow[i];
+
+        for(j = 0; j < mg.count; j++)
+            if(mg.sym[j] == ma.sym[i])
+                p -= mg.pow[j];
+        if(p == 0)
+            continue;
+        ast_ChildAppend(ret, p == 1 ? ast_MakeSymbol(ma.sym[i])
+            : ast_MakeBinary(OP_POW, ast_MakeSymbol(ma.sym[i]), ast_MakeNumber(num_FromInt(p))));
+        left++;
+    }
+
+    /*same shape as the divide and simplify gave, the sort order hangs on it. a MULT stays a
+    MULT even with one letter left (no commutative pass), but eval folds a lone number out, and
+    anything that wasn't a MULT comes back bare*/
+    if(left == 0) {
+        ast_Cleanup(ret);
+        return ast_MakeNumber(num_FromInt(1));
+    }
+    if(!isoptype(a, OP_MULT) || (left == 1 && ast_ChildGet(ret, 0)->type == NODE_NUMBER)) {
+        pcas_ast_t *only = ast_ChildRemoveIndex(ret, 0);
+
+        ast_Cleanup(ret);
+        return only;
+    }
+    return ret;
+}
+
 pcas_ast_t *gcd(pcas_ast_t *a, pcas_ast_t *b) {
     pcas_ast_t *ret = NULL;
     gm_t ga, gb;
