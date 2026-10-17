@@ -40,22 +40,10 @@ void keys_script(char *const *presses, int count) {
     script_pos = 0;
 }
 
-static key_t from_text(char c);
-
 /* one scripted press - a key name, or a single char to type. "on+" "2nd+" "alpha+" hold that one down for it */
 static keypress_t scripted(void) {
-    static const struct { const char *name; key_t key; } names[] = {
-        { "enter", K_ENTER }, { "clear", K_CLEAR }, { "del", K_DEL },
-        { "left", K_LEFT }, { "right", K_RIGHT }, { "up", K_UP }, { "down", K_DOWN },
-        { "2nd", K_2ND }, { "alpha", K_ALPHA }, { "mode", K_MODE },
-        { "y=", K_YEQU }, { "window", K_WINDOW }, { "zoom", K_ZOOM }, { "trace", K_TRACE }, { "graph", K_GRAPH },
-        { "x^2", K_SQUARE }, { "x^-1", K_RECIP }, { "sin", K_SIN }, { "cos", K_COS }, { "tan", K_TAN },
-        { "ln", K_LN }, { "log", K_LOG }, { "neg", K_NEG }, { "xt", K_XT }, { "sto", K_STO }, { "math", K_MATH }, { "vars", K_VARS },
-        { "on", K_ON }, { "apps", K_APPS }, { "prgm", K_PRGM }, { "stat", K_STAT },
-    };
     keypress_t press = { K_QUIT, false };
     const char *s;
-    unsigned i;
 
     if(script_pos >= script_len)
         return press;    /* script's done, quit */
@@ -76,37 +64,8 @@ static keypress_t scripted(void) {
             break;
         }
     }
-    for(i = 0; i < sizeof names / sizeof names[0]; i++) {
-        if(strcmp(s, names[i].name) == 0) {
-            press.key = names[i].key;
-            return press;
-        }
-    }
-    press.key = s[0] != '\0' && s[1] == '\0' ? from_text(s[0]) : K_NONE;
+    press.key = keys_named(s);
     return press;
-}
-
-static key_t from_text(char c) {
-    if(c >= '0' && c <= '9')
-        return (key_t)(K_0 + (c - '0'));
-    if(c >= 'a' && c <= 'z')
-        return (key_t)(K_LETTER_A + (c - 'a'));
-    if(c >= 'A' && c <= 'Z')
-        return (key_t)(K_CAPITAL_A + (c - 'A'));
-
-    switch(c) {
-    case '+': return K_ADD;
-    case '-': return K_SUB;
-    case '*': return K_MUL;
-    case '/': return K_DIV;
-    case '^': return K_POW;
-    case '(': return K_LPAREN;
-    case ')': return K_RPAREN;
-    case ',': return K_COMMA;
-    case '.': return K_DOT;
-    case '~': return K_NEG;
-    default:  return K_NONE;
-    }
 }
 
 static key_t from_key(SDL_Keycode k) {
@@ -190,7 +149,7 @@ static void push_char(char c, bool on) {
         push(K_2ND, on);
         push(K_MATH, on);
     } else {
-        push(from_text(c), on);
+        push(keys_from_char(c), on);
     }
 }
 
@@ -258,9 +217,9 @@ static void key_down(const SDL_KeyboardEvent *ev) {
         skip_text = true;
         if(ev->key == '=') {
             push_char('=', on);     /* that's already [2nd][math] */
-        } else if(ev->key < 0x80 && from_text((char)ev->key) != K_NONE) {
+        } else if(ev->key < 0x80 && keys_from_char((char)ev->key) != K_NONE) {
             push(K_2ND, on);
-            push(from_text((char)ev->key), on);
+            push(keys_from_char((char)ev->key), on);
         }
     }
 }

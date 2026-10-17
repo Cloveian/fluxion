@@ -64,12 +64,42 @@ build-pc/fluxion-app: src/main_pc.c $(FLUX_OBJECTS) $(ENGINE_OBJECTS)
 build-pc/editor-test: test/editor_test.c $(FLUX_OBJECTS) $(ENGINE_OBJECTS)
 	$(CC) $(FLUX_CFLAGS) $^ $(LDLIBS) $(SDL_LIBS) -o $@
 
+# the app in a browser, for the showcase page: make -f pc.makefile web -> web/build/
+# same code, web.c stands in for the SDL bits. asyncify so keys_wait() can block
+EMCC ?= emcc
+WEB_FLAGS = -O2 -DCOMPILE_PC -Isrc/engine -Isrc -MMD -MP
+WEB_SOURCES := $(filter-out $(SRCDIR)/pc/%,$(SOURCES)) src/main_pc.c \
+               $(filter-out src/platform/keys_pc.c src/platform/window_pc.c,$(FLUX_SOURCES))
+WEB_OBJECTS := $(WEB_SOURCES:src/%.c=build-web/%.o)
+
+build-web/engine/%.o: src/engine/%.c
+	@mkdir -p $(@D)
+	$(EMCC) -std=c89 $(WEB_FLAGS) -c $< -o $@
+
+build-web/%.o: src/%.c
+	@mkdir -p $(@D)
+	$(EMCC) -std=c99 $(WEB_FLAGS) -c $< -o $@
+
+-include $(WEB_OBJECTS:.o=.d)
+
+web/build/fluxion.js: $(WEB_OBJECTS)
+	@mkdir -p $(@D)
+	$(EMCC) $^ -O2 -lm -sASYNCIFY -sALLOW_MEMORY_GROWTH -sMODULARIZE -sEXPORT_ES6 -sENVIRONMENT=web \
+		-sEXPORTED_RUNTIME_METHODS=HEAPU8,ccall -o $@
+
+# the page reads the feature tables straight out of the docs
+web/build/features.md: docs/features.md
+	@mkdir -p $(@D)
+	cp $< $@
+
+web: web/build/fluxion.js web/build/features.md
+
 test: $(TARGET) build-pc/identity-masks build-pc/layout-dump build-pc/view build-pc/editor-test build-pc/fluxion-app
 	./$(TARGET) test test/pcas.tests
 	./$(TARGET) test test/fluxion.tests
 	./build-pc/identity-masks
 
 clean:
-	rm -rf build-pc
+	rm -rf build-pc build-web web/build
 
-.PHONY: test clean
+.PHONY: test clean web

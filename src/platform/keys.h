@@ -75,6 +75,11 @@ void keys_sleep(void);
    quit. each is a key name (enter, clear, y=, x^2, 2nd, ...) or one character to
    type, with "on+", "2nd+" or "alpha+" in front for held ones. */
 void keys_script(char *const *presses, int count);
+
+/* PC and browser: the key a script name stands for, or the one for a typed
+   character. K_NONE if it's neither. in web.c, it has no SDL */
+key_t keys_named(const char *name);
+key_t keys_from_char(char c);
 #endif
 
 #endif

@@ -19,3 +19,5 @@ convimg.yaml.lst
 /.claude
 __pycache__/
 .playwright-mcp/
+/build-web/
+/web/build/
