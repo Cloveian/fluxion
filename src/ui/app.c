@@ -7,6 +7,7 @@
 #include "polyfn.h"
 #include "tri.h"
 #include "conic.h"
+#include "piece.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -936,16 +937,18 @@ static bool run(editor_t *line) {
         free(src);
         return true;
     }
-    /* ellipse( and hyperbola( take one too, they're let through to conic_run */
+    /* ellipse( and hyperbola( take one too, they're let through to conic_run.
+       piecewise( for its x=v (and x = 0 as a condition) */
     if(strchr(src, '=') != NULL
-       && (cmd == NULL || (strcmp(cmd, "ellipse") != 0 && strcmp(cmd, "hyperbola") != 0))) {
+       && (cmd == NULL || (strcmp(cmd, "ellipse") != 0 && strcmp(cmd, "hyperbola") != 0
+                           && strcmp(cmd, "piecewise") != 0))) {
         free(src);
-        status = "= only works in solve( and system(";
+        status = "= goes in solve(, system(, piecewise( or a conic";
         return false;
     }
     in = ed_layout(line, &draw_font, false);
     if(geom_run(cmd, src, in) || polyfn_run(cmd, src, in) || tri_run(cmd, src, in)
-       || conic_run(cmd, src, in)) {
+       || conic_run(cmd, src, in) || piece_run(cmd, src, in)) {
         free(src);
         return true;
     }

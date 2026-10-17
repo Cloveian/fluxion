@@ -44,8 +44,8 @@ ITEM(it_close,    ")",     NULL, ITEM_CHAR, "[)]",      ")",     HAVE_YES, NULL,
      "closing parenthesis, ends a group or a function's input")
 ITEM(it_comma,    ",",     NULL, ITEM_CHAR, "[,]",      ",",     HAVE_YES, "between arguments: logb(x,2)",
      "separates the inputs of a function, like solve(2x=6,x)")
-ITEM(it_equals,   "=",     NULL, ITEM_CHAR, "[2nd][math]", "=", HAVE_PARTLY, "only in solve(: the engine has no equations, the app splits the line",
-     "equals sign, [2nd][math]. only works inside solve. solve(2x=6,x) -> x = 3")
+ITEM(it_equals,   "=",     NULL, ITEM_CHAR, "[2nd][math]", "=", HAVE_PARTLY, "solve( system( and ellipse( hyperbola( piecewise(: the engine has no equations, the app splits the line",
+     "equals sign, [2nd][math]. for solve, system, piecewise and the conics. solve(2x=6,x) -> x = 3")
 
 /* variables and constants */
 ITEM(it_x,        "x",     NULL, ITEM_CHAR, "[x,t,theta,n]", "X", HAVE_YES, "shown lowercase",
@@ -143,8 +143,9 @@ ITEM(it_frac,     "n/d",   NULL, ITEM_TEMPLATE, "[alpha][y=]", "($)/($)", HAVE_Y
      "an empty fraction. type the top, then move down to type the bottom. [alpha][x,t,theta,n] does it too")
 ITEM(it_parens,   "( )",   NULL, ITEM_TEMPLATE, NULL, "($)",       HAVE_YES, NULL,
      "a pair of parentheses with the cursor inside, to group things")
-ITEM(it_piecewise, "piecewise", NULL, ITEM_TEMPLATE, NULL, NULL,   HAVE_NO, "no conditions in the engine",
-     "A function with a different rule for different values of x. not in Fluxion yet")
+ITEM(it_piecewise, "piecewise", "piecewise", ITEM_COMMAND, NULL, "piecewise($)", HAVE_PARTLY,
+     "piecewise(f1,c1,f2,c2,...,x=v): done in the app, the engine has no conditions. conditions are < > <= >= != chains in one letter, from [math]. no brace yet",
+     "a different rule for different x. piecewise(x^2,x<0,2x+1,x>=0) shows the pieces, add x=3 at the end -> 7, the first piece whose condition holds. 1<x<=3 chains work")
 
 /* Algebra (commands) */
 ITEM(it_simplify, "simplify", NULL, ITEM_COMMAND, "[enter]", NULL, HAVE_YES,
