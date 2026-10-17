@@ -294,6 +294,27 @@ static bool worth_expanding(const pcas_ast_t *e) {
     return true;
 }
 
+/* a root anywhere, a ^ with a fraction up top or a root node. comdenom rationalizes
+   those into a mess, so the by hand fraction only keeps them if they got smaller */
+static bool has_root(const pcas_ast_t *e) {
+    const pcas_ast_t *k;
+
+    if(e->type != NODE_OPERATOR)
+        return false;
+    if(optype(e) == OP_ROOT)
+        return true;
+    if(optype(e) == OP_POW && e->op.operator.base != NULL) {
+        const pcas_ast_t *exp = e->op.operator.base->next;
+
+        if(exp != NULL && (exp->type != NODE_NUMBER || !mp_rat_is_integer(exp->op.num)))
+            return true;
+    }
+    for(k = e->op.operator.base; k != NULL; k = k->next)
+        if(has_root(k))
+            return true;
+    return false;
+}
+
 /* the form on top of a plain simplify, the same steps the commands take */
 static void apply_form(pcas_ast_t *e) {
     switch(form) {
@@ -329,6 +350,26 @@ static void apply_form(pcas_ast_t *e) {
             ast_Cleanup(x);
         break;
     }
+    }
+
+    /* and one fraction, x/2 + 1/3 is (3x+2)/6 and 1/x + 1/(x+1) is (2x+1)/(x(x+1)),
+       bottom factored and top multiplied out like the nspire. kept only if it's not
+       bigger, sqrt(2)/2 + 1/2 came out as ((sqrt(2)+2)sqrt(2))/4 otherwise. not a trig
+       family either, pi/6 + 2pi n reads better as a sum */
+    if(form == FORM_HAND && !pcas_cancelled && !has_symbol(e, SYM_N)) {
+        pcas_ast_t *x = ast_Copy(e);
+
+        if(x == NULL)
+            return;
+        comdenom(x, true);
+        if(isoptype(x, OP_DIV)) {
+            expand(ast_ChildGet(x, 0), EXP_ALL);
+            simplify(ast_ChildGet(x, 0), SIMP_BASIC | SIMP_EVAL | SIMP_LIKE_TERMS);
+        }
+        if(!pcas_cancelled && (nodes(x) <= nodes(e) || !has_root(x)))
+            replace_node(e, x);
+        else
+            ast_Cleanup(x);
     }
 }
 
