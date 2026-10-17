@@ -146,7 +146,7 @@ static void put_value(box_t *row, pcas_ast_t *v) {
 }
 
 /* one piece: lo < x < hi, x <= hi, x > lo or x = c. NULL for no end on a side */
-static box_t *piece_row(char shown, pcas_ast_t *lo, bool lo_in, pcas_ast_t *hi, bool hi_in) {
+box_t *ineq_row(char shown, pcas_ast_t *lo, bool lo_in, pcas_ast_t *hi, bool hi_in) {
     char name[2] = { shown, '\0' }, lt[2] = { '<', '\0' }, le[2] = { CH_LE, '\0' };
     box_t *row = layout_box(BOX_ROW, 0);
 
@@ -244,7 +244,7 @@ void ineq_run(pcas_ast_t *f, Symbol var, char shown, char rel, box_t *in) {
             }
             if(runs++ > 0)
                 layout_add(col, layout_text("or", 0));
-            layout_add(col, piece_row(shown, lo, p % 2 == 1, hi, q % 2 == 1));
+            layout_add(col, ineq_row(shown, lo, p % 2 == 1, hi, q % 2 == 1));
             p = q;
         }
         if(runs == 0) {
