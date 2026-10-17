@@ -1152,6 +1152,10 @@ static void comdenom_sum(pcas_ast_t *e, bool factored) {
 
     frac = ast_MakeBinary(OP_DIV, num, lcm);
     cancel_fraction(frac);
+    if(!isoptype(frac, OP_DIV)) { /*Fluxion: it all cancelled, x/(x-1)-1/(x-1) is just 1. was a NULL deref*/
+        replace_node(e, frac);
+        return;
+    }
     num = ast_ChildGet(frac, 0);
     den = ast_ChildGet(frac, 1);
 

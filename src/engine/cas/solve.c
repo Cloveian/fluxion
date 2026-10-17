@@ -1193,6 +1193,54 @@ int solve(pcas_ast_t *expr, Symbol var, pcas_ast_t **out) {
     return solve_ex(expr, var, out, false);
 }
 
+/*Fluxion: var under a fraction bar, (3x-y)/(x+y) = 5/8. clear_denominators only takes numbers off,
+so it goes over one denominator here and the top gets solved. a root that makes the bottom 0
+was never a root (x/x = 0 has none)*/
+static int solve_over(pcas_ast_t *expr, Symbol var, pcas_ast_t **out, bool complex) {
+    pcas_ast_t *c = ast_Copy(expr), *bottom, *sym;
+    int n = SOLVE_UNKNOWN, i, k;
+
+    if(c == NULL)
+        return SOLVE_UNKNOWN;
+    simplify(c, SIMP_SOLVE);
+    comdenom(c, false);
+    if(!pcas_cancelled && !has_symbol(c, var)) {
+        /*nothing with var left, x/(x-1) = 1/(x-1) ends up 1 = 0. the x = 1 that made it cancel is out anyway*/
+        n = is_zero(c) ? SOLVE_ALL : c->type == NODE_NUMBER ? 0 : SOLVE_UNKNOWN;
+        ast_Cleanup(c);
+        return n;
+    }
+    if(pcas_cancelled || !isoptype(c, OP_DIV) || !has_symbol(ast_ChildGet(c, 1), var)) {
+        ast_Cleanup(c);
+        return SOLVE_UNKNOWN;
+    }
+    bottom = ast_ChildGet(c, 1);
+    n = solve_ex(ast_ChildGet(c, 0), var, out, complex);
+
+    sym = ast_MakeSymbol(var);
+    for(i = k = 0; n > 0 && i < n; i++) {
+        pcas_ast_t *b = ast_Copy(bottom);
+        bool zero;
+
+        substitute(b, sym, out[i]);
+        simplify(b, SIMP_ALL);
+        zero = is_zero(b);
+        ast_Cleanup(b);
+        if(zero)
+            ast_Cleanup(out[i]);
+        else
+            out[k++] = out[i];
+    }
+    if(n > 0) {
+        for(i = k; i < n; i++)
+            out[i] = NULL;
+        n = k;
+    }
+    ast_Cleanup(sym);
+    ast_Cleanup(c);
+    return n;
+}
+
 int solve_ex(pcas_ast_t *expr, Symbol var, pcas_ast_t **out, bool complex) {
     pcas_ast_t *e = ast_Copy(expr);
     coefs_t p;
@@ -1230,6 +1278,9 @@ int solve_ex(pcas_ast_t *expr, Symbol var, pcas_ast_t **out, bool complex) {
 
     if(n == SOLVE_UNKNOWN && !pcas_cancelled && count_var(e, var) == 1)
         n = isolate(e, var, out);   /*not a polynomial in it, but it's only there once*/
+
+    if(n == SOLVE_UNKNOWN && !pcas_cancelled)
+        n = solve_over(expr, var, out, complex);
 
     if(pcas_cancelled) /*half a root list isn't an answer either*/
         n = SOLVE_UNKNOWN;

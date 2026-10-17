@@ -104,6 +104,12 @@ solve; X^3_3X+1=0; X; 2cos(8pi/9),2cos(4pi/9),2cos(2pi/9)
 solve; X^3+X+1=0; X; (-108+12*93^(1/2))^(1/3)/6_((108+12*93^(1/2))^(1/3))/6
 solve; X^3_6X^2+11X_6=0; X; 1,2,3
 solve; X^3_2=0; X; 2^(1/3)
+#x under a fraction bar, over one denominator and the top solved. a root that zeroes the bottom is out
+solve; (3X_Y)/(X+Y)=5/8; X; 13Y/19
+solve; 1/X+1/(X+1)=1; X; 1/2_(5^(1/2))/2,1/2+(5^(1/2))/2
+solve; X/(X_1)=1/(X_1); X; false
+solve; (X^2_1)/(X_1)=0; X; -1
+solve; 2/X=4; X; 1/2
 #odd roots of a negative stay real, these came back with an i in them (inverse(x^3+1) did)
 solve; X^3+1_Y=0; X; -(1_Y)^(1/3)
 simplify; (-8)^(1/3); -2
