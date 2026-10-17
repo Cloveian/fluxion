@@ -185,6 +185,15 @@ ITEM(it_par,      "parallel", "par", ITEM_COMMAND, NULL, "par($)", HAVE_YES,
 ITEM(it_perp,     "perpendicular", "perp", ITEM_COMMAND, NULL, "perp($)", HAVE_YES,
      "perp(m,x1,y1): slope -1/m through the point, x = x1 when m is 0",
      "the line at right angles to slope m, through a point. perp(2,1,1) -> y = (-x+3)/2")
+ITEM(it_roots,    "roots",  "roots", ITEM_COMMAND, NULL, "roots($)", HAVE_PARTLY,
+     "roots(p,x): solve(p=0,x) under another name, complex roots on, same limits as solve",
+     "where a polynomial is 0, complex ones too. roots(x^2+1,x) -> x = -i, i")
+ITEM(it_fromrts,  "from roots", "fromrts", ITEM_COMMAND, NULL, "fromrts($)", HAVE_YES,
+     "fromrts(r1,r2,...,x): (x-r1)(x-r2)... expanded. a letter at the end is the variable. fromroots is two letters too long for a name",
+     "the polynomial with those roots. fromrts(2,-3) -> x^2+x-6")
+ITEM(it_inverse,  "inverse", "inverse", ITEM_COMMAND, NULL, "inverse($)", HAVE_PARTLY,
+     "inverse(f,x): solves y = f(x) for x over the reals and puts x back for y. as far as solve gets",
+     "the inverse function. inverse(2x+3) -> (x-3)/2, inverse(x^2) -> -sqrt(x), sqrt(x)")
 
 /* Calculus */
 ITEM(it_deriv,    "d/dx",   "deriv", ITEM_TEMPLATE, NULL, "deriv($,X,X)", HAVE_YES, "derivative with respect to x",
@@ -217,7 +226,7 @@ const item_t *const catalog[] = {
     &it_gcd, &it_lcm, &it_ncr, &it_npr,
     &it_frac, &it_parens, &it_piecewise,
     &it_simplify, &it_expand, &it_subst, &it_evaluate, &it_factor, &it_solve, &it_asym, &it_domain, &it_system,
-    &it_slope, &it_dist, &it_mid, &it_par, &it_perp,
+    &it_slope, &it_dist, &it_mid, &it_par, &it_perp, &it_roots, &it_fromrts, &it_inverse,
     &it_deriv, &it_deriv_at, &it_integral, &it_limit,
     &it_id_basic, &it_id_trig, &it_id_hyp, &it_id_cplx, &it_id_tconst, &it_id_iconst, &it_clear
 };
@@ -225,7 +234,7 @@ const unsigned catalog_count = sizeof catalog / sizeof catalog[0];
 
 static const item_t *const algebra[] = {
     &it_expand, &it_factor, &it_solve, &it_asym, &it_domain, &it_system, &it_slope, &it_dist, &it_mid,
-    &it_par, &it_perp, &it_subst, &it_evaluate
+    &it_par, &it_perp, &it_roots, &it_fromrts, &it_inverse, &it_subst, &it_evaluate
 };
 static const item_t *const calculus[] = {
     &it_deriv, &it_deriv_at, &it_integral, &it_limit

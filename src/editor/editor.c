@@ -1108,7 +1108,7 @@ char *ed_row_to_engine(const ed_row_t *r) {
 }
 
 static const char *const commands[] = { "expand", "factor", "eval", "solve", "asym", "domain", "system",
-                                        "slope", "dist", "mid", "par", "perp" };
+                                        "slope", "dist", "mid", "par", "perp", "roots", "fromrts", "inverse" };
 
 const char *ed_command(const editor_t *ed) {
     const ed_node_t *n;
