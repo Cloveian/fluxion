@@ -245,17 +245,36 @@ static int sel_end(const editor_t *ed) {
 
 /* typing */
 
+/* a ( before pos in r that nothing's closed yet, so a typed ) has something to close */
+static bool open_before(const ed_row_t *r, int pos) {
+    int i, depth = 0;
+
+    for(i = 0; i < pos; i++) {
+        if(r->items[i]->kind != ED_CHAR)
+            continue;
+        if(r->items[i]->ch == '(')
+            depth++;
+        else if(r->items[i]->ch == ')' && depth > 0)
+            depth--;
+    }
+    return depth > 0;
+}
+
 bool ed_insert_char(editor_t *ed, char c) {
     ed_node_t *n;
 
-    if(c == '(')
+    /* with a selection ( still goes around it, as a pair */
+    if(c == '(' && ed_has_selection(ed))
         return ed_insert(ed, ED_PARENS, NULL);
 
-    if(c == ')') {
-        /* brackets come in pairs: ) just steps out of the brackets your in */
+    /* a ( is just a character now, its ) is a ghost at the end of the row till
+       you type a real one (see lay_group), and that's just a character too */
+    if(c == ')')
+        ed_deselect(ed, false);
+    if(c == ')' && !open_before(ed->row, ed->pos)) {
+        /* nothing open here: ) steps out of the template brackets your in */
         ed_row_t *r;
 
-        ed_deselect(ed, false);
         for(r = ed->row; r->parent != NULL; r = r->parent->in) {
             if(r->parent->kind == ED_PARENS || r->parent->kind == ED_FUNC || r->parent->kind == ED_LOGB) {
                 after(ed, r->parent);
@@ -297,11 +316,54 @@ static void wrap(editor_t *ed, ed_node_t *n) {
     }
 }
 
+/* where the term ending at pos starts: back to a + - = , or a ( that's still
+   open, hopping over whole (...) groups on the way. a stray ) with no ( stops
+   it too, it'd be a mess on top of a fraction */
+static int term_start(const ed_row_t *r, int pos) {
+    int depth = 0, safe = pos;
+
+    /* 2* then a fraction, the term isn't done yet so theres nothing to pull */
+    if(pos > 0 && r->items[pos - 1]->kind == ED_CHAR && (r->items[pos - 1]->ch == ED_TIMES
+       || r->items[pos - 1]->ch == ED_DIVIDE || r->items[pos - 1]->ch == ED_NEG))
+        return pos;
+
+    for(; pos > 0; pos--) {
+        const ed_node_t *n = r->items[pos - 1];
+
+        if(n->kind == ED_CHAR) {
+            char c = n->ch;
+
+            if(c == ')') {
+                depth++;
+            } else if(c == '(') {
+                if(depth == 0)
+                    break;
+                depth--;
+            } else if(depth == 0 && (c == ED_PLUS || c == ED_SUB || c == '=' || c == ',' || c == '<'
+                                     || c == '>' || c == CH_LE || c == CH_GE || c == CH_NE || c == CH_STO)) {
+                break;
+            }
+        }
+        if(depth == 0)
+            safe = pos - 1;
+    }
+    return safe;
+}
+
 bool ed_insert(editor_t *ed, ed_kind_t kind, const char *name) {
     ed_node_t *n;
 
     if(kind == ED_CHAR)
         return false;
+
+    /* 5+9 then a fraction: the 9 goes on top and you're in the bottom, like the
+       TI and the nspire. done by selecting it, the selection already goes on top */
+    if(kind == ED_FRAC && !ed_has_selection(ed)) {
+        int from = term_start(ed->row, ed->pos);
+
+        if(from < ed->pos)
+            ed->anchor = from;
+    }
 
     /* x+1 selected, then ^: (x+1)^ */
     if(kind == ED_POW && ed_has_selection(ed) && sel_end(ed) - sel_start(ed) > 1) {
@@ -905,8 +967,17 @@ void ed_delete(editor_t *ed) {
 /* names, see editor.h */
 
 bool (*ed_name_lookup)(const char *letters, int n, ed_name_t *out) = NULL;
+const ed_row_t *(*ed_ans)(void) = NULL;
 const char *ed_error = NULL;
 static char error_buf[64];
+
+/* reading ans's own row, where "ans" is just letters again. an answer of a*n*s
+   is drawn "ans", and reading that as ans would go round forever */
+static bool in_ans;
+
+static const ed_row_t *ans_row(void) {
+    return ed_ans != NULL && !in_ans ? ed_ans() : NULL;
+}
 
 static bool is_letter(char c) {
     return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
@@ -926,6 +997,16 @@ static int letter_run(const ed_row_t *r, int i, char *buf, int max) {
 /* the name at the start of the run. with nothing plugged in, or no match, it's one
    plain letter (len 1 and the rest zero) */
 static void next_name(const char *letters, int n, ed_name_t *nm) {
+    const ed_row_t *ans = ans_row();
+
+    /* ans is the last answer, a stored value like any other except it moves */
+    if(ans != NULL && n >= 3 && memcmp(letters, "ans", 3) == 0) {
+        memset(nm, 0, sizeof *nm);
+        nm->len = 3;
+        nm->row = ans;
+        nm->bold = true;
+        return;
+    }
     if(ed_name_lookup == NULL || !ed_name_lookup(letters, n, nm) || nm->len <= 0) {
         memset(nm, 0, sizeof *nm);
         nm->len = 1;
@@ -1039,7 +1120,7 @@ static bool row_has_equals(const ed_row_t *r) {
 }
 
 static void put_row(out_t *o, const ed_row_t *r) {
-    int i;
+    int i, open = 0;
 
     if(r->len == 0)
         o->bad = true;
@@ -1049,7 +1130,16 @@ static void put_row(out_t *o, const ed_row_t *r) {
         ed_name_t nm;
 
         if(n == 0) {
-            put_node(o, r->items[i], i == 0);
+            const ed_node_t *c = r->items[i];
+
+            if(c->kind == ED_CHAR && c->ch == '(') {
+                /* nothing in it yet, same as an empty slot */
+                if(i + 1 == r->len || (r->items[i + 1]->kind == ED_CHAR && r->items[i + 1]->ch == ')'))
+                    o->bad = true;
+                open++;
+            } else if(c->kind == ED_CHAR && c->ch == ')' && open > 0)
+                open--;
+            put_node(o, c, i == 0);
             i++;
             continue;
         }
@@ -1059,6 +1149,8 @@ static void put_row(out_t *o, const ed_row_t *r) {
             next_name(letters + k, n - k, &nm);
             if(nm.row != NULL) {
                 /* a stored value in its place. read the same way, so it's live */
+                bool was = in_ans;
+
                 if(row_has_equals(nm.row)) {
                     if(!allow_equations) {
                         memcpy(error_buf, letters + k, (size_t)nm.len);
@@ -1067,12 +1159,15 @@ static void put_row(out_t *o, const ed_row_t *r) {
                         o->bad = true;
                         return;
                     }
+                    in_ans = in_ans || nm.row == ans_row();
                     put_row(o, nm.row);
                 } else {
+                    in_ans = in_ans || nm.row == ans_row();
                     put(o, "(");
                     put_row(o, nm.row);
                     put(o, ")");
                 }
+                in_ans = was;
             } else if(nm.engine != NULL) {
                 put(o, nm.engine);
             } else {
@@ -1081,6 +1176,11 @@ static void put_row(out_t *o, const ed_row_t *r) {
         }
         i += n;
     }
+
+    /* the ghost brackets: a ( nobody closed shuts at the end of its row, right
+       where it's drawn, so 2(x+1 is 2(x+1) */
+    while(open-- > 0)
+        put(o, ")");
 }
 
 char *ed_to_engine(const editor_t *ed) {
@@ -1142,8 +1242,61 @@ char *ed_command_arg(const editor_t *ed) {
     return o.s;
 }
 
+/* copies items [from, to) of src onto the end of dst, with ans swapped for the
+   answer itself in brackets. a stored value gets read live, so an ans left in it
+   would follow every new answer around (and ans -> a with a in the answer loops) */
+static bool freeze(ed_row_t *dst, const ed_row_t *src, int from, int to) {
+    int i, k, s;
+
+    for(i = from; i < to; ) {
+        char letters[32];
+        int n = letter_run(src, i, letters, (int)sizeof letters);
+        ed_name_t nm;
+
+        if(n == 0) {
+            const ed_node_t *c = src->items[i++];
+            ed_node_t *copy = node_new(c->kind, c->ch, c->name);
+
+            if(!append(dst, copy))
+                return false;
+            for(s = 0; s < copy->slots; s++)
+                if(!freeze(copy->slot[s], c->slot[s], 0, c->slot[s]->len))
+                    return false;
+            continue;
+        }
+
+        for(k = 0; k < n; k += nm.len) {
+            next_name(letters + k, n - k, &nm);
+            if(nm.row != NULL && nm.row == ans_row()) {
+                ed_node_t *parens = node_new(ED_PARENS, 0, NULL);
+                int j;
+
+                if(!append(dst, parens))
+                    return false;
+                for(j = 0; j < nm.row->len; j++)
+                    if(!append(parens->slot[0], node_copy(nm.row->items[j], NULL, NULL)))
+                        return false;
+            } else {
+                int j;
+
+                for(j = 0; j < nm.len; j++)
+                    if(!append(dst, node_copy(src->items[i + k + j], NULL, NULL)))
+                        return false;
+            }
+        }
+        i += n;
+    }
+    return true;
+}
+
 ed_row_t *ed_row_slice(const ed_row_t *r, int from, int to) {
-    return row_copy(r, from, to, NULL, 0, NULL, NULL);
+    ed_row_t *out = row_new(NULL, 0);
+
+    if(out != NULL && !freeze(out, r, from, to)) {
+        row_free(out);
+        return NULL;
+    }
+    return out;
 }
 
 int ed_row_find_char(const ed_row_t *r, char c) {
@@ -1174,7 +1327,7 @@ const ed_row_t *ed_command_row(const editor_t *ed) {
 bool ed_fold_command(editor_t *ed) {
     ed_row_t *r = ed->root, *slot;
     char word[16];
-    int w = letter_run(r, 0, word, (int)sizeof word - 1), i, depth = 0, inside;
+    int w = letter_run(r, 0, word, (int)sizeof word - 1), i, depth = 0, inside, shut;
     unsigned c;
     ed_node_t *func;
 
@@ -1187,8 +1340,8 @@ bool ed_fold_command(editor_t *ed) {
     if(c == sizeof commands / sizeof commands[0])
         return false;
 
-    /* ( makes a bracket template, so this is the usual shape: the word, then one
-       ED_PARENS holding everything. it only needs to change kind */
+    /* the word, then one bracket template holding everything (an answer pasted
+       back, or ( around a selection). it only needs to change kind */
     if(w + 1 == r->len && r->items[w]->kind == ED_PARENS) {
         ed_node_t *n = r->items[w];
 
@@ -1202,19 +1355,20 @@ bool ed_fold_command(editor_t *ed) {
         return true;
     }
 
-    /* typed brackets (pasted, or from the history) */
-    if(r->items[w]->kind != ED_CHAR || r->items[w]->ch != '('
-       || r->items[r->len - 1]->kind != ED_CHAR || r->items[r->len - 1]->ch != ')')
+    /* typed brackets */
+    if(r->items[w]->kind != ED_CHAR || r->items[w]->ch != '(')
         return false;
-    /* the first bracket has to be the last one's partner, expand(x)+expand(y) isn't one */
-    for(i = w; i < r->len - 1; i++) {
+    /* the first bracket has to be the last one's partner, expand(x)+expand(y) isn't
+       one. or nobody closed it, then its ghost ) is at the end and it still counts */
+    for(i = w; i < r->len; i++) {
         if(r->items[i]->kind != ED_CHAR)
             continue;
         if(r->items[i]->ch == '(')
             depth++;
-        else if(r->items[i]->ch == ')' && --depth == 0)
+        else if(r->items[i]->ch == ')' && --depth == 0 && i < r->len - 1)
             return false;
     }
+    shut = depth == 0 ? 1 : 0;
 
     func = node_new(ED_FUNC, 0, commands[c]);
     if(func == NULL)
@@ -1222,18 +1376,19 @@ bool ed_fold_command(editor_t *ed) {
     /* room for everything first, so the move can't run out halfway and leave
        bits in two rows */
     slot = func->slot[0];
-    inside = r->len - w - 2;
+    inside = r->len - w - 1 - shut;
     slot->items = malloc((inside > 0 ? inside : 1) * sizeof(ed_node_t *));
     if(slot->items == NULL) {
         node_free(func);
         return false;
     }
     slot->cap = inside > 0 ? inside : 1;
-    while(r->len > w + 2)
+    while(r->len > w + 1 + shut)
         row_insert(slot, slot->len, row_remove(r, w + 1));
 
     /* ) before (, the other way round shifts it out from under w + 1 */
-    node_free(row_remove(r, w + 1));
+    if(shut)
+        node_free(row_remove(r, w + 1));
     node_free(row_remove(r, w));
     while(w-- > 0)
         node_free(row_remove(r, 0));
@@ -1395,8 +1550,15 @@ bool ed_row_reaches(const ed_row_t *r, const ed_row_t *target) {
             continue;
         }
         for(k = 0; k < n; k += nm.len) {
+            bool was = in_ans, reaches;
+
             next_name(letters + k, n - k, &nm);
-            if(nm.row != NULL && (nm.row == target || ed_row_reaches(nm.row, target)))
+            if(nm.row == NULL)
+                continue;
+            in_ans = in_ans || nm.row == ans_row();
+            reaches = nm.row == target || ed_row_reaches(nm.row, target);
+            in_ans = was;
+            if(reaches)
                 return true;
         }
         i += n;
@@ -1576,17 +1738,66 @@ static bool between(int x, int from, int to) {
     return x > from && x < to;
 }
 
-static box_t *lay_row(lay_t *l, const ed_row_t *r, unsigned char level) {
-    box_t *row = layout_box(BOX_ROW, level);
+static void lay_range(lay_t *l, const ed_row_t *r, int start, int end, box_t *row, unsigned char level);
+
+/*
+    a ( and everything up to its ) as one bracket box, so typed brackets grow
+    around a fraction like the template ones do. a ( nobody closed takes the rest
+    of the range and its ) is a ghost, drawn dim while you're typing (the export
+    closes it in the same spot, see put_row). returns where to carry on
+*/
+static int lay_group(lay_t *l, const ed_row_t *r, int open, int end, box_t *row, unsigned char level,
+                     bool here, bool *ghost) {
+    box_t *inner = layout_box(BOX_ROW, level), *b;
+    int close, depth = 0;
+
+    for(close = open + 1; close < end; close++) {
+        const ed_node_t *c = r->items[close];
+
+        if(c->kind != ED_CHAR)
+            continue;
+        if(c->ch == '(')
+            depth++;
+        else if(c->ch == ')' && depth-- == 0)
+            break;
+    }
+    *ghost = close >= end;
+
+    if(here && l->ed->pos == open)
+        layout_add(row, layout_box(BOX_CURSOR, level));
+    lay_range(l, r, open + 1, close, inner, level);
+    b = pair(BOX_PARENS, inner, NULL, level);
+    /* the history just gets a normal ), it was closed there when it ran */
+    if(b != NULL && *ghost && l->cursor)
+        b->aux = 1;
+
+    if(b != NULL && here && ed_has_selection(l->ed) && open >= sel_start(l->ed)
+       && sel_end(l->ed) >= close + (*ghost ? 0 : 1)) {
+        box_t *sel = layout_box(BOX_SELECT, level);
+
+        layout_add(sel, b);
+        b = sel;
+    }
+    layout_add(row, b);
+    return *ghost ? end : close + 1;
+}
+
+/* items [start, end) of r into row */
+static void lay_range(lay_t *l, const ed_row_t *r, int start, int end, box_t *row, unsigned char level) {
     bool here = l->cursor && l->ed->row == r;
     bool sel = here && ed_has_selection(l->ed);
+    bool ghost = false;
     int i;
 
-    for(i = 0; i < r->len; ) {
+    for(i = start; i < end; ) {
         char letters[32];
         int n = letter_run(r, i, letters, (int)sizeof letters), k;
         ed_name_t nm;
 
+        if(n == 0 && r->items[i]->kind == ED_CHAR && r->items[i]->ch == '(') {
+            i = lay_group(l, r, i, end, row, level, here, &ghost);
+            continue;
+        }
         if(n == 0) {
             lay_item(l, r, i, row, level, here);
             i++;
@@ -1637,8 +1848,15 @@ static box_t *lay_row(lay_t *l, const ed_row_t *r, unsigned char level) {
         i += n;
     }
 
-    if(here && l->ed->pos == r->len)
+    /* after a ghost group the cursor's already in it, in front of the ghost */
+    if(here && l->ed->pos == end && !ghost)
         layout_add(row, layout_box(BOX_CURSOR, level));
+}
+
+static box_t *lay_row(lay_t *l, const ed_row_t *r, unsigned char level) {
+    box_t *row = layout_box(BOX_ROW, level);
+
+    lay_range(l, r, 0, r->len, row, level);
 
     /* an empty slot shows a box to fill (not the empty input line itself) */
     if(r->len == 0 && r->parent != NULL)

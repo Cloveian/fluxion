@@ -579,6 +579,21 @@ static bool has_frac(const box_t *b) {
     return false;
 }
 
+/* what's under the editor's highlight, if it's just one thing */
+static const box_t *unselected(const box_t *b) {
+    return b->kind == BOX_SELECT && b->child != NULL && b->child->next == NULL ? b->child : b;
+}
+
+static bool is_dot(const box_t *b) {
+    b = unselected(b);
+    return b->kind == BOX_TEXT && b->text != NULL && strcmp(b->text, STR_CDOT) == 0;
+}
+
+/* the bar runs straight into a · next to it otherwise */
+static bool dot_by_frac(const box_t *a, const box_t *b) {
+    return (is_dot(a) && unselected(b)->kind == BOX_FRAC) || (unselected(a)->kind == BOX_FRAC && is_dot(b));
+}
+
 static void measure(const layout_font_t *f, box_t *b) {
     int fi = b->size;
     box_t *k;
@@ -600,12 +615,18 @@ static void measure(const layout_font_t *f, box_t *b) {
     case BOX_ROW:
     case BOX_SELECT: {
         int x = 0;
+        const box_t *prev = NULL;
 
         /* even an empty row is a line tall */
         b->ascent = f->ascent[fi];
         b->descent = f->descent[fi];
 
         for(k = b->child; k != NULL; k = k->next) {
+            /* the same room as round a +, the editor's cursor doesn't count as being between */
+            if(prev != NULL && k->kind != BOX_CURSOR && dot_by_frac(prev, k))
+                x += LAYOUT_SPACE(b->level);
+            if(k->kind != BOX_CURSOR)
+                prev = k;
             k->x = x;
             k->y = 0;
             x += k->width;

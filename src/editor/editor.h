@@ -21,7 +21,7 @@ typedef enum {
     ED_POW, /* slot 0 is the exponent, base is whatever's right before it */
     ED_SQRT, /* just slot 0 */
     ED_NROOT, /* slot 0 index, slot 1 radicand */
-    ED_PARENS, /* slot 0, brackets come in pairs (nspire) */
+    ED_PARENS, /* slot 0. ( around a selection and answers pasted back. typed ( and ) are plain characters */
     ED_ABS,
     ED_FUNC, /* name then slot 0, so sin, asin, ln, log, int ... */
     ED_LOGB /* log_b(x), slot 0 the base and slot 1 the argument */
@@ -70,8 +70,8 @@ void ed_clear(editor_t *ed); /* empties the line, keeps the undo steps */
 bool ed_is_empty(const editor_t *ed);
 
 /* typing. return false if out of memory or not allowed here. */
-bool ed_insert_char(editor_t *ed, char c);              /* ')' leaves the brackets it's in */
-bool ed_insert(editor_t *ed, ed_kind_t kind, const char *name);  /* name: ED_FUNC only */
+bool ed_insert_char(editor_t *ed, char c);              /* ')' with no ( open before it leaves the brackets it's in */
+bool ed_insert(editor_t *ed, ed_kind_t kind, const char *name);  /* name: ED_FUNC only. ED_FRAC pulls the term before the cursor on top */
 
 /* moving. these drop the selection. up/down return false if there was nowhere to go
    (the app goes into the history then) */
@@ -132,7 +132,8 @@ char *ed_row_to_engine(const ed_row_t *r);
    NULL means the usual, something's unfinished */
 extern const char *ed_error;
 
-/* a copy of items [from, to) of a row, for splitting a line at the sto arrow */
+/* a copy of items [from, to) of a row, for splitting a line at the sto arrow.
+   ans in it becomes the answer itself, so whats stored doesn't move with it */
 ed_row_t *ed_row_slice(const ed_row_t *r, int from, int to);
 
 /*
@@ -182,6 +183,10 @@ typedef struct {
     bool bold;
 } ed_name_t;
 extern bool (*ed_name_lookup)(const char *letters, int n, ed_name_t *out);
+
+/* the last answer's row, NULL if there isn't one. the app plugs it in. while
+   there is one, the letters "ans" read as it, bold, the same as a stored name */
+extern const ed_row_t *(*ed_ans)(void);
 
 /* when the whole line is a single command (expand, factor, eval, solve), its name. else NULL.
    the app runs those itself; the engine's parser doesn't know them. */

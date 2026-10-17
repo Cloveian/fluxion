@@ -194,7 +194,12 @@ void draw_box(const box_t *b, int x, int y) {
 
     case BOX_PARENS:
         bracket(x, top, bottom, true);
+        /* a ghost ) the editor would close for you, so it's there but not loud */
+        if(b->aux)
+            screen_color(COL_DIM);
         bracket(x + b->width - PAREN_W, top, bottom, false);
+        if(b->aux)
+            screen_color(COL_FG);
         break;
 
     case BOX_ABS:

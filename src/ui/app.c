@@ -217,6 +217,17 @@ static const ed_row_t *hist_row(void) {
     return hist_out ? history[hist].out_row : history[hist].row;
 }
 
+/* ans, for the editor. the newest answer there is, an error or a "stored"
+   doesn't wipe it (the TI's Ans doesn't either) */
+static const ed_row_t *last_answer(void) {
+    int i;
+
+    for(i = history_len - 1; i >= 0; i--)
+        if(history[i].out_row != NULL)
+            return history[i].out_row;
+    return NULL;
+}
+
 /* up off the top of the input line */
 static void history_open(void) {
     if(history_len == 0)
@@ -1582,6 +1593,15 @@ static bool key_plain(keypress_t p) {
         break;
     }
 
+    /* an operator first thing on an empty line works on the last answer, like the
+       TI. not (-), that's starting a new number */
+    if((p.key == K_ADD || p.key == K_SUB || p.key == K_MUL || p.key == K_DIV || p.key == K_POW)
+       && ed_is_empty(&ed) && last_answer() != NULL) {
+        ed_insert_char(&ed, 'a');
+        ed_insert_char(&ed, 'n');
+        ed_insert_char(&ed, 's');
+    }
+
     switch(p.key) {
     case K_QUIT:   return false;
     case K_DOT:    ed_insert_char(&ed, '.'); break;
@@ -2441,6 +2461,7 @@ void app_run(void) {
         return;
 
     names_init();
+    ed_ans = last_answer;
     history_load();
     screen_begin();
     settings_load();    /* after, it sets the palette and gfx_Begin would put its own back */
