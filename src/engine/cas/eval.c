@@ -64,8 +64,14 @@ static bool eval_commutative(pcas_ast_t *e, unsigned short flags) {
 
                 a = &accumulator->num;
                 b = &accumulator->den;
-                c = &c_num->op.num->num;
-                d = &c_den->op.num->num;
+
+                /*Fluxion: the two numbers can be fractions themselves, (p/q)/(r/s) is ps/(qr).
+                only the tops got read, so (13/9)/2 counted as 13/2 and (1+4/9)/2+1/9 was 119/18*/
+                c = mp_int_alloc();
+                mp_int_mul(&c_num->op.num->num, &c_den->op.num->den, c);
+
+                d = mp_int_alloc();
+                mp_int_mul(&c_den->op.num->num, &c_num->op.num->den, d);
 
                 first = mp_int_alloc();
                 mp_int_init(first);
@@ -92,6 +98,8 @@ static bool eval_commutative(pcas_ast_t *e, unsigned short flags) {
                 mp_int_free(second);
                 mp_int_free(num);
                 mp_int_free(den);
+                mp_int_free(c);
+                mp_int_free(d);
 
                 ast_Cleanup(ast_ChildRemoveIndex(e, i));
 
