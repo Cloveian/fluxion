@@ -4,6 +4,7 @@
 #include "mode.h"
 #include "settings.h"
 #include "geom.h"
+#include "polyfn.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -846,7 +847,7 @@ static bool run(editor_t *line) {
 
     /* solving for a variable that has a value makes no sense, and would quietly
        solve for 5. bold = not symbolic, consistently */
-    if(cmd != NULL && strcmp(cmd, "solve") == 0) {
+    if(cmd != NULL && (strcmp(cmd, "solve") == 0 || strcmp(cmd, "roots") == 0)) {
         const ed_row_t *arg = ed_command_row(line);
         int comma = arg != NULL ? ed_row_find_last(arg, ',') : -1;
         char var[NAME_LEN + 1];
@@ -870,13 +871,15 @@ static bool run(editor_t *line) {
     /* no nesting commands yet, expand(...) has to be the whole line (todo, ugh) */
     if(strstr(src, "expand(") || strstr(src, "factor(") || strstr(src, "eval(") || strstr(src, "solve(")
        || strstr(src, "asym(") || strstr(src, "system(") || strstr(src, "slope(") || strstr(src, "dist(")
-       || strstr(src, "mid(") || strstr(src, "par(") || strstr(src, "perp(") || strstr(src, "domain(")) {
+       || strstr(src, "mid(") || strstr(src, "par(") || strstr(src, "perp(") || strstr(src, "domain(")
+       || strstr(src, "roots(") || strstr(src, "fromrts(") || strstr(src, "inverse(")) {
         free(src);
         status = "commands have to be the whole line (for now)";
         return false;
     }
 
-    if(cmd != NULL && strcmp(cmd, "solve") == 0) {
+    /* roots(p, x) is solve(p = 0, x), which is what solve does without an = anyway */
+    if(cmd != NULL && (strcmp(cmd, "solve") == 0 || strcmp(cmd, "roots") == 0)) {
         run_solve(src, ed_layout(line, &draw_font, false));
         free(src);
         return true;
@@ -902,7 +905,7 @@ static bool run(editor_t *line) {
         return false;
     }
     in = ed_layout(line, &draw_font, false);
-    if(geom_run(cmd, src, in)) {
+    if(geom_run(cmd, src, in) || polyfn_run(cmd, src, in)) {
         free(src);
         return true;
     }
@@ -1176,7 +1179,8 @@ static bool pick_into(editor_t *into, const item_t *it, bool dry) {
            strcmp(s, "factor($)") != 0 && strcmp(s, "eval($)") != 0 && strcmp(s, "solve($)") != 0
            && strcmp(s, "asym($)") != 0 && strcmp(s, "system($)") != 0 && strcmp(s, "slope($)") != 0
            && strcmp(s, "dist($)") != 0 && strcmp(s, "mid($)") != 0 && strcmp(s, "par($)") != 0
-           && strcmp(s, "perp($)") != 0 && strcmp(s, "domain($)") != 0)
+           && strcmp(s, "perp($)") != 0 && strcmp(s, "domain($)") != 0 && strcmp(s, "roots($)") != 0
+           && strcmp(s, "fromrts($)") != 0 && strcmp(s, "inverse($)") != 0)
             return false;
         if(!dry) {
             memcpy(name, s, n);
