@@ -706,15 +706,15 @@ static void run_domain(char *src, box_t *in) {
     letters it finds, a to z. writes into src like the other two
 */
 static void run_system(char *src, box_t *in) {
-    pcas_ast_t *eqs[SYSTEM_MAX] = { NULL }, *out[SYSTEM_MAX] = { NULL }, *rhs;
+    pcas_ast_t *eqs[SYSTEM_MAX] = { NULL }, *out[SYSTEM_SETS][SYSTEM_MAX] = { { NULL } }, *rhs;
     char *piece[2 * SYSTEM_MAX], *s, shown[SYSTEM_MAX];
     Symbol vars[SYSTEM_MAX];
     pcas_error_t err = E_SUCCESS;
     clock_t start;
     unsigned long ms;
-    int depth = 0, pieces = 1, n = 0, nvars = 0, i, got;
+    int depth = 0, pieces = 1, n = 0, nvars = 0, i, k, got;
     bool too_many = false;
-    box_t *row;
+    box_t *row, *col;
 
     piece[0] = src;
     for(s = src; *s != '\0'; s++) {
@@ -796,25 +796,33 @@ static void run_system(char *src, box_t *in) {
     else if(got == 0)
         push(in, word_box("false"), NULL, ms);
     else {
-        row = layout_box(BOX_ROW, 0);
-        for(i = 0; i < n; i++) {
-            char name[2] = { shown[i], '\0' };
+        /* one line per solution set, an "or" line between them like the nspire */
+        col = layout_box(BOX_COL, 0);
+        for(k = 0; k < got && k < SYSTEM_SETS; k++) {
+            if(k > 0)
+                layout_add(col, layout_text("or", 0));
+            row = layout_box(BOX_ROW, 0);
+            for(i = 0; i < n; i++) {
+                char name[2] = { shown[i], '\0' };
 
-            if(i > 0) {
-                layout_add(row, layout_text(",", 0));
-                layout_add(row, layout_space(2 * SPACE_BINARY));
+                if(i > 0) {
+                    layout_add(row, layout_text(",", 0));
+                    layout_add(row, layout_space(2 * SPACE_BINARY));
+                }
+                layout_add(row, layout_text(name, 0));
+                layout_add(row, layout_space(LAYOUT_SPACE(0)));
+                layout_add(row, layout_text("=", 0));
+                layout_add(row, layout_space(LAYOUT_SPACE(0)));
+                layout_add(row, value_box(out[k][i]));
             }
-            layout_add(row, layout_text(name, 0));
-            layout_add(row, layout_space(LAYOUT_SPACE(0)));
-            layout_add(row, layout_text("=", 0));
-            layout_add(row, layout_space(LAYOUT_SPACE(0)));
-            layout_add(row, value_box(out[i]));
+            layout_add(col, row);
         }
-        layout_finish(row, &draw_font);
-        push(in, row, NULL, ms);
+        layout_finish(col, &draw_font);
+        push(in, col, NULL, ms);
     }
-    for(i = 0; i < n; i++)
-        ast_Cleanup(out[i]);
+    for(k = 0; k < SYSTEM_SETS; k++)
+        for(i = 0; i < n; i++)
+            ast_Cleanup(out[k][i]);
 }
 
 static void busy_start(void);

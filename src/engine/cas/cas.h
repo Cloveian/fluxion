@@ -302,12 +302,15 @@ typedef struct {
 bool domain(pcas_ast_t *f, Symbol var, domain_t *out);
 void domain_free(domain_t *d);
 
-/*Fluxion: linear systems (cas/system.c). n expressions that are = 0, in the n
-  vars. out[i] gets the value of vars[i] (all NULL going in). returns n, or 0 for
-  no solution, SOLVE_ALL when they're dependent (infinitely many), SOLVE_UNKNOWN
-  when it isn't linear in those or something gave up*/
+/*Fluxion: systems (cas/system.c). n expressions that are = 0, in the n vars.
+  linear ones by elimination, two nonlinear ones in two letters by substitution,
+  real only. out[k][i] gets the value of vars[i] in solution set k (all NULL going
+  in). returns how many sets (a linear one has 1), sorted by the first var, or 0
+  for no solution, SOLVE_ALL when there's infinitely many, SOLVE_UNKNOWN when it
+  can't solve those or something gave up*/
 #define SYSTEM_MAX 4
-int solve_system(pcas_ast_t **eqs, int n, const Symbol *vars, pcas_ast_t **out);
+#define SYSTEM_SETS 6
+int solve_system(pcas_ast_t **eqs, int n, const Symbol *vars, pcas_ast_t *out[][SYSTEM_MAX]);
 
 /*Fluxion: degree of e (simplified and expanded) as a polynomial in var, -1 if it
   isn't one. the leading coefficient goes in *lead if that's not NULL (new tree)*/
