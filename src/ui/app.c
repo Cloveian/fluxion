@@ -828,7 +828,7 @@ static void run_system(char *src, box_t *in) {
     if(pcas_cancelled)
         push(in, NULL, pcas_oom ? "out of memory" : "cancelled", ms);
     else if(got == SOLVE_UNKNOWN)
-        push(in, NULL, "can't solve this one yet (linear only)", ms);
+        push(in, NULL, "can't solve this one yet", ms);
     else if(got == SOLVE_ALL)
         push(in, NULL, "infinitely many, they say the same thing", ms);
     else if(got == 0)
@@ -1210,6 +1210,17 @@ static bool pick_into(editor_t *into, const item_t *it, bool dry) {
     if(strcmp(s, "deriv($,X,X)") == 0) {
         if(!dry)
             ed_insert(into, ED_FUNC, "deriv");
+        return true;
+    }
+    /* no template for the at one, it'd need a second slot in the editor. so it goes in
+       typed out, deriv(f,x,3) already works */
+    if(strcmp(s, "deriv($,X,$)") == 0) {
+        if(!dry) {
+            const char *c;
+
+            for(c = "deriv("; *c != '\0'; c++)
+                ed_insert_char(into, *c);
+        }
         return true;
     }
 

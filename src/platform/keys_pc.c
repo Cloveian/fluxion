@@ -42,7 +42,7 @@ void keys_script(char *const *presses, int count) {
 
 static key_t from_text(char c);
 
-/* one scripted press - a key name, or a single char to type, "on+" means Ctrl */
+/* one scripted press - a key name, or a single char to type. "on+" "2nd+" "alpha+" hold that one down for it */
 static keypress_t scripted(void) {
     static const struct { const char *name; key_t key; } names[] = {
         { "enter", K_ENTER }, { "clear", K_CLEAR }, { "del", K_DEL },
@@ -51,7 +51,7 @@ static keypress_t scripted(void) {
         { "y=", K_YEQU }, { "window", K_WINDOW }, { "zoom", K_ZOOM }, { "trace", K_TRACE }, { "graph", K_GRAPH },
         { "x^2", K_SQUARE }, { "x^-1", K_RECIP }, { "sin", K_SIN }, { "cos", K_COS }, { "tan", K_TAN },
         { "ln", K_LN }, { "log", K_LOG }, { "neg", K_NEG }, { "xt", K_XT }, { "sto", K_STO }, { "math", K_MATH }, { "vars", K_VARS },
-        { "on", K_ON },
+        { "on", K_ON }, { "apps", K_APPS }, { "prgm", K_PRGM }, { "stat", K_STAT },
     };
     keypress_t press = { K_QUIT, false };
     const char *s;
@@ -61,9 +61,20 @@ static keypress_t scripted(void) {
         return press;    /* script's done, quit */
 
     s = script[script_pos++];
-    if(strncmp(s, "on+", 3) == 0) {
-        press.on = true;
-        s += 3;
+    /* held ones, any order. alpha+ is how the web demo holds alpha over a whole word */
+    for(;;) {
+        if(strncmp(s, "on+", 3) == 0) {
+            press.on = true;
+            s += 3;
+        } else if(strncmp(s, "2nd+", 4) == 0) {
+            press.second = true;
+            s += 4;
+        } else if(strncmp(s, "alpha+", 6) == 0) {
+            press.alpha = true;
+            s += 6;
+        } else {
+            break;
+        }
     }
     for(i = 0; i < sizeof names / sizeof names[0]; i++) {
         if(strcmp(s, names[i].name) == 0) {

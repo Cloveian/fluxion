@@ -160,14 +160,14 @@ ITEM(it_evaluate, "evaluate", "eval", ITEM_COMMAND, NULL, "eval($)", HAVE_PARTLY
      "exact only (big powers, factorials); no decimal approximation yet",
      "works out the exact value. eval(2^10) -> 1024. no decimal answers yet")
 ITEM(it_factor,   "factor", "factor", ITEM_COMMAND, NULL, "factor($)", HAVE_PARTLY,
-     "one variable over the rationals; not x^2-y^2, not irrational roots (factor(x^2-2,x))",
-     "writes it as a product. factor(x^2-1) -> (x-1)(x+1). one variable only")
+     "over the rationals, more than one letter ok (x^2-y^2); not irrational roots (factor(x^2-2,x))",
+     "writes it as a product. factor(x^2-1) -> (x-1)(x+1). x^2-y^2 works too")
 ITEM(it_solve,    "solve",  "solve", ITEM_COMMAND, NULL, "solve($)", HAVE_PARTLY,
      "solve(eq,x): linear (any coefficients), polynomials via factor + the quadratic formula + cubics (cos form or cardano), trig families, one letter at a time. < > <= >= go through a sign chart (not trig yet). systems have their own command",
      "solves equations and inequalities. solve(x^2-4=0,x) -> x = -2, 2. solve(x^2-4<0,x) -> -2 < x < 2")
 ITEM(it_asym,     "asymptotes", "asym", ITEM_COMMAND, NULL, "asym($)", HAVE_PARTLY,
-     "asym(f,x): holes, vertical and horizontal asymptotes of a rational function. no slant ones yet",
-     "holes and asymptotes of a fraction. asym((x^2-1)/(x-1),x) -> hole at x = 1. no slant ones yet")
+     "asym(f,x): holes, vertical, horizontal and slant asymptotes of a rational function",
+     "holes and asymptotes of a fraction. asym((x^2-1)/(x-1),x) -> hole at x = 1. slant ones too")
 ITEM(it_domain,   "domain", "domain", ITEM_COMMAND, NULL, "domain($)", HAVE_PARTLY,
      "domain(f,x): zeros of bottoms, even roots and logs of ax+b, tan at pi/2+pi n. worse inside a root or log just says (and maybe more)",
      "where it's defined. domain(sqrt(x-2),x) -> x >= 2. a root or log of more than ax+b is only partly done")
@@ -175,8 +175,8 @@ ITEM(it_range,    "range",  "range", ITEM_COMMAND, NULL, "range($)", HAVE_PARTLY
      "range(f,x): domain and asym cut it into pieces, each one spans its turning points (f' = 0) and ends. no trig yet",
      "the y values it takes. range(x^2+1,x) -> y >= 1, range(1/x,x) -> y < 0 or y > 0")
 ITEM(it_system,   "system", "system", ITEM_COMMAND, NULL, "system($)", HAVE_PARTLY,
-     "system(eq, eq, ..., x, y): linear systems by elimination, letters in the coefficients ok. nothing nonlinear yet",
-     "solves equations together. system(2x-y=7,x+y=2,x,y) -> x = 3, y = -1. linear only, for now")
+     "system(eq, eq, ..., x, y): linear systems by elimination, letters in the coefficients ok. two nonlinear ones by substitution",
+     "solves equations together. system(2x-y=7,x+y=2,x,y) -> x = 3, y = -1. two curvy ones work too, x^2+y^2=25 and y=x+1")
 ITEM(it_slope,    "slope",  "slope", ITEM_COMMAND, NULL, "slope($)", HAVE_YES,
      "slope(x1,y1,x2,y2): (y2-y1)/(x2-x1), done in the app, a message when it's vertical",
      "slope between two points. slope(1,2,3,4) -> 1")
@@ -203,7 +203,7 @@ ITEM(it_inverse,  "inverse", "inverse", ITEM_COMMAND, NULL, "inverse($)", HAVE_P
      "the inverse function. inverse(2x+3) -> (x-3)/2, inverse(x^2) -> -sqrt(x), sqrt(x)")
 ITEM(it_triangle, "triangle", "triangle", ITEM_COMMAND, NULL, "triangle($)", HAVE_YES,
      "triangle(a,b,c,ab,bc,ca): sss, sas, asa, aas and ssa (both when there are two), floats in the app, angle mode for the angles",
-     "solves a triangle from 3 of its sides and angles, empty or 0 for the rest. ab is the angle between a and b. triangle(3,4,5,,,) -> ab = 90")
+     "solves a triangle from 3 of its sides and angles, empty or 0 for the rest. ab is the angle between a and b. triangle(3,4,5,,,) -> ab = 90 (in degrees)")
 ITEM(it_circle,   "circle", "circle", ITEM_COMMAND, NULL, "circle($)", HAVE_YES,
      "circle(r): area, circumference, diameter",
      "area and the rest from the radius. circle(3) -> area = 9pi")
@@ -251,7 +251,7 @@ ITEM(it_hyperbola, "hyperbola", "hyperbola", ITEM_COMMAND, NULL, "hyperbola($)",
 ITEM(it_deriv,    "d/dx",   "deriv", ITEM_TEMPLATE, NULL, "deriv($,X,X)", HAVE_YES, "derivative with respect to x",
      "derivative with respect to x. d/dx(x^3) -> 3x^2")
 ITEM(it_deriv_at, "d/dx at", NULL, ITEM_TEMPLATE, NULL, "deriv($,X,$)", HAVE_YES, "derivative evaluated at a value",
-     "derivative at one value of x. d/dx(x^2) at x=3 -> 6")
+     "derivative at one value of x, typed out for now: function, x, value. deriv(x^2,x,3) -> 6")
 ITEM(it_integral, "integral", NULL, ITEM_TEMPLATE, NULL, NULL, HAVE_NO, "table + linearity + u-substitution",
      "integral, the area under a curve. not in Fluxion yet")
 ITEM(it_limit,    "limit",  NULL, ITEM_TEMPLATE, NULL, NULL, HAVE_NO, NULL,

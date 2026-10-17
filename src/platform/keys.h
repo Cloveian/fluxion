@@ -73,7 +73,7 @@ void keys_sleep(void);
 #ifndef __TICE__
 /* PC only, for tests. presses come from this list instead of the keyboard, then
    quit. each is a key name (enter, clear, y=, x^2, 2nd, ...) or one character to
-   type, with "on+" in front for [on] held. */
+   type, with "on+", "2nd+" or "alpha+" in front for held ones. */
 void keys_script(char *const *presses, int count);
 #endif
 
