@@ -38,18 +38,24 @@
 - [x] Parallel and perpendicular lines
 - [ ] Transformations
 - [ ] Geometry formulas (area, perimeter, volume, angles)
-- [x] Probability (nCr, nPr)
+- [x] Probability (nCr, nPr, and pand / por for independent events)
 - [x] GCD, LCM and prime factorisation
 - [ ] Percent
 - [ ] Defining and calling functions like f(x)
 - [x] Domain and range. domain(f,x) is in, range is not (todo)
 - [x] Factoring with more than one variable (x²−y²)
-- [ ] Nonlinear systems
+- [x] Nonlinear systems. two equations, two letters, by substitution
 - [x] Cubics with no rational root
 - [x] Complex roots in solve
 - [x] Slant asymptotes
 - [ ] Unit circle display
-- [ ] Triangle solver
+- [x] Triangle solver
+- [x] Amplitude
+- [x] Roots to a polynomial and back (roots, fromroots)
+- [x] Inverse functions
+- [x] Ellipses and hyperbolas, equation to points and back. lined up with the axes only
+- [x] Piecewise functions. a command for now, no brace template
+- [x] Ghost parens, the fraction grabbing the last term, ans when a line starts with an operator
 - [ ] Show-the-work steps
 
 ## more-later
