@@ -1,5 +1,18 @@
 # Log
 
+## 2026-10-16 (evening) - the big list
+
+got a list of 16 things with a deadline, so five workers on their own branches, one thing each, and me on the engine bugs and merging. all in by 19:10, 407 tests
+
+- editor: `(` doesn't force a `)` anymore, a grey one sits where it would close and export closes it there. the fraction key pulls the term before the cursor up top (5+9 then n/d is 5+9/▯). a line that starts with + - * / ^ gets ans in front. and the · next to a fraction has room now
+- `[alpha][enter]` is a decimal for that one answer, the next one is back to normal
+- by hand comes out as one fraction, bottom factored, top multiplied out: 6x/(x+1)-5/(x+1) is (6x-5)/(x+1). roots stay a sum for now, comdenom rationalizes them into a mess
+- new commands, roots / fromroots, inverse, triangle(a,b,c,ab,bc,ca) (empty for unknowns, both triangles in the ssa case, decimals), amplitude, pand / por, ellipse and hyperbola both ways, piecewise(f1,c1,f2,c2,...,x=v). the editor's name buffer went 8 -> 12 so triangle, amplitude, hyperbola and fromroots fit. system() does two nonlinear equations by substitution, every pair checked back in both
+- engine bugs. (7+4i)^2 went polar, 65cos(2atan(4/7))+... and the app ran out of memory drawing it, whole powers of a complex sum multiply out first now. (-8)^(1/3) was 1+isqrt(3), odd roots of a negative stay real like the nspire's real mode (that's what made inverse(x^3+1) complex). and (1+4/9)/2+1/9 was 119/18!! upstream bug from day one, eval read only the tops of a fraction of fractions. a worker bisected it to the import
+- the sort's divides got the same direct path as the gcd, (x+y+z+1)^4 is 11 ms now, was 98 this afternoon
+- solve(3e^x=12,x) running out of memory i cant reproduce, ln(4) on the PC and 24 KB of heap. probably an old build on the calc, waiting to hear
+- the app grew a lot, the program's second appvar went 44 -> 63 KB and the installer is 6 appvars now (345 KB, most of the difference to the program is the relocation table flash apps carry)
+
 ## 2026-10-16 - it remembers, cot sec csc, mode menu, solve grew up
 
 - it remembers now. the history and the stored names go into RAM appvars on the way out (FLXHIST, FLXNAMES, files under build-pc/store on the PC) and come back at start. rows go to bytes with a tiny format in editor.c, a format byte up front so an old one gets ignored instead of read wrong. history capped at 12 KB, oldest dropped, names 4 KB. a RAM reset loses them and thats the deal
