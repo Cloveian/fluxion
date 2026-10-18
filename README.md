@@ -1,4 +1,9 @@
-# Fluxion
+<h1>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="media/logo-dark.svg">
+    <img src="media/logo-light.svg" alt="Fluxion" height="56">
+  </picture>
+</h1>
 
 **A CAS for the TI-84 Plus CE** that i'm trying to make simplify better than the TI-Nspire CAS does. You type math the way it looks (stacked fractions, roots, exponents), press enter, and get an exact answer.
 
@@ -7,9 +12,10 @@
   <img src="media/solve.png" width="49%" alt="Solving a quadratic and a derivative">
 </p>
 
-<sub>screenshots are from the PC build, it draws the same pixels as the calculator</sub>
+**[Try it in your browser](https://cloveian.github.io/fluxion/)**, (compiled to WebAssembly)
 
 ## What it does
+(sorry for massive block of text im to lazy to make it look nice rn ( • ᴗ - ) ✧)
 
 - enter simplifies, cancels stuff in fractions, pulls square factors out of roots ($\sqrt{35\cdot108} \to 6\sqrt{105}$), keeps everything as exact fractions. by hand it comes out as one fraction, $\frac{6x}{x+1}-\frac{5}{x+1} \to \frac{6x-5}{x+1}$
 - other answer forms one key away: expanded, factored, decimal (`[2nd][enter]` cycles them, `[alpha][enter]` is a decimal just once)
@@ -24,7 +30,7 @@
 - nspire style layout, history on top (arrow up into it to reuse an answer), input on the bottom, the five keys under the screen open folders of commands
 - variables you can store and look through, degrees / radians, a light theme, and the screen goes off by itself when you leave it
 
-Its still a work in progress, no integrals, limits or graphs yet ┐(￣ヘ￣)┌ Everything it does right now is in [docs/features.md](docs/features.md), and the [docs](https://cloveian.github.io/fluxion/) have how i designed it and what's planned.
+Its still a work in progress, no integrals, limits or graphs yet ┐(￣ヘ￣)┌ Everything it does right now is in [docs/features.md](docs/features.md), and the [docs](https://cloveian.github.io/fluxion/docs/) have how i designed it and what's planned.
 
 ## Install
 
@@ -43,7 +49,7 @@ You need a TI-84 Plus CE.
 | `[enter]` | simplify |
 | `[2nd][enter]` | next answer form, `[alpha][enter]` a decimal just once |
 | `[y=]` ... `[graph]` | the folders: Algebra, Calculus, Functions, Templates, Tools |
-| `[alpha][y=]` | fraction |
+| `[alpha][x,t,θ,n]` | fraction (`[alpha][y=]` works too, like the TI) |
 | `[2nd][math]` | `=` (for `solve(`), `[math]` is `<` `>` `≤` `≥` |
 | `[2nd]`, `[alpha]`, `[on]` | work on the next key, or hold them down. tap twice to lock, once more to unlock. `[2nd][alpha]` + a letter is a capital |
 | `↑` | into the history, `[enter]` pastes that answer where the cursor is |
@@ -62,9 +68,19 @@ make                          # bin/FLUXION.8xp
 make installer                # bin-installer/, the app + its installer (see installer/README.md)
 make -f pc.makefile test      # PC build + engine tests
 ./build-pc/fluxion-app        # run it in a window on the PC
+make -f pc.makefile web       # web/build/, the same thing for a browser (needs emscripten)
 ```
 
 The PC build needs SDL3. On PC, Shift is `[alpha]`, Alt is `[2nd]`, and Ctrl is `[on]` (when you tap them by themselves).
+
+## LLM use
+
+I did(do) the design and the hard parts myself (engine stuff, editor, layout, platform code, etc.). I had agents do the 'busywork'
+
+- **Simple(for calculator) features**: the triangle solver, amplitude, probability of independent events, ellipses and hyperbolas, piecewise, roots / fromroots and inverse, the shape formulas, 2x2 nonlinear systems, and the editor's ghost brackets, fraction grabbing the last term and `ans` autofill
+- **Bug hunting**: a suprising amount of bug in upstream PineappleCAS (no hate)
+- Small refactors
+- (Some of) The website: Mostly CSS/layout and the demo problems (no 'content' except demo problems)
 
 ## Credits
 
@@ -73,6 +89,7 @@ The PC build needs SDL3. On PC, Shift is `[alpha]`, Alt is `[2nd]`, and Ctrl is 
 - Fonts from the X11 misc-fixed set (public domain)
 - Built with the [CE C toolchain](https://github.com/CE-Programming/toolchain)
 - The app installer is [CEaShell-Installer](https://github.com/RoccoLoxPrograms/CEaShell-Installer) by RoccoLox Programs, unmodified
+- The keypad on the web page was measured off [CEmu](https://github.com/CE-Programming/CEmu)'s (no code from it)
 
 ## License
 
