@@ -4,13 +4,13 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Fluxion</title>
-    <meta name="description" content="A CAS for the TI-84 Plus CE. Exact answers, stacked fractions, solve with letters, right on the calculator you already have.">
+    <meta name="description" content="A CAS for the TI-84 Plus CE. Why shouldn't I teach a TI-84 calculus? Can't be that hard.">
     <link rel="icon" type="image/svg+xml" href="icon.svg">
     <!-- what a shared link shows. preview.png is this page at 1200x630, ~14 s in so the demo's
          answered a few, with #keys and the "not an emulator" note hidden -->
     <meta property="og:type" content="website">
     <meta property="og:title" content="Fluxion">
-    <meta property="og:description" content="A CAS for the TI-84 Plus CE. Exact answers, stacked fractions, solve with letters, right on the calculator you already have. Try it in your browser.">
+    <meta property="og:description" content="A CAS for the TI-84 Plus CE. Why shouldn't I teach a TI-84 calculus? Can't be that hard. Try it in your browser.">
     <meta property="og:url" content="https://cloveian.github.io/fluxion/">
     <meta property="og:image" content="https://cloveian.github.io/fluxion/preview.png">
     <meta property="og:image:width" content="1200">
@@ -18,8 +18,11 @@
     <meta name="twitter:card" content="summary_large_image">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;800&family=Archivo+Narrow:wght@700&display=swap">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;800&family=Archivo+Narrow:wght@700&family=IBM+Plex+Mono:wght@500&display=swap">
+    <!-- just the characters in the sulky face after quitting, so it looks the same everywhere -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans&family=Noto+Sans+Mandaic&text=(%20%E2%80%A2%E1%B7%84%E0%A1%87%E1%B7%85)&display=swap">
     <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="frames.css">
     <script type="module" src="page.js"></script>
 </head>
 <body>
@@ -33,7 +36,15 @@
             <div class="panel intro">
                 <h1 aria-label="Fluxion"><span aria-hidden="true"><span class="f">ƒ</span>l<span class="mu">µ</span>xion</span></h1>
                 <p class="tagline">A CAS for the TI-84 Plus CE</p>
-                <p>Algebra on the calculator you already have. Exact answers, stacked fractions, roots, solving with letters in it, factoring, systems, all typed the way it looks on paper. I'm trying to make it simplify better than the Nspire does.</p>
+                <p>Why? Why shouldn't I teach a TI-84 calculus<span class="tip star" tabindex="0" data-tip="Mostly algebra so far. Derivatives work, integrals and limits aren't done yet.">*</span>? Can't be that hard.</p>
+                <p class="aside">Don't listen to the (other) voices, it's gonna be really <em>dih</em>ficult!<br>Too late, aren't&nbsp;I<span class="tip star" tabindex="0" data-tip="(Other voices): bwahahaha, we have won >:3">...</span></p>
+                <!-- a line each, : in front like a TI-BASIC program -->
+                <p class="lines">
+                    <span>It does exact answers now,</span>
+                    <span>with stacked fractions, roots, factoring,</span>
+                    <span>and solving with letters, and good MathPrint.</span>
+                    <span>Better<span class="tip star" tabindex="0" data-tip="Working on it. There's a scoreboard against the Nspire in the docs.">*</span> simplify than Nspire's.</span>
+                </p>
                 <div class="buttons">
                     <a class="button quiet" href="#features">Features</a>
                     <a class="button quiet" href="#install">Install</a>
@@ -91,8 +102,9 @@
                 <h2>Features</h2>
                 <p class="hint">Click for example</p>
                 <!-- filled from docs/features.md and feature-demos.txt by page.js -->
+                <div id="folders" class="folders"></div>
                 <div id="cards" class="cards"></div>
-                <p id="not-yet" class="not-yet"></p>
+                <div id="not-yet" class="err" hidden></div>
             </section>
 
             <section id="install" class="install">
@@ -100,8 +112,8 @@
                 <dl id="facts" class="facts"></dl>
                 <ol>
                     <li>If you're on OS 5.5 or newer, jailbreak it with <a href="https://yvantt.github.io/arTIfiCE/">arTIfiCE</a>, and get a shell like <a href="https://github.com/mateoconlechuga/cesium">Cesium</a>.</li>
-                    <li>Send the <a href="https://github.com/CE-Programming/libraries/releases">CE C libraries</a> (<code>clibs.8xg</code>).</li>
-                    <li>From <a href="https://github.com/Cloveian/fluxion/releases">releases</a>, send <code>FLUXINST.8xp</code> and all the <code>FLUXAPP</code> files, then run <code>FLUXINST</code> once. Fluxion shows up under apps.</li>
+                    <li>Send the <a href="https://github.com/CE-Programming/libraries/releases">CE C libraries</a> <span class="nowrap">(<code>clibs.8xg</code>).</span></li>
+                    <li>From <a href="https://github.com/Cloveian/fluxion/releases">releases</a>, send <code>Fluxion-app.b84</code> with TI Connect CE, then run <code>FLUXINST</code> once. Fluxion shows up under apps.</li>
                 </ol>
             </section>
 

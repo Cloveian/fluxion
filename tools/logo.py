@@ -14,8 +14,8 @@ from fontTools.pens.boundsPen import BoundsPen
 
 TEXT = "ƒlµxion"
 MU_AT = TEXT.index("µ")
-# text colour and the µ's blue, the light one's darker so it holds up on white
-THEMES = {"dark": ("#e9e9ef", "#6eaaff"), "light": ("#1f2328", "#2f6fd8")}
+# text colour and the µ's pink (the page's palette), the light one's deeper so it holds up on white
+THEMES = {"dark": ("#e6e2ee", "#f5a9c9"), "light": ("#1f2328", "#c94f86")}
 
 font = instantiateVariableFont(TTFont(sys.argv[1]), {"wght": 800, "wdth": 100})
 glyphs, cmap, hmtx = font.getGlyphSet(), font.getBestCmap(), font["hmtx"]

@@ -39,8 +39,8 @@ You need a TI-84 Plus CE.
 1. If you're on OS 5.5 or newer, jailbreak with [arTIfiCE](https://yvantt.github.io/arTIfiCE/) and get a shell like [Cesium](https://github.com/mateoconlechuga/cesium)
 2. Send the [CE C libraries](https://github.com/CE-Programming/libraries/releases) (`clibs.8xg`) to the calculator
 3. From [releases](https://github.com/Cloveian/fluxion/releases), either
-   - **the app** (what i use): send `FLUXINST.8xp` and `FLUXAPP.0.8xv` ... `FLUXAPP.5.8xv`, run `FLUXINST` once, and Fluxion shows up under apps
-   - **the program**: send `FLUXION.8xp` and its three appvars (`FLUXION.8xp.0.8xv` ... `.2.8xv`) and run it from Cesium
+   - **the app** (what I use): send `Fluxion-app.b84` (or `FLUXINST.8xp` and the six `FLUXAPP` files), run `FLUXINST` once, and Fluxion shows up under apps
+   - **the program**: send `Fluxion-program.b84` (or `FLUXION.8xp` and its three appvars) and run it from Cesium
 
 ## Keys
 

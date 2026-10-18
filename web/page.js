@@ -21,7 +21,7 @@ hint.addEventListener("click", () => {
     if (!tip) {
         tip = hint.appendChild(document.createElement("span"));
         tip.className = "gotcha";
-        tip.innerHTML = "Not <em><strong>this</strong></em> dummy („&gt;‿&lt;„) the <em>feature list</em>";
+        tip.innerHTML = 'Not <em><strong>this</strong></em> dummy <span class="kao">(„&gt;‿&lt;„)</span> the <em>feature list</em>';
     }
     tip.classList.add("shown");
     clearTimeout(tip.hide);

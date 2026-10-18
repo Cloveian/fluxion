@@ -34,15 +34,21 @@ const ROWS = [
      ["neg", "(−)", "ans", "?", "num"], ["enter", "enter", "entry", "solve", "light"]],
 ];
 
-// the black one
+// the page inverted, a pastel one with black on it (they do sell CEs in colours). the key
+// half is the page's pink, flat like everything else on the page. shading it like the
+// plastic curving away just made it look grubby next to all the flat stuff
 const COLOURS = {
-    sides: "#3b3b3b", centre: "#191919",
-    dark: "#1d1d1d", light: "#eeeeee",
-    second: "#93c3f3", alpha: "#a0ca1e",
-    // the 2nd and alpha keys themselves, a bit darker than CEmu's so their white text reads.
-    // the little labels above the keys keep the bright ones, they're on black
-    secondKey: "#6fa3d8", alphaKey: "#84a816",
-    text: "#eeeeee", ink: "#191919",
+    body: "#f5a9c9", bodyEdge: "#a05577", // the pink darker in oklch, mixing in black went grey
+    head: "#141319", bezel: "#000000", // not quite black or the top vanishes into the page
+    dark: "#141319", light: "#faf8ff", edge: "#141319",
+    // the page's softened 2nd and alpha (style.css), not CEmu's. dark text on the keys,
+    // white didn't read on pastels
+    second: "#9cc7f2", alpha: "#c6e38f",
+    secondInk: "#10141a", alphaInk: "#12160a",
+    // the little 2nd / alpha labels above the keys, the pastels vanish on a pastel body
+    // so they're printed deeper like on the light coloured real ones
+    secondLabel: "#073a7d", alphaLabel: "#1e6626",
+    text: "#f4f2fa", ink: "#141319", title: "#ffffff",
 };
 
 // number block is taller and sits a bit lower, like the real one
@@ -53,7 +59,7 @@ function layout() {
 
     // CEmu's corner numbers are diameters, these are half of them
     GRAPH.forEach((k, c) => add([...k, "graph"], 18 + 27 * c, 14, 18, 9,
-        [c === 0 ? 4 : 2, c === 4 ? 4 : 2, c === 4 ? 4 : 2, c === 0 ? 4 : 2]));
+        [c === 0 ? 3 : 2, c === 4 ? 3 : 2, c === 4 ? 3 : 2, c === 0 ? 3 : 2])); // 4 cut them to a point
     TOP.forEach((row, r) => row.forEach((k, c) => add(k, 18 + 27 * c, 37 + 21 * r, 18, 12, [2, 2, 2, 2])));
     ROWS.forEach((row, r) => row.forEach((k, c) => {
         if (k[4] !== "num")
@@ -66,8 +72,8 @@ function layout() {
     return keys;
 }
 
-// radii go tl tr br bl
-function capPath({ x, y, w, h, radii }) {
+// radii go tl tr br bl. the body and the screen keep the real thing's round corners
+function roundPath({ x, y, w, h, radii }) {
     const [tl, tr, br, bl] = radii.map(r => Math.min(r, w / 2, h / 2));
     return `M${x + tl},${y} H${x + w - tr} A${tr},${tr} 0 0 1 ${x + w},${y + tr}`
         + ` V${y + h - br} A${br},${br} 0 0 1 ${x + w - br},${y + h}`
@@ -75,21 +81,54 @@ function capPath({ x, y, w, h, radii }) {
         + ` V${y + tl} A${tl},${tl} 0 0 1 ${x + tl},${y} Z`;
 }
 
-// a ring cut in four
-const PAD = { cx: 121, cy: 53, outer: 17.5, inner: 8, gap: 2 };
+// the keys get cut corners like the rest of the page (frames.py)
+// instead of CEmu's round ones, each radius is how big that cut is, same little bevel
+function capPath({ x, y, w, h, radii }) {
+    const pts = [];
+    [[x, y, 1, 1], [x + w, y, -1, 1], [x + w, y + h, -1, -1], [x, y + h, 1, -1]].forEach(([ox, oy, sx, sy], i) => {
+        const c = Math.min(radii[i], w / 2, h / 2), d = c * .1, e = d * .7071;
+        const corner = [[0, c + d], [e, c - e], [c - e, e], [c + d, 0]].map(([a, b]) => [ox + sx * a, oy + sy * b]);
+        pts.push(...(sx * sy > 0 ? corner : corner.reverse()));
+    });
+    return "M" + pts.map(([a, b]) => `${+a.toFixed(3)},${+b.toFixed(3)}`).join(" L") + " Z";
+}
+
+// an octagon cut in four round a square hole, flat sides facing the arrows. was round,
+// but it was the one round thing left on a pad of cut corner keys
+const PAD = { cx: 121, cy: 53, outer: 17.5, inner: 6.5, gap: 2, round: .6 };
 const ARROWS = [["right", 0], ["down", 90], ["left", 180], ["up", 270]];
 
 function arrowPath(angle) {
     const { cx, cy, outer, inner, gap } = PAD;
-    const at = (r, deg) => {
-        const a = deg * Math.PI / 180;
-        return `${(cx + r * Math.cos(a)).toFixed(2)},${(cy + r * Math.sin(a)).toFixed(2)}`;
+    const dir = deg => [Math.cos(deg * Math.PI / 180), Math.sin(deg * Math.PI / 180)];
+    const vert = (r, deg) => dir(deg).map(v => v * r); // octagon corners are at 22.5 + 45k
+    const cross = (u, p) => u[0] * p[1] - u[1] * p[0];
+    // where the octagon side p -> q crosses the line `gap` off the divider at `deg`, so the
+    // gap's the same width inside and out
+    const cut = (p, q, deg, off) => {
+        const u = dir(deg), t = (off - cross(u, p)) / cross(u, [q[0] - p[0], q[1] - p[1]]);
+        return [p[0] + t * (q[0] - p[0]), p[1] + t * (q[1] - p[1])];
     };
-    // so the gap is the same width inside and out
-    const half = r => 45 - Math.asin(gap / r) * 180 / Math.PI;
-    const ho = half(outer), hi = half(inner);
-    return `M${at(outer, angle - ho)} A${outer},${outer} 0 0 1 ${at(outer, angle + ho)}`
-        + ` L${at(inner, angle + hi)} A${inner},${inner} 0 0 0 ${at(inner, angle - hi)} Z`;
+    const out = [
+        cut(vert(outer, angle - 67.5), vert(outer, angle - 22.5), angle - 45, gap),
+        vert(outer, angle - 22.5), vert(outer, angle + 22.5),
+        cut(vert(outer, angle + 22.5), vert(outer, angle + 67.5), angle + 45, -gap),
+    ];
+    // the hole's a square, its corners sit on the dividers so each bit gets one side of it
+    const a = vert(inner * Math.SQRT2, angle - 45), b = vert(inner * Math.SQRT2, angle + 45);
+    const pts = [...out, cut(a, b, angle + 45, -gap), cut(a, b, angle - 45, gap)]
+        .map(([x, y]) => [cx + x, cy + y]);
+    // every corner eased off a touch, start a bit back along one side and curve round
+    // through the corner to a bit along the next
+    const f = ([x, y]) => `${x.toFixed(2)},${y.toFixed(2)}`;
+    const toward = (p, q) => {
+        const d = Math.hypot(q[0] - p[0], q[1] - p[1]), r = Math.min(PAD.round, d / 2);
+        return [p[0] + (q[0] - p[0]) * r / d, p[1] + (q[1] - p[1]) * r / d];
+    };
+    return pts.map((p, i) => {
+        const prev = pts[(i + pts.length - 1) % pts.length], next = pts[(i + 1) % pts.length];
+        return `${i ? "L" : "M"}${f(toward(p, prev))} Q${f(p)} ${f(toward(p, next))}`;
+    }).join(" ") + " Z";
 }
 
 function arrowHead(angle) {
@@ -109,12 +148,13 @@ function el(tag, attrs, parent) {
     return e;
 }
 
-const CAP = { graph: "light", dark: "dark", light: "light", num: "light", second: "secondKey", alpha: "alphaKey" };
-const INK = { graph: "ink", light: "ink", num: "ink" };
+const CAP = { graph: "light", dark: "dark", light: "light", num: "light", second: "second", alpha: "alpha" };
+const INK = { graph: "ink", light: "ink", num: "ink", second: "secondInk", alpha: "alphaInk" };
 
 const STYLE = `
 .key { cursor: pointer; }
-.cap { stroke: #808080; stroke-width: .375; }
+/* the page backwards, black outlines on pastel. the white and 2nd keys got lost on the lilac */
+.cap { stroke: ${COLOURS.edge}; stroke-width: .5; }
 .key .shine { fill: var(--keypad-lit, #8ab4ff); opacity: 0; transition: opacity .3s; }
 .key.lit .shine { opacity: .5; transition: none; }
 .key.lit { transform: translateY(.6px); }
@@ -138,35 +178,21 @@ export function calculator(parent, onpress) {
     const height = HEAD + 238;
     const svg = el("svg", { viewBox: `0 0 162 ${height}`, class: "calc", style: "touch-action: none" }, parent);
     el("style", {}, svg).textContent = STYLE;
-    const defs = el("defs", {}, svg);
-    // stops are [offset, colour, opacity]. across by default, [0, 0, 0, 1] is top to bottom
-    const gradient = (id, stops, [x1, y1, x2, y2] = [0, 0, 1, 0]) => {
-        const g = el("linearGradient", { id, x1, y1, x2, y2 }, defs);
-        for (const [offset, colour, opacity = 1] of stops)
-            el("stop", { offset, "stop-color": colour, "stop-opacity": opacity }, g);
-    };
-    gradient("calc-face", [[0, COLOURS.sides], [.18, COLOURS.centre], [.82, COLOURS.centre], [1, COLOURS.sides]]);
-    // the screen half is shinier black plastic than the keys, and the bezel's shinier again
-    gradient("calc-head", [[0, "#242424"], [.18, "#0e0e0e"], [.82, "#0e0e0e"], [1, "#242424"]]);
-    gradient("calc-gloss", [[0, "#fff", .13], [.3, "#fff", .03], [1, "#fff", 0]], [0, 0, 0, 1]);
-    gradient("calc-bezel", [[0, "#232323"], [1, "#0a0a0a"]], [0, 0, 0, 1]);
-    gradient("calc-shine", [[0, "#fff", .2], [.42, "#fff", .05], [.43, "#fff", 0]], [0, 0, 1, 1]);
-    // svg text doesn't take css text-shadow everywhere, so the 2nd / alpha labels get this
-    el("feDropShadow", { dx: 0, dy: .3, stdDeviation: .25, "flood-color": "#000", "flood-opacity": .45 },
-        el("filter", { id: "calc-text-shadow" }, defs));
 
-    el("path", { d: capPath({ x: 0, y: 0, w: 162, h: height, radii: [21, 21, 20, 20] }), fill: "url(#calc-face)" }, svg);
-    const head = capPath({ x: 0, y: 0, w: 162, h: HEAD, radii: [21, 21, 0, 0] });
-    el("path", { d: head, fill: "url(#calc-head)" }, svg);
-    el("path", { d: head, fill: "url(#calc-gloss)" }, svg);
+    // all flat, no plastic shading, like the page. used to be gradients and gloss here
+    el("path", { d: roundPath({ x: 0, y: 0, w: 162, h: height, radii: [21, 21, 20, 20] }), fill: COLOURS.body }, svg);
+    el("path", { d: roundPath({ x: 0, y: 0, w: 162, h: HEAD, radii: [21, 21, 0, 0] }), fill: COLOURS.head }, svg);
+    // a darker pink edge all the way round like the boxes on the page. .7 is about 2px at
+    // the size it shows, pulled in half of that so it doesnt get clipped
+    el("path", { d: roundPath({ x: .35, y: .35, w: 161.3, h: height - .7, radii: [20.65, 20.65, 19.65, 19.65] }),
+                 fill: "none", stroke: COLOURS.bodyEdge, "stroke-width": .7 }, svg);
 
-    const title = el("text", { x: 81, y: 10.5, "font-size": 7.2, "text-anchor": "middle", fill: "#fff", class: "title" }, svg);
+    const title = el("text", { x: 81, y: 10.5, "font-size": 7.2, "text-anchor": "middle", fill: COLOURS.title, class: "title" }, svg);
     el("tspan", {}, title).textContent = "TI-84 ";
     el("tspan", { "font-weight": 400 }, title).textContent = "Plus CE";
-    const bezel = { x: 10, y: 21, width: 142, height: 103.4, rx: 10.3 };
-    el("rect", { ...bezel, fill: "url(#calc-bezel)", stroke: "#050505", "stroke-width": .6 }, svg);
-    el("rect", { ...bezel, fill: "url(#calc-shine)" }, svg);
-    el("rect", { ...SCREEN, fill: "#000", stroke: "#08080b", "stroke-width": .7 }, svg);
+    const bezel = roundPath({ x: 10, y: 21, w: 142, h: 103.4, radii: [10.3, 10.3, 10.3, 10.3] });
+    el("path", { d: bezel, fill: COLOURS.bezel }, svg);
+    el("rect", { ...SCREEN, fill: "#000" }, svg);
     const pad = el("g", { transform: `translate(0 ${HEAD})` }, svg);
 
     const keys = {};
@@ -255,18 +281,16 @@ export function calculator(parent, onpress) {
         const label = el("text", { x: k.x + k.w / 2, y: k.y + k.h / 2, "font-size": labelSize(k), "text-anchor": "middle",
                                    fill: COLOURS[INK[k.kind] ?? "text"] }, g);
         label.textContent = k.label;
-        if (k.kind === "second" || k.kind === "alpha")
-            label.setAttribute("filter", "url(#calc-text-shadow)");
 
         // 2nd on the left, alpha on the right, or 2nd in the middle if it's alone
         const above = (str, x, anchor, colour) => {
-            if (str) el("text", { x, y: k.y - 3, "font-size": 3.8, "text-anchor": anchor, fill: colour }, pad).textContent = str;
+            if (str) el("text", { x, y: k.y - 3, "font-size": 4.3, "text-anchor": anchor, fill: colour }, pad).textContent = str;
         };
         if (k.alpha) {
-            above(k.second, k.x - 1, "start", COLOURS.second);
-            above(k.alpha, k.x + k.w + 1, "end", COLOURS.alpha);
+            above(k.second, k.x - 1, "start", COLOURS.secondLabel);
+            above(k.alpha, k.x + k.w + 1, "end", COLOURS.alphaLabel);
         } else {
-            above(k.second, k.x + k.w / 2, "middle", COLOURS.second);
+            above(k.second, k.x + k.w / 2, "middle", COLOURS.secondLabel);
         }
         hook(g, k.name);
     }

@@ -25,7 +25,7 @@ def tiles():
 
 
 COLS, ROWS = 8, 8
-BEZEL, GAP, ROUND = 5, 14, 7  # at 1x, the 2x one doubles them
+BEZEL, GAP, CUT = 5, 14, 6  # at 1x, the 2x one doubles them. cut corners like the page
 
 
 def render(keys, scale):
@@ -48,7 +48,9 @@ def compose(scale):
     draw = ImageDraw.Draw(wall)
     for i in range(COLS * ROWS):
         x, y = i % COLS * slot_w + gap // 2, i // COLS * slot_h + gap // 2
-        draw.rounded_rectangle([x, y, x + slot_w - gap - 1, y + slot_h - gap - 1], ROUND * scale, fill="#1c1c1f")
+        w, h, k = slot_w - gap - 1, slot_h - gap - 1, CUT * scale
+        draw.polygon([(x + k, y), (x + w - k, y), (x + w, y + k), (x + w, y + h - k),
+                      (x + w - k, y + h), (x + k, y + h), (x, y + h - k), (x, y + k)], fill="#16151c")
         wall.paste(screens[i % len(screens)], (x + bezel, y + bezel))
     out = os.path.join(WALL, f"wall-{scale}x.png")
     wall.save(out)
