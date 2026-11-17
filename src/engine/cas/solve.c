@@ -988,29 +988,19 @@ static pcas_ast_t *turns(int k) {
     return t;
 }
 
-/*e as a decimal, a NUMBER node. approx() gives rationals but eval keeps
-  fractions as a/b trees, so this puts the fraction back together.
-  NULL if there's still a letter in it*/
+/*e as a decimal, a NUMBER node. NULL if there's still a letter in it*/
 pcas_ast_t *approx_number(pcas_ast_t *e) {
-    pcas_ast_t *a = ast_Copy(e), *r = NULL;
+    pcas_ast_t *a = ast_Copy(e);
 
     if(a == NULL)
         return NULL;
     approx(a);
     simplify(a, SIMP_EVAL); /*only numbers left to fold, SIMP_SOLVE would run them through expand for nothing*/
-    if(a->type == NODE_NUMBER) {
-        r = a;
-        a = NULL;
-    } else if(isoptype(a, OP_DIV) && ast_ChildGet(a, 0)->type == NODE_NUMBER && ast_ChildGet(a, 1)->type == NODE_NUMBER
-              && !is_zero(ast_ChildGet(a, 1))) {
-        r = number(0);
-        if(r != NULL && mp_rat_div(ast_ChildGet(a, 0)->op.num, ast_ChildGet(a, 1)->op.num, r->op.num) != MP_OK) {
-            ast_Cleanup(r);
-            r = NULL;
-        }
-    }
+    fold_fraction(a); /*eval leaves a/b*/
+    if(a->type == NODE_NUMBER)
+        return a;
     ast_Cleanup(a);
-    return r;
+    return NULL;
 }
 
 /*the family with one integer in for n, not simplified. approx_number folds it for the
