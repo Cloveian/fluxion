@@ -9,7 +9,6 @@
 
 #include "engine/ast.h"
 #include "engine/cas/cas.h"
-#include "render/draw.h"
 
 /*
     coordinate geometry, run by the app like asym( and system(. the line gets cut
@@ -44,20 +43,6 @@ static pcas_ast_t *over_two(pcas_ast_t *e) {
 
 static pcas_ast_t *squared(pcas_ast_t *e) {
     return ast_MakeBinary(OP_POW, e, ast_MakeNumber(num_FromInt(2)));
-}
-
-/* ( a, b ), the same pieces solutions_box puts between its values */
-static box_t *point_box(pcas_ast_t *x, pcas_ast_t *y) {
-    box_t *row = layout_box(BOX_ROW, 0);
-
-    layout_add(row, layout_text("(", 0));
-    layout_add(row, value_box(x));
-    layout_add(row, layout_text(",", 0));
-    layout_add(row, layout_space(2 * SPACE_BINARY));
-    layout_add(row, value_box(y));
-    layout_add(row, layout_text(")", 0));
-    layout_finish(row, &draw_font);
-    return row;
 }
 
 bool geom_run(const char *cmd, char *src, box_t *in) {

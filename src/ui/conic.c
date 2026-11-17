@@ -101,17 +101,10 @@ static int sign_of(pcas_ast_t *e) {
     return s;
 }
 
-/* ( a, b ) like geom's, except it takes them */
-static box_t *point_box(pcas_ast_t *x, pcas_ast_t *y) {
-    box_t *row = layout_box(BOX_ROW, 0);
+/* point_box, except it takes them */
+static box_t *point_take(pcas_ast_t *x, pcas_ast_t *y) {
+    box_t *row = point_box(x, y);
 
-    layout_add(row, layout_text("(", 0));
-    layout_add(row, value_box(x));
-    layout_add(row, layout_text(",", 0));
-    layout_add(row, layout_space(2 * SPACE_BINARY));
-    layout_add(row, value_box(y));
-    layout_add(row, layout_text(")", 0));
-    layout_finish(row, &draw_font);
     ast_Cleanup(x);
     ast_Cleanup(y);
     return row;
@@ -130,9 +123,9 @@ static box_t *pair_box(pcas_ast_t *h, pcas_ast_t *k, pcas_ast_t *d, bool across)
             layout_add(row, layout_space(2 * SPACE_BINARY));
         }
         if(across)
-            layout_add(row, point_box(simp(add(ast_Copy(h), off)), ast_Copy(k)));
+            layout_add(row, point_take(simp(add(ast_Copy(h), off)), ast_Copy(k)));
         else
-            layout_add(row, point_box(ast_Copy(h), simp(add(ast_Copy(k), off))));
+            layout_add(row, point_take(ast_Copy(h), simp(add(ast_Copy(k), off))));
     }
     layout_finish(row, &draw_font);
     return row;
@@ -378,13 +371,13 @@ static const char *from_equation(bool hyper, pcas_ast_t *lhs, pcas_ast_t *rhs, b
     c = simp(root(hyper ? add(ast_Copy(a2), ast_Copy(b2)) : sub(ast_Copy(a2), ast_Copy(b2))));
 
     col = layout_box(BOX_COL, 0);
-    layout_add(col, labelled("center", point_box(ast_Copy(h), ast_Copy(k))));
+    layout_add(col, labelled("center", point_take(ast_Copy(h), ast_Copy(k))));
     layout_add(col, labelled("vertices", pair_box(h, k, a, across)));
     if(!hyper)
         layout_add(col, labelled("co-vertices", pair_box(h, k, b, !across)));
     /* a circle, both foci sit on the center */
     if(zero(c))
-        layout_add(col, labelled("focus", point_box(ast_Copy(h), ast_Copy(k))));
+        layout_add(col, labelled("focus", point_take(ast_Copy(h), ast_Copy(k))));
     else
         layout_add(col, labelled("foci", pair_box(h, k, c, across)));
     if(hyper) {

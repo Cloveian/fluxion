@@ -443,6 +443,20 @@ box_t *solutions_box(char var, pcas_ast_t **roots, int n) {
     return row;
 }
 
+/* ( a, b ) */
+box_t *point_box(pcas_ast_t *x, pcas_ast_t *y) {
+    box_t *row = layout_box(BOX_ROW, 0);
+
+    layout_add(row, layout_text("(", 0));
+    layout_add(row, value_box(x));
+    layout_add(row, layout_text(",", 0));
+    layout_add(row, layout_space(2 * SPACE_BINARY));
+    layout_add(row, value_box(y));
+    layout_add(row, layout_text(")", 0));
+    layout_finish(row, &draw_font);
+    return row;
+}
+
 /* "vertical    x = -2, 2", one line of an asym() answer. takes the values row */
 box_t *labelled(const char *label, box_t *values) {
     box_t *row = layout_box(BOX_ROW, 0);
