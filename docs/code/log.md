@@ -1,5 +1,13 @@
 # Log
 
+## 2026-11-17 - the branch hangs, so not that one yet
+
+the style checker finaly went over all 18 of last night's commits (it got blocked then). mostly comment trims and log numbers that said more than the runs did, all folded back into their own commits
+
+- perf/grouped-monomials makes simplify hang. (XYZ)^2+6X^2Z^2+X^3 never comes back on the branch (8 s and still going), main does it instantly, and random sums of 2-5 monomials hang 2-3 in 300 (main 0 in 800). same kind of thing as the cardano one: the fast gcd and divide hand compare() *different* trees than the slow path, so the sort isn't one consistent order anymore and just goes round. one of those is fixed on the branch (a bare (yz)^3 over z kept only the y), four aren't. and the "order flip" is really a tie kept in typed order, 55 of 300 sums print in another order than main. so it stays on its branch until gm_gcd / gm_div give exactly the trees the slow path does, or compare() gets one order for monomials. future me problem
+- with alpha locked, 1-9 in a menu turned into y z θ t u v o p q and picked nothing. locked alpha leaves them as numbers now, a tapped one still gets you O P Q in Functions
+- long folders (Algebra, Functions) drew over the status bar, padlock corner included. they count their rows from under the bar now, one row less and they scroll
+
 ## 2026-11-16 - cleanup night, folders in folders
 
 okie so a month off, then a look around before adding anything: what a 'real' cas has that this doesn't (polynomial gcd, real factoring, a normal form, assumptions. gcd(x^4-1, x^6-1) says 1 lol), what nspire support would take (a cheap port, the TI side of platform/ is ~370 lines and ndless r2020 does the CX II on 6.2.0), and where to stop for the CE (time and heap, not flash, PC ms \* 6500 is still the rule). all of that wants the code a bit less copy pasted first
