@@ -988,8 +988,8 @@ static pcas_ast_t *turns(int k) {
     return t;
 }
 
-/*e as a decimal, a NUMBER node. approx() gives rationals but normalize splits
-  them straight back into a/b trees, so this puts the fraction back together.
+/*e as a decimal, a NUMBER node. approx() gives rationals but eval keeps
+  fractions as a/b trees, so this puts the fraction back together.
   NULL if there's still a letter in it*/
 pcas_ast_t *approx_number(pcas_ast_t *e) {
     pcas_ast_t *a = ast_Copy(e), *r = NULL;
@@ -997,7 +997,7 @@ pcas_ast_t *approx_number(pcas_ast_t *e) {
     if(a == NULL)
         return NULL;
     approx(a);
-    simplify(a, SIMP_SOLVE);
+    simplify(a, SIMP_EVAL); /*only numbers left to fold, SIMP_SOLVE would run them through expand for nothing*/
     if(a->type == NODE_NUMBER) {
         r = a;
         a = NULL;
