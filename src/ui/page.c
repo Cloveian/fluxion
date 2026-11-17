@@ -1,4 +1,5 @@
 #include "page.h"
+#include "areas.h"
 
 #include <string.h>
 
@@ -159,7 +160,7 @@ static int wrapped(int x, int y, int w, const char *text, const font_t *font, in
     return used;
 }
 
-void page_draw(int top) {
+void page_draw(void) {
     const open_t *o = &stack[depth - 1];
     const page_t *pg = o->page;
     const font_t *font = draw_label_font(), *big = draw_font_for(draw_font.base);
@@ -167,8 +168,9 @@ void page_draw(int top) {
     /* the bar eats about a line, so the help gives one up and the list keeps its rows */
     int help_lines = pg->softkeys != NULL ? HELP_LINES - 1 : HELP_LINES;
     int help_h = help_lines * (font->ascent + font->descent + 1) + 4;
-    int list_top = top + big->ascent + big->descent + 4;
-    int list_bottom = SCREEN_H - (pg->softkeys != NULL ? BAR_H : 0) - help_h - 2;
+    int top = areas.body.y + 2, list_top = top + big->ascent + big->descent + 4;
+    int bottom = pg->softkeys != NULL ? areas.keys.y : areas.keys.y + areas.keys.h; /* no keys, it gets their row too */
+    int list_bottom = bottom - help_h - 2;
     int rows, i;
     const char *help;
 
@@ -234,5 +236,5 @@ void page_draw(int top) {
     }
 
     if(pg->softkeys != NULL)
-        draw_softkeys(pg->softkeys, -1);
+        draw_softkeys(&areas.keys, pg->softkeys, -1);
 }

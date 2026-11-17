@@ -1,4 +1,5 @@
 #include "app.h"
+#include "areas.h"
 #include "args.h"
 #include "names.h"
 #include "vars.h"
@@ -2045,14 +2046,14 @@ static void draw_bar(void) {
 
     for(i = 0; i < FOLDER_COUNT; i++)
         names[i] = folders[i].name;
-    draw_softkeys(names, menu);
+    draw_softkeys(&areas.keys, names, menu);
 }
 
 static void draw_menu(void) {
     const font_t *font = draw_label_font();
     const folder_t *f = &folders[menu];
     int row_h = font->ascent + font->descent + 2;
-    int bottom = SCREEN_H - BAR_H - 1;
+    int bottom = areas.body.y + areas.body.h - 1;
     int rows = (int)f->count, max_rows;
     int width = 0, x, top, i;
 
@@ -2080,7 +2081,7 @@ static void draw_menu(void) {
     if(menu_sel >= menu_top + rows)
         menu_top = menu_sel - rows + 1;
 
-    x = menu * (SCREEN_W / FOLDER_COUNT);
+    x = areas.keys.x + menu * (areas.keys.w / FOLDER_COUNT); /* over its key */
     if(x + width > SCREEN_W - 1)
         x = SCREEN_W - 1 - width;
     top = bottom - rows * row_h - 2;
@@ -2125,8 +2126,6 @@ static void draw_menu(void) {
     }
 }
 
-static int top_h(void);
-
 /* the [math] grid, just above the cursor, each cell numbered in the corner */
 static void draw_popup(void) {
     const font_t *font = draw_font_for(draw_font.base), *tiny = draw_font_for(0);
@@ -2139,8 +2138,8 @@ static void draw_popup(void) {
         x = 1;
     if(x + w > SCREEN_W - 1)
         x = SCREEN_W - 1 - w;
-    if(y < top_h())
-        y = top_h();
+    if(y < areas.body.y)
+        y = areas.body.y;
 
     screen_color(COL_BG);
     screen_fill(x, y, w, h);
@@ -2176,12 +2175,6 @@ static void draw_popup(void) {
 
 static int battery = -1;
 static clock_t battery_next;
-
-static int top_h(void) {
-    const font_t *small = draw_label_font();
-
-    return small->ascent + small->descent + 3;
-}
 
 /* 3x5 letters punched out of the padlocks, top bit on the left: 2, A, C */
 static const unsigned char lock_letters[3][5] = {
@@ -2229,7 +2222,7 @@ static void draw_battery(int x, int y, int level) {
 }
 
 static void draw_top_bar(void) {
-    int h = top_h(), y = (h - 1 - 11) / 2;
+    int h = areas.top.h, y = (h - 1 - 11) / 2;
 
     if(battery < 0 || clock() >= battery_next) {
         battery = power_battery();
@@ -2237,7 +2230,7 @@ static void draw_top_bar(void) {
     }
 
     screen_color(COL_BG);
-    screen_fill(0, 0, SCREEN_W, h);
+    screen_fill(areas.top.x, areas.top.y, areas.top.w, h);
     screen_color(COL_DIM);
     screen_hline(MARGIN, h - 1, SCREEN_W - 2 * MARGIN);
     draw_battery(SCREEN_W - MARGIN - BATTERY_W, (h - 1 - 7) / 2, battery);
@@ -2290,12 +2283,13 @@ static void draw_screen(void) {
     const font_t *small = draw_label_font();
     box_t *in = ed_layout(&ed, &draw_font, true);
     int line_y, y, i, avail = SCREEN_W - 2 * MARGIN, first;
+    int top = areas.body.y, bottom = areas.body.y + areas.body.h;
 
     screen_clear();
 
     if(page_is_open()) {
         layout_free(in);
-        page_draw(top_h() + 2);
+        page_draw();
         draw_top_bar();
         screen_show();
         return;
@@ -2305,7 +2299,7 @@ static void draw_screen(void) {
 
     /* input line, just above the soft keys. scrolls sideways to keep the cursor in view. */
     if(in != NULL) {
-        int x = MARGIN, base = SCREEN_H - BAR_H - 3 - in->descent;
+        int x = MARGIN, base = bottom - 3 - in->descent;
 
         if(in->width > avail) {
             int cx = cursor_x(in, 0), shift = cx - avail * 3 / 4;
@@ -2322,7 +2316,7 @@ static void draw_screen(void) {
         line_y = base - in->ascent - 3;
         layout_free(in);
     } else {
-        line_y = SCREEN_H - BAR_H - 20;
+        line_y = bottom - 20;
     }
 
     screen_color(COL_DIM);
@@ -2343,14 +2337,14 @@ static void draw_screen(void) {
 
         for(k = hist; k <= i; k++)
             below += entry_h(&history[k]);
-        for(; i > hist && below > line_y - GAP - top_h(); i--)
+        for(; i > hist && below > line_y - GAP - top; i--)
             below -= entry_h(&history[i]);
     }
     /* the status line takes the bottom row, else it lands on the last message */
     y = line_y - GAP - (status != NULL ? small->ascent + small->descent + 2 : 0);
     /* the cleared ones stay hidden unless you've gone up into them */
     first = hist >= 0 && hist < cleared ? 0 : cleared;
-    for(; i >= first && y > top_h(); i--) {
+    for(; i >= first && y > top; i--) {
         entry_t *h = &history[i];
         box_t *out = h->out, *inb = h->in, *browse = NULL;
 
@@ -2423,7 +2417,7 @@ static void draw_working(void) {
     static const unsigned char dots[8][2] = {
         { 3, 0 }, { 5, 1 }, { 6, 3 }, { 5, 5 }, { 3, 6 }, { 1, 5 }, { 0, 3 }, { 1, 1 }
     };
-    int x = SCREEN_W - MARGIN - BATTERY_W - 6 - 8, y = (top_h() - 1 - 8) / 2;
+    int x = SCREEN_W - MARGIN - BATTERY_W - 6 - 8, y = (areas.top.h - 1 - 8) / 2;
     unsigned i;
 
     /* a head and two dimmer dots behind it, going round */
@@ -2507,6 +2501,7 @@ void app_run(void) {
     screen_begin();
     settings_load();    /* after, it sets the palette and gfx_Begin would put its own back */
     keys_begin();
+    areas_init();
     draw_screen();
     pcas_poll = busy_poll;
     keys_on_sleep = on_sleep;

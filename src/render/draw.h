@@ -35,9 +35,12 @@ int draw_text_width_styled(const char *text, const font_t *font, font_style_t st
 /* draws b with its origin (left edge, baseline) at screen (x, y), in the current colour */
 void draw_box(const box_t *b, int x, int y);
 
-/* the soft-key bar along the bottom, one name over each of the five keys. lit
-   is the one drawn pressed, -1 for none. here so the pages get the same bar */
-#define BAR_H 15
-void draw_softkeys(const char *const names[5], int lit);
+typedef struct {
+    int x, y, w, h;
+} rect_t;
+
+/* the soft-key bar, one name over each of the five keys. lit is the one drawn
+   pressed, -1 for none. here so the pages get the same bar */
+void draw_softkeys(const rect_t *bar, const char *const names[5], int lit);
 
 #endif

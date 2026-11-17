@@ -34,7 +34,7 @@ bool page_is_open(void);
    row starting with it */
 void page_key(keypress_t p, char letter);
 
-/* everything under the status bar, from top to the bottom of the screen */
-void page_draw(int top);
+/* everything under the status bar, down to the bottom of the screen */
+void page_draw(void);
 
 #endif
