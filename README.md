@@ -48,7 +48,7 @@ You need a TI-84 Plus CE.
 |---|---|
 | `[enter]` | simplify |
 | `[2nd][enter]` | next answer form, `[alpha][enter]` a decimal just once |
-| `[y=]` ... `[graph]` | the folders: Algebra, Calculus, Functions, Templates, Tools |
+| `[y=]` ... `[graph]` | the folders: Algebra, Calculus, Functions, Templates, Tools. A number picks, past 9 it's `[alpha]` + A, B, C like the Nspire, and `→` opens a folder inside a folder |
 | `[alpha][x,t,θ,n]` | fraction (`[alpha][y=]` works too, like the TI) |
 | `[2nd][math]` | `=` (for `solve(`), `[math]` is `<` `>` `≤` `≥` |
 | `[2nd]`, `[alpha]`, `[on]` | work on the next key, or hold them down. Tap twice to lock, once more to unlock. `[2nd][alpha]` + a letter is a capital |
