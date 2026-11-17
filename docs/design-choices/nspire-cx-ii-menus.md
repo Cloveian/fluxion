@@ -1,0 +1,309 @@
+## 1 Actions
+
+- 1 Define
+- 2 Recall Definition
+- 3 Delete Variable
+- 4 Clear a-z...
+- 5 Clear History
+- 6 Insert Comment
+- **7 Library**
+- **8 Lock**
+
+## 2 Number
+
+- 1 Convert to Decimal
+- 2 Approximate to Fraction
+- 3 Factor
+- 4 Least Common Multiple
+- 5 Greatest Common Divisor
+- 6 Remainder
+- **7 Fraction Tools**
+  - 1 Proper Fraction
+  - 2 Get Numerator
+  - 3 Get Denominator
+  - 4 Common Denominator
+- **8 Number Tools**
+  - 1 Round
+  - 2 Integer Part
+  - 3 Fractional Part
+  - 4 Sign
+  - 5 Mod
+  - 6 Floor
+  - 7 Ceiling
+- **9 Complex Number Tools**
+  - 1 Complex Conjugate
+  - 2 Real Part
+  - 3 Imaginary Part
+  - 4 Polar Angle
+  - 5 Magnitude
+  - 6 Convert to Polar
+  - 7 Convert to Rectangular
+
+## 3 Algebra
+
+- 1 Solve
+- 2 Factor
+- 3 Expand
+- 4 Zeros
+- 5 Complete the Square
+- 6 Numerical Solve
+- **7 Solve System of Equations**
+  - 1 Solve System of Equations...
+  - 2 Solve System of Linear Equations...
+- **8 Polynomial Tools**
+  - 1 Find Roots of Polynomial...
+  - 2 Real Roots of Polynomial
+  - 3 Complex Roots of Polynomial
+  - 4 Remainder of Polynomial
+  - 5 Quotient of Polynomial
+  - 6 Greatest Common Divisor
+  - 7 Coefficients of Polynomial
+  - 8 Degree of Polynomial
+- **9 Fraction Tools**
+  - 1 Proper Fraction
+  - 2 Get Numerator
+  - 3 Get Denominator
+  - 4 Common Denominator
+- **A Convert Expression**
+  - 1 Convert to ln
+  - 2 Convert to logbase
+  - 3 Convert to exp
+  - 4 Convert to sin
+  - 5 Convert to cos
+- **B Trigonometry**
+  - 1 Expand
+  - 2 Collect
+- **C Complex**
+  - 1 Solve
+  - 2 Factor
+  - 3 Zeros
+- **D Extract**
+  - 1 Left
+  - 2 Right
+
+## 4 Calculus
+
+- 1 Derivative
+- 2 Derivative at a Point...
+- 3 Integral
+- 4 Limit
+- 5 Sum
+- 6 Product
+- 7 Function Minimum
+- 8 Function Maximum
+- 9 Tangent Line
+- A Normal Line
+- B Arc Length
+- **C Series**
+  - 1 Taylor Polynomial
+  - 2 Generalized Series
+  - 3 Dominant Term
+- D Differential Equation Solver...
+- E Implicit Differentiation
+- **F Numerical Calculations**
+  - 1 Numerical Derivative at a Point
+  - 2 Central Difference Quotient with Step
+  - 3 Numerical Integral
+  - 4 Numerical Function Minimum
+  - 5 Numerical Function Maximum
+
+## 5 Probability
+
+- 1 Factorial (!)
+- 2 Permutations
+- 3 Combinations
+- **4 Random**
+  - 1 Number
+  - 2 Integer
+  - 3 Binomial
+  - 4 Normal
+  - 5 Sample
+  - 6 Seed
+- **5 Distributions**
+  - 1 Normal Pdf...
+  - 2 Normal Cdf...
+  - 3 Inverse Normal...
+  - 4 t Pdf...
+  - 5 t Cdf...
+  - 6 Inverse t...
+  - 7 χ² Pdf...
+  - 8 χ² Cdf...
+  - 9 Inverse χ²...
+  - A Binomial Pdf...
+  - B Binomial Cdf...
+  - C Inverse Binomial...
+  - D Inverse Binomial N...
+  - E F Pdf...
+  - F F Cdf...
+  - G Inverse F...
+  - H Geometric Pdf...
+  - I Geometric Cdf...
+  - J Poisson Pdf...
+  - K Poisson Cdf...
+
+## 6 Statistics
+
+- **1 Stat Calculations**
+  - 1 One-Variable Statistics...
+  - 2 Two-Variable Statistics...
+  - 3 Linear Regression (mx+b)...
+  - 4 Linear Regression (a+bx)...
+  - 5 Median-Median Line...
+  - 6 Quadratic Regression...
+  - 7 Cubic Regression...
+  - 8 Quartic Regression...
+  - 9 Power Regression...
+  - A Exponential Regression...
+  - B Logarithmic Regression...
+  - C Sinusoidal Regression...
+  - D Logistic Regression (d=0)...
+  - E Logistic Regression (d≠0)...
+  - F Multiple Linear Regression...
+  - G Correlation Matrix
+- 2 Stat Results
+- **3 List Math**
+  - 1 Minimum
+  - 2 Maximum
+  - 3 Mean
+  - 4 Median
+  - 5 Sum of Elements
+  - 6 Product of Elements
+  - 7 Sample Standard Deviation
+  - 8 Sample Variance
+  - 9 Population Standard Deviation
+  - A Population Variance
+- **4 List Operations**
+  - 1 Sort Ascending
+  - 2 Sort Descending
+  - 3 Cumulative Sum List
+  - 4 Fill
+  - 5 Sequence
+  - 6 Difference List
+  - 7 Augment
+  - 8 Convert List to Matrix
+  - 9 Convert Matrix to List
+  - A Left
+  - B Mid
+  - C Right
+- **5 Distributions**
+  - 1 Normal Pdf...
+  - 2 Normal Cdf...
+  - 3 Inverse Normal...
+  - 4 t Pdf...
+  - 5 t Cdf...
+  - 6 Inverse t...
+  - 7 χ² Pdf...
+  - 8 χ² Cdf...
+  - 9 Inverse χ²...
+  - A Binomial Pdf...
+  - B Binomial Cdf...
+  - C Inverse Binomial...
+  - D Inverse Binomial N...
+  - E F Pdf...
+  - F F Cdf...
+  - G Inverse F...
+  - H Geometric Pdf...
+  - I Geometric Cdf...
+  - J Poisson Pdf...
+  - K Poisson Cdf...
+- **6 Confidence Intervals**
+  - 1 z Interval...
+  - 2 t Interval...
+  - 3 2-Sample z Interval...
+  - 4 2-Sample t Interval...
+  - 5 1-Prop z Interval...
+  - 6 2-Prop z Interval...
+  - 7 Linear Reg t Intervals...
+  - 8 Multiple Reg Intervals...
+- **7 Stat Tests**
+  - 1 z Test...
+  - 2 t Test...
+  - 3 2-Sample z Test...
+  - 4 2-Sample t Test...
+  - 5 1-Prop z Test...
+  - 6 2-Prop z Test...
+  - 7 χ² GOF...
+  - 8 χ² 2-way Test...
+  - 9 2-Sample F Test...
+  - A Linear Reg t Test...
+  - B Multiple Reg Tests...
+  - C ANOVA...
+  - D ANOVA 2-Way...
+
+## 7 Matrix & Vector
+
+- **1 Create**
+  - 1 Matrix...
+  - 2 Zero Matrix
+  - 3 Identity
+  - 4 Diagonal
+  - 5 Random Matrix
+  - 6 Fill
+  - 7 Submatrix
+  - 8 Augment
+  - 9 Column Augment
+  - A Construct Matrix
+- 2 Transpose
+- 3 Determinant
+- 4 Row-Echelon Form
+- 5 Reduced Row-Echelon Form
+- 6 Simultaneous
+- **7 Norms**
+  - 1 Norm
+  - 2 Row
+  - 3 Column
+- **8 Dimensions**
+  - 1 Matrix
+  - 2 Row
+  - 3 Column
+- **9 Row Operations**
+  - 1 Swap Rows
+  - 2 Row Add
+  - 3 Multiply Row
+  - 4 Multiply Row & Add
+- **A Element Operations**
+  - 1 Dot Add
+  - 2 Dot Subtract
+  - 3 Dot Multiply
+  - 4 Dot Divide
+  - 5 Dot Power
+- **B Advanced**
+  - 1 Trace
+  - 2 LU Decomposition
+  - 3 QR Decomposition
+  - 4 Eigenvalues
+  - 5 Eigenvectors
+  - 6 Characteristic Polynomial
+- **C Vector**
+  - 1 Unit Vector
+  - 2 Cross Product
+  - 3 Dot Product
+  - 4 Convert to Polar
+  - 5 Convert to Rectangular
+  - 6 Convert to Cylindrical
+  - 7 Convert to Spherical
+
+## 8 Finance
+
+- 1 Finance Solver...
+- **2 TVM Functions**
+  - 1 Number of Periods
+  - 2 Interest Rate per Year
+  - 3 Present Value
+  - 4 Payment Amount
+  - 5 Future Value
+- **3 Amortization**
+  - 1 Amortization Table
+  - 2 Balance
+  - 3 Interest Paid
+  - 4 Principal Paid
+- **4 Cash Flows**
+  - 1 Net Present Value
+  - 2 Internal Rate of Return
+  - 3 Modified Internal Rate of Return
+- **5 Interest Conversion**
+  - 1 Nominal Interest Rate
+  - 2 Effective Interest Rate
+- **6 Days between Dates**
+  - 1 Month Day Format
+  - 2 Day Month Format
