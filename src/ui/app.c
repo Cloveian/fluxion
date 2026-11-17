@@ -2504,7 +2504,7 @@ static void draw_working(void) {
     screen_direct(false);
 }
 
-/* "12s, [on]+[mode] stops it" after the padlocks. no guess at the total, sin(x)=1/2 is 6 nodes and ~7 s on the calc */
+/* "12s, [on]+[mode] stops it" after the padlocks. no guess at the total, 1/x+1/(x+1)=1 is one short line and ~26 s on the calc */
 static void draw_busy_hint(unsigned long s) {
     const font_t *small = draw_label_font();
     int x = MARGIN + 3 * LOCK_SLOT + 4;
