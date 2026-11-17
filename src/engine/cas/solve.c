@@ -341,17 +341,6 @@ static pcas_ast_t *root_of(pcas_ast_t *d, long *k) {
     return ast_MakeBinary(OP_POW, d, ast_MakeNumber(num_FromFraction(1, 2)));
 }
 
-static long gcd_small(long a, long b) {
-    if(a < 0) a = -a;
-    if(b < 0) b = -b;
-    while(b != 0) {
-        long t = a % b;
-        a = b;
-        b = t;
-    }
-    return a;
-}
-
 /*the coef as a plain number if it is one (or missing, 0). false if it's letters*/
 static bool coef_small(coefs_t *p, int i, long *v) {
     mp_small n, den;

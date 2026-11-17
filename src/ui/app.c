@@ -423,25 +423,37 @@ box_t *value_box(pcas_ast_t *v) {
     return layout_build(v, &draw_font);
 }
 
-/* x = -5, 6 */
-box_t *solutions_box(char var, pcas_ast_t **roots, int n) {
-    char name[2] = { var, '\0' };
-    box_t *row = layout_box(BOX_ROW, 0);
+static void add_values(box_t *row, pcas_ast_t **v, int n) {
     int i;
-
-    layout_add(row, layout_text(name, 0));
-    layout_add(row, layout_space(LAYOUT_SPACE(0)));
-    layout_add(row, layout_text("=", 0));
-    layout_add(row, layout_space(LAYOUT_SPACE(0)));
 
     for(i = 0; i < n; i++) {
         if(i > 0) {
             layout_add(row, layout_text(",", 0));
             layout_add(row, layout_space(2 * SPACE_BINARY));
         }
-        layout_add(row, value_box(roots[i]));
+        layout_add(row, value_box(v[i]));
     }
+}
 
+/* -5, 6 */
+box_t *values_box(pcas_ast_t **v, int n) {
+    box_t *row = layout_box(BOX_ROW, 0);
+
+    add_values(row, v, n);
+    layout_finish(row, &draw_font);
+    return row;
+}
+
+/* x = -5, 6 */
+box_t *solutions_box(char var, pcas_ast_t **roots, int n) {
+    char name[2] = { var, '\0' };
+    box_t *row = layout_box(BOX_ROW, 0);
+
+    layout_add(row, layout_text(name, 0));
+    layout_add(row, layout_space(LAYOUT_SPACE(0)));
+    layout_add(row, layout_text("=", 0));
+    layout_add(row, layout_space(LAYOUT_SPACE(0)));
+    add_values(row, roots, n);
     layout_finish(row, &draw_font);
     return row;
 }

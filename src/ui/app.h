@@ -21,6 +21,7 @@ void app_set_form_index(int i);
    come out the same as solve's. push takes in and out */
 void push(box_t *in, box_t *out, const char *message, unsigned long ms);
 box_t *value_box(pcas_ast_t *v);
+box_t *values_box(pcas_ast_t **v, int n);
 box_t *solutions_box(char var, pcas_ast_t **roots, int n);
 box_t *point_box(pcas_ast_t *x, pcas_ast_t *y);
 box_t *labelled(const char *label, box_t *values);

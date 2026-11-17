@@ -258,6 +258,9 @@ pcas_ast_t *gcd(pcas_ast_t *a, pcas_ast_t *b);
 g's number is positive and it divides. NULL otherwise. compare() uses it to skip a simplify per sorted pair*/
 pcas_ast_t *gm_div(pcas_ast_t *a, pcas_ast_t *g);
 
+/*Fluxion: gcd of two plain integers, signs dropped*/
+long gcd_small(long a, long b);
+
 /*Helper functions*/
 
 /*Cleanup a. Copy a to b and cleanup b.*/

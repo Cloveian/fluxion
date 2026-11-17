@@ -60,23 +60,6 @@ static box_t *from_roots(pcas_ast_t **a, int n) {
     return out;
 }
 
-/* the answers side by side with commas, like solve's but without the x = in
-   front, they're functions of x and x = sqrt(x) would be nonsense */
-static box_t *values_box(pcas_ast_t **v, int n) {
-    box_t *row = layout_box(BOX_ROW, 0);
-    int i;
-
-    for(i = 0; i < n; i++) {
-        if(i > 0) {
-            layout_add(row, layout_text(",", 0));
-            layout_add(row, layout_space(2 * SPACE_BINARY));
-        }
-        layout_add(row, value_box(v[i]));
-    }
-    layout_finish(row, &draw_font);
-    return row;
-}
-
 /* solve y = f(x) for x, then call y x again. y is just the usual letter, if f
    already has one some other letter stands in. not n, that's the trig n */
 static box_t *inverse_of(pcas_ast_t *f, Symbol var, const char **message) {
@@ -125,7 +108,7 @@ static box_t *inverse_of(pcas_ast_t *f, Symbol var, const char **message) {
     ast_Cleanup(x);
 
     if(!pcas_cancelled)
-        out = values_box(roots, n);
+        out = values_box(roots, n); /* no x = in front, they're functions of x and x = sqrt(x) would be nonsense */
     for(i = 0; i < n; i++)
         ast_Cleanup(roots[i]);
     return out;

@@ -719,9 +719,11 @@ static void poly_primitive(poly_t *p) {
     }
 }
 
-static mp_small small_gcd(mp_small a, mp_small b) {
+long gcd_small(long a, long b) {
+    if(a < 0) a = -a;
+    if(b < 0) b = -b;
     while(b != 0) {
-        mp_small t = a % b;
+        long t = a % b;
         a = b;
         b = t;
     }
@@ -778,7 +780,7 @@ static bool poly_find_root(poly_t *poly, mp_small *p, mp_small *q) {
     nq = divisors(an, dq);
     for(j = 0; j < nq; j++) {
         for(i = 0; i < np; i++) {
-            if(small_gcd(dp[i], dq[j]) != 1)
+            if(gcd_small(dp[i], dq[j]) != 1)
                 continue;
             for(sign = 1; sign >= -1; sign -= 2) {
                 if(poly_is_root(poly, sign * dp[i], dq[j])) {
