@@ -80,6 +80,7 @@ nav:
       - Input: design-choices/input.md
       - Screens & operations: design-choices/ui.md
       - Simplify cases: simplify-cases.md
+      - Nspire CX II menus: design-choices/nspire-cx-ii-menus.md
   - Code:
       - code/index.md
       - Structure: code/structure.md
