@@ -2,9 +2,9 @@
 
 What has to be done before a release.
 
-## The program
-- [ ] `FLUXION.8xp` builds clean (no warnings)
-- [ ] Runs from Cesium / arTIfiCE on OS 5.8.0
+## The app
+- [ ] `make installer` builds clean (no warnings past the linker's executable stack ones)
+- [ ] `FLUXINST` installs it on OS 5.8.0 and it runs from the apps menu
 - [ ] Doesn't crash or RAM-reset on nasty inputs (huge exponents, deep nesting, divide by zero)
 
 ## README
@@ -14,7 +14,7 @@ What has to be done before a release.
 - [ ] Credit PineappleCAS, keep its MIT licence text
 
 ## Release
-- [ ] GitHub release with `FLUXION.8xp`
+- [ ] GitHub release with `Fluxion-app.b84` (or `FLUXINST.8xp` + the six `FLUXAPP` appvars)
 - [ ] Demo video recorded in CEmu (most people don't have a CE)
 
 ---
