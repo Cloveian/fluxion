@@ -1,5 +1,13 @@
 # Log
 
+## 2026-11-17 (afternoon) - themes, and a clock for the slow ones
+
+- past 5 s the top bar says how long its been going and that [on]+[mode] stops it, counting up. no guess at the total, i looked and theres nothing to guess from: sin(x)=1/2 is 6 nodes and ~7 s on the calc, x^2+y^2=25 with x^2+y^2/4=10 is ~36 s, and the input size says nothing about either. so ~~"this will take ~N s"~~ a counter, unless a real predictor shows up someday
+- the scripted PC app takes `wait:6`, `png:busy.png` and `busy:on+mode` now, so a screenshot mid-run and a cancel can be tested without a window
+- themes! dark, light, contrast, green, rose, paper. each one is just bg, text and accent, dim is mixed halfway bg -> text and select a quarter bg -> accent, so a new one is three colours to get right instead of five (text on bg 12+, dim on bg 3.1+, text on select 6.6+, the WCAG ratios). the palette was also written out twice before (screen_ti.c and screen_pc.c, each one "same colours as" the other), one table in ui/theme.c now. dark and light moved a tiny bit cuz their dim / select are mixed now too, dark dim 120,120,140 -> 129,129,136, so the wall got rerendered. the old light byte in the save still means dark / light
+- trig solve *dih*ging. approx_number ran a full SIMP_SOLVE on stuff that was already all numbers, like terms and all, which goes through expand. SIMP_EVAL instead: ran both side by side on all 295 calls in fluxion.tests, same answer every time, 499k -> 491k work total
+- then at_n (plugging n into a family for the one turn answers) didn't need its simplify at all, approx_number folds it and the keepers get the full one anyway. 300 one-turn solves (sin / cos / tan, 10 arguments, 10 right sides, 60 of them didnt parse) against main: 235 of 240 root lists the same and the other 5 *better*, sin(2x-1)=1/2 had (-pi)/12+1/2+pi/2 where it now says 1/2+(5pi)/12. with the SIMP_EVAL one, one turn sin(x)=1/2 went 6514 -> 5335 work (~7.5 -> ~5.3 s on the calc, by the budget's guess). two of the 300 went in as tests
+
 ## 2026-11-17 - the branch hangs, so not that one yet
 
 the style checker finaly went over all 18 of last night's commits (it got blocked then). mostly comment trims and log numbers that said more than the runs did, all folded back into their own commits
