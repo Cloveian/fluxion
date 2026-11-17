@@ -1,5 +1,15 @@
 # Log
 
+## 2026-11-16 - cleanup night, folders in folders
+
+okie so a month off, then a look around before adding anything: what a 'real' cas has that this doesn't (polynomial gcd, real factoring, a normal form, assumptions. gcd(x^4-1, x^6-1) says 1 lol), what nspire support would take (a cheap port, the TI side of platform/ is ~370 lines and ndless r2020 does the CX II on 6.2.0), and where to stop for the CE (time and heap, not flash, PC ms \* 6500 is still the rule). all of that wants the code a bit less copy pasted first
+
+- the agent written command files each had their own comma cutter, six copies of the same 20 lines (polyfn's even said "same as geom's"). one args.c now, args_split / args_parse (+ a degrees one) / args_read / args_var. 272 lines out and 135 in (args.c included), the third program appvar went 12324 -> 11389 bytes. checked by typing 47 commands into the old and the new app and comparing the screenshots, byte for byte the same
+- point_box was in geom and conic, lives next to solutions_box in app.c now
+- the screen is three bands (areas.c): top bar, body, soft keys. app, page and the soft-key bar each worked out SCREEN_H - BAR_H and top_h() on their own before. 29 ui screens came out byte for byte the same. so a screen without the bar (the nspire, someday) is one number, and any resolution later is mostly SCREEN_W / SCREEN_H turning into variables (and fonts, *bleh*)
+- folders can have folders. Algebra was 32 things, which is *exactly* menu_boxes[32], so that was coming either way. it's the everyday nine now, then Function info / Lines / Shapes / Solids / Conics / Probability (a first guess, not settled), and rows past 9 are A, B, C like the nspire, alpha + the letter. the menu takes its keys after the modifiers now so a tapped alpha works in there (the padlock shows up too)
+- wrote the nspire cx ii cas menu tree down off a pile of photos ([nspire-cx-ii-menus.md](../design-choices/nspire-cx-ii-menus.md)). 252 things in it, the cas part (number / algebra / calculus) is maybe 90, stats and finance the OS already does
+
 ## 2026-10-16 (evening) - the big list
 
 got a list of 16 things with a deadline, so five workers on their own branches, one thing each, and me on the engine bugs and merging. all in by 19:10, 407 tests

@@ -23,6 +23,8 @@ fluxion/
 │   │   └── editor.c    the input line: rows, templates, cursor; to engine string / boxes
 │   └── ui/
 │       ├── app.c    history, input line, soft-key folders, running the engine
+│       ├── areas.c  the top bar / body / soft-key bands, where the drawing gets its edges
+│       ├── args.c  cutting a command's line at its commas and parsing the pieces, for every command file
 │       ├── catalog.c  everything you can type or pick, and what the engine can do. its words are the name table too
 │       ├── page.c  full screen list pages (catalog, vars, mode)
 │       ├── names.c  stored names and the typed-word lookup the editor asks

@@ -55,6 +55,8 @@ Folders, first guess (`*` = not in the engine yet, hybrid work or later):
 | `trace`  | Templates | fraction, √, ⁿ√, exponent, abs, piecewise\*                      |
 | `graph`  | Tools     | settings (identity toggles, derivative variable), clear history  |
 
+later: Algebra grew to 32 things, which is exactly the menu's row cap, so folders can have subfolders now. one level, a `>` on the row, right or enter opens it and left goes back up. Algebra keeps the everyday nine on 1-9 and the rest went into Function info / Lines / Shapes / Solids / Conics / Probability, and rows past 9 go A, B, C like the nspire ([its menus](nspire-cx-ii-menus.md)), alpha + the letter on the calc. that grouping is a first guess too
+
 ### Change form
 
 the nspire just picks a form and if you want a different one you have to know `expand` / `factor` / `comDenom` / etc. i want to just be able to switch (examples in [simplify cases](../simplify-cases.md))
