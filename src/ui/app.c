@@ -2138,7 +2138,7 @@ static void draw_menu(void) {
             row_h = h;
     }
     width += 34;    /* for the "1:" plus room for a * or [x] */
-    max_rows = (bottom - 4) / row_h;
+    max_rows = (bottom - areas.body.y - 4) / row_h;
 
     if(rows > max_rows)
         rows = max_rows;
