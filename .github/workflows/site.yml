@@ -12,7 +12,7 @@ on:
       - "requirements.txt"
       - "web/**"
       - "src/**"
-      - "pc.makefile"
+      - "makefile"
       - ".github/workflows/site.yml"
   workflow_dispatch:
 
@@ -46,7 +46,7 @@ jobs:
         with:
           version: 6.0.12
 
-      - run: make -f pc.makefile web -j4
+      - run: make web -j4
 
       # the page and what it loads, not the two test pages
       - run: rsync -a --exclude calc.html --exclude live.html web/ site/

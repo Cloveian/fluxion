@@ -4,8 +4,7 @@
 
 ```
 fluxion/
-├── makefile    calculator build (CEdev), compressed to one .8xp
-├── pc.makefile    PC build: engine, tools, the app in a window; `make -f pc.makefile test`
+├── makefile    all of it: the calculator app (CEdev) by default, `make test` / `make web` / `make budget` for the PC side
 ├── icon.png
 ├── src/
 │   ├── main.c  calculator start: app_run()
@@ -46,7 +45,7 @@ only `src/platform/` is allowed to touch graphx, keypadc or SDL. everything else
 ## Testing
 
 - PC: engine + layout built with `gcc`, takes a few seconds
-- `make -f pc.makefile budget`: every test line's work (pcas_check calls), PC time and \*6500 for the CE, most work first. work is the same number on every machine, time per unit spreads ~4x (more on bignum heavy stuff)
+- `make budget`: every test line's work (pcas_check calls), PC time and \*6500 for the CE, most work first. work is the same number on every machine, time per unit spreads ~4x (more on bignum heavy stuff)
 - CEmu: by hand. `cemu-autotester` comes with CEdev if i ever want scripted key presses
 
 ## Gotchas

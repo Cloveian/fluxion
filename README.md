@@ -64,11 +64,11 @@ Variables are lowercase, like on the Nspire.
 Needs the [CE C toolchain](https://github.com/CE-Programming/toolchain) (v15):
 
 ```sh
-make                          # bin/FLUXION.8xp
+make                          # bin-app/Fluxion.8ek, the app
 make installer                # bin-installer/, the app + its installer (see installer/README.md)
-make -f pc.makefile test      # PC build + engine tests
+make test                     # PC build + engine tests
 ./build-pc/fluxion-app        # run it in a window on the PC
-make -f pc.makefile web       # web/build/, the same thing for a browser (needs emscripten)
+make web                      # web/build/, the same thing for a browser (needs emscripten)
 ```
 
 The PC build needs SDL3. On PC, Shift is `[alpha]`, Alt is `[2nd]`, and Ctrl is `[on]` (when you tap them by themselves).

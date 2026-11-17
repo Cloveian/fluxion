@@ -1,7 +1,7 @@
 /* checks that every identity's function mask read from its text (text_func_mask)
    is never stricter than the mask of the parsed identity (func_mask).
    if it were, id_ExecuteTable would skip an identity that should apply.
-   run by: make -f pc.makefile test */
+   run by: make test */
 
 #include <stdio.h>
 #include "cas/cas.h"
