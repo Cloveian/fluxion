@@ -226,9 +226,9 @@ static bool gm_read(pcas_ast_t *e, gm_t *m) {
 }
 
 /*number gcd (a missing number is 1, so only when both have one), then each shared letter
-to the smaller power. same simplify at the end as gcd() so the tree comes out the same*/
+to the smaller power. the tree comes out the same as gcd() gives*/
 static pcas_ast_t *gm_gcd(gm_t *a, gm_t *b) {
-    pcas_ast_t *ret = ast_MakeOperator(OP_MULT);
+    pcas_ast_t *ret = ast_MakeOperator(OP_MULT), *first;
     int i, j;
 
     if(a->num != NULL && b->num != NULL && mp_rat_compare(a->num->op.num, b->num->op.num) == 0) {
@@ -253,12 +253,19 @@ static pcas_ast_t *gm_gcd(gm_t *a, gm_t *b) {
                 ast_ChildAppend(ret, ast_MakeBinary(OP_POW, ast_MakeSymbol(a->sym[i]), ast_MakeNumber(num_FromInt(p))));
         }
 
+    /*the simplify at the end of gcd() only drops a 1 and unwraps a lone factor on these (side by side over every test)*/
+    first = ast_ChildGet(ret, 0);
+    if(first != NULL && first->type == NODE_NUMBER && mp_rat_compare_value(first->op.num, 1, 1) == 0)
+        ast_Cleanup(ast_ChildRemoveIndex(ret, 0));
     if(ast_ChildLength(ret) == 0) {
         ast_Cleanup(ret);
         return ast_MakeNumber(num_FromInt(1));
     }
-
-    simplify(ret, SIMP_ALL ^ SIMP_ID_ALL);
+    if(ast_ChildLength(ret) == 1) {
+        first = ast_ChildRemoveIndex(ret, 0);
+        ast_Cleanup(ret);
+        return first;
+    }
     return ret;
 }
 

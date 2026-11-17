@@ -110,6 +110,10 @@ static entry_t *push_slot(void) {
 void push(box_t *in, box_t *out, const char *message, unsigned long ms) {
     entry_t *h = push_slot();
 
+#ifdef COMPILE_PC
+    if(getenv("FLX_WORK") != NULL) /* for fitting the cost estimate */
+        fprintf(stderr, "work %lu ms %lu\n", pcas_work, ms);
+#endif
     h->in = in;
     h->out = out;
     h->message = message;
@@ -2535,6 +2539,7 @@ static bool busy_poll(void) {
 static void busy_start(void) {
     pcas_cancelled = false;
     pcas_oom = false;
+    pcas_work = 0;
     busy_frame = 0;
     busy_next = clock() + CLOCKS_PER_SEC / 10;
     busy_keys_next = busy_next;
