@@ -2026,7 +2026,10 @@ static bool handle(keypress_t p) {
         c = (char)('a' + (p.key - K_LETTER_A));
 
     if(menu >= 0) {
-        menu_key(p, c);
+        /* locked alpha leaves 1-9 as numbers in here, a tapped one still makes 7-9 o p q */
+        bool digit = p.key >= K_1 && p.key <= K_9;
+
+        menu_key(p, alpha_lock && digit ? 0 : c);
         return true;
     }
     if(page_is_open()) {
