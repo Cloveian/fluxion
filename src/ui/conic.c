@@ -1,12 +1,12 @@
 #include "conic.h"
 
 #include "app.h"
+#include "args.h"
 
 #include <string.h>
 #include <time.h>
 
 #include "engine/ast.h"
-#include "engine/parser.h"
 #include "engine/cas/cas.h"
 #include "render/draw.h"
 
@@ -99,39 +99,6 @@ static int sign_of(pcas_ast_t *e) {
     }
     ast_Cleanup(e);
     return s;
-}
-
-/* cut at the top level commas like geom's read_args. how many pieces, 0 for too many */
-static int split(char *src, char **piece) {
-    int depth = 0, pieces = 1;
-    char *s;
-
-    piece[0] = src;
-    for(s = src; *s != '\0'; s++) {
-        if(*s == '(')
-            depth++;
-        else if(*s == ')')
-            depth--;
-        else if(depth == 0 && *s == ',') {
-            if(pieces == ARGS_MAX)
-                return 0;
-            *s = '\0';
-            piece[pieces++] = s + 1;
-        }
-    }
-    return pieces;
-}
-
-static pcas_ast_t *read_piece(const char *s, pcas_error_t *err) {
-    pcas_ast_t *e = parse((const uint8_t *)s, strlen(s), str_table, err);
-
-    if(*err != E_SUCCESS || e == NULL) {
-        if(*err == E_SUCCESS)
-            *err = E_GENERIC;
-        ast_Cleanup(e);
-        return NULL;
-    }
-    return e;
 }
 
 /* ( a, b ) like geom's, except it takes them */
@@ -569,7 +536,7 @@ bool conic_run(const char *cmd, char *src, box_t *in) {
         return false;
 
     /* an = means the equation one, else it has to be the 6 numbers */
-    n = split(src, piece);
+    n = args_split(src, piece, ARGS_MAX);
     if(n == 1) {
         for(s = src; *s != '\0' && eq == NULL; s++) {
             if(*s == '(')
@@ -582,12 +549,12 @@ bool conic_run(const char *cmd, char *src, box_t *in) {
     }
     if(eq != NULL) {
         *eq = '\0';
-        a[0] = read_piece(src, &err);
+        a[0] = args_parse(src, &err);
         if(a[0] != NULL)
-            a[1] = read_piece(eq + 1, &err);
+            a[1] = args_parse(eq + 1, &err);
     } else if(n == ARGS_MAX) {
         for(i = 0; i < n && err == E_SUCCESS; i++)
-            a[i] = read_piece(piece[i], &err);
+            a[i] = args_parse(piece[i], &err);
     }
     if(err != E_SUCCESS || (eq == NULL && n != ARGS_MAX)) {
         for(i = 0; i < ARGS_MAX; i++)

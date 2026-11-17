@@ -1,6 +1,7 @@
 #include "piece.h"
 
 #include "app.h"
+#include "args.h"
 #include "numval.h"
 #include "settings.h"
 
@@ -9,7 +10,6 @@
 #include <time.h>
 
 #include "engine/ast.h"
-#include "engine/parser.h"
 #include "engine/cas/cas.h"
 #include "editor/editor.h"
 #include "render/draw.h"
@@ -41,46 +41,6 @@ typedef struct {
 /* the messages are all plain strings and don't say which condition, push keeps
    the pointer so a buffer would get rewritten under the older history lines */
 static const char *usage = "piecewise(f1, c1, f2, c2, ..., x=v)";
-
-/* 0 when there are more than ARGS_MAX, and src is half cut up by then */
-static int split(char *src, char **piece) {
-    char *s;
-    int depth = 0, pieces = 1;
-
-    piece[0] = src;
-    for(s = src; *s != '\0'; s++) {
-        if(*s == '(')
-            depth++;
-        else if(*s == ')')
-            depth--;
-        else if(depth == 0 && *s == ',') {
-            if(pieces == ARGS_MAX)
-                return 0;
-            *s = '\0';
-            piece[pieces++] = s + 1;
-        }
-    }
-    return pieces;
-}
-
-/* NULL and err set on a parse error. degrees go in straight away like the
-   main line does it, so sin(30) < x means what it says */
-static pcas_ast_t *read_piece(const char *s, pcas_error_t *err) {
-    pcas_ast_t *e;
-
-    *err = E_SUCCESS;
-    e = parse((const uint8_t *)s, strlen(s), str_table, err);
-    if(*err != E_SUCCESS || e == NULL) {
-        if(e != NULL)
-            ast_Cleanup(e);
-        if(*err == E_SUCCESS)
-            *err = E_GENERIC;
-        return NULL;
-    }
-    if(setting_angle == ANGLE_DEGREES)
-        e = degrees_in(e);
-    return e;
-}
 
 /* simplified for showing, degrees back out after */
 static void exact(pcas_ast_t *e) {
@@ -147,7 +107,7 @@ static const char *read_cond(char *s, cond_t *c) {
         return "a condition isn't an inequality";
 
     for(k = 0; k < n; k++) {
-        if((c->side[k] = read_piece(side[k], &err)) == NULL)
+        if((c->side[k] = args_parse_deg(side[k], &err)) == NULL)
             return error_text[err];
         c->n = k + 1;
         c->letters |= letters(c->side[k]);
@@ -256,7 +216,7 @@ bool piece_run(const char *cmd, char *src, box_t *in) {
     if(cmd == NULL || strcmp(cmd, "piecewise") != 0)
         return false;
 
-    n = split(src, arg);
+    n = args_split(src, arg, ARGS_MAX);
     if(n == 0) {
         push(in, NULL, "8 pieces at most", 0);
         return true;
@@ -286,7 +246,7 @@ bool piece_run(const char *cmd, char *src, box_t *in) {
     }
 
     for(got = 0; got < pieces && message == NULL; got++) {
-        f[got] = read_piece(arg[2 * got], &err);
+        f[got] = args_parse_deg(arg[2 * got], &err);
         if(f[got] == NULL) {
             message = error_text[err];
             c[got].n = 0;
@@ -298,7 +258,7 @@ bool piece_run(const char *cmd, char *src, box_t *in) {
     if(message == NULL && at != NULL) {
         if((both & bit) == 0)
             message = "the conditions aren't in x=v's letter";
-        else if((v = read_piece(at, &err)) == NULL)
+        else if((v = args_parse_deg(at, &err)) == NULL)
             message = error_text[err];
     }
 

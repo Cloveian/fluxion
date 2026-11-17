@@ -1,4 +1,5 @@
 #include "app.h"
+#include "args.h"
 #include "names.h"
 #include "vars.h"
 #include "mode.h"
@@ -452,21 +453,6 @@ box_t *labelled(const char *label, box_t *values) {
     return row;
 }
 
-/* the variable after the comma in solve(..., x) and asym(..., x). one letter, or theta */
-static bool read_var(const char *s, Symbol *var, char *shown) {
-    if(strcmp(s, "theta") == 0) {
-        *var = SYM_THETA;
-        *shown = CH_THETA;
-        return true;
-    }
-    if(s[0] >= 'A' && s[0] <= 'Z' && s[1] == '\0') {
-        *var = (Symbol)s[0];
-        *shown = (char)(s[0] - 'A' + 'a');
-        return true;
-    }
-    return false;
-}
-
 /*
     solve(equation, variable). the engine's parser has no =, so the line is split
     here: at the = and the last comma outside brackets. no variable: x.
@@ -502,7 +488,7 @@ static void run_solve(char *src, box_t *in) {
 
     if(comma != NULL) {
         *comma = '\0';
-        if(!read_var(comma + 1, &var, &shown)) {
+        if(!args_var(comma + 1, &var, &shown)) {
             push(in, NULL, "solve(equation, variable)", 0);
             return;
         }
@@ -589,7 +575,7 @@ pcas_ast_t *read_f(char *src, box_t *in, const char *usage, Symbol *var, char *s
     }
     if(comma != NULL) {
         *comma = '\0';
-        if(!read_var(comma + 1, var, shown)) {
+        if(!args_var(comma + 1, var, shown)) {
             push(in, NULL, usage, 0);
             return NULL;
         }
@@ -774,7 +760,7 @@ static void run_system(char *src, box_t *in) {
         char *eq = strchr(piece[i], '=');
 
         if(eq == NULL) {
-            if(nvars == SYSTEM_MAX || !read_var(piece[i], &vars[nvars], &shown[nvars]))
+            if(nvars == SYSTEM_MAX || !args_var(piece[i], &vars[nvars], &shown[nvars]))
                 break;
             nvars++;
             continue;

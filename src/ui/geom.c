@@ -1,13 +1,13 @@
 #include "geom.h"
 
 #include "app.h"
+#include "args.h"
 
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
 
 #include "engine/ast.h"
-#include "engine/parser.h"
 #include "engine/cas/cas.h"
 #include "render/draw.h"
 
@@ -46,40 +46,6 @@ static pcas_ast_t *squared(pcas_ast_t *e) {
     return ast_MakeBinary(OP_POW, e, ast_MakeNumber(num_FromInt(2)));
 }
 
-/* the argument pieces parsed, how many there are. more than ARGS_MAX parses
-   nothing and says 0, which is the wrong count for all of them. -1 for a
-   parse error, err says which */
-static int read_args(char *src, pcas_ast_t **args, pcas_error_t *err) {
-    char *piece[ARGS_MAX], *s;
-    int depth = 0, pieces = 1, i;
-
-    piece[0] = src;
-    for(s = src; *s != '\0'; s++) {
-        if(*s == '(')
-            depth++;
-        else if(*s == ')')
-            depth--;
-        else if(depth == 0 && *s == ',') {
-            if(pieces == ARGS_MAX)
-                return 0;
-            *s = '\0';
-            piece[pieces++] = s + 1;
-        }
-    }
-
-    for(i = 0; i < pieces; i++) {
-        args[i] = parse((const uint8_t *)piece[i], strlen(piece[i]), str_table, err);
-        if(*err != E_SUCCESS || args[i] == NULL) {
-            if(*err == E_SUCCESS)
-                *err = E_GENERIC;
-            while(i >= 0)
-                ast_Cleanup(args[i--]);
-            return -1;
-        }
-    }
-    return pieces;
-}
-
 /* ( a, b ), the same pieces solutions_box puts between its values */
 static box_t *point_box(pcas_ast_t *x, pcas_ast_t *y) {
     box_t *row = layout_box(BOX_ROW, 0);
@@ -110,7 +76,7 @@ bool geom_run(const char *cmd, char *src, box_t *in) {
     if(c == G_COUNT)
         return false;
 
-    n = read_args(src, a, &err);
+    n = args_read(src, a, ARGS_MAX, &err); /* too many is 0, the wrong count for all of them */
     if(n != cmds[c].args) {
         for(i = 0; i < n; i++)
             ast_Cleanup(a[i]);

@@ -1,6 +1,7 @@
 #include "tri.h"
 
 #include "app.h"
+#include "args.h"
 #include "numval.h"
 #include "settings.h"
 
@@ -9,7 +10,6 @@
 #include <time.h>
 
 #include "engine/ast.h"
-#include "engine/parser.h"
 #include "engine/cas/cas.h"
 #include "editor/editor.h"
 #include "render/draw.h"
@@ -39,68 +39,15 @@ static const struct {
     { "por",       "por(pa, pb)", 2, 2 },
 };
 
-/* cut at the top level commas, empty pieces kept (triangle(3,4,5,,,) needs
-   them). 0 when there are more than ARGS_MAX */
-static int split(char *src, char **piece) {
-    char *s;
-    int depth = 0, pieces = 1;
-
-    piece[0] = src;
-    for(s = src; *s != '\0'; s++) {
-        if(*s == '(')
-            depth++;
-        else if(*s == ')')
-            depth--;
-        else if(depth == 0 && *s == ',') {
-            if(pieces == ARGS_MAX)
-                return 0;
-            *s = '\0';
-            piece[pieces++] = s + 1;
-        }
-    }
-    return pieces;
-}
-
-/* NULL and err set on a parse error. an empty piece counts as one too */
-static pcas_ast_t *read_piece(const char *s, pcas_error_t *err) {
-    pcas_ast_t *e;
-
-    *err = E_SUCCESS;
-    e = parse((const uint8_t *)s, strlen(s), str_table, err);
-    if(*err != E_SUCCESS || e == NULL) {
-        if(e != NULL)
-            ast_Cleanup(e);
-        if(*err == E_SUCCESS)
-            *err = E_GENERIC;
-        return NULL;
-    }
-    return e;
-}
-
-/* the variable for amplitude(f, x). one letter or theta, like read_var in app.c */
-static bool read_var(const char *s, Symbol *var) {
-    if(strcmp(s, "theta") == 0) {
-        *var = SYM_THETA;
-        return true;
-    }
-    if(s[0] >= 'A' && s[0] <= 'Z' && s[1] == '\0') {
-        *var = (Symbol)s[0];
-        return true;
-    }
-    return false;
-}
-
 /* triangle */
 
 /* a piece as a plain number. pi/3 and sqrt(2) are fine, x isn't */
 static bool number_of(const char *s, float *x, pcas_error_t *err) {
-    pcas_ast_t *e = read_piece(s, err);
+    pcas_ast_t *e = args_parse_deg(s, err);
     bool ok;
 
     if(e == NULL)
         return false;
-    if(setting_angle == ANGLE_DEGREES)
-        e = degrees_in(e);
     simplify(e, SIMP_ALL);
     approx(e);
     ok = num_float(e, x) && isfinite(*x);
@@ -473,7 +420,7 @@ bool tri_run(const char *cmd, char *src, box_t *in) {
     if(c == T_COUNT)
         return false;
 
-    n = split(src, piece);
+    n = args_split(src, piece, ARGS_MAX);
     if(n < cmds[c].least || n > cmds[c].most) {
         push(in, NULL, cmds[c].usage, 0);
         return true;
@@ -483,9 +430,9 @@ bool tri_run(const char *cmd, char *src, box_t *in) {
     if(c == T_TRIANGLE)
         message = run_triangle(piece, &out);
     else if(c == T_AMPLITUDE) {
-        if(n == 2 && !read_var(piece[1], &var))
+        if(n == 2 && !args_var(piece[1], &var, NULL))
             message = cmds[c].usage;
-        else if((a[0] = read_piece(piece[0], &err)) == NULL)
+        else if((a[0] = args_parse(piece[0], &err)) == NULL)
             message = error_text[err];
         else {
             /* no trig identities, they'd turn sin(2x) into 2sin(x)cos(x) and
@@ -497,7 +444,7 @@ bool tri_run(const char *cmd, char *src, box_t *in) {
         }
     } else {
         for(i = 0; i < 2 && message == NULL; i++) {
-            if((a[i] = read_piece(piece[i], &err)) == NULL)
+            if((a[i] = args_parse(piece[i], &err)) == NULL)
                 message = error_text[err];
             else {
                 pcas_ast_t *v;

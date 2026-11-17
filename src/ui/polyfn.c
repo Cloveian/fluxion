@@ -1,6 +1,7 @@
 #include "polyfn.h"
 
 #include "app.h"
+#include "args.h"
 #include "settings.h"
 
 #include <stdlib.h>
@@ -8,7 +9,6 @@
 #include <time.h>
 
 #include "engine/ast.h"
-#include "engine/parser.h"
 #include "engine/cas/cas.h"
 #include "render/draw.h"
 
@@ -21,39 +21,6 @@
 #define ARGS_MAX 12
 
 #define SIMP_BASIC (SIMP_NORMALIZE | SIMP_COMMUTATIVE | SIMP_RATIONAL)
-
-/* same as geom's. more than ARGS_MAX parses nothing and says 0, -1 for a parse
-   error with err saying which */
-static int read_args(char *src, pcas_ast_t **args, pcas_error_t *err) {
-    char *piece[ARGS_MAX], *s;
-    int depth = 0, pieces = 1, i;
-
-    piece[0] = src;
-    for(s = src; *s != '\0'; s++) {
-        if(*s == '(')
-            depth++;
-        else if(*s == ')')
-            depth--;
-        else if(depth == 0 && *s == ',') {
-            if(pieces == ARGS_MAX)
-                return 0;
-            *s = '\0';
-            piece[pieces++] = s + 1;
-        }
-    }
-
-    for(i = 0; i < pieces; i++) {
-        args[i] = parse((const uint8_t *)piece[i], strlen(piece[i]), str_table, err);
-        if(*err != E_SUCCESS || args[i] == NULL) {
-            if(*err == E_SUCCESS)
-                *err = E_GENERIC;
-            while(i >= 0)
-                ast_Cleanup(args[i--]);
-            return -1;
-        }
-    }
-    return pieces;
-}
 
 /* a letter on its own (or theta), so it can be the variable */
 static bool is_var(const pcas_ast_t *e) {
@@ -183,7 +150,7 @@ bool polyfn_run(const char *cmd, char *src, box_t *in) {
         return false;
     usage = inv ? "inverse(f, x)" : "fromroots(root, root, ..., x)";
 
-    n = read_args(src, a, &err);
+    n = args_read(src, a, ARGS_MAX, &err);
     if(n < 1 || (inv && (n > 2 || (n == 2 && !is_var(a[1]))))) {
         for(i = 0; i < n; i++)
             ast_Cleanup(a[i]);

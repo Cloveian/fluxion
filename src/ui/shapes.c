@@ -1,6 +1,7 @@
 #include "shapes.h"
 
 #include "app.h"
+#include "args.h"
 #include "numval.h"
 #include "settings.h"
 
@@ -10,7 +11,6 @@
 #include <time.h>
 
 #include "engine/ast.h"
-#include "engine/parser.h"
 #include "engine/cas/cas.h"
 #include "editor/editor.h"
 #include "render/draw.h"
@@ -65,48 +65,11 @@ static const struct {
         { "diagonals", "$0*($0_3)/2" } } },
 };
 
-/* cut at the top level commas. 0 when there are more than ARGS_MAX */
-static int split(char *src, char **piece) {
-    char *s;
-    int depth = 0, pieces = 1;
-
-    piece[0] = src;
-    for(s = src; *s != '\0'; s++) {
-        if(*s == '(')
-            depth++;
-        else if(*s == ')')
-            depth--;
-        else if(depth == 0 && *s == ',') {
-            if(pieces == ARGS_MAX)
-                return 0;
-            *s = '\0';
-            piece[pieces++] = s + 1;
-        }
-    }
-    return pieces;
-}
-
-static pcas_ast_t *read_text(const char *s, pcas_error_t *err) {
-    pcas_ast_t *e;
-
-    *err = E_SUCCESS;
-    e = parse((const uint8_t *)s, strlen(s), str_table, err);
-    if(*err != E_SUCCESS || e == NULL) {
-        ast_Cleanup(e);
-        if(*err == E_SUCCESS)
-            *err = E_GENERIC;
-        return NULL;
-    }
-    if(setting_angle == ANGLE_DEGREES)
-        e = degrees_in(e);
-    return e;
-}
-
 /* each piece on its own first, so a typo gets the parser's message and not some
    mess from inside a formula. only plain numbers get judged, letters go through */
 static const char *check(const char *s, bool sides) {
     pcas_error_t err;
-    pcas_ast_t *e = read_text(s, &err);
+    pcas_ast_t *e = args_parse_deg(s, &err);
     const char *msg = NULL;
     float x;
 
@@ -170,7 +133,7 @@ static const char *add_line(box_t *col, const char *label, const char *formula, 
 
     if(text == NULL)
         return "out of memory";
-    e = read_text(text, &err);
+    e = args_parse_deg(text, &err);
     free(text);
     if(e == NULL)
         return error_text[err];
@@ -209,7 +172,7 @@ bool shapes_run(const char *cmd, char *src, box_t *in) {
     if(c == S_COUNT)
         return false;
 
-    n = split(src, piece);
+    n = args_split(src, piece, ARGS_MAX);
     if(n != shapes[c].args) {
         push(in, NULL, shapes[c].usage, 0);
         return true;
