@@ -1013,9 +1013,9 @@ pcas_ast_t *approx_number(pcas_ast_t *e) {
     return r;
 }
 
-/*the family with one integer in for n, simplified the light way. it's a sum of
-  a few pi's (or plain numbers in degrees), the identity passes have nothing to
-  do there and they're the slow part. NULL when oom*/
+/*the family with one integer in for n, not simplified. approx_number folds it for the
+  range check and keepers get SIMP_ALL. a SIMP_SOLVE first gets SIMP_ALL stuck on
+  (-pi)/12+1/2+pi/2 instead of 1/2+(5pi)/12. NULL when oom*/
 static pcas_ast_t *at_n(pcas_ast_t *root, pcas_ast_t *sym, int k) {
     pcas_ast_t *c = ast_Copy(root), *v = number(k);
 
@@ -1026,7 +1026,6 @@ static pcas_ast_t *at_n(pcas_ast_t *root, pcas_ast_t *sym, int k) {
     }
     substitute(c, sym, v);
     ast_Cleanup(v);
-    simplify(c, SIMP_SOLVE);
     return c;
 }
 

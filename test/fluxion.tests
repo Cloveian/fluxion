@@ -264,6 +264,8 @@ turn; sin(X)=1; X; pi/2
 turn; sin(X)=0; X; 0,pi
 turn; tan(X)=1; X; pi/4,(5pi)/4
 turn; X^2=4; X; -2,2
+turn; sin(2X_1)=1/2; X; 1/2+pi/12,1/2+(5pi)/12,1/2+(13pi)/12,1/2+(17pi)/12
+turn; cos(X+pi/3)=1/3; X; acos(1/3)_pi/3,-acos(1/3)+(5pi)/3
 
 #k-th powers out of roots. ACT Q8. 2sqrt(2) merges back to 2^(3/2) as like terms: the canonical form splits it at output
 simplify; sqrt(35*108); 6sqrt(105)
