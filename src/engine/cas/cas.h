@@ -102,6 +102,9 @@ extern bool (*pcas_poll)(void);
 extern bool pcas_cancelled;
 bool pcas_check(void);
 
+/*Fluxion: pcas_check() calls since the caller last zeroed it. same count for the same input on every machine, so it's the unit for cost estimates*/
+extern unsigned long pcas_work;
+
 /*Simplifies ast. Returns true if changed*/
 bool simplify(pcas_ast_t *e, unsigned short flags);
 

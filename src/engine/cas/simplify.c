@@ -75,8 +75,10 @@ void replace_node(pcas_ast_t *a, pcas_ast_t *b) {
 
 /*Fluxion: see cas.h. pcas_cancelled lives in error.c now, out of memory sets it too*/
 bool (*pcas_poll)(void) = NULL;
+unsigned long pcas_work;
 
 bool pcas_check(void) {
+    pcas_work++;
     if(!pcas_cancelled && pcas_poll != NULL && pcas_poll())
         pcas_cancelled = true;
     return pcas_cancelled;

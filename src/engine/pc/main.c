@@ -26,6 +26,7 @@ void display_help() {
     printf("Usage: ./pineapple [operation] [args]\n");
     printf("Valid operations include:\n");
     printf("\ttest [file]\t\t\tRuns all tests in file\n");
+    printf("\tbudget [file]\t\t\tWork, PC time and CE guess per test, most work first\n"); /*Fluxion*/
     printf("\tsimplify [expression]\t\tSimplifies expression. Also evaluates constants.\n");
     printf("\tgcd [expression1] [expression2]\tPrints the GCD of the two expressions\n");
     printf("\tfactor [expression]\t\tFactors expression\n");
@@ -387,6 +388,68 @@ int run_test(int argc, char **argv) {
     return -1;
 }
 
+/*Fluxion: budget [file]. work = pcas_check calls, CE guess = PC time * 6500*/
+#define BUDGET_REPS 5   /*fastest of these, one run is mostly timer noise*/
+
+typedef struct {
+    unsigned long work, us;
+    const test_t *t;
+} budget_row_t;
+
+static int budget_cmp(const void *a, const void *b) {
+    unsigned long x = ((const budget_row_t *)a)->work, y = ((const budget_row_t *)b)->work;
+
+    return x < y ? 1 : x > y ? -1 : 0;
+}
+
+int run_budget(int argc, char **argv) {
+    unsigned len, i, r;
+    budget_row_t *rows;
+    test_t **arr;
+
+    if(argc < 3) {
+        display_help();
+        return -1;
+    }
+    arr = test_Load(argv[2], &len);
+    if(arr == NULL) {
+        printf("Could not load test file.\n");
+        return -1;
+    }
+    rows = malloc((len + 1) * sizeof *rows); /*+1, an empty file isn't malloc(0)*/
+    if(rows == NULL) {
+        test_CleanupArr(arr, len);
+        return -1;
+    }
+
+    for(i = 0; i < len; i++) {
+        rows[i].us = (unsigned long)-1;
+        for(r = 0; r < BUDGET_REPS; r++) {
+            test_t copy = *arr[i]; /*test_Run cuts its strings up*/
+            clock_t start;
+            unsigned long t;
+
+            pcas_work = 0;
+            start = clock();
+            test_Run(&copy);
+            t = (unsigned long)((clock() - start) * 1000000.0 / CLOCKS_PER_SEC);
+            if(t < rows[i].us)
+                rows[i].us = t;
+        }
+        rows[i].work = pcas_work;
+        rows[i].t = arr[i];
+    }
+    qsort(rows, len, sizeof *rows, budget_cmp);
+
+    printf("%5s %9s %9s %9s  %s\n", "line", "work", "pc us", "ce s", "input");
+    for(i = 0; i < len; i++)
+        printf("%5u %9lu %9lu %9.1f  %.50s\n", rows[i].t->line, rows[i].work, rows[i].us, rows[i].us * 6500.0 / 1e6, rows[i].t->arg1);
+
+    free(rows);
+    test_CleanupArr(arr, len);
+    return 0;
+}
+
 int run_derivative(int argc, char **argv) {
 
     uint8_t *trimmed;
@@ -492,6 +555,7 @@ int main(int argc, char **argv) {
 
     if(argc > 1) {
         if(!strcmp(argv[1], "test"))            ret = run_test(argc, argv);
+        else if(!strcmp(argv[1], "budget"))     ret = run_budget(argc, argv); /*Fluxion*/
         else if(!strcmp(argv[1], "simplify"))   ret = run_simplify(argc, argv);
         else if(!strcmp(argv[1], "gcd"))        ret = run_gcd(argc, argv);
         else if(!strcmp(argv[1], "factor"))     ret = run_factor(argc, argv);
