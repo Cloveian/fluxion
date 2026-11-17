@@ -884,6 +884,7 @@ static void clear_denominators(pcas_ast_t **e) {
 static int isolate(pcas_ast_t *e, Symbol var, pcas_ast_t **out) {
     pcas_ast_t *side = e, *other[SOLVE_MAX];
     int m = 1, i;
+    bool family = false;
 
     other[0] = number(0);
     while(side->type != NODE_SYMBOL && !pcas_cancelled) {
@@ -928,6 +929,7 @@ static int isolate(pcas_ast_t *e, Symbol var, pcas_ast_t **out) {
                    && ast_ChildGet(inv, 0)->type == NODE_SYMBOL && ast_ChildGet(inv, 0)->op.symbol == SYM_PI)
                     half = true;
                 t = ast_MakeBinary(OP_ADD, inv, turns(op == OP_TAN || half ? 1 : 2));
+                family = true;
                 break;
             }
             case OP_SIN_INV: t = ast_MakeUnary(OP_SIN, o); break;
@@ -963,8 +965,10 @@ static int isolate(pcas_ast_t *e, Symbol var, pcas_ast_t **out) {
 
     for(i = 0; i < m; i++) {
         /*the works, so asin(1/2) ends up pi/6. tried the light one for the trig
-          families, it leaves pi - pi/6 and (pi/3 + 2pi n)/2 alone, so no*/
-        simplify(other[i], SIMP_ALL);
+          families, it leaves pi - pi/6 and (pi/3 + 2pi n)/2 alone, so no. the asin in a
+          family got its SIMP_ALL up in the switch, the trig / hyperbolic tables have nothing
+          left to find (~260 work each solve). complex stays, peeling an i off after makes 1/i*/
+        simplify(other[i], family ? SIMP_ALL & ~(SIMP_ID_TRIG | SIMP_ID_HYPERBOLIC) : SIMP_ALL);
         out[i] = other[i];
     }
     return m;
