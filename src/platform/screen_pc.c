@@ -13,24 +13,7 @@
 static unsigned char fb[SCREEN_H][SCREEN_W];
 static unsigned char current = COL_FG;
 
-/* same colours as screen_ti.c */
-static const unsigned char dark[COL_COUNT][3] = {
-    {  24,  24,  32 },  /* COL_BG */
-    { 235, 235, 240 },  /* COL_FG */
-    { 120, 120, 140 },  /* COL_DIM */
-    { 110, 170, 255 },  /* COL_ACCENT */
-    {  40,  64, 112 },  /* COL_SELECT */
-};
-
-static const unsigned char light[COL_COUNT][3] = {
-    { 245, 245, 248 },  /* COL_BG */
-    {  24,  24,  32 },  /* COL_FG */
-    { 120, 120, 140 },  /* COL_DIM */
-    {  40, 110, 220 },  /* COL_ACCENT */
-    { 200, 215, 245 },  /* COL_SELECT */
-};
-
-static const unsigned char (*palette)[3] = dark;
+static unsigned char palette[COL_COUNT][3]; /* ui/theme.c fills it */
 static int brightness;  /* nothing reads it, it's here so the PC keeps the same state */
 
 void screen_begin(void) { screen_clear(); }
@@ -39,7 +22,7 @@ void screen_show(void) { window_present(); }   /* does nothing unless a window i
 void screen_power(bool on) { (void)on; } /* no backlight to turn off here */
 void screen_brightness(int level) { brightness = level; }
 int screen_brightness_current(void) { return 2; } /* no OS level to start from, 2 is as good as any */
-void screen_theme(bool on) { palette = on ? light : dark; }
+void screen_palette(const unsigned char rgb[COL_COUNT][3]) { memcpy(palette, rgb, sizeof palette); }
 
 /* just the one framebuffer here, so drawing is always "direct", only needs showing */
 void screen_direct(bool on) {

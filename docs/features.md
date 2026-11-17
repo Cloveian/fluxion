@@ -123,7 +123,7 @@ Everything Fluxion does right now, as tables. Yes / partly / no first, the other
 | Feature                            |     |
 | ---------------------------------- | --- |
 | Radians and degrees                | yes |
-| Light theme                        | yes |
+| Themes (dark, light + 4 more)      | yes |
 | Remembers everything after closing | yes |
 
 ### Variables

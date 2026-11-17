@@ -21,6 +21,7 @@
 #include "engine/cas/identities.h"
 #include "editor/editor.h"
 #include "ui/names.h"
+#include "ui/theme.h"
 #include "render/draw.h"
 #include "platform/screen.h"
 
@@ -96,6 +97,7 @@ int main(int argc, char **argv) {
     printf("%s\n", engine != NULL ? engine : "(unfinished)");
 
     screen_begin();
+    theme_apply(0);
     screen_clear();
 
     /* the input line, with its cursor */

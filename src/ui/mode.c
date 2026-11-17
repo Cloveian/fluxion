@@ -3,7 +3,7 @@
 #include "app.h"
 #include "page.h"
 #include "settings.h"
-#include "platform/screen.h"
+#include "theme.h"
 
 /* rows, in the order they show */
 enum { ROW_ANGLE, ROW_TRIG, ROW_FORM, ROW_RATIONALIZE, ROW_THEME, ROW_COUNT };
@@ -28,7 +28,7 @@ static const char *mode_value(int i) {
         return setting_angle == ANGLE_DEGREES ? "0 to 360" : "0 to 2pi";
     case ROW_FORM:        return app_form_name();
     case ROW_RATIONALIZE: return app_rationalize() ? "on" : "off";
-    case ROW_THEME:       return setting_light ? "light" : "dark";
+    case ROW_THEME:       return themes[setting_theme].name;
     }
     return NULL;
 }
@@ -44,7 +44,7 @@ static const char *mode_help(int i) {
     case ROW_RATIONALIZE:
         return "roots off the bottom, 1/sqrt(2) -> sqrt(2)/2. off keeps them where you wrote them";
     case ROW_THEME:
-        return "light is easier outside or in a bright room. [2nd] up/down is the brightness, from anywhere but here";
+        return "enter goes through them. light or paper is easier outside or in a bright room. [2nd] up/down is the brightness, from anywhere but here";
     }
     return NULL;
 }
@@ -56,7 +56,7 @@ static bool mode_pick(int i) {
     case ROW_TRIG:        setting_trig = setting_trig == TRIG_GENERAL ? TRIG_ONE_TURN : TRIG_GENERAL; break;
     case ROW_FORM:        app_next_form(); break;
     case ROW_RATIONALIZE: app_toggle_rationalize(); break;
-    case ROW_THEME:       setting_light = !setting_light; screen_theme(setting_light); break;
+    case ROW_THEME:       setting_theme = (setting_theme + 1) % theme_count; theme_apply(setting_theme); break;
     }
     settings_save();    /* so a flip sticks even if the app dies before exit */
     return false;

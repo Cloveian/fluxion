@@ -64,9 +64,9 @@ export async function live(parent) {
     // something on the screen while the wasm comes down, black looked broken on slow connections
     {
         const s = small.getContext("2d");
-        s.fillStyle = "#181820"; // screen_pc.c's dark background
+        s.fillStyle = "#181820"; // dark theme bg in ui/theme.c
         s.fillRect(0, 0, 320, 240);
-        s.fillStyle = "#787890";
+        s.fillStyle = "#818188"; // and its dim
         s.font = "16px monospace";
         s.textAlign = "center";
         s.fillText("loading...", 160, 124);

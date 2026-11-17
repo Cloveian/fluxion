@@ -6,9 +6,10 @@
 #include "screen.h"
 
 #include <graphx.h>
+#include <string.h>
 #include <sys/lcd.h>
 
-static bool light_theme;
+static unsigned char palette[COL_COUNT][3];
 static unsigned char backlight; /* ours, what waking up goes back to */
 static unsigned char os_backlight; /* the OS's, handed back on the way out */
 static bool asleep;
@@ -16,7 +17,7 @@ static bool asleep;
 void screen_begin(void) {
     gfx_Begin();
     gfx_SetDrawBuffer();
-    screen_theme(light_theme);  /* gfx_Begin put its own palette in */
+    screen_palette(palette);  /* gfx_Begin put its own in */
 
     os_backlight = backlight = lcd_BacklightLevel;
 }
@@ -26,23 +27,13 @@ void screen_end(void) {
     lcd_BacklightLevel = os_backlight;
 }
 
-void screen_theme(bool light) {
-    light_theme = light;
+void screen_palette(const unsigned char rgb[COL_COUNT][3]) {
+    int i;
 
-    /* same colours as screen_pc.c */
-    if(light) {
-        gfx_palette[COL_BG]     = gfx_RGBTo1555(245, 245, 248);
-        gfx_palette[COL_FG]     = gfx_RGBTo1555(24, 24, 32);
-        gfx_palette[COL_DIM]    = gfx_RGBTo1555(120, 120, 140);
-        gfx_palette[COL_ACCENT] = gfx_RGBTo1555(40, 110, 220);
-        gfx_palette[COL_SELECT] = gfx_RGBTo1555(200, 215, 245);
-    } else {
-        gfx_palette[COL_BG]     = gfx_RGBTo1555(24, 24, 32);
-        gfx_palette[COL_FG]     = gfx_RGBTo1555(235, 235, 240);
-        gfx_palette[COL_DIM]    = gfx_RGBTo1555(120, 120, 140);
-        gfx_palette[COL_ACCENT] = gfx_RGBTo1555(110, 170, 255);
-        gfx_palette[COL_SELECT] = gfx_RGBTo1555(40, 64, 112);
-    }
+    if(rgb != palette) /* screen_begin passes its own copy back */
+        memcpy(palette, rgb, sizeof palette);
+    for(i = 0; i < COL_COUNT; i++)
+        gfx_palette[i] = gfx_RGBTo1555(rgb[i][0], rgb[i][1], rgb[i][2]);
 }
 
 /* the register goes 0 brightest to 255 off, 32 a step leaves 7 still readable */

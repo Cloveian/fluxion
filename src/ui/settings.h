@@ -20,9 +20,9 @@ typedef enum { TRIG_GENERAL, TRIG_ONE_TURN } trig_t;
 extern trig_t setting_trig;
 
 /* the screen. brightness is [2nd] up/down, 0 brightest .. 7 darkest (screen.h),
-   light is the theme row */
+   theme indexes themes[] (theme.h) */
 extern int setting_brightness;
-extern bool setting_light;
+extern int setting_theme;
 
 /* to and from the store (platform/store.h), a few bytes in their own slot. the
    mode page saves after every flip, the app loads at start. the form and

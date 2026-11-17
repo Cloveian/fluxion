@@ -2596,7 +2596,7 @@ void app_run(void) {
     ed_ans = last_answer;
     history_load();
     screen_begin();
-    settings_load();    /* after, it sets the palette and gfx_Begin would put its own back */
+    settings_load();    /* after, a first run starts from the OS brightness screen_begin read */
     keys_begin();
     areas_init();
     draw_screen();

@@ -54,8 +54,8 @@ void screen_brightness(int level);
    before anything's saved */
 int screen_brightness_current(void);
 
-/* swaps the colours behind the COL_ indexes, so nothing that draws has to know */
-void screen_theme(bool light);
+/* the colours behind the COL_ indexes, so nothing that draws has to know. kept across screen_begin */
+void screen_palette(const unsigned char rgb[COL_COUNT][3]);
 
 #ifndef __TICE__
 /* PC only */

@@ -16,6 +16,7 @@
 #include "engine/cas/identities.h"
 #include "render/layout.h"
 #include "render/draw.h"
+#include "ui/theme.h"
 #include "platform/screen.h"
 #include "platform/window_pc.h"
 
@@ -119,6 +120,7 @@ int main(int argc, char **argv) {
     }
 
     screen_begin();
+    theme_apply(0);
     screen_clear();
     for(; i < argc; i++)
         y = draw_entry(argv[i], y);

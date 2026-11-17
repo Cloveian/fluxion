@@ -1,15 +1,16 @@
 #include "settings.h"
 
 #include "app.h"
+#include "theme.h"
 #include "platform/screen.h"
 #include "platform/store.h"
 
 angle_t setting_angle = ANGLE_RADIANS;  /* the engine's native one */
 trig_t setting_trig = TRIG_GENERAL;
 int setting_brightness = 2;
-bool setting_light = false;
+int setting_theme = 0;
 
-/* format byte, angle, form, rationalize, trig, brightness, light. nothing fancy,
+/* format byte, angle, form, rationalize, trig, brightness, theme. nothing fancy,
    anything off and it's ignored. format 2 grew the trig byte, 3 the two screen
    ones, anything older just gets dropped */
 #define SLOT "FLXMODE"
@@ -23,7 +24,7 @@ void settings_save(void) {
     b[3] = (unsigned char)app_rationalize();
     b[4] = (unsigned char)setting_trig;
     b[5] = (unsigned char)setting_brightness;
-    b[6] = (unsigned char)setting_light;
+    b[6] = (unsigned char)setting_theme;
     store_save(SLOT, b, sizeof b);
 }
 
@@ -37,12 +38,12 @@ void settings_load(void) {
             app_toggle_rationalize();
         setting_trig = b[4] == TRIG_ONE_TURN ? TRIG_ONE_TURN : TRIG_GENERAL;
         setting_brightness = b[5] <= 7 ? b[5] : screen_brightness_current();
-        setting_light = b[6] != 0;
+        setting_theme = b[6] < theme_count ? b[6] : 0;
     } else {
         setting_brightness = screen_brightness_current();  /* nothing saved yet, or an older format. start where the OS was */
     }
 
     /* outside the if, a first run with nothing saved still wants the defaults on screen */
-    screen_theme(setting_light);
+    theme_apply(setting_theme);
     screen_brightness(setting_brightness);
 }

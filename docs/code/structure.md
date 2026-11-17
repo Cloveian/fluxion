@@ -29,7 +29,8 @@ fluxion/
 │       ├── names.c  stored names and the typed-word lookup the editor asks
 │       ├── vars.c   the [vars] page
 │       ├── mode.c  the [mode] page
-│       └── settings.c  the angle mode, and saving the lot
+│       ├── settings.c  the angle mode, and saving the lot
+│       └── theme.c  the colour presets, three colours each and the other two mixed from them
 ├── test/
 │   ├── pcas.tests   PineappleCAS's 256 engine tests
 │   ├── fluxion.tests   Fluxion's engine tests (factor, solve, cancel, roots, forms)
