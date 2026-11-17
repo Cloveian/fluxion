@@ -2474,9 +2474,13 @@ static void draw_screen(void) {
 /* [on]+this stops a slow answer, like [on] breaks a program on the TI */
 /* #define CANCEL_KEY K_ON   // plain [on] is the TI's own break key, dont */
 #define CANCEL_KEY K_MODE
+#define CANCEL_NAME "[mode]"
+#define BUSY_HINT 5 /* s */
 
 static clock_t busy_next;
 static unsigned busy_frame;
+static clock_t busy_started;
+static unsigned long busy_shown; /* seconds the hint says, 0 = not up yet */
 
 /* a dot going round in the status bar (left of the battery) while the engine
    runs, so a slow simplify doesn't look frozen. drawn straight onto the screen,
@@ -2500,6 +2504,21 @@ static void draw_working(void) {
     screen_direct(false);
 }
 
+/* "12s, [on]+[mode] stops it" after the padlocks. no guess at the total, sin(x)=1/2 is 6 nodes and ~7 s on the calc */
+static void draw_busy_hint(unsigned long s) {
+    const font_t *small = draw_label_font();
+    int x = MARGIN + 3 * LOCK_SLOT + 4;
+    char t[32];
+
+    snprintf(t, sizeof t, "%lus, [on]+" CANCEL_NAME " stops it", s);
+    screen_direct(true);
+    screen_color(COL_BG);
+    screen_fill(x, 0, draw_text_width(t, small), areas.top.h - 1);
+    screen_color(COL_DIM);
+    draw_text(x, 1, t, small);
+    screen_direct(false);
+}
+
 /* what the keys looked like at the last poll, for edges */
 static clock_t busy_keys_next;
 static key_t busy_key;
@@ -2514,6 +2533,7 @@ static bool busy_on, busy_on_chord;
    is the cancel. 40 Hz so a quick tap doesn't fall between two polls */
 static bool busy_poll(void) {
     keypress_t p;
+    unsigned long s;
 
     if(clock() < busy_keys_next)
         return false;
@@ -2522,6 +2542,11 @@ static bool busy_poll(void) {
         busy_next = clock() + CLOCKS_PER_SEC / 10;
         busy_frame++;
         draw_working();
+        s = (unsigned long)((clock() - busy_started) / CLOCKS_PER_SEC);
+        if(s >= BUSY_HINT && s != busy_shown) {
+            busy_shown = s;
+            draw_busy_hint(s);
+        }
     }
 
     p = keys_peek();
@@ -2544,7 +2569,9 @@ static void busy_start(void) {
     pcas_oom = false;
     pcas_work = 0;
     busy_frame = 0;
-    busy_next = clock() + CLOCKS_PER_SEC / 10;
+    busy_started = clock();
+    busy_shown = 0;
+    busy_next = busy_started + CLOCKS_PER_SEC / 10;
     busy_keys_next = busy_next;
     busy_key = K_NONE;
     busy_on = busy_on_chord = false;
