@@ -180,25 +180,32 @@ static bool gm_letter(Symbol s) {
     return (s >= SYM_A && s <= SYM_Z) || s == SYM_THETA; /*i has its own power rules, pi and e can go the slow way*/
 }
 
-static bool gm_term(gm_t *m, pcas_ast_t *e) {
+/*outer is the power it's under, the canonical form writes x^2z^2 as (xz)^2*/
+static bool gm_term(gm_t *m, pcas_ast_t *e, mp_small outer) {
     pcas_ast_t *base = e;
     mp_small p = 1;
     int i;
 
     if(e->type == NODE_NUMBER) {
-        if(m->num != NULL || !mp_rat_is_integer(e->op.num))
+        if(m->num != NULL || !mp_rat_is_integer(e->op.num) || outer != 1)
             return false;
         m->num = e;
         return true;
     }
 
     if(isoptype(e, OP_POW)) {
-        pcas_ast_t *power = ast_ChildGet(e, 1);
+        pcas_ast_t *power = ast_ChildGet(e, 1), *k;
 
         base = ast_ChildGet(e, 0);
         if(power == NULL || power->type != NODE_NUMBER || !mp_rat_is_integer(power->op.num)
             || mp_int_to_int(&power->op.num->num, &p) != MP_OK || p < 1)
             return false;
+        if(isoptype(base, OP_MULT)) {
+            for(k = ast_ChildGet(base, 0); k != NULL; k = k->next)
+                if(!gm_term(m, k, outer * p))
+                    return false;
+            return true;
+        }
     }
 
     if(base == NULL || base->type != NODE_SYMBOL || !gm_letter(base->op.symbol) || m->count == GM_MAX)
@@ -208,7 +215,7 @@ static bool gm_term(gm_t *m, pcas_ast_t *e) {
             return false; /*XX isn't simplified yet, not my problem*/
 
     m->sym[m->count] = base->op.symbol;
-    m->pow[m->count++] = p;
+    m->pow[m->count++] = p * outer;
     return true;
 }
 
@@ -218,9 +225,9 @@ static bool gm_read(pcas_ast_t *e, gm_t *m) {
     m->num = NULL;
     m->count = 0;
     if(!isoptype(e, OP_MULT))
-        return gm_term(m, e);
+        return gm_term(m, e, 1);
     for(child = ast_ChildGet(e, 0); child != NULL; child = child->next)
-        if(!gm_term(m, child))
+        if(!gm_term(m, child, 1))
             return false;
     return true;
 }
@@ -324,12 +331,12 @@ pcas_ast_t *gm_div(pcas_ast_t *a, pcas_ast_t *g) {
 
     /*same shape as the divide and simplify gave, the sort order hangs on it. a MULT stays a
     MULT even with one letter left (no commutative pass), but eval folds a lone number out, and
-    anything that wasn't a MULT comes back bare*/
+    one letter left of anything that wasn't a MULT comes back bare. (xz)^2/x keeps both or the sort hangs*/
     if(left == 0) {
         ast_Cleanup(ret);
         return ast_MakeNumber(num_FromInt(1));
     }
-    if(!isoptype(a, OP_MULT) || (left == 1 && ast_ChildGet(ret, 0)->type == NODE_NUMBER)) {
+    if(left == 1 && (!isoptype(a, OP_MULT) || ast_ChildGet(ret, 0)->type == NODE_NUMBER)) {
         pcas_ast_t *only = ast_ChildRemoveIndex(ret, 0);
 
         ast_Cleanup(ret);
