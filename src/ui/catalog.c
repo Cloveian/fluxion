@@ -15,7 +15,7 @@
 */
 
 #define ITEM(name, label, word, kind, keys, engine, have, note, help) \
-    static const item_t name = { label, word, kind, keys, engine, have, note, help };
+    static const item_t name = { label, word, kind, keys, engine, have, note, help, NULL };
 
 /* stuff you type straight from the keypad */
 
@@ -287,13 +287,28 @@ const item_t *const catalog[] = {
 };
 const unsigned catalog_count = sizeof catalog / sizeof catalog[0];
 
+#define FOLDER(key, name, list) { key, name, list, sizeof list / sizeof list[0] }
+#define SUBFOLDER(item, folder, label, list) \
+    static const folder_t folder = FOLDER(NULL, label, list); \
+    static const item_t item = { label, NULL, ITEM_FOLDER, NULL, NULL, HAVE_YES, NULL, NULL, &folder };
+
+static const item_t *const fn_info[] = { &it_asym, &it_domain, &it_range };
+static const item_t *const lines[] = { &it_slope, &it_dist, &it_mid, &it_par, &it_perp };
+static const item_t *const shapes[] = { &it_triangle, &it_circle, &it_rect, &it_squareshape, &it_trap, &it_polygon };
+static const item_t *const solids[] = { &it_sphere, &it_cyl, &it_cone, &it_cube, &it_box };
+static const item_t *const conics[] = { &it_ellipse, &it_hyperbola };
+static const item_t *const prob[] = { &it_pand, &it_por };
+
+SUBFOLDER(it_fn_info, fn_info_folder, "Function info", fn_info)
+SUBFOLDER(it_lines, lines_folder, "Lines", lines)
+SUBFOLDER(it_shapes, shapes_folder, "Shapes", shapes)
+SUBFOLDER(it_solids, solids_folder, "Solids", solids)
+SUBFOLDER(it_conics, conics_folder, "Conics", conics)
+SUBFOLDER(it_prob, prob_folder, "Probability", prob)
+
 static const item_t *const algebra[] = {
-    &it_expand, &it_factor, &it_solve, &it_asym, &it_domain, &it_range, &it_system, &it_slope, &it_dist, &it_mid,
-    &it_par, &it_perp, &it_roots, &it_fromroots, &it_inverse, &it_triangle,
-    &it_circle, &it_rect, &it_squareshape, &it_trap, &it_sphere, &it_cyl, &it_cone, &it_cube, &it_box,
-    &it_polygon, &it_pand, &it_por,
-    &it_ellipse, &it_hyperbola,
-    &it_subst, &it_evaluate
+    &it_expand, &it_factor, &it_solve, &it_system, &it_roots, &it_fromroots, &it_inverse, &it_subst, &it_evaluate,
+    &it_fn_info, &it_lines, &it_shapes, &it_solids, &it_conics, &it_prob
 };
 static const item_t *const calculus[] = {
     &it_deriv, &it_deriv_at, &it_integral, &it_limit
@@ -312,8 +327,6 @@ static const item_t *const tools[] = {
     &it_id_basic, &it_id_trig, &it_id_hyp, &it_id_cplx, &it_id_tconst, &it_id_iconst,
     &it_clear
 };
-
-#define FOLDER(key, name, list) { key, name, list, sizeof list / sizeof list[0] }
 
 const folder_t folders[FOLDER_COUNT] = {
     FOLDER("y=",     "Algebra",   algebra),

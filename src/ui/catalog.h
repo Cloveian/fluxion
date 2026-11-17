@@ -22,8 +22,11 @@ typedef enum {
     ITEM_TEMPLATE, /* a 2D shape with slots, like a fraction, exponent, root, |x| */
     ITEM_FUNCTION, /* name then a slot, sin, ln, ... */
     ITEM_COMMAND, /* something you do to an expression, expand, solve, ... */
-    ITEM_SETTING /* Tools folder */
+    ITEM_SETTING, /* Tools folder */
+    ITEM_FOLDER /* a subfolder row, only in menus */
 } item_kind_t;
+
+typedef struct folder folder_t;
 
 typedef struct {
     const char *label; /* how it looks in a menu */
@@ -34,14 +37,15 @@ typedef struct {
     have_t have;
     const char *note;
     const char *help; /* what it does, for the catalog page. NULL for settings */
+    const folder_t *sub; /* what an ITEM_FOLDER opens */
 } item_t;
 
-typedef struct {
-    const char *key; /* the soft key under the screen */
+struct folder {
+    const char *key; /* the soft key under the screen, NULL for a subfolder */
     const char *name;
     const item_t *const *items;
     unsigned count;
-} folder_t;
+};
 
 /* every item, in typing order (what the editor has to accept) */
 extern const item_t *const catalog[];

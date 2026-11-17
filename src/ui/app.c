@@ -75,7 +75,9 @@ static bool ctl, ctl_lock;      /* [on] tapped, so the next key becomes [on]+key
 static const char *status;      /* one-line message above the input, or NULL */
 
 static int menu = -1;           /* open folder, -1 = none */
+static const folder_t *menu_in; /* folders[menu] or one of its subfolders */
 static int menu_sel, menu_top;
+static int menu_up_sel;         /* the subfolder's row, for going back up */
 
 static unsigned short simp_flags = SIMP_ALL;
 static unsigned char canon_flags = CANONICAL_ALL;
@@ -1106,7 +1108,7 @@ void app_set_form_index(int i) {
 /* -- menus -- */
 
 static const item_t *menu_item(int i) {
-    return folders[menu].items[i];
+    return menu_in->items[i];
 }
 
 /* Tools - which simp_flags bit each setting maps to, 0 if it isnt one */
@@ -1267,7 +1269,7 @@ static void menu_free_boxes(void) {
 }
 
 static void menu_build_boxes(void) {
-    const folder_t *f = &folders[menu];
+    const folder_t *f = menu_in;
     layout_font_t small = draw_font;
     unsigned i;
 
@@ -1279,8 +1281,8 @@ static void menu_build_boxes(void) {
         const item_t *it = f->items[i];
 
         menu_boxes[i] = NULL;
-        if(it->kind == ITEM_SETTING || !pick(it, true))
-            continue; /* settings and the greyed out ones stay text */
+        if(it->kind == ITEM_FOLDER || it->kind == ITEM_SETTING || !pick(it, true))
+            continue; /* subfolders, settings and the greyed out ones stay text */
         /* the power's base is whatever's left of it, so alone it's just a
            floating slot. "x^n" says it better */
         if(strcmp(it->engine, "($)^($)") == 0)
@@ -1297,17 +1299,27 @@ static void menu_close(void) {
     menu = -1;
 }
 
-static void menu_open(int folder) {
+static void menu_show(const folder_t *f, int sel) {
     menu_free_boxes();
-    menu = folder;
-    menu_sel = 0;
+    menu_in = f;
+    menu_sel = sel;
     menu_top = 0;
     menu_build_boxes();
+}
+
+static void menu_open(int folder) {
+    menu = folder;
+    menu_show(&folders[folder], 0);
 }
 
 static void menu_choose(int i) {
     const item_t *it = menu_item(i);
 
+    if(it->kind == ITEM_FOLDER) {
+        menu_up_sel = i;
+        menu_show(it->sub, 0);
+        return;
+    }
     if(it->kind != ITEM_SETTING && pick(it, true))
         will_edit(false);
     if(!pick(it, false)) {
@@ -1319,14 +1331,25 @@ static void menu_choose(int i) {
         menu_close();
 }
 
-static void menu_key(keypress_t p) {
-    int count = (int)folders[menu].count;
+/* letter is what [alpha] made of the key, 0 if nothing. rows past 9 go A, B, C like the nspire */
+static void menu_key(keypress_t p, char letter) {
+    int count = (int)menu_in->count, n = -1;
 
     switch(p.key) {
     case K_UP:    menu_sel = (menu_sel + count - 1) % count; break;
     case K_DOWN:  menu_sel = (menu_sel + 1) % count; break;
-    case K_LEFT:  menu_open((menu + FOLDER_COUNT - 1) % FOLDER_COUNT); break;
-    case K_RIGHT: menu_open((menu + 1) % FOLDER_COUNT); break;
+    case K_LEFT:
+        if(menu_in != &folders[menu])
+            menu_show(&folders[menu], menu_up_sel);
+        else
+            menu_open((menu + FOLDER_COUNT - 1) % FOLDER_COUNT);
+        break;
+    case K_RIGHT:
+        if(menu_item(menu_sel)->kind == ITEM_FOLDER)
+            menu_choose(menu_sel);
+        else
+            menu_open((menu + 1) % FOLDER_COUNT);
+        break;
     case K_ENTER: menu_choose(menu_sel); break;
     case K_CLEAR: menu_close(); break;
 
@@ -1340,8 +1363,12 @@ static void menu_key(keypress_t p) {
     }
 
     default:
-        if(p.key >= K_1 && p.key <= K_9 && (int)(p.key - K_1) < count)
-            menu_choose((int)(p.key - K_1));
+        if(letter != 0)
+            n = 9 + (letter - 'a');
+        else if(p.key >= K_1 && p.key <= K_9)
+            n = (int)(p.key - K_1);
+        if(n >= 0 && n < count)
+            menu_choose(n);
         break;
     }
 }
@@ -1438,14 +1465,40 @@ static int cat_index(const item_t *it) {
     return -1;
 }
 
+static bool folder_has(const folder_t *f, const item_t *it) {
+    unsigned j;
+
+    for(j = 0; j < f->count; j++)
+        if(f->items[j] == it || (f->items[j]->kind == ITEM_FOLDER && folder_has(f->items[j]->sub, it)))
+            return true;
+    return false;
+}
+
 static bool in_a_folder(const item_t *it) {
-    unsigned f, j;
+    unsigned f;
 
     for(f = 0; f < FOLDER_COUNT; f++)
-        for(j = 0; j < folders[f].count; j++)
-            if(folders[f].items[j] == it)
-                return true;
+        if(folder_has(&folders[f], it))
+            return true;
     return false;
+}
+
+/* a folder's items in menu order, subfolders opened up in place */
+static void cat_add_folder(const folder_t *f) {
+    unsigned j;
+
+    for(j = 0; j < f->count && cat_count < (int)sizeof cat_order; j++) {
+        int at;
+
+        if(f->items[j]->kind == ITEM_FOLDER) {
+            cat_add_folder(f->items[j]->sub);
+            continue;
+        }
+        at = cat_index(f->items[j]);
+        /* settings show no on/off here, they have tools and mode */
+        if(at >= 0 && catalog[at]->kind != ITEM_SETTING)
+            cat_order[cat_count++] = (unsigned char)at;
+    }
 }
 
 /* a header then its items a-z, insertion sort is plenty for ~60. all of them
@@ -1474,20 +1527,14 @@ static void catalog_open(void) {
     /* built once. the folders keep their menu order, Keys and All go a-z */
     /* order? i hardly know 'er bwhahaHAHAah */
     if(cat_count == 0) {
-        unsigned f, j;
+        unsigned f;
 
         for(f = 0; f < FOLDER_COUNT; f++) {
             int head = cat_count;
 
             if(cat_count < (int)sizeof cat_order)
                 cat_order[cat_count++] = (unsigned char)(CAT_FOLDER + f);
-            for(j = 0; j < folders[f].count && cat_count < (int)sizeof cat_order; j++) {
-                int at = cat_index(folders[f].items[j]);
-
-                /* settings show no on/off here, they have tools and mode */
-                if(at >= 0 && catalog[at]->kind != ITEM_SETTING)
-                    cat_order[cat_count++] = (unsigned char)at;
-            }
+            cat_add_folder(&folders[f]);
             if(cat_count == head + 1)
                 cat_count = head;   /* nothing left in it (tools), no lonely header */
         }
@@ -1929,10 +1976,6 @@ static bool handle(keypress_t p) {
     if(p.key == K_QUIT)
         return false;
 
-    if(menu >= 0) {
-        menu_key(p);
-        return true;
-    }
     if(popup >= 0) {
         popup_key(p);
         return true;
@@ -1966,6 +2009,10 @@ static bool handle(keypress_t p) {
     if(p.key >= K_LETTER_A && p.key <= K_LETTER_Z)
         c = (char)('a' + (p.key - K_LETTER_A));
 
+    if(menu >= 0) {
+        menu_key(p, c);
+        return true;
+    }
     if(page_is_open()) {
         if(sec && p.key == K_MODE)  /* [2nd][mode] is quit, out of the page here */
             page_close();
@@ -2051,7 +2098,7 @@ static void draw_bar(void) {
 
 static void draw_menu(void) {
     const font_t *font = draw_label_font();
-    const folder_t *f = &folders[menu];
+    const folder_t *f = menu_in;
     int row_h = font->ascent + font->descent + 2;
     int bottom = areas.body.y + areas.body.h - 1;
     int rows = (int)f->count, max_rows;
@@ -2095,8 +2142,9 @@ static void draw_menu(void) {
 
     for(i = 0; i < rows; i++) {
         int n = menu_top + i, y = top + 2 + i * row_h;
+        int text_y = y + (row_h - 2 - font->ascent - font->descent) / 2;
         const item_t *it = f->items[n];
-        bool can = pick(it, true);
+        bool can = it->kind == ITEM_FOLDER || pick(it, true);
         char label[48];
 
         if(it->kind == ITEM_SETTING && strcmp(it->label, "clear history") != 0)
@@ -2112,16 +2160,18 @@ static void draw_menu(void) {
             screen_color(can ? COL_FG : COL_DIM);
         }
 
-        if(n < 9) {
-            char num[3] = { (char)('1' + n), ':', '\0' };
-            draw_text(x + 3, y + (row_h - 2 - font->ascent - font->descent) / 2, num, font);
+        if(n < 9 + 26) {
+            char num[3] = { (char)(n < 9 ? '1' + n : 'A' + (n - 9)), ':', '\0' };
+            draw_text(x + 3, text_y, num, font);
         }
+        if(it->kind == ITEM_FOLDER)
+            draw_text(x + width - 3 - draw_text_width(">", font), text_y, ">", font);
         if(n < menu_box_count && menu_boxes[n] != NULL) {
             const box_t *b = menu_boxes[n];
 
             draw_box(b, x + 18, y + (row_h - 2 - b->ascent - b->descent) / 2 + b->ascent);
         } else {
-            draw_text(x + 18, y + (row_h - 2 - font->ascent - font->descent) / 2, label, font);
+            draw_text(x + 18, text_y, label, font);
         }
     }
 }
