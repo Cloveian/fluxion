@@ -2,6 +2,7 @@
 #
 #   make -f pc.makefile          build build-pc/fluxion
 #   make -f pc.makefile test     run the engine's tests + the identity mask check
+#   make -f pc.makefile budget   what each test line costs, the CE guess too
 #   ./build-pc/fluxion simplify '2X+X'
 #
 # uses PineappleCAS's PC command line (src/engine/pc/). same flags as upstream:
@@ -99,7 +100,10 @@ test: $(TARGET) build-pc/identity-masks build-pc/layout-dump build-pc/view build
 	./$(TARGET) test test/fluxion.tests
 	./build-pc/identity-masks
 
+budget: $(TARGET)
+	./$(TARGET) budget test/fluxion.tests
+
 clean:
 	rm -rf build-pc build-web web/build
 
-.PHONY: test clean web
+.PHONY: test budget clean web

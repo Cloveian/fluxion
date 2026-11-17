@@ -46,7 +46,7 @@ only `src/platform/` is allowed to touch graphx, keypadc or SDL. everything else
 ## Testing
 
 - PC: engine + layout built with `gcc`, takes a few seconds
-- `./build-pc/fluxion budget test/fluxion.tests`: every test line's work (pcas_check calls), PC time and \*6500 for the CE, most work first. work is the same number on every machine, time per unit spreads ~4x (more on bignum heavy stuff)
+- `make -f pc.makefile budget`: every test line's work (pcas_check calls), PC time and \*6500 for the CE, most work first. work is the same number on every machine, time per unit spreads ~4x (more on bignum heavy stuff)
 - CEmu: by hand. `cemu-autotester` comes with CEdev if i ever want scripted key presses
 
 ## Gotchas
