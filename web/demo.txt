@@ -8,6 +8,6 @@ solve-letters: y= 3 alpha xt 3 xt - alpha 1 down xt + alpha 1 right 2nd math 5 a
 inequality: y= 3 xt x^2 - 4 math 3 0 , xt enter
 roots: alpha+* alpha+7 alpha+7 alpha+4 alpha+ln ( xt ^ 4 right - 1 , xt enter
 derivative: window 1 ln xt right alpha xt xt enter
-circle-line: y= 7 xt x^2 + alpha 1 x^2 2nd math 2 5 , alpha 1 2nd math xt + 1 enter
-range: y= 6 xt x^2 + 1 , xt enter
-hyperbola: y= up up up enter xt x^2 alpha xt 9 right - alpha 1 x^2 alpha xt 1 6 right 2nd math 1 enter
+circle-line: y= 4 xt x^2 + alpha 1 x^2 2nd math 2 5 , alpha 1 2nd math xt + 1 enter
+range: y= alpha math 3 xt x^2 + 1 , xt enter
+hyperbola: y= alpha sin 2 xt x^2 alpha xt 9 right - alpha 1 x^2 alpha xt 1 6 right 2nd math 1 enter

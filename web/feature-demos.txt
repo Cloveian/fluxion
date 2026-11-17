@@ -16,9 +16,9 @@ Multivariable factoring | By pattern only | y= 2 xt ^ 4 right - alpha 1 ^ 4 ente
 Prime factoring |  | y= 2 3 6 0 enter
 *Dih*rivatives | With respect to x | window 1 2nd ln xt x^2 right enter
 Derivative at a value | Typed out, no template | window 2 xt ^ 3 right , xt , 2 enter
-Linear systems | Up to 4 equations | y= 7 2 xt - alpha 1 2nd math 7 , xt + alpha 1 2nd math 2 enter
-Systems with letters |  | y= 7 alpha math xt + alpha 1 2nd math 1 , xt - alpha 1 2nd math 2 , xt , alpha 1 enter
-Nonlinear systems | Two equations only | y= 7 xt x^2 + alpha 1 x^2 2nd math 2 5 , alpha 1 2nd math xt + 1 enter
+Linear systems | Up to 4 equations | y= 4 2 xt - alpha 1 2nd math 7 , xt + alpha 1 2nd math 2 enter
+Systems with letters |  | y= 4 alpha math xt + alpha 1 2nd math 1 , xt - alpha 1 2nd math 2 , xt , alpha 1 enter
+Nonlinear systems | Two equations only | y= 4 xt x^2 + alpha 1 x^2 2nd math 2 5 , alpha 1 2nd math xt + 1 enter
 Decimals to fractions |  | . 3 7 5 enter
 Nested fractions |  | alpha xt 1 + 1 alpha xt xt right down 1 - 1 alpha xt xt enter
 Root simplification |  | 2nd x^2 1 2 right + 2nd x^2 2 7 enter
@@ -28,9 +28,9 @@ Exact trig values |  | cos 3 2nd ^ alpha xt 4 enter
 Reciprocal trig |  | on+cos 2nd ^ alpha xt 3 enter
 Hyperbolic functions |  | window 1 alpha+ln alpha+x^2 alpha+log alpha+^ ( xt x^2 enter
 Trig identities |  | 2 sin xt right cos xt enter
-Domain | Rough inside roots and logs | y= 5 2nd x^2 4 - xt right alpha xt xt + 1 enter
-Range | Not trig ones | y= 6 xt 2nd ln neg xt enter
-Asymptotes and holes | Rational functions only | y= 4 alpha xt xt x^2 - 1 down xt x^2 - xt enter
+Domain | Rough inside roots and logs | y= alpha math 2 2nd x^2 4 - xt right alpha xt xt + 1 enter
+Range | Not trig ones | y= alpha math 3 xt 2nd ln neg xt enter
+Asymptotes and holes | Rational functions only | y= alpha math 1 alpha xt xt x^2 - 1 down xt x^2 - xt enter
 Inverse functions |  | 2nd 0 alpha x^2 enter 2 xt + 3 enter
 Amplitude | Sin and cos only | zoom up enter 3 sin 2 xt right + 4 cos 2 xt enter
 Piecewise | No brace template | trace up enter xt x^2 , xt math 3 0 , 2 xt + 1 , xt math 6 0 enter
@@ -56,13 +56,13 @@ Out of memory recovery |  |
 Factorials |  | 1 0 math 7 enter
 GCD and LCM | Whole numbers only | zoom up up up up up enter 8 4 , 1 2 0 enter
 Complex numbers | No complex division | 2nd x^2 neg 1 6 right + 2nd x^2 neg 9 right enter
-Big integers |  | y= up enter 2 ^ 1 0 0 enter
-Slope, distance, midpoint |  | y= 8 1 , 2 , 4 , 8 enter y= 9 1 , 2 , 4 , 8 enter
+Big integers |  | y= 9 2 ^ 1 0 0 enter
+Slope, distance, midpoint |  | y= alpha apps 1 1 , 2 , 4 , 8 enter y= alpha apps 2 1 , 2 , 4 , 8 enter
 Parallel and perpendicular lines |  | 2nd 0 alpha 8 alpha 8 enter 2 , 1 , 1 enter
 Triangle solving | Decimal answers | 2nd 0 alpha 4 enter 3 , 4 , 5 , , , enter
 Shape formulas | 2D and 3D | 2nd 0 alpha prgm alpha prgm alpha prgm enter 3 , 4 enter
-Ellipses | Axis-aligned only | y= up up up up enter 4 xt x^2 + 9 alpha 1 x^2 2nd math 3 6 enter
-Hyperbolas | Axis-aligned only | y= up up up enter xt x^2 alpha xt 9 right - alpha 1 x^2 alpha xt 1 6 right 2nd math 1 enter
-Conic from points |  | y= up up up up enter 1 , 2 , 6 , 2 , 4 , 2 enter
+Ellipses | Axis-aligned only | y= alpha sin 1 4 xt x^2 + 9 alpha 1 x^2 2nd math 3 6 enter
+Hyperbolas | Axis-aligned only | y= alpha sin 2 xt x^2 alpha xt 9 right - alpha 1 x^2 alpha xt 1 6 right 2nd math 1 enter
+Conic from points |  | y= alpha sin 1 1 , 2 , 6 , 2 , 4 , 2 enter
 Combinations, permutations |  | zoom up up up enter 1 0 , 3 enter
-Independent events |  | y= up up up up up enter 1 alpha xt 2 right , 1 alpha xt 3 enter
+Independent events |  | y= alpha cos 2 1 alpha xt 2 right , 1 alpha xt 3 enter
