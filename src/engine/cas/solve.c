@@ -7,8 +7,10 @@
       linear in var                var = -b/a. a and b can have other variables in them
       polynomial with numbers      factored (factor.c), then each factor: linear, a
                                    quadratic by the formula, or a cubic by cardano / the
-                                   cos form. a quartic or higher factor left over means
-                                   it can't be solved (yet), never a partial answer.
+                                   cos form, or a var^4 / var^6 with only even powers as
+                                   one of those in var^2. any other quartic or higher
+                                   factor left over means it can't be solved (yet), never
+                                   a partial answer.
                                    one exception, a cardano cubic only gives its real
                                    root even with complex on, the pair is too slow to
                                    draw on the calculator for now.
@@ -798,6 +800,110 @@ done:
     return n;
 }
 
+/*every var^2k in f as var^k, false when var turns up any other way (x, x^3). x^4-5x^2+4 -> x^2-5x+4*/
+static bool halve_powers(pcas_ast_t *f, Symbol var) {
+    pcas_ast_t *c, *p;
+    mp_small k, den;
+
+    if(f->type == NODE_SYMBOL)
+        return f->op.symbol != var;
+    if(f->type != NODE_OPERATOR)
+        return true;
+    if(isoptype(f, OP_POW) && ast_ChildGet(f, 0)->type == NODE_SYMBOL && ast_ChildGet(f, 0)->op.symbol == var) {
+        p = ast_ChildGet(f, 1);
+        if(p->type != NODE_NUMBER || mp_rat_to_ints(p->op.num, &k, &den) != MP_OK || den != 1 || k % 2 != 0)
+            return false;
+        replace_node(p, number(k / 2));
+        return true;
+    }
+    for(c = ast_ChildGet(f, 0); c != NULL; c = c->next)
+        if(!halve_powers(c, var))
+            return false;
+    return true;
+}
+
+static int solve_factor(pcas_ast_t *f, Symbol var, pcas_ast_t **out, int n, bool complex);
+
+static int sign_of(pcas_ast_t *c) {
+    return c == NULL || is_zero(c) ? 0 : mp_rat_compare_zero(c->op.num);
+}
+
+/*how many of p's m real roots are above 0, exactly. sign changes (descartes) when all deg
+  came back, a cardano cubic's one root has the sign of -c0/lead. -1 when it can't tell
+  (a cubic with a double root), then it's the decimal. the decimal alone said 3x^4+200000x^2+3
+  had real roots, the cancelling in mid +- sqrt(q) flips the sign of a tiny u*/
+static int positive_roots(coefs_t *p, int m) {
+    int i, changes = 0, last = sign_of(p->lead), s;
+
+    if(p->deg == 3 && m == 1)
+        return sign_of(p->c[0]) * last < 0;
+    if(m != p->deg && !(p->deg == 2 && m == 1)) /*a quadratic's double root comes back once*/
+        return -1;
+    for(i = p->deg - 1; i >= 0; i--) {
+        s = sign_of(p->c[i]);
+        if(s != 0 && s != last) {
+            changes++;
+            last = s;
+        }
+    }
+    return changes < m ? changes : m;
+}
+
+/*only even powers, so a quadratic or cubic in var^2: solve that for u and take +-sqrt(u).
+990099x^4-2000099x^2+1010000 has roots past the rational search (its constant is over a million)*/
+static int solve_even(pcas_ast_t *f, Symbol var, pcas_ast_t **out, int n, bool complex) {
+    pcas_ast_t *g = ast_Copy(f), *u[3] = { NULL }, *dec[3], *r, *neg;  /*quadratic or cubic in u. a SOLVE_MAX array here pushs solve_factor past ix-128, +3.7 KB on the CE*/
+    coefs_t p;
+    bool have;
+    int m, i, pos;
+
+    if(g == NULL || !halve_powers(g, var)) {
+        ast_Cleanup(g);
+        return SOLVE_UNKNOWN;
+    }
+    simplify(g, SIMP_SOLVE);
+    have = !complex && read_poly(g, var, &p);
+    m = solve_factor(g, var, u, 0, complex);
+    pos = have && m > 0 ? positive_roots(&p, m) : -1;
+    if(have)
+        coefs_free(&p);
+    ast_Cleanup(g);
+
+    for(i = 0; i < 3; i++)
+        dec[i] = i < m ? approx_number(u[i]) : NULL;
+    for(i = 0; i < 3; i++) {
+        bool keep = complex;
+
+        if(!keep && i < m && pos >= 0) { /*the pos biggest ones, the decimals only put them in order*/
+            int above = 0, j;
+
+            for(j = 0; j < m; j++)
+                if(j != i && dec[i] != NULL && dec[j] != NULL && mp_rat_compare(dec[j]->op.num, dec[i]->op.num) > 0)
+                    above++;
+            keep = dec[i] != NULL && above < pos;
+        } else if(!keep && i < m) {
+            keep = dec[i] != NULL && mp_rat_compare_zero(dec[i]->op.num) >= 0;
+        }
+        if(i < m && keep && n + 2 <= SOLVE_MAX) {
+            if(is_zero(u[i])) {
+                n = add_root(out, n, number(0));
+            } else {
+                r = ast_MakeBinary(OP_POW, ast_Copy(u[i]), ast_MakeNumber(num_FromFraction(1, 2)));
+                simplify(r, SIMP_ALL);
+                neg = ast_MakeBinary(OP_MULT, number(-1), ast_Copy(r));
+                simplify(neg, SIMP_ALL);
+                n = add_root(out, n, neg);
+                n = add_root(out, n, r);
+            }
+        }
+    }
+    for(i = 0; i < 3; i++) { /*after, every pass looks at all the decimals*/
+        ast_Cleanup(dec[i]);
+        ast_Cleanup(u[i]);  /*all 3, an unknown m can still leave some*/
+    }
+    return m < 0 ? m : n;
+}
+
 /*roots of one factor of the factored polynomial, added at out[n]. returns the
 new count, or SOLVE_UNKNOWN.*/
 static int solve_factor(pcas_ast_t *f, Symbol var, pcas_ast_t **out, int n, bool complex) {
@@ -831,6 +937,8 @@ static int solve_factor(pcas_ast_t *f, Symbol var, pcas_ast_t **out, int n, bool
         n = solve_quadratic_sym(&p, out, n);
     else if(p.deg == 3 && p.numeric)
         n = solve_cubic(&p, out, n, false); /*the complex pair takes minutes to draw on the calculator, real only for now*/
+    else if((p.deg == 4 || p.deg == 6) && p.numeric)
+        n = solve_even(f, var, out, n, complex);
     else
         n = SOLVE_UNKNOWN;      /*quartics someday, ferrari looks even worse*/
 
