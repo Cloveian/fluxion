@@ -863,9 +863,11 @@ static int solve_even(pcas_ast_t *f, Symbol var, pcas_ast_t **out, int n, bool c
         return SOLVE_UNKNOWN;
     }
     simplify(g, SIMP_SOLVE);
-    have = !complex && read_poly(g, var, &p);
+    have = read_poly(g, var, &p);
     m = solve_factor(g, var, u, 0, complex);
-    pos = have && m > 0 ? positive_roots(&p, m) : -1;
+    pos = have && !complex && m > 0 ? positive_roots(&p, m) : -1;
+    if(complex && have && p.deg == 3 && m == 1) /*the cubic is real only, its complex pair is 4 roots this would leave out*/
+        m = SOLVE_UNKNOWN;
     if(have)
         coefs_free(&p);
     ast_Cleanup(g);
