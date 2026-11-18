@@ -46,6 +46,22 @@ factor; X^4_1; (X_1)(X+1)(X^2+1)
 factor; X^3+8; (X+2)(X^2_2X+4)
 factor; X^3_1; (X_1)(X^2+X+1)
 
+#Only even powers: roots in X^2, then an even quartic as (Px^2+Rx+S)(Px^2_Rx+S)
+factor; X^4_5X^2+6; (X^2_2)(X^2_3)
+factor; 2X^4_7X^2+3; (2X^2_1)(X^2_3)
+factor; X^4+2X^2+1; (X^2+1)^2
+factor; X^8_1; (X_1)(X+1)(X^2+1)(X^4+1)
+factor; X^6+1; (X^2+1)(X^4_X^2+1)
+factor; X^6_64; (X_2)(X+2)(X^2+2X+4)(X^2_2X+4)
+factor; X^4+4; (X^2+2X+2)(X^2_2X+2)
+factor; 4X^4+1; (2X^2+2X+1)(2X^2_2X+1)
+factor; X^4+X^2+1; (X^2+X+1)(X^2_X+1)
+factor; X^5+4X; X(X^2+2X+2)(X^2_2X+2)
+factor; X^4+1; X^4+1
+factor; X^4+16; X^4+16
+csolve; X^4+4=0; X; -1_i,-1+i,1_i,1+i
+csolve; X^4_5X^2+6=0; X; -3^(1/2),-2^(1/2),2^(1/2),3^(1/2)
+
 #Nothing to factor
 factor; X^2; X^2
 factor; 5; 5

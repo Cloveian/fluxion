@@ -659,6 +659,7 @@ typedef struct {
     int found;                          /*roots p/q found, and how many times each*/
     mp_small fp[POLY_MAX_DEGREE], fq[POLY_MAX_DEGREE];
     int mult[POLY_MAX_DEGREE];
+    int fk[POLY_MAX_DEGREE];            /*1 for qX - p, 2 for qX^2 - p*/
 
     mp_small dp[POLY_MAX_DIVISORS], dq[POLY_MAX_DIVISORS];
     mp_int tmp[3];
@@ -818,6 +819,19 @@ static bool poly_read(pcas_ast_t *e, poly_t *p) {
     return true;
 }
 
+/*p /= X^n, the n lowest have to be 0*/
+static void poly_drop_low(poly_t *p, int n) {
+    int i;
+
+    for(i = 0; i < n; i++)
+        mp_int_free(p->c[i]);
+    for(i = 0; i <= p->deg - n; i++)
+        p->c[i] = p->c[i + n];
+    for(; i <= p->deg; i++)
+        p->c[i] = NULL;
+    p->deg -= n;
+}
+
 /*moves the gcd of the coefficients (with the leading one's sign) into scale, and
 the lowest power of the variable into low. p is then primitive, with c[0] != 0.*/
 static void poly_primitive(poly_t *p) {
@@ -836,15 +850,7 @@ static void poly_primitive(poly_t *p) {
     mp_rat_mul_int(p->scale, g, p->scale);
 
     for(p->low = 0; mp_int_compare_zero(p->c[p->low]) == 0; p->low++);
-    if(p->low > 0) {
-        for(i = 0; i < p->low; i++)
-            mp_int_free(p->c[i]);
-        for(i = 0; i <= p->deg - p->low; i++)
-            p->c[i] = p->c[i + p->low];
-        for(; i <= p->deg; i++)
-            p->c[i] = NULL;
-        p->deg -= p->low;
-    }
+    poly_drop_low(p, p->low);
 }
 
 long gcd_small(long a, long b) {
@@ -873,16 +879,17 @@ static int divisors(mp_small n, mp_small *out) {
     return count;
 }
 
-/*is p/q a root? Horner on q^deg * P(p/q), so it stays in integers (no float rounding bugs)*/
+/*is p/q a root? Horner on q^deg * P(p/q), so it stays in integers (no float rounding bugs).
+  s = 2 reads every other coefficient*/
 /*integer? i hardly know 'er bwahahhhaaa*/
 /*you need to leave!!*/
-static bool poly_is_root(poly_t *poly, mp_small p, mp_small q) {
+static bool poly_is_root(poly_t *poly, mp_small p, mp_small q, int s) {
     mp_int v = poly->tmp[0], qpow = poly->tmp[1], t = poly->tmp[2];
     int i;
 
     mp_int_copy(poly->c[poly->deg], v);
     mp_int_set_value(qpow, 1);
-    for(i = poly->deg - 1; i >= 0; i--) {
+    for(i = poly->deg - s; i >= 0; i -= s) {
         mp_int_mul_value(v, p, v);
         mp_int_mul_value(qpow, q, qpow);
         mp_int_mul(poly->c[i], qpow, t);
@@ -893,7 +900,7 @@ static bool poly_is_root(poly_t *poly, mp_small p, mp_small q) {
 
 /*some rational root p/q (q > 0) of a primitive poly with c[0] != 0, by the
 rational root theorem: p divides c[0], q divides c[deg]*/
-static bool poly_find_root(poly_t *poly, mp_small *p, mp_small *q) {
+static bool poly_find_root(poly_t *poly, mp_small *p, mp_small *q, int s) {
     mp_small a0, an, *dp = poly->dp, *dq = poly->dq;
     int np, nq, i, j, sign;
 
@@ -911,7 +918,7 @@ static bool poly_find_root(poly_t *poly, mp_small *p, mp_small *q) {
             if(gcd_small(dp[i], dq[j]) != 1)
                 continue;
             for(sign = 1; sign >= -1; sign -= 2) {
-                if(poly_is_root(poly, sign * dp[i], dq[j])) {
+                if(poly_is_root(poly, sign * dp[i], dq[j], s)) {
                     *p = sign * dp[i];
                     *q = dq[j];
                     return true;
@@ -922,24 +929,21 @@ static bool poly_find_root(poly_t *poly, mp_small *p, mp_small *q) {
     return false;
 }
 
-/*poly /= (qX - p), for a root p/q. synthetic division, top down:
-b[n-1] = c[n]/q, b[i-1] = (c[i] + p*b[i])/q, each b[i] kept in c[i+1]*/
-static void poly_divide(poly_t *poly, mp_small p, mp_small q) {
+/*poly /= (qX^s - p), for a root p/q. synthetic division, top down:
+b[n-1] = c[n]/q, b[i-1] = (c[i] + p*b[i])/q, each b[i] kept in c[i+1] (c[i+s] for s = 2,
+the odd zeros just move down with them)*/
+static void poly_divide(poly_t *poly, mp_small p, mp_small q, int s) {
     mp_int t = poly->tmp[0];
     int i, n = poly->deg;
 
     mp_int_div_value(poly->c[n], q, poly->c[n], NULL);
-    for(i = n - 1; i >= 1; i--) {
-        mp_int_mul_value(poly->c[i + 1], p, t);
+    for(i = n - s; i >= s; i -= s) {
+        mp_int_mul_value(poly->c[i + s], p, t);
         mp_int_add(poly->c[i], t, poly->c[i]);
         mp_int_div_value(poly->c[i], q, poly->c[i], NULL);
     }
 
-    mp_int_free(poly->c[0]);
-    for(i = 0; i < n; i++)
-        poly->c[i] = poly->c[i + 1];
-    poly->c[n] = NULL;
-    poly->deg--;
+    poly_drop_low(poly, s);
 }
 
 static pcas_ast_t *int_number(mp_int z) {
@@ -953,41 +957,97 @@ static pcas_ast_t *power_or_self(pcas_ast_t *e, int n) {
     return n == 1 ? e : ast_MakeBinary(OP_POW, e, ast_MakeNumber(num_FromInt(n)));
 }
 
-/*qX - p*/
-static pcas_ast_t *poly_linear(Symbol var, mp_small p, mp_small q) {
-    pcas_ast_t *x = ast_MakeSymbol((char)var);
+/*qX^k - p*/
+static pcas_ast_t *poly_binomial(Symbol var, mp_small p, mp_small q, int k) {
+    pcas_ast_t *x = power_or_self(ast_MakeSymbol((char)var), k);
 
     if(q != 1)
         x = ast_MakeBinary(OP_MULT, ast_MakeNumber(num_FromInt(q)), x);
     return ast_MakeBinary(OP_ADD, x, ast_MakeNumber(num_FromInt(-p)));
 }
 
-static pcas_ast_t *poly_to_ast(poly_t *poly) {
+static pcas_ast_t *poly_to_ast(Symbol var, mp_int *c, int deg) {
     pcas_ast_t *sum = ast_MakeOperator(OP_ADD);
     int i;
 
-    for(i = poly->deg; i >= 0; i--) {
+    for(i = deg; i >= 0; i--) {
         pcas_ast_t *term;
 
-        if(mp_int_compare_zero(poly->c[i]) == 0)
+        if(mp_int_compare_zero(c[i]) == 0)
             continue;
 
         if(i == 0) {
-            term = int_number(poly->c[i]);
+            term = int_number(c[i]);
         } else {
-            term = power_or_self(ast_MakeSymbol((char)poly->var), i);
-            if(mp_int_compare_value(poly->c[i], 1) != 0)
-                term = ast_MakeBinary(OP_MULT, int_number(poly->c[i]), term);
+            term = power_or_self(ast_MakeSymbol((char)var), i);
+            if(mp_int_compare_value(c[i], 1) != 0)
+                term = ast_MakeBinary(OP_MULT, int_number(c[i]), term);
         }
         ast_ChildAppend(sum, term);
     }
     return sum;
 }
 
+/*every rational root, divided out. s = 2 for roots in X^2 of an even one, x^4-5x^2+6 is (x^2-2)(x^2-3)*/
+static void poly_take_roots(poly_t *poly, int s) {
+    mp_small p, q;
+    int i;
+
+    while(poly->deg >= s && poly_find_root(poly, &p, &q, s)) {
+        poly_divide(poly, p, q, s);
+
+        /*a root found again is one more power of its factor*/
+        for(i = 0; i < poly->found && (poly->fp[i] != p || poly->fq[i] != q || poly->fk[i] != s); i++);
+        if(i == poly->found) {
+            poly->fp[i] = p;
+            poly->fq[i] = q;
+            poly->fk[i] = s;
+            poly->mult[i] = 0;
+            poly->found++;
+        }
+        poly->mult[i]++;
+    }
+}
+
+/*only even powers of X*/
+static bool poly_even(poly_t *poly) {
+    int i;
+
+    for(i = 1; i <= poly->deg; i += 2)
+        if(mp_int_compare_zero(poly->c[i]) != 0)
+            return false;
+    return poly->deg % 2 == 0;
+}
+
+static bool int_root(mp_int z, mp_small k);
+
+/*an even quartic with no roots in X or X^2 can still be (Px^2 + Rx + S)(Px^2 - Rx + S) = (Px^2 + S)^2 - R^2x^2,
+  so P^2 the top, S^2 the bottom and R^2 = 2PS - middle, S either sign. x^4+4 is (x^2+2x+2)(x^2-2x+2).
+  any other split of an even one is two even ones, those were roots in X^2*/
+static pcas_ast_t *poly_pair(poly_t *poly) {
+    mp_int *f = poly->tmp; /*S, R, P, low to high like c*/
+    pcas_ast_t *first;
+    int sign;
+
+    if(mp_int_copy(poly->c[4], f[2]) != MP_OK || !int_root(f[2], 2)
+       || mp_int_copy(poly->c[0], f[0]) != MP_OK || !int_root(f[0], 2)) /*the bottom < 0 fails here too*/
+        return NULL;
+    for(sign = 1; sign >= -1; sign -= 2) {
+        if(mp_int_mul(f[2], f[0], f[1]) == MP_OK && mp_int_mul_value(f[1], 2, f[1]) == MP_OK
+           && mp_int_sub(f[1], poly->c[2], f[1]) == MP_OK && mp_int_compare_zero(f[1]) > 0 && int_root(f[1], 2)) {
+            first = poly_to_ast(poly->var, f, 2);
+            mp_int_neg(f[1], f[1]);
+            return ast_MakeBinary(OP_MULT, first, poly_to_ast(poly->var, f, 2));
+        }
+        mp_int_neg(f[0], f[0]);
+    }
+    return NULL;
+}
+
 /*the factored form of e, or NULL if e isn't a polynomial or doesn't factor*/
 static pcas_ast_t *poly_factor(pcas_ast_t *e) {
     poly_t *poly;
-    pcas_ast_t *result = NULL;
+    pcas_ast_t *result = NULL, *pair = NULL;
     int pieces, i;
 
     if(pcas_cancelled) /*Fluxion: stop here, the answer's being thrown away*/
@@ -1001,26 +1061,14 @@ static pcas_ast_t *poly_factor(pcas_ast_t *e) {
     }
     poly_primitive(poly);
 
-    while(poly->deg >= 1) {
-        mp_small p, q;
-
-        if(!poly_find_root(poly, &p, &q))
-            break;
-        poly_divide(poly, p, q);
-
-        /*a root found again is one more power of its factor*/
-        for(i = 0; i < poly->found && (poly->fp[i] != p || poly->fq[i] != q); i++);
-        if(i == poly->found) {
-            poly->fp[i] = p;
-            poly->fq[i] = q;
-            poly->mult[i] = 0;
-            poly->found++;
-        }
-        poly->mult[i]++;
-    }
+    poly_take_roots(poly, 1);
+    if(poly_even(poly))
+        poly_take_roots(poly, 2);
+    if(poly->deg == 4 && poly_even(poly) && (pair = poly_pair(poly)) != NULL)
+        poly->deg = 0;
 
     /*only a change if it's now a product of two or more things*/
-    pieces = (mp_rat_compare_value(poly->scale, 1, 1) != 0) + (poly->low > 0) + (poly->deg >= 1);
+    pieces = (mp_rat_compare_value(poly->scale, 1, 1) != 0) + (poly->low > 0) + (poly->deg >= 1) + 2 * (pair != NULL);
     for(i = 0; i < poly->found; i++)
         pieces += poly->mult[i];
 
@@ -1034,9 +1082,11 @@ static pcas_ast_t *poly_factor(pcas_ast_t *e) {
         if(poly->low > 0)
             ast_ChildAppend(result, power_or_self(ast_MakeSymbol((char)poly->var), poly->low));
         for(i = 0; i < poly->found; i++)
-            ast_ChildAppend(result, power_or_self(poly_linear(poly->var, poly->fp[i], poly->fq[i]), poly->mult[i]));
+            ast_ChildAppend(result, power_or_self(poly_binomial(poly->var, poly->fp[i], poly->fq[i], poly->fk[i]), poly->mult[i]));
+        if(pair != NULL)
+            ast_ChildAppend(result, pair);
         if(poly->deg >= 1)
-            ast_ChildAppend(result, poly_to_ast(poly));
+            ast_ChildAppend(result, poly_to_ast(poly->var, poly->c, poly->deg));
     }
 
     poly_free(poly);
