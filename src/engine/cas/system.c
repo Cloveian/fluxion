@@ -180,14 +180,85 @@ static bool zero_bottom(pcas_ast_t *e) {
     return false;
 }
 
+/*sum + |e| as a decimal. false when e has none*/
+static bool add_abs(mp_rat sum, pcas_ast_t *e) {
+    pcas_ast_t *v = approx_number(e);
+
+    if(v == NULL)
+        return false;
+    mp_rat_abs(v->op.num, v->op.num);
+    mp_rat_add(sum, v->op.num, sum);
+    ast_Cleanup(v);
+    return true;
+}
+
+/*|d| over 1e-5 (1 + |x| + |y|)^2. floats are ~7 *dih*gits and the terms grow like the
+  values squared, so loose. past it is a for sure not 0*/
+static bool past_loose(mp_rat d, pcas_ast_t **x) {
+    mp_rat tol = mp_rat_alloc(), t = mp_rat_alloc();
+    bool past;
+
+    mp_rat_set_value(tol, 1, 1);
+    add_abs(tol, x[0]);
+    add_abs(tol, x[1]);
+    mp_rat_mul(tol, tol, tol);
+    mp_rat_set_value(t, 1, 100000);
+    mp_rat_mul(tol, t, tol);
+    past = mp_rat_compare_unsigned(d, tol) > 0;
+    mp_rat_free(tol);
+    mp_rat_free(t);
+    return past;
+}
+
+/*|d| within 1e-5 (1 + |each term of e|). false when a term has no decimal*/
+static bool tiny(pcas_ast_t *e, mp_rat d) {
+    pcas_ast_t *k;
+    mp_rat scale = mp_rat_alloc(), t = mp_rat_alloc();
+    bool known = true;
+
+    mp_rat_set_value(scale, 1, 1);
+    if(isoptype(e, OP_ADD))
+        for(k = ast_ChildGet(e, 0); known && k != NULL; k = k->next)
+            known = add_abs(scale, k);
+    else
+        known = add_abs(scale, e);
+    mp_rat_set_value(t, 1, 100000);
+    mp_rat_mul(scale, t, scale);
+    known = known && mp_rat_compare_unsigned(d, scale) <= 0;
+    mp_rat_free(scale);
+    mp_rat_free(t);
+    return known;
+}
+
+/*the letters only under + * and positive whole powers, or over a bottom without them*/
+static bool polynomial(pcas_ast_t *e, const Symbol *vars) {
+    pcas_ast_t *k, *p;
+
+    if(e->type != NODE_OPERATOR || (!has_symbol(e, vars[0]) && !has_symbol(e, vars[1])))
+        return true;
+    if(isoptype(e, OP_POW)) {
+        p = ast_ChildGet(e, 1);
+        return p->type == NODE_NUMBER && mp_rat_is_integer(p->op.num) && mp_rat_compare_zero(p->op.num) > 0
+            && polynomial(ast_ChildGet(e, 0), vars);
+    }
+    if(isoptype(e, OP_DIV)) {
+        p = ast_ChildGet(e, 1);
+        return !has_symbol(p, vars[0]) && !has_symbol(p, vars[1]) && polynomial(ast_ChildGet(e, 0), vars);
+    }
+    if(!isoptype(e, OP_ADD) && !isoptype(e, OP_MULT))
+        return false;
+    for(k = ast_ChildGet(e, 0); k != NULL; k = k->next)
+        if(!polynomial(k, vars))
+            return false;
+    return true;
+}
+
 /*eq with the pair put in, false only when it's for sure not 0. undefined there, or
-  an i turning up (a root of a negative, outside the real domain) is a no too. exact
-  first, then the decimal against 1e-5 (1 + |x| + |y|)^2 since floats are ~7 digits
-  and the terms grow like the values squared. a letter left in it is a keep*/
-static bool fits(pcas_ast_t *eq, const Symbol *vars, pcas_ast_t **x) {
-    pcas_ast_t *e = ast_Copy(eq), *d, *dx, *s;
-    mp_rat tol, t;
-    bool ok = true;
+  an i turning up (a root of a negative, outside the real domain) is a no too. a letter
+  left in it is a keep. poly: x came out of polynomials the whole way*/
+static bool fits(pcas_ast_t *eq, const Symbol *vars, pcas_ast_t **x, bool poly) {
+    pcas_ast_t *e = ast_Copy(eq), *d, *s;
+    bool ok;
     int i;
 
     if(e == NULL)
@@ -201,6 +272,22 @@ static bool fits(pcas_ast_t *eq, const Symbol *vars, pcas_ast_t **x) {
     if(zero_bottom(e)) {
         ast_Cleanup(e);
         return false;
+    }
+    /*a sure 0 by decimal skips the exact way, ~1.2M work on the cardano pairs of y=x^3,
+      x^2=y+3. only when everything solved on the way was a polynomial, those roots are
+      exact so the pair really fits and a near 0 is one. any root in there and isolate or
+      squaring can make pairs up a decimal can't tell (x = 10000, y = -100 misses y = sqrt(x)
+      by just 200, x^3+1000000=999992 at x = 2 by 16). and only the yes side, unsimplifed
+      x^2=2000000 with y=x^3-2828427124 has ~300 of float noise*/
+    d = poly ? approx_number(e) : NULL;
+    if(d != NULL) {
+        bool sure = tiny(e, d->op.num);
+
+        ast_Cleanup(d);
+        if(sure) {
+            ast_Cleanup(e);
+            return true;
+        }
     }
     simplify(e, SIMP_SYS);
     expand(e, EXP_ALL);
@@ -222,32 +309,15 @@ static bool fits(pcas_ast_t *eq, const Symbol *vars, pcas_ast_t **x) {
     ast_Cleanup(e);
     if(d == NULL)
         return true;
-    tol = mp_rat_alloc();
-    t = mp_rat_alloc();
-    mp_rat_set_value(tol, 1, 1);
-    for(i = 0; i < 2; i++) {
-        dx = approx_number(x[i]);
-        if(dx != NULL) {
-            mp_rat_abs(dx->op.num, t);
-            mp_rat_add(tol, t, tol);
-        }
-        ast_Cleanup(dx);
-    }
-    mp_rat_mul(tol, tol, tol);
-    mp_rat_set_value(t, 1, 100000);
-    mp_rat_mul(tol, t, tol);
-    if(mp_rat_compare_unsigned(d->op.num, tol) > 0)
-        ok = false;
-    mp_rat_free(tol);
-    mp_rat_free(t);
+    ok = !past_loose(d->op.num, x);
     ast_Cleanup(d);
     return ok;
 }
 
 /*the pair x goes in as set *sets unless it's already there or doesn't fit both
   equations (squaring makes some up). x is the set's now either way. false when
-  there's no room*/
-static bool add_set(pcas_ast_t **eqs, const Symbol *vars, pcas_ast_t **x, pcas_ast_t *out[][SYSTEM_MAX], int *sets) {
+  there's no room. poly goes on to fits()*/
+static bool add_set(pcas_ast_t **eqs, const Symbol *vars, pcas_ast_t **x, pcas_ast_t *out[][SYSTEM_MAX], int *sets, bool poly) {
     pcas_ast_t *d;
     int k, i, same;
 
@@ -262,7 +332,7 @@ static bool add_set(pcas_ast_t **eqs, const Symbol *vars, pcas_ast_t **x, pcas_a
             break;
     }
     if(k < *sets || zero_bottom(x[0]) || zero_bottom(x[1]) || has_imaginary_node(x[0]) || has_imaginary_node(x[1])
-       || !fits(eqs[0], vars, x) || !fits(eqs[1], vars, x)) {
+       || !fits(eqs[0], vars, x, poly) || !fits(eqs[1], vars, x, poly)) {
         ast_Cleanup(x[0]);
         ast_Cleanup(x[1]);
         return true;
@@ -368,6 +438,7 @@ static int by_substitution(pcas_ast_t **eqs, int i, int v, const Symbol *vars, p
     pcas_ast_t *first[SOLVE_MAX] = { NULL }, *second[SOLVE_MAX], *sv, *sw, *e, *x[2];
     int w = 1 - v, nf, ns, a, b, k, sets = 0, result = 0;
     bool fam = !has_symbol(eqs[0], SYM_N) && !has_symbol(eqs[1], SYM_N); /*an n is solve's unless they had one*/
+    bool both = polynomial(eqs[0], vars) && polynomial(eqs[1], vars), poly;
 
     sv = ast_MakeSymbol(vars[v]);
     sw = ast_MakeSymbol(vars[w]);
@@ -388,6 +459,7 @@ static int by_substitution(pcas_ast_t **eqs, int i, int v, const Symbol *vars, p
             break;
         }
         substitute(e, sv, first[a]);
+        poly = both && polynomial(e, vars); /*a sqrt from the first solve in here and isolate can make roots up*/
         for(b = 0; b < SOLVE_MAX; b++)
             second[b] = NULL;
         ns = solve_top(e, vars[w], second);
@@ -415,7 +487,7 @@ static int by_substitution(pcas_ast_t **eqs, int i, int v, const Symbol *vars, p
                 result = SOLVE_UNKNOWN;
                 break;
             }
-            if(!add_set(eqs, vars, x, out, &sets))
+            if(!add_set(eqs, vars, x, out, &sets, poly))
                 result = SOLVE_UNKNOWN; /*more than fit, and half of them isn't an answer*/
         }
         for(b = 0; b < ns; b++)
