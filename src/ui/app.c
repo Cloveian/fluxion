@@ -2241,6 +2241,9 @@ static void draw_popup(void) {
 #define BATTERY_W   13
 #define BATTERY_READ (CLOCKS_PER_SEC * 10)     /* the level is read this often (reading every frame was slow) */
 #define LOCK_SLOT   13 /* per padlock, fixed so one turning on doesn't shove the others along */
+#define BAR_LEFT    (areas.top.x + MARGIN)
+#define BAR_RIGHT   (areas.top.x + areas.top.w - MARGIN)
+#define BAR_BEFORE_BATTERY (BAR_RIGHT - BATTERY_W - 6) /* right edge of the form name and the busy dot */
 
 static int battery = -1;
 static clock_t battery_next;
@@ -2291,8 +2294,8 @@ static void draw_battery(int x, int y, int level) {
 }
 
 static void draw_top_bar(void) {
-    int h = areas.top.h, y = (h - 1 - 11) / 2;
-    int left = areas.top.x + MARGIN, right = areas.top.x + areas.top.w - MARGIN;
+    int h = areas.top.h, top = areas.top.y, y = top + (h - 1 - 11) / 2;
+    int left = BAR_LEFT, right = BAR_RIGHT;
 
     if(battery < 0 || clock() >= battery_next) {
         battery = power_battery();
@@ -2300,10 +2303,10 @@ static void draw_top_bar(void) {
     }
 
     screen_color(COL_BG);
-    screen_fill(areas.top.x, areas.top.y, areas.top.w, h);
+    screen_fill(areas.top.x, top, areas.top.w, h);
     screen_color(COL_DIM);
-    screen_hline(left, h - 1, right - left);
-    draw_battery(right - BATTERY_W, (h - 1 - 7) / 2, battery);
+    screen_hline(left, top + h - 1, right - left);
+    draw_battery(right - BATTERY_W, top + (h - 1 - 7) / 2, battery);
 
     if(second)
         draw_padlock(left, y, 0, second_lock);
@@ -2317,7 +2320,7 @@ static void draw_top_bar(void) {
         const font_t *small = draw_label_font();
 
         screen_color(COL_DIM);
-        draw_text(right - BATTERY_W - 6 - draw_text_width(form_names[form], small), 1,
+        draw_text(BAR_BEFORE_BATTERY - draw_text_width(form_names[form], small), top + 1,
                   form_names[form], small);
     }
 }
@@ -2492,7 +2495,7 @@ static void draw_working(void) {
     static const unsigned char dots[8][2] = {
         { 3, 0 }, { 5, 1 }, { 6, 3 }, { 5, 5 }, { 3, 6 }, { 1, 5 }, { 0, 3 }, { 1, 1 }
     };
-    int x = areas.top.x + areas.top.w - MARGIN - BATTERY_W - 6 - 8, y = (areas.top.h - 1 - 8) / 2;
+    int x = BAR_BEFORE_BATTERY - 8, y = areas.top.y + (areas.top.h - 1 - 8) / 2;
     unsigned i;
 
     /* a head and two dimmer dots behind it, going round */
@@ -2509,15 +2512,15 @@ static void draw_working(void) {
 /* "12s, [on]+[mode] stops it" after the padlocks. no guess at the total, 1/x+1/(x+1)=1 is one short line and ~17 s on the calc */
 static void draw_busy_hint(unsigned long s) {
     const font_t *small = draw_label_font();
-    int x = areas.top.x + MARGIN + 3 * LOCK_SLOT + 4;
+    int x = BAR_LEFT + 3 * LOCK_SLOT + 4;
     char t[32];
 
     snprintf(t, sizeof t, "%lus, [on]+" CANCEL_NAME " stops it", s);
     screen_direct(true);
     screen_color(COL_BG);
-    screen_fill(x, 0, draw_text_width(t, small), areas.top.h - 1);
+    screen_fill(x, areas.top.y, draw_text_width(t, small), areas.top.h - 1);
     screen_color(COL_DIM);
-    draw_text(x, 1, t, small);
+    draw_text(x, areas.top.y + 1, t, small);
     screen_direct(false);
 }
 
