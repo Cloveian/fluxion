@@ -130,10 +130,20 @@ simplify; (-2+2*3^(1/2)i)^(1/2); 1+i3^(1/2)
 simplify; (-2_2*3^(1/2)i)^(1/2); 1_i3^(1/2)
 simplify; (-3+4i)^(1/2); 25^(1/4)/5^(1/2)+(2*25^(1/4)i)/5^(1/2)
 simplify; ln(-1_i); ln(2)/2+2atan(-1/(-1+2^(1/2)))i
-#a = 0 and b < 0 too, abs(-3i) gives 3i
+#a = 0 and b < 0 too
 simplify; ln(-3i); ln(9)/2_(ipi)/2
 simplify; (-i)^(1/2); 2^(1/2)/2_(i2^(1/2))/2
 csolve; sin(iX)=1/2; X; (-ipi)/6_2ipiN,-2piNi_(5pii)/6
+
+#abs of a product or fraction, numbers out as their size and i as 1, letters stay in
+simplify; abs(-3i); 3
+simplify; abs(-2i/3); 2/3
+simplify; abs(-3X); 3abs(X)
+simplify; abs(-3/X); 3/abs(X)
+simplify; abs(-2pi); 2pi
+simplify; abs(-3sqrt(2)); 3sqrt(2)
+simplify; abs(-ie^2); e^2
+simplify; abs(XY); abs(XY)
 
 #cubics, exact. the 1,2,3 one factors, it's there so that still goes the old way
 solve; X^3_3X+1=0; X; 2cos(8pi/9),2cos(4pi/9),2cos(2pi/9)

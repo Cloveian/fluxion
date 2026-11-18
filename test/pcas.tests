@@ -225,7 +225,8 @@ simplify; cosh(X)^2_sinh(X)^2; 1
 
 #Imaginary tests
 simplify; abs(I+Ji; sqrt(I^2+J^2
-simplify; abs(Ji; J
+#Fluxion: abs(J), J can be below 0
+simplify; abs(Ji; abs(J
 simplify; abs(i; 1
 
 simplify; ln(i; ipi/2

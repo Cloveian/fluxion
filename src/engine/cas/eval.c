@@ -698,12 +698,72 @@ static bool eval_int(pcas_ast_t *e, unsigned short flags) {
     return changed;
 }
 
+/*Fluxion: pi, e, and those or a number above 0 to a number's power (sqrt(2), e^2)*/
+static bool positive_factor(pcas_ast_t *c) {
+    pcas_ast_t *b, *p;
+
+    if(c->type == NODE_SYMBOL)
+        return c->op.symbol == SYM_PI || c->op.symbol == SYM_EULER;
+    if(!isoptype(c, OP_POW))
+        return false;
+    b = ast_ChildGet(c, 0);
+    p = ast_ChildGet(c, 1);
+    if(isoptype(p, OP_DIV) && ast_ChildGet(p, 0)->type == NODE_NUMBER) /*1/2 stays a/b after normalize*/
+        p = ast_ChildGet(p, 1);
+    if(p->type != NODE_NUMBER)
+        return false;
+    if(b->type == NODE_NUMBER)
+        return mp_rat_compare_zero(b->op.num) > 0;
+    return positive_factor(b);
+}
+
+/*Fluxion: abs(-3ix) -> 3abs(x), positive_factor ones out as they are. absolute_val only flips the first minus*/
+static bool abs_product(pcas_ast_t *e, pcas_ast_t *a) {
+    pcas_ast_t *out = ast_MakeOperator(OP_MULT), *c, *next;
+    bool changed = false;
+
+    if(out == NULL) /*oom*/
+        return false;
+    for(c = ast_ChildGet(a, 0); c != NULL; c = next) {
+        next = c->next;
+        if(c->type == NODE_SYMBOL && c->op.symbol == SYM_IMAG) {
+            ast_Cleanup(ast_ChildRemove(a, c));
+            changed = true;
+        } else if(c->type == NODE_NUMBER || positive_factor(c)) {
+            if(c->type == NODE_NUMBER)
+                mp_rat_abs(c->op.num, c->op.num);
+            ast_ChildAppend(out, ast_ChildRemove(a, c));
+            changed = true;
+        }
+    }
+    if(!changed) {
+        ast_Cleanup(out);
+        return false;
+    }
+    if(ast_ChildLength(a) > 0)
+        ast_ChildAppend(out, ast_MakeUnary(OP_ABS, ast_ChildRemove(e, a)));
+    replace_node(e, out);
+    return true;
+}
+
 static bool eval_abs(pcas_ast_t *e, unsigned short flags) {
     bool changed = false;
     pcas_ast_t *a = ast_ChildGet(e, 0);
 
     if(!(flags & EVAL_ABS))
         return false;
+    if(isoptype(a, OP_MULT)) /*Fluxion*/
+        return abs_product(e, a);
+    if(positive_factor(a)) { /*Fluxion: abs(sqrt(2)), a product's leftover once its powers settle*/
+        replace_node(e, a);
+        return true;
+    }
+    if(isoptype(a, OP_DIV)) { /*Fluxion: abs(-3/x) -> 3/abs(x)*/
+        pcas_ast_t *top = ast_ChildRemoveIndex(a, 0), *bottom = ast_ChildRemoveIndex(a, 0);
+
+        replace_node(e, ast_MakeBinary(OP_DIV, ast_MakeUnary(OP_ABS, top), ast_MakeUnary(OP_ABS, bottom)));
+        return true;
+    }
 
     changed = absolute_val(a) || a->type == NODE_NUMBER;
 

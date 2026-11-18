@@ -194,7 +194,7 @@ pcas_id_t id_complex[ID_NUM_COMPLEX] = {
     {"abs(I+Ji", "sqrt(I^2+J^2"},
     {"atan(X/0", "pi/2"}, /*Lol is this cheating?*/
     {"ln(R+Ji", "ln(abs(R+Ji))+iatan(J/R)"}, /*Fluxion: atan(J/I) was off by pi for I < 0, sqrt(-2+2isqrt(3)) came out sqrt(3)-i*/
-    {"ln(I+Ji", "ln(sqrt(I^2+J^2))+2iatan(J/(sqrt(I^2+J^2)+I))"}, /*Fluxion: half angle, any I. sqrt cuz abs(-3i) is 3i*/
+    {"ln(I+Ji", "ln(sqrt(I^2+J^2))+2iatan(J/(sqrt(I^2+J^2)+I))"}, /*Fluxion: half angle, any I*/
     {"logb(X,I+Ji", "ln(X)/ln(I+Ji"},
     {"sin(I+Ji", "sin(I)cosh(J)+icos(I)sinh(J"},
     {"cos(I+Ji", "cos(I)cosh(J)_isin(I)sinh(J)"},
