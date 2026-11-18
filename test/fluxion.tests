@@ -266,6 +266,8 @@ system; Y=X^(1/2),Y=X_10100; XY; 101^2,101
 system; Y=X^(1/2)+2000000,Y=X+1999890; XY; 11^2,2000011
 system; X^2=Y^3,X^3+1000000=999992; XY; -2,8^(2/9)
 system; X=5*2^A,Y=X; XY; 5*2^A,5*2^A
+system; X^2=Y^2_9999,XY+10000Y^2=100000100; XY; unknown
+system; X^2=Y^2_99999999/100000000,XY+Y^2=9999/10000; XY; -1/10000,1 | 1/10000,-1
 
 #trig solve, just one turn (turn; equation; var; roots from 0 up to 2pi, sorted)
 turn; sin(X)=1/2; X; pi/6,(5pi)/6
@@ -489,6 +491,11 @@ decimal; 1.5[E]-3; 0.0015
 simplify; 1/(2X)+1/X^2; 1/(2X)+1/X^2
 simplify; 1/(2X)+1/(3X^2); 1/(2X)+1/(3X^2)
 comdenom; 1/(4X)+1/(6X^2); (3X+2)/(12X^2)
+#a number's power in a bottom, 20000^2 from factoring. segfaulted, then lost a term
+comdenom; 1/(2*20000^2)+1/X; (X+800000000)/(800000000X)
+comdenom; 1/(6*20000^2)+1/(4X); (X+600000000)/(2400000000X)
+comdenom; 1/11+1/11^65; (11^65+11)/11^66
+comdenom; 1/(2*11^2)+1/11; 23/242
 solve; X^2_3X+1=0; X; 3/2_sqrt(5)/2,3/2+sqrt(5)/2
 solve; X^2_X_1=0; X; 1/2_sqrt(5)/2,1/2+sqrt(5)/2
 

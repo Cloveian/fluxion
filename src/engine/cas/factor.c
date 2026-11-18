@@ -1188,21 +1188,39 @@ static pcas_ast_t *find_factor(pcas_ast_t *prod, pcas_ast_t *f) {
     pcas_ast_t *g, *b = power_base(f, &n);
 
     for(g = ast_ChildGet(prod, 0); g != NULL; g = g->next) {
-        if(b->type == NODE_NUMBER ? g->type == NODE_NUMBER : ast_Compare(power_base(g, &n), b))
-            return g;
+        if(f->type == NODE_NUMBER || g->type == NODE_NUMBER ? f->type == g->type : ast_Compare(power_base(g, &n), b))
+            return g; /*a number's power never takes a plain number, lcm_merge would turn it into the power*/
     }
     return NULL;
 }
 
 /*Fluxion: a term's denominator as a product of factors, NULL if it has none*/
 static pcas_ast_t *term_den(pcas_ast_t *t) {
-    pcas_ast_t *den;
+    pcas_ast_t *den, *f;
+    mp_small n;
 
     if(!isoptype(t, OP_DIV))
         return NULL;
     den = ast_Copy(ast_ChildGet(t, 1));
     simplify(den, SIMP_NORMALIZE | SIMP_COMMUTATIVE | SIMP_RATIONAL | SIMP_EVAL);
     factor_polynomial(den);
+    den = as_product(den);
+
+    /*factoring hands back 20000^2 and eval leaves it. folded and multiplied into the one
+      number, two numbers in a bottom got divided out of the one number in the lcm twice*/
+    for(f = ast_ChildGet(den, 0); f != NULL; f = f->next) {
+        pcas_ast_t *b = power_base(f, &n);
+
+        if(b != f && b->type == NODE_NUMBER && mp_rat_is_integer(b->op.num) && n <= 64) {
+            mp_rat r = num_FromInt(1);
+
+            if(r != NULL && mp_int_expt(mp_rat_numer_ref(b->op.num), n, mp_rat_numer_ref(r)) == MP_OK)
+                replace_node(f, ast_MakeNumber(r));
+            else if(r != NULL) /*Fluxion: oom*/
+                num_Cleanup(r);
+        }
+    }
+    simplify(den, SIMP_COMMUTATIVE | SIMP_EVAL);
     return as_product(den);
 }
 
