@@ -871,7 +871,7 @@ static int solve_even(pcas_ast_t *f, Symbol var, pcas_ast_t **out, int n, bool c
     ast_Cleanup(g);
 
     for(i = 0; i < 3; i++)
-        dec[i] = i < m ? approx_number(u[i]) : NULL;
+        dec[i] = i < m && !complex && pos < 0 ? approx_number(u[i]) : NULL; /*only the fallback reads them, the cos form ones cost on the calc*/
     /*u smallest first. the quadratic gives them that way, 3 from solve_cubic are always the cos
       form, k = 0 1 2 biggest first*/
     if(m == 3) {
