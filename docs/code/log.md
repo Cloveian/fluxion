@@ -1,5 +1,15 @@
 # Log
 
+## 2026-11-17 (evening) - the branch comes home
+
+- the branch is in. the fix was making the sort not need the gcd at all for sums: every term splits into its letters (powers counted) and whatever else is in it (sin(x), pi, x+1), and the letters decide first, most of them first, then more of the earlier letter. the old gcd-and-divide compare only gets the ties now (same letters) and pairs with no letters on either side. 0 hangs in 5000 random sums where main hung on *13* of them, plain ones like xy^2z^3+y^2z^2/2-xy-3xz/4-1, so main was never safe either. expand((x+y+z+1)^4) in the app is 139k -> 4.3k work and ^5 is 10.8k (main never came back). multivariable sums print in a fixed order now, x^2+2xy+y^2+2x+2y+1 instead of 2xy+y^2+x^2+2x+2y+1. graded order, not sure if the nspire does plain lex, (todo) check on a real one
+- first try of that broke things that weren't monomials: 4x^2y^2pi next to x^2y^2 still went the slow way and *that* hung 41 in 1500 (worse than main lol). then sin(x) vs pi recursed forever and segfaulted. then 1-ln(x) came out -ln(x)+1. three rounds, all fixed, 1-ln(x) has no test yet tho
+- systems check their pairs by decimal first, y=x^3 with x^2=y+3 was ~2.8 *hours* on the calc and is ~47 min now (still awful, the back substitution is the rest). getting it right took four rounds of the checker finding made up pairs: big values blow up the float tolerance, float noise in a cancelling y, big constants on both sides, and isolate making roots up after a sqrt got substituted in. it ended at: the decimal only ever says yes, and only when everything solved on the way was a polynomial, where the roots are exact anyway
+- fraction solves check their roots the light way first, 1/x+1/(x+1)=1 ~25 s -> ~17 s. a power of a negative still gets the full check, (-8)^(1/3) is only -2 in SIMP_ALL
+- trig families skip the trig / hyperbolic tables their asin already went through (complex stays, an i peeled off after makes 1/i)
+- 5*2^X printed as 52^X, upstream thought a power of 2 was a sqrt
+- found and not fixed yet: some systems segfault in lcm_divide (x^2=y^2-9999, xy+10000y^2=100000100), roots of negatives get kept as real pairs, one system loses one of its four real pairs, x(y^3-3y-1)=1 with y^3=3y+1 keeps three pairs when there are none, and 2sqrt(2)1000^3 doesn't get folded in a system answer
+
 ## 2026-11-17 (afternoon) - themes, and a clock for the slow ones
 
 - past 5 s the top bar says how long its been going and that [on]+[mode] stops it, counting up. no guess at the total, i looked and theres nothing to guess from: sin(x)=1/2 is 6 nodes and ~7 s on the calc, x^2+y^2=25 with x^2+y^2/4=10 is ~36 s, and the input size says nothing about either. so ~~"this will take ~N s"~~ a counter, unless a real predictor shows up someday

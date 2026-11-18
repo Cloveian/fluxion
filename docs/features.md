@@ -138,6 +138,7 @@ Everything Fluxion does right now, as tables. Yes / partly / no first, the other
 | Feature                 |     |
 | ----------------------- | --- |
 | Cancelling slow answers | yes |
+| Timer on slow answers   | yes |
 | Out of memory recovery  | yes |
 
 ### Numbers
