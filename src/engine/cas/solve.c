@@ -11,9 +11,6 @@
                                    one of those in var^2. any other quartic or higher
                                    factor left over means it can't be solved (yet), never
                                    a partial answer.
-                                   one exception, a cardano cubic only gives its real
-                                   root even with complex on, the pair is too slow to
-                                   draw on the calculator for now.
 
     Your mom
 */
@@ -636,9 +633,9 @@ static bool pi_part(pcas_ast_t *e, mp_rat c) {
 /*a*X^3 + b*X^2 + c*X + d, all numbers, added at out[n]. X = t - b/3a gives
 t^3 + pt + q, and the sign of disc = (q/2)^2 + (p/3)^3 says which way:
 below 0 three real roots, the cos one (cardano would want cube roots of complex
-numbers for those). above 0 one real root by cardano, and the two complex ones
-if complex. 0 is a repeated root, factor() takes those out before here so that's
-just in case. returns the new count*/
+numbers for those). above 0 one real root by cardano, unknown if complex. 0 is
+a repeated root, factor() misses those in a cubic in x^2 ((x^2-2)^3 from
+solve_even). returns the new count*/
 static int solve_cubic(coefs_t *p, pcas_ast_t **out, int n, bool complex) {
     mp_rat a, b, c, d, pp, q, disc, mid, shift, t, k;
     int i;
@@ -757,16 +754,17 @@ static int solve_cubic(coefs_t *p, pcas_ast_t **out, int n, bool complex) {
         ast_Cleanup(amp);
         ast_Cleanup(theta);
         num_Cleanup(cpi);
+    } else if(mp_rat_compare_zero(disc) > 0 && complex) {
+        n = SOLVE_UNKNOWN; /*1 real root of 3, the complex pair takes minutes to draw on the calculator*/
     } else if(mp_rat_compare_zero(disc) > 0) {
         /*cbrt(-q/2 + sqrt(disc)) + cbrt(-q/2 - sqrt(disc)). the complex pair is
         the two cbrts times the other cube roots of 1, the -i one first*/
         pcas_ast_t *u = cardano_term(mid, disc, 1), *v = cardano_term(mid, disc, -1);
 
         n = add_root(out, n, cardano_root(u, v, 0, 0, shift));
-        if(complex) {
-            n = add_root(out, n, cardano_root(u, v, -1, 1, shift));
-            n = add_root(out, n, cardano_root(u, v, 1, -1, shift));
-        }
+        /*the pair, for when it draws fast enough
+        n = add_root(out, n, cardano_root(u, v, -1, 1, shift));
+        n = add_root(out, n, cardano_root(u, v, 1, -1, shift));*/
         ast_Cleanup(u);
         ast_Cleanup(v);
     } else if(mp_rat_compare_zero(pp) == 0) {
@@ -866,8 +864,6 @@ static int solve_even(pcas_ast_t *f, Symbol var, pcas_ast_t **out, int n, bool c
     have = read_poly(g, var, &p);
     m = solve_factor(g, var, u, 0, complex);
     pos = have && !complex && m > 0 ? positive_roots(&p, m) : -1;
-    if(complex && have && p.deg == 3 && m == 1) /*the cubic is real only, its complex pair is 4 roots this would leave out*/
-        m = SOLVE_UNKNOWN;
     if(have)
         coefs_free(&p);
     ast_Cleanup(g);
@@ -942,7 +938,7 @@ static int solve_factor(pcas_ast_t *f, Symbol var, pcas_ast_t **out, int n, bool
     else if(p.deg == 2)
         n = solve_quadratic_sym(&p, out, n);
     else if(p.deg == 3 && p.numeric)
-        n = solve_cubic(&p, out, n, false); /*the complex pair takes minutes to draw on the calculator, real only for now*/
+        n = solve_cubic(&p, out, n, complex);
     else if((p.deg == 4 || p.deg == 6) && p.numeric)
         n = solve_even(f, var, out, n, complex);
     else

@@ -98,6 +98,10 @@ csolve; X^2=-4; X; -2i,2i
 csolve; X^2+X+1=0; X; -1/2_(i3^(1/2))/2,-1/2+(i3^(1/2))/2
 csolve; X^4=1; X; -1,1,-i,i
 csolve; X^3=8; X; 2,-1_i3^(1/2),-1+i3^(1/2)
+csolve; X^3+X+1=0; X; unknown
+csolve; X^3_6X^2+12X_8=0; X; 2
+csolve; X^6_6X^4+12X^2_8=0; X; -2^(1/2),2^(1/2)
+csolve; X^6+X^2+1=0; X; unknown
 csolve; sin(iX)=1/2; X; (-ipi)/6_2ipiN,-2piNi_(5pii)/6
 
 #cubics, exact. the 1,2,3 one factors, it's there so that still goes the old way
