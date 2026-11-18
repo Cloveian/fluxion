@@ -872,22 +872,17 @@ static int solve_even(pcas_ast_t *f, Symbol var, pcas_ast_t **out, int n, bool c
 
     for(i = 0; i < 3; i++)
         dec[i] = i < m ? approx_number(u[i]) : NULL;
-    /*u smallest first. the quadratic gives them that way, the cos form cubic biggest first, and
-      when every u has a decimal they just get sorted*/
-    if(m == 3 && (dec[0] == NULL || dec[1] == NULL || dec[2] == NULL || mp_rat_compare(dec[0]->op.num, dec[2]->op.num) > 0)) {
+    /*u smallest first. the quadratic gives them that way, 3 from solve_cubic are always the cos
+      form, k = 0 1 2 biggest first*/
+    if(m == 3) {
         r = u[0]; u[0] = u[2]; u[2] = r;
         r = dec[0]; dec[0] = dec[2]; dec[2] = r;
     }
     for(i = 0; i < 3; i++) {
         keep[i] = complex && i < m;
-        if(!keep[i] && i < m && pos >= 0) { /*the pos biggest ones, the decimals only put them in order*/
-            int above = 0, j;
-
-            for(j = 0; j < m; j++)
-                if(j != i && dec[i] != NULL && dec[j] != NULL && mp_rat_compare(dec[j]->op.num, dec[i]->op.num) > 0)
-                    above++;
-            keep[i] = pos == m || (dec[i] != NULL && above < pos); /*all of them positive needs no decimal, x^6-20000x^4+40000x^2-1 had none*/
-        } else if(!keep[i] && i < m) {
+        if(!keep[i] && i < m && pos >= 0) /*the pos biggest, no decimals. those tie in float (x^6+20000x^4-40000x^2-1) or aren't there at all*/
+            keep[i] = i >= m - pos;
+        else if(!keep[i] && i < m) {
             keep[i] = dec[i] != NULL && mp_rat_compare_zero(dec[i]->op.num) >= 0;
         }
     }
@@ -906,7 +901,7 @@ static int solve_even(pcas_ast_t *f, Symbol var, pcas_ast_t **out, int n, bool c
             simplify(r, SIMP_ALL);
             n = add_root(out, n, r);
         }
-    for(i = 0; i < 3; i++) { /*after, every pass looks at all the decimals*/
+    for(i = 0; i < 3; i++) {
         ast_Cleanup(dec[i]);
         ast_Cleanup(u[i]);  /*all 3, an unknown m can still leave some*/
     }
