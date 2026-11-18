@@ -180,14 +180,63 @@ static bool zero_bottom(pcas_ast_t *e) {
     return false;
 }
 
+/*sum + |e| as a decimal. false when e has none*/
+static bool add_abs(mp_rat sum, pcas_ast_t *e) {
+    pcas_ast_t *v = approx_number(e);
+
+    if(v == NULL)
+        return false;
+    mp_rat_abs(v->op.num, v->op.num);
+    mp_rat_add(sum, v->op.num, sum);
+    ast_Cleanup(v);
+    return true;
+}
+
+/*|d| over 1e-5 (1 + |x| + |y|)^2. floats are ~7 digits and the terms grow like the
+  values squared, so loose. past it is a for sure not 0*/
+static bool past_loose(mp_rat d, pcas_ast_t **x) {
+    mp_rat tol = mp_rat_alloc(), t = mp_rat_alloc();
+    bool past;
+
+    mp_rat_set_value(tol, 1, 1);
+    add_abs(tol, x[0]);
+    add_abs(tol, x[1]);
+    mp_rat_mul(tol, tol, tol);
+    mp_rat_set_value(t, 1, 100000);
+    mp_rat_mul(tol, t, tol);
+    past = mp_rat_compare_unsigned(d, tol) > 0;
+    mp_rat_free(tol);
+    mp_rat_free(t);
+    return past;
+}
+
+/*|d| within 1e-5 (1 + |each term of e|), the float error of adding those up. a for sure 0.
+  false when a term has no decimal*/
+static bool tiny(pcas_ast_t *e, mp_rat d) {
+    pcas_ast_t *k;
+    mp_rat scale = mp_rat_alloc(), t = mp_rat_alloc();
+    bool known = true;
+
+    mp_rat_set_value(scale, 1, 1);
+    if(isoptype(e, OP_ADD))
+        for(k = ast_ChildGet(e, 0); known && k != NULL; k = k->next)
+            known = add_abs(scale, k);
+    else
+        known = add_abs(scale, e);
+    mp_rat_set_value(t, 1, 100000);
+    mp_rat_mul(scale, t, scale);
+    known = known && mp_rat_compare_unsigned(d, scale) <= 0;
+    mp_rat_free(scale);
+    mp_rat_free(t);
+    return known;
+}
+
 /*eq with the pair put in, false only when it's for sure not 0. undefined there, or
-  an i turning up (a root of a negative, outside the real domain) is a no too. exact
-  first, then the decimal against 1e-5 (1 + |x| + |y|)^2 since floats are ~7 digits
-  and the terms grow like the values squared. a letter left in it is a keep*/
+  an i turning up (a root of a negative, outside the real domain) is a no too. a letter
+  left in it is a keep*/
 static bool fits(pcas_ast_t *eq, const Symbol *vars, pcas_ast_t **x) {
-    pcas_ast_t *e = ast_Copy(eq), *d, *dx, *s;
-    mp_rat tol, t;
-    bool ok = true;
+    pcas_ast_t *e = ast_Copy(eq), *d, *s;
+    bool ok;
     int i;
 
     if(e == NULL)
@@ -201,6 +250,19 @@ static bool fits(pcas_ast_t *eq, const Symbol *vars, pcas_ast_t **x) {
     if(zero_bottom(e)) {
         ast_Cleanup(e);
         return false;
+    }
+    /*a sure 0 by decimal skips the exact way, ~1.2M work on the cardano pairs of y=x^3,
+      x^2=y+3. only the yes side: unsimplified, x^2=2000000 with y=x^3-2828427124 has ~300
+      of float noise, and x = 10000, y = -100 misses y = sqrt(x) by just 200*/
+    d = approx_number(e);
+    if(d != NULL) {
+        bool sure = tiny(e, d->op.num);
+
+        ast_Cleanup(d);
+        if(sure) {
+            ast_Cleanup(e);
+            return true;
+        }
     }
     simplify(e, SIMP_SYS);
     expand(e, EXP_ALL);
@@ -222,24 +284,7 @@ static bool fits(pcas_ast_t *eq, const Symbol *vars, pcas_ast_t **x) {
     ast_Cleanup(e);
     if(d == NULL)
         return true;
-    tol = mp_rat_alloc();
-    t = mp_rat_alloc();
-    mp_rat_set_value(tol, 1, 1);
-    for(i = 0; i < 2; i++) {
-        dx = approx_number(x[i]);
-        if(dx != NULL) {
-            mp_rat_abs(dx->op.num, t);
-            mp_rat_add(tol, t, tol);
-        }
-        ast_Cleanup(dx);
-    }
-    mp_rat_mul(tol, tol, tol);
-    mp_rat_set_value(t, 1, 100000);
-    mp_rat_mul(tol, t, tol);
-    if(mp_rat_compare_unsigned(d->op.num, tol) > 0)
-        ok = false;
-    mp_rat_free(tol);
-    mp_rat_free(t);
+    ok = !past_loose(d->op.num, x);
     ast_Cleanup(d);
     return ok;
 }

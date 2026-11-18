@@ -262,6 +262,7 @@ system; X^2+Y^2=1,Y=5; XY; false
 system; X^2+Y^2=25,X^2+Y^2/4=10; XY; -5^(1/2),-2*5^(1/2) | -5^(1/2),2*5^(1/2) | 5^(1/2),-2*5^(1/2) | 5^(1/2),2*5^(1/2)
 system; 1/X+1/Y=1,X+Y=4; XY; 2,2
 system; e^X+Y=2,e^Y+X=2; XY; unknown
+system; Y=X^(1/2),Y=X_10100; XY; 101^2,101
 
 #trig solve, just one turn (turn; equation; var; roots from 0 up to 2pi, sorted)
 turn; sin(X)=1/2; X; pi/6,(5pi)/6
