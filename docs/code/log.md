@@ -1,5 +1,15 @@
 # Log
 
+## 2026-11-18 (night) - most of last list
+
+- the lcm_divide segfault: factoring a bottom hands back 20000^2, which eval leaves alone, and comdenom's lcm turned its plain 20000 into that power, then the next bottom's 20000 found nothing. term_den folds those now and merges the numbers into one. my first go just folded and 1/(2\*20000^2)+1/x quietly came out 1/x, which is worse than a crash honestly. the checker's fuzz set went 14 segfaults -> 0. that system says unknown now, but it has four real pairs, its quartic is (y-100)(y+100)(990099y^2-9901009901). a quadratic in y^2 would do it (todo)
+- systems handed out sqrt(-7) as a real answer. 65 of the 600 made up systems (11%!!) had fake pairs, every one of them agrees with sympy on how many real ones there are now. the exponent comes as a 1/2 *tree* half the time, not a number, which is why the first version caught nothing lol
+- system answers get big powers worked out (1000^3, 998^2), that also gave back the real pair one system was losing (its like terms couldn't meet). capped at 64 bits cuz uncapped 2^1000000 ran for a minute and 7^150/11^250 turned into 127 digits over 261 on a 320 px screen. and a failed power in eval put half a number in, upstream, fixed
+- near tangents get an exact sign when the numbers fit, x^2+y^2=1 with x=1+1/10^7 is false now. past ~10^19 it's the float check again, known corner
+- widths come off the bands now, SCREEN_W only lives in areas.c, and the top bar's edges are in one place. 11 screens and the wall byte for byte the same
+- still open: x(y^3-3y-1)=1 with y^3=3y+1 keeps three made up pairs (needs the triple angle identity to see the bottom is 0). and products of fractions like (3+2y^2+10x^2)/(100+3y^2+7y)\*(5y+10x^2)/(1/2+10-1) sit in upstream's pairwise gcd factoring for over a minute, main too. the timer and [on]+[mode] cover it for now
+- a question for future me: enter leaves 1000^2 and 2^100 alone (upstream only works out a^b with a, b <= 10), eval( does them. the nspire would just say 1000000. probably should do the same with the 64 bit cap, but that's a call to make awake
+
 ## 2026-11-17 (evening) - the branch comes home
 
 - the branch is in. the fix was making the sort not need the gcd at all for sums: every term splits into its letters (powers counted) and whatever else is in it (sin(x), pi, x+1), and the letters decide first, most of them first, then more of the earlier letter. the old gcd-and-divide compare only gets the ties now (same letters) and pairs with no letters on either side. 0 hangs in 5000 random sums where main hung on *13* of them, plain ones like xy^2z^3+y^2z^2/2-xy-3xz/4-1, so main was never safe either. expand((x+y+z+1)^4) in the app is 139k -> 4.3k work and ^5 is 10.8k (main never came back). multivariable sums print in a fixed order now, x^2+2xy+y^2+2x+2y+1 instead of 2xy+y^2+x^2+2x+2y+1. graded order, not sure if the nspire does plain lex, (todo) check on a real one
