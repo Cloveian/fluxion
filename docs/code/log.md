@@ -9,6 +9,7 @@
 - widths come off the bands now, SCREEN_W only lives in areas.c, and the top bar's edges are in one place. 11 screens and the wall byte for byte the same
 - still open: x(y^3-3y-1)=1 with y^3=3y+1 keeps three made up pairs (needs the triple angle identity to see the bottom is 0). and products of fractions like (3+2y^2+10x^2)/(100+3y^2+7y)\*(5y+10x^2)/(1/2+10-1) sit in upstream's pairwise gcd factoring for over a minute, main too. the timer and [on]+[mode] cover it for now
 - a question for future me: enter leaves 1000^2 and 2^100 alone (upstream only works out a^b with a, b <= 10), eval( does them. the nspire would just say 1000000. probably should do the same with the 64 bit cap, but that's a call to make awake
+- (later) that quadratic in y^2 happened: solve does x^4 and x^6 with only even powers as a quadratic / cubic in x^2, the system above gives its four pairs, and 86 of the 600 systems went from unknown to an answer (72 against sympy, 14 by residual). which u are positive goes by descartes and the order the roots come back in, decimals only for a cubic with a double root. the decimal said 3x^4+200000x^2+3 had real roots, then two u tied as floats and a negative one got kept, *bleh*. x^6 solves with real roots are still ~20 s to 2 min on the calc by the budget's guess, nearly all of it simplifying the sqrt of a cos form or a cardano root
 
 ## 2026-11-17 (evening) - the branch comes home
 
