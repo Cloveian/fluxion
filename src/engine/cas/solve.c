@@ -950,7 +950,7 @@ static int solve_factor(pcas_ast_t *f, Symbol var, pcas_ast_t **out, int n, bool
 
 /*not a polynomial in the variable, but it only turns up once: y = 2^x, sqrt(x) = 2,
 1/x = 2. so peel whatever's wrapped round it, one layer at a time, mirroring each
-layer onto the other side. an even power gives both signs. trig gives the first
+layer onto the other side. an even power gives both signs (all n under csolve). trig gives the first
 answer only, the rest of those is the trig solving item*/
 
 static int count_var(pcas_ast_t *e, Symbol var) {
@@ -975,10 +975,46 @@ static pcas_ast_t *rest_of(pcas_ast_t *e, pcas_ast_t *skip, OperatorType op) {
     return r;
 }
 
-static bool even_number(pcas_ast_t *e) {
-    mp_small n, den;
+static bool whole_number(pcas_ast_t *e, mp_small *n) {
+    mp_small den;
 
-    return e->type == NODE_NUMBER && mp_rat_to_ints(e->op.num, &n, &den) == MP_OK && den == 1 && n % 2 == 0;
+    return e->type == NODE_NUMBER && mp_rat_to_ints(e->op.num, n, &den) == MP_OK && den == 1;
+}
+
+/*p is o^(1/n) from isolate, out gets all n roots of o: r(cos t + isin t), t going round 2pi/n
+  at a time. a number below 0 starts pi/n round with r = |o|^(1/n), then they're all cos and sin
+  of one angle. false when oom*/
+static bool nth_roots(pcas_ast_t *p, int n, pcas_ast_t **out) {
+    pcas_ast_t *o = ast_Copy(ast_ChildGet(p, 0)), *r, *angle, *sine;
+    int k, s;
+
+    if(o == NULL)
+        return false;
+    ast_Cleanup(p); /*out[0] is where it was*/
+    simplify(o, SIMP_ALL);
+    s = o->type == NODE_NUMBER && mp_rat_compare_zero(o->op.num) < 0;
+    if(s)
+        mp_rat_neg(o->op.num, o->op.num);
+    r = ast_MakeBinary(OP_POW, o, ast_MakeNumber(num_FromFraction(1, n)));
+    for(k = 0; k < n; k++) {
+        int t = 2 * k + s;
+
+        if(t > n) /*-pi..pi, cos(3pi/2) never folded*/
+            t -= 2 * n;
+        angle = ast_MakeBinary(OP_MULT, ast_MakeNumber(num_FromFraction(t, n)), ast_MakeSymbol(SYM_PI));
+        sine = ast_MakeUnary(OP_SIN, ast_Copy(angle)); /*before the cos, an oom there frees angle*/
+        out[k] = ast_MakeBinary(OP_MULT, ast_Copy(r), ast_MakeBinary(OP_ADD, ast_MakeUnary(OP_COS, angle),
+            ast_MakeBinary(OP_MULT, ast_MakeSymbol(SYM_IMAG), sine)));
+        if(out[k] == NULL)
+            break;
+    }
+    ast_Cleanup(r);
+    if(k == n)
+        return true;
+    while(k > 0)
+        ast_Cleanup(out[--k]);
+    out[0] = NULL; /*p went already, nope in isolate still frees other[0]*/
+    return false;
 }
 
 static pcas_ast_t *turns(int k);
@@ -1009,9 +1045,10 @@ static void clear_denominators(pcas_ast_t **e) {
     num_Cleanup(l);
 }
 
-static int isolate(pcas_ast_t *e, Symbol var, pcas_ast_t **out) {
+static int isolate(pcas_ast_t *e, Symbol var, pcas_ast_t **out, bool complex) {
     pcas_ast_t *side = e, *other[SOLVE_MAX];
     int m = 1, i;
+    mp_small n;
     bool family = false;
 
     other[0] = number(0);
@@ -1069,11 +1106,17 @@ static int isolate(pcas_ast_t *e, Symbol var, pcas_ast_t **out) {
                 goto nope;
             other[i] = t;
         }
-        if(op == OP_POW && in == a && even_number(b)) {
-            int k = m;
+        if(op == OP_POW && in == a && whole_number(b, &n)) {
+            if(complex && n >= 2) {
+                if(m > 1 || n > SOLVE_MAX || !nth_roots(other[0], (int)n, other)) /*m > 1 would be m*n of them, unknown till something needs it*/
+                    goto nope;
+                m = (int)n;
+            } else if(n % 2 == 0) {
+                int k = m;
 
-            for(i = 0; i < k && m < SOLVE_MAX; i++)
-                other[m++] = ast_MakeBinary(OP_MULT, number(-1), ast_Copy(other[i]));
+                for(i = 0; i < k && m < SOLVE_MAX; i++)
+                    other[m++] = ast_MakeBinary(OP_MULT, number(-1), ast_Copy(other[i]));
+            }
         }
         if((op == OP_SIN || op == OP_COS) && !half) {
             /*sin: pi - asin(v), cos: -acos(v), each plus the turns again. the
@@ -1391,10 +1434,19 @@ static int solve_over(pcas_ast_t *expr, Symbol var, pcas_ast_t **out, bool compl
     return n;
 }
 
+static void clear_roots(pcas_ast_t **out) {
+    int i;
+
+    for(i = 0; i < SOLVE_MAX && out[i] != NULL; i++) {
+        ast_Cleanup(out[i]);
+        out[i] = NULL;
+    }
+}
+
 int solve_ex(pcas_ast_t *expr, Symbol var, pcas_ast_t **out, bool complex) {
     pcas_ast_t *e = ast_Copy(expr);
     coefs_t p;
-    int n = SOLVE_UNKNOWN, i;
+    int n = SOLVE_UNKNOWN;
 
     if(e == NULL) /*Fluxion: oom*/
         return SOLVE_UNKNOWN;
@@ -1418,16 +1470,22 @@ int solve_ex(pcas_ast_t *expr, Symbol var, pcas_ast_t **out, bool complex) {
             out[0] = linear_root(&p);
             n = 1;
         } else if(p.numeric && p.deg <= SOLVE_MAX) {
-            factor(e, FAC_POLYNOMIAL);
-            n = solve_factor(e, var, out, 0, complex);
+            pcas_ast_t *f = ast_Copy(e); /*e stays whole for isolate, x^5-1 is one x and (x-1)(x^4+..) is five*/
+
+            if(f != NULL)
+                factor(f, FAC_POLYNOMIAL);
+            n = solve_factor(f, var, out, 0, complex);
+            ast_Cleanup(f);
         } else if(p.deg == 2) {
             n = solve_quadratic_sym(&p, out, 0);   /*letters in the coefs, no factoring those*/
         }
         coefs_free(&p);
     }
 
+    if(n == SOLVE_UNKNOWN)
+        clear_roots(out); /*roots solve_factor had before it gave up, the next tries write from 0*/
     if(n == SOLVE_UNKNOWN && !pcas_cancelled && count_var(e, var) == 1) {
-        n = isolate(e, var, out);   /*not a polynomial in it, but it's only there once*/
+        n = isolate(e, var, out, complex);   /*not a polynomial in it, but it's only there once*/
         n = drop_undefined(out, n);
     }
 
@@ -1437,13 +1495,9 @@ int solve_ex(pcas_ast_t *expr, Symbol var, pcas_ast_t **out, bool complex) {
     if(pcas_cancelled) /*half a root list isn't an answer either*/
         n = SOLVE_UNKNOWN;
 
-    if(n == SOLVE_UNKNOWN) {
-        /*roots found before giving up aren't all of them*/
-        for(i = 0; i < SOLVE_MAX && out[i] != NULL; i++) {
-            ast_Cleanup(out[i]);
-            out[i] = NULL;
-        }
-    } else if(n > 0) {
+    if(n == SOLVE_UNKNOWN)
+        clear_roots(out); /*roots found before giving up aren't all of them*/
+    else if(n > 0) {
         sort_roots(out, n);
     }
 
