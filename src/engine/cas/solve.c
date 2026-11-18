@@ -40,6 +40,24 @@ bool has_symbol(const pcas_ast_t *e, Symbol s) {
     return false;
 }
 
+/*Fluxion: just + * / ^ and roots, no functions, logs, e or powers of a negative*/
+static bool algebraic(pcas_ast_t *e) {
+    pcas_ast_t *child;
+
+    if(e->type == NODE_SYMBOL)
+        return e->op.symbol != SYM_EULER;
+    if(e->type == NODE_OPERATOR) {
+        if(optype(e) > OP_ROOT)
+            return false;
+        if(isoptype(e, OP_POW) && is_negative_for_sure(ast_ChildGet(e, 0)))
+            return false; /*(-8)^(1/3) = -2 and (-4)^(1/2) = 2i only happen in SIMP_ALL*/
+        for(child = e->op.operator.base; child != NULL; child = child->next)
+            if(!algebraic(child))
+                return false;
+    }
+    return true;
+}
+
 static pcas_ast_t *number(mp_small n) {
     return ast_MakeNumber(num_FromInt(n));
 }
@@ -1240,7 +1258,12 @@ static int solve_over(pcas_ast_t *expr, Symbol var, pcas_ast_t **out, bool compl
         bool zero;
 
         substitute(b, sym, out[i]);
-        simplify(b, SIMP_ALL);
+        /*light way first, a 0 there is real. the full one only when its identities could still find one*/
+        simplify(b, SIMP_SOLVE);
+        expand(b, EXP_ALL);
+        simplify(b, SIMP_SOLVE);
+        if(!is_zero(b) && !algebraic(b))
+            simplify(b, SIMP_ALL);
         zero = is_zero(b);
         ast_Cleanup(b);
         if(zero)
