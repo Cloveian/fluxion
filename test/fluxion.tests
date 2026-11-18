@@ -268,6 +268,11 @@ system; X^2=Y^3,X^3+1000000=999992; XY; -2,8^(2/9)
 system; X=5*2^A,Y=X; XY; 5*2^A,5*2^A
 system; X^2=Y^2_9999,XY+10000Y^2=100000100; XY; unknown
 system; X^2=Y^2_99999999/100000000,XY+Y^2=9999/10000; XY; -1/10000,1 | 1/10000,-1
+#pairs with a sqrt of a negative in them aren't real ones, x^2+y^2=1 with x^2+2y^2=9 is x^2 = -7
+system; X^2+Y^2=1,X^2+2Y^2=9; XY; false
+system; X^2+Y^2+2X=3,X^2+Y^2=25; XY; false
+system; X^2=Y^2-9999,XY+10000Y^2=100000100; XY; false
+system; X^2_Y^2=7,Y^2=X; XY; 1/2+29^(1/2)/2,-(1/2+29^(1/2)/2)^(1/2) | 1/2+29^(1/2)/2,(1/2+29^(1/2)/2)^(1/2)
 
 #trig solve, just one turn (turn; equation; var; roots from 0 up to 2pi, sorted)
 turn; sin(X)=1/2; X; pi/6,(5pi)/6

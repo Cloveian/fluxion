@@ -314,6 +314,58 @@ static bool fits(pcas_ast_t *eq, const Symbol *vars, pcas_ast_t **x, bool poly) 
     return ok;
 }
 
+/*below 0 for sure, or as a decimal past the float noise. 1-2^(3/2) is a sum, is_negative_for_sure can't tell*/
+static bool negative(pcas_ast_t *e) {
+    pcas_ast_t *d;
+    bool neg;
+
+    if(is_negative_for_sure(e))
+        return true;
+    if((d = approx_number(e)) == NULL)
+        return false;
+    neg = mp_rat_compare_zero(d->op.num) < 0 && !tiny(e, d->op.num);
+    ast_Cleanup(d);
+    return neg;
+}
+
+/*a power that's an even root, 1/2 or 3/2. comes as a number or as a 1/2 tree*/
+static bool even_root(pcas_ast_t *p) {
+    mp_rat r;
+    bool even;
+
+    if(p->type == NODE_NUMBER)
+        return !mp_rat_is_integer(p->op.num) && mp_int_is_even(mp_rat_denom_ref(p->op.num));
+    if(!isoptype(p, OP_DIV) || ast_ChildGet(p, 0)->type != NODE_NUMBER || ast_ChildGet(p, 1)->type != NODE_NUMBER
+       || zero(ast_ChildGet(p, 1)))
+        return false;
+    r = num_FromInt(0);
+    even = r != NULL && mp_rat_div(ast_ChildGet(p, 0)->op.num, ast_ChildGet(p, 1)->op.num, r) == MP_OK
+        && !mp_rat_is_integer(r) && mp_int_is_even(mp_rat_denom_ref(r));
+    num_Cleanup(r);
+    return even;
+}
+
+/*an i, or an even root of a negative. simplify leaves (-39996)^(1/2) like that,
+  has_imaginary_node only sees an i*/
+static bool not_real(pcas_ast_t *e) {
+    pcas_ast_t *k, *p;
+
+    if(has_imaginary_node(e))
+        return true;
+    if(e->type != NODE_OPERATOR)
+        return false;
+    p = ast_ChildGet(e, 1);
+    if(isoptype(e, OP_POW) && even_root(p) && negative(ast_ChildGet(e, 0)))
+        return true;
+    if(isoptype(e, OP_ROOT) && ast_ChildGet(e, 0)->type == NODE_NUMBER && mp_rat_is_integer(ast_ChildGet(e, 0)->op.num)
+       && mp_int_is_even(mp_rat_numer_ref(ast_ChildGet(e, 0)->op.num)) && negative(p))
+        return true;
+    for(k = ast_ChildGet(e, 0); k != NULL; k = k->next)
+        if(not_real(k))
+            return true;
+    return false;
+}
+
 /*the pair x goes in as set *sets unless it's already there or doesn't fit both
   equations (squaring makes some up). x is the set's now either way. false when
   there's no room. poly goes on to fits()*/
@@ -331,7 +383,7 @@ static bool add_set(pcas_ast_t **eqs, const Symbol *vars, pcas_ast_t **x, pcas_a
         if(same == 2)
             break;
     }
-    if(k < *sets || zero_bottom(x[0]) || zero_bottom(x[1]) || has_imaginary_node(x[0]) || has_imaginary_node(x[1])
+    if(k < *sets || zero_bottom(x[0]) || zero_bottom(x[1]) || not_real(x[0]) || not_real(x[1])
        || !fits(eqs[0], vars, x, poly) || !fits(eqs[1], vars, x, poly)) {
         ast_Cleanup(x[0]);
         ast_Cleanup(x[1]);
