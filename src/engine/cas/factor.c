@@ -164,9 +164,8 @@ static pcas_ast_t *gcd_pow(pcas_ast_t *pow, pcas_ast_t *b) {
     return ast_MakeNumber(num_FromInt(1));
 }
 
-/*Fluxion: the fast gcd for monomials, a whole number times letters to whole powers. compare()
-does a gcd for every pair it sorts and the general one recurses with a simplify at every step,
-66ms of the 71 in expand((X+Y+Z+1)^4) was the canonical sort*/
+/*Fluxion: the fast gcd for monomials, a wole number times letters to whole powers. the
+general one recurses with a simplify at every step*/
 #define GM_MAX 8
 
 typedef struct {
@@ -343,6 +342,121 @@ pcas_ast_t *gm_div(pcas_ast_t *a, pcas_ast_t *g) {
         return only;
     }
     return ret;
+}
+
+/*Fluxion: p more of letter s, false past GM_MAX letters*/
+static bool gm_add(gm_t *m, Symbol s, mp_small p) {
+    int i;
+
+    for(i = 0; i < m->count && m->sym[i] != s; i++)
+        ;
+    if(i == m->count) {
+        if(m->count == GM_MAX)
+            return false;
+        m->sym[m->count] = s;
+        m->pow[m->count++] = 0;
+    }
+    m->pow[i] += p;
+    return true;
+}
+
+/*the letters of a monomial and their powers for gm_order, the number doesn't matter.
+-x, x/2 and (xz)^2 count too, that's what the sort sees*/
+static bool gm_letters(gm_t *m, pcas_ast_t *e, mp_small outer) {
+    pcas_ast_t *k;
+    mp_small p;
+
+    if(e->type == NODE_NUMBER)
+        return true;
+    if(e->type == NODE_SYMBOL)
+        return gm_letter(e->op.symbol) && gm_add(m, e->op.symbol, outer);
+    if(isoptype(e, OP_MULT)) {
+        for(k = ast_ChildGet(e, 0); k != NULL; k = k->next)
+            if(!gm_letters(m, k, outer))
+                return false;
+        return true;
+    }
+    if(isoptype(e, OP_DIV))
+        return ast_ChildGet(e, 1)->type == NODE_NUMBER && gm_letters(m, ast_ChildGet(e, 0), outer);
+    if(isoptype(e, OP_POW)) {
+        k = ast_ChildGet(e, 1);
+        if(k->type != NODE_NUMBER || !mp_rat_is_integer(k->op.num) || mp_int_to_int(&k->op.num->num, &p) != MP_OK
+           || p < 1 || p > 1000 || outer > 1000) /*so outer * p can't overflow a 32 bit long, nobody types x^1000 in a sum*/
+            return false;
+        return gm_letters(m, ast_ChildGet(e, 0), outer * p);
+    }
+    return false;
+}
+
+static mp_small gm_pow(const gm_t *m, Symbol s) {
+    int i;
+
+    for(i = 0; i < m->count; i++)
+        if(m->sym[i] == s)
+            return m->pow[i];
+    return 0;
+}
+
+int compare(pcas_ast_t *a, pcas_ast_t *b, bool add); /*simplify.c, not in cas.h since domain.c has its own*/
+
+/*a term of a sum as its letters and the factors that aren't (sin(x), pi, sqrt(2), x+1)*/
+typedef struct {
+    gm_t m;
+    pcas_ast_t *rest[GM_MAX];
+    int nrest;
+} gm_split_t;
+
+static bool gm_split(gm_split_t *t, pcas_ast_t *e) {
+    pcas_ast_t *k = isoptype(e, OP_MULT) ? ast_ChildGet(e, 0) : e;
+    gm_t one;
+    int i;
+
+    t->m.count = t->nrest = 0;
+    for(; k != NULL; k = k == e ? NULL : k->next) {
+        one.count = 0;
+        if(!gm_letters(&one, k, 1)) {
+            if(t->nrest == GM_MAX)
+                return false;
+            t->rest[t->nrest++] = k;
+            continue;
+        }
+        for(i = 0; i < one.count; i++)
+            if(!gm_add(&t->m, one.sym[i], one.pow[i]))
+                return false;
+    }
+    return true;
+}
+
+bool gm_order(pcas_ast_t *a, pcas_ast_t *b, int *val) {
+    gm_split_t ta, tb;
+    mp_small da = 0, db = 0, pa, pb;
+    int i, s;
+
+    if(!gm_split(&ta, a) || !gm_split(&tb, b))
+        return false;
+    if(ta.nrest == 1 && ta.rest[0] == a && tb.nrest == 1 && tb.rest[0] == b)
+        return false; /*sin(x) and pi, the old way has to do those or this goes round*/
+    for(i = 0; i < ta.m.count; i++)
+        da += ta.m.pow[i];
+    for(i = 0; i < tb.m.count; i++)
+        db += tb.m.pow[i];
+    *val = da > db ? -1 : da < db ? 1 : 0;
+    for(s = SYM_A; *val == 0 && s <= SYM_THETA; s++) {
+        if(!gm_letter((Symbol)s))
+            continue;
+        pa = gm_pow(&ta.m, (Symbol)s);
+        pb = gm_pow(&tb.m, (Symbol)s);
+        *val = pa > pb ? -1 : pa < pb ? 1 : 0;
+    }
+    /*same letters, then the one with more else to it first like the old compare had numbers
+      last, then the else factor by factor the old way, it never sees a monomial there*/
+    if(*val == 0 && ta.nrest != tb.nrest)
+        *val = ta.nrest > tb.nrest ? -1 : 1;
+    for(i = 0; *val == 0 && i < ta.nrest; i++)
+        *val = compare(ta.rest[i], tb.rest[i], true);
+    /*just the numbers apart (2 and 3, 2x and 3x) is the old way's, compare() sorts the powers
+      in e^(2x)+e^(3x) through here too. not with an else part, that went round forever*/
+    return *val != 0 || ta.nrest != 0;
 }
 
 pcas_ast_t *gcd(pcas_ast_t *a, pcas_ast_t *b) {
