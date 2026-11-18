@@ -434,8 +434,8 @@ bool gm_order(pcas_ast_t *a, pcas_ast_t *b, int *val) {
 
     if(!gm_split(&ta, a) || !gm_split(&tb, b))
         return false;
-    if(ta.nrest == 1 && ta.rest[0] == a && tb.nrest == 1 && tb.rest[0] == b)
-        return false; /*sin(x) and pi, the old way has to do those or this goes round*/
+    if(ta.m.count == 0 && tb.m.count == 0)
+        return false; /*no letters either side, the old way: 1-ln(x) stays like that, and sin(x) vs pi here went round*/
     for(i = 0; i < ta.m.count; i++)
         da += ta.m.pow[i];
     for(i = 0; i < tb.m.count; i++)

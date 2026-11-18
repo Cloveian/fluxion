@@ -262,7 +262,7 @@ g's number is positive and it divides. NULL otherwise. compare() uses it to skip
 pcas_ast_t *gm_div(pcas_ast_t *a, pcas_ast_t *g);
 
 /*Fluxion: where two terms go in a sum, most letters (powers counted) first, then more of the
-earlier letter, then their other factors. false on two lone non-letters (sin(x), pi) or past
+earlier letter, then their other factors. false when neither has letters or past
 GM_MAX. the gcd and *dih*vide way alone went round forever on XY^2Z^3+Y^2Z^2/2-XY-3XZ/4-1*/
 bool gm_order(pcas_ast_t *a, pcas_ast_t *b, int *val);
 
