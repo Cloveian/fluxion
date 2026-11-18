@@ -54,12 +54,12 @@ pcas_ast_t *leftmost(pcas_ast_t *e) {
 
     if(e->type == NODE_OPERATOR) {
         switch(optype(e)) {
-        case OP_POW:
         case OP_ROOT:
             /*For the sqrt special case*/
             if(is_ast_int(ast_ChildGet(e, 0), 2))
                 return e;
             /*FALLTHROUGH*/
+        case OP_POW: /*Fluxion: a power of 2 isn't a sqrt, the * in 5*2^X stays*/
         case OP_LOG:
         case OP_FACTORIAL:
             return leftmost(opbase(e));

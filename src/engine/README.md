@@ -88,3 +88,4 @@ Everything i change in here goes in this table so it's clear what's PineappleCAS
 | 2026-10-16 | `cas/solve.c` | `drop_undefined()` after isolate: a root with a /0, a 0^(negative) or a log of 0 in it goes, none left is no root | solve(1/x^2=0,x) said x = 1/0, -1/0 and e^x = 0 said ln(0). range( hit it straight away, f' = 0 is usually that shape |
 | 2026-10-17 | `cas/derivative.c` | asinh, acosh, atanh rules take the inside (`A`) under the root, not `X` | upstream bug, only right when the inside was plain x. d/dx asinh(2x) gave 2/sqrt(x^2+1) |
 | 2026-10-17 | `cas/identities.c` | sinh, cosh, tanh and the inverses at 0 (acosh at 1) in `id_hyperbolic` | sinh(0) just stayed sinh(0), the catalog help said it worked |
+| 2026-11-17 | `export.c` | `leftmost()` takes the sqrt special case for roots only, a power goes to its base | upstream bug, a power of 2 counted as a sqrt so the `*` in front went missing. 5*2^X printed as 52^X |

@@ -265,6 +265,7 @@ system; e^X+Y=2,e^Y+X=2; XY; unknown
 system; Y=X^(1/2),Y=X_10100; XY; 101^2,101
 system; Y=X^(1/2)+2000000,Y=X+1999890; XY; 11^2,2000011
 system; X^2=Y^3,X^3+1000000=999992; XY; -2,8^(2/9)
+system; X=5*2^A,Y=X; XY; 5*2^A,5*2^A
 
 #trig solve, just one turn (turn; equation; var; roots from 0 up to 2pi, sorted)
 turn; sin(X)=1/2; X; pi/6,(5pi)/6
