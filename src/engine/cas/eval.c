@@ -349,6 +349,16 @@ static bool eval_div(pcas_ast_t *e, unsigned short flags) {
 
 #define power_in_small_range(a, b) (mp_rat_compare_value((a)->op.num, -1, 1) == 0 || (mp_rat_compare_value((a)->op.num, 10, 1) <= 0 && mp_rat_compare_value((b)->op.num, 10, 1) <= 0))
 
+/*Fluxion: 20 *dih*gits, half a line on the screen. uncapped, 7^150/11^250 is a 250 digit answer, and 2^1000000 a minute on the PC and never on the calc*/
+#define POWER_FIT_BITS 64
+
+/*Fluxion: bits of a times b, never past POWER_FIT_BITS but loose (10^15 is 50 bits, counts as 60). count_bits is 1 for 0, and a b too big for a long fails to_int*/
+static bool power_fits(pcas_ast_t *a, pcas_ast_t *b) {
+    mp_small n;
+
+    return mp_int_to_int(&b->op.num->num, &n) == MP_OK && n <= POWER_FIT_BITS / (mp_small)mp_int_count_bits(&a->op.num->num);
+}
+
 /*Fluxion: trial division for root factors stops here, so a k-th power of a bigger
 prime stays inside the root (still right, just not as simple)*/
 #define ROOT_MAX_FACTOR 1000
@@ -484,12 +494,17 @@ static bool eval_pow(pcas_ast_t *e, unsigned short flags) {
             && mp_rat_compare_zero(b->op.num) > 0) {
 
             if(flags & EVAL_POWERS_FULL ||
-                (flags & EVAL_POWERS_SMALL && power_in_small_range(a, b))) {
+                (flags & EVAL_POWERS_SMALL && power_in_small_range(a, b))
+                || (flags & EVAL_POWERS_FIT && power_fits(a, b))) { /*Fluxion*/
                 mp_rat result;
 
                 result = num_FromInt(1);
 
-                mp_int_expt_full(&a->op.num->num, &b->op.num->num, &result->num);
+                /*Fluxion: out of memory left half a product in there*/
+                if(result == NULL || mp_int_expt_full(&a->op.num->num, &b->op.num->num, &result->num) != MP_OK) {
+                    num_Cleanup(result);
+                    return false;
+                }
 
                 replace_node(e, ast_MakeNumber(result));
 

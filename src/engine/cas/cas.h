@@ -194,6 +194,8 @@ pcas_ast_t *poly_quotient(pcas_ast_t *top, pcas_ast_t *bot, Symbol var, bool *ex
 /*Evaluates a^b if a <= 10 and b <= 10*/
 #define EVAL_POWERS_SMALL       (1u << 3u)
 #define EVAL_POWERS_FULL        (1u << 4u)
+/*Fluxion: a^b when bits of a times b is 64 or less (POWER_FIT_BITS)*/
+#define EVAL_POWERS_FIT         (1u << 9u)
 /*Evaluates int(5.5) = 5*/
 #define EVAL_INT                (1u << 5u)
 /*Evaluates absolute value of strictly real constants*/

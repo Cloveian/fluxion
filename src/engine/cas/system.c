@@ -321,6 +321,17 @@ static bool negative(pcas_ast_t *e) {
 
     if(is_negative_for_sure(e))
         return true;
+    /*all numbers, then the exact sign. 1-10000001^2/10000000^2 is -2e-7, under the float noise allowence*/
+    if((d = ast_Copy(e)) != NULL) {
+        eval(d, EVAL_EASY | EVAL_POWERS_FIT);
+        simplify(d, SIMP_EVAL | SIMP_RATIONAL);
+        neg = d->type == NODE_NUMBER && mp_rat_compare_zero(d->op.num) < 0;
+        if(d->type == NODE_NUMBER) {
+            ast_Cleanup(d);
+            return neg;
+        }
+        ast_Cleanup(d);
+    }
     if((d = approx_number(e)) == NULL)
         return false;
     neg = mp_rat_compare_zero(d->op.num) < 0 && !tiny(e, d->op.num);
@@ -531,6 +542,7 @@ static int by_substitution(pcas_ast_t **eqs, int i, int v, const Symbol *vars, p
                 simplify(x[v], SIMP_SYS);
                 merge_roots(x[v]);
                 expand(x[v], EXP_ALL);
+                eval(x[v], EVAL_EASY | EVAL_POWERS_FIT); /*simplify leaves 1000^3 and 998^2, then like terms with a sqrt in them don't meet*/
                 simplify(x[v], SIMP_SYS);
             }
             if(x[v] == NULL || x[w] == NULL || pcas_cancelled) {
