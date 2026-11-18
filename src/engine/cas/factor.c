@@ -459,6 +459,14 @@ bool gm_order(pcas_ast_t *a, pcas_ast_t *b, int *val) {
     return *val != 0 || ta.nrest != 0;
 }
 
+/*Fluxion: the root bit of simplify_normalize, on one node*/
+static pcas_ast_t *root_as_pow(pcas_ast_t *e) {
+    if(!isoptype(e, OP_ROOT))
+        return ast_Copy(e);
+    return ast_MakeBinary(OP_POW, ast_Copy(ast_ChildGet(e, 1)),
+        ast_MakeBinary(OP_DIV, ast_MakeNumber(num_FromInt(1)), ast_Copy(ast_ChildGet(e, 0))));
+}
+
 pcas_ast_t *gcd(pcas_ast_t *a, pcas_ast_t *b) {
     pcas_ast_t *ret = NULL;
     gm_t ga, gb;
@@ -471,6 +479,17 @@ pcas_ast_t *gcd(pcas_ast_t *a, pcas_ast_t *b) {
 
     if(ast_Compare(a, b))
         return ast_Copy(a);
+
+    /*Fluxion: canonical form makes sqrt(2) mid sort and the copies in gcd_mult normalize back to 2^(1/2),
+      gcd(sqrt(2), 2^(1/2)) came out 1 and -sqrt(2)-isqrt(2) went round forever*/
+    if(isoptype(a, OP_ROOT) || isoptype(b, OP_ROOT)) {
+        pcas_ast_t *pa = root_as_pow(a), *pb = root_as_pow(b);
+
+        ret = gcd(pa, pb);
+        ast_Cleanup(pa);
+        ast_Cleanup(pb);
+        return ret;
+    }
 
     if(a->type == NODE_NUMBER && b->type == NODE_NUMBER) {
         if(mp_rat_is_integer(a->op.num) && mp_rat_is_integer(b->op.num)) {
