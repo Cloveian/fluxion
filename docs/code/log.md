@@ -1,5 +1,13 @@
 # Log
 
+## 2026-11-18 (morning) - wrong answers, round whatever
+
+- csolve on a cubic with one real root handed back that one root like it was all of them, x^3+x+1=0 was 1 of 3. unknown now, same as any other partial, and solve_factor finally passes complex into solve_cubic, so (x^2-2)^3 written out gets its +-sqrt(2) back. last night's go at that pushed the solve_factor frame past ix-128, this one *shrank* the app
+- x(y^3-3y-1)=1 with y^3=3y+1 didn't need the triple angle identity after all. when one equation is a cubic or more in one letter alone, the other one gets *dih*vided down by it first (poly_div carries the other letters through now), so that one turns into -1=0 and it's false. 120 made up systems like it against sympy: 81 right and 5 wrong -> 107 right and 0 wrong, the other 13 have cardano answers too long for the test runner to print
+- sqrt(-2+2isqrt(3)) came out sqrt(3)-i, which squares to 2-2isqrt(3), so not even a root of the right thing. upstream's ln(a+bi) used atan(b/a), off by pi whenever a < 0, and (-A)^(X/Y) pulled the -1 out of a complex A too. it's the half angle 2atan(b/(|z|+a)) now unless a is a plain positive number. x^6=64 had 2 wrong roots of its 6 and ln(-1+i) had the wrong angle. the checker found ln(-3i) still broken cuz upstream abs(-3i) is 3i (￢_￢ ) so it's sqrt(a^2+b^2) in there instead, abs itself is still todo
+- csolve x^n = c gives all n now (2x^6+3=0 was 2 of 6), r(cos t + isin t) going round 2pi/n. x^5=1 and even plain solve x^5=32 were unknown: factoring turned x^5-32 into (x-2) times a quartic and isolate never got to see it whole. residuals ~1e-15 against sympy
+- still open: ln(-1+i) is right but prints 2atan(1/(-1+2^(1/2)))i, no 3pi/8 in the table. abs(-3i). x^4=-16 says -2/2^(1/2) where -2^(1/2) would do. and the slow ones, same as last night
+
 ## 2026-11-18 (night) - most of last list
 
 - the lcm_divide segfault: factoring a bottom hands back 20000^2, which eval leaves alone, and comdenom's lcm turned its plain 20000 into that power, then the next bottom's 20000 found nothing. term_den folds those now and merges the numbers into one. my first go just folded and 1/(2\*20000^2)+1/x quietly came out 1/x, which is worse than a crash honestly. the checker's fuzz set went 14 segfaults -> 0. that system says unknown now, but it has four real pairs, its quartic is (y-100)(y+100)(990099y^2-9901009901). a quadratic in y^2 would do it (todo)
