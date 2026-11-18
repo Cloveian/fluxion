@@ -992,6 +992,7 @@ static bool nth_roots(pcas_ast_t *p, int n, pcas_ast_t **out) {
         return false;
     ast_Cleanup(p); /*out[0] is where it was*/
     simplify(o, SIMP_ALL);
+    fold_fraction(o); /*-3/2 comes back a/b, then (-3/2)^(1/6) goes complex in every root*/
     s = o->type == NODE_NUMBER && mp_rat_compare_zero(o->op.num) < 0;
     if(s)
         mp_rat_neg(o->op.num, o->op.num);
@@ -1001,8 +1002,10 @@ static bool nth_roots(pcas_ast_t *p, int n, pcas_ast_t **out) {
 
         if(t > n) /*-pi..pi, cos(3pi/2) never folded*/
             t -= 2 * n;
-        angle = ast_MakeBinary(OP_MULT, ast_MakeNumber(num_FromFraction(t, n)), ast_MakeSymbol(SYM_PI));
+        angle = ast_MakeBinary(OP_MULT, ast_MakeNumber(num_FromFraction(t < 0 ? -t : t, n)), ast_MakeSymbol(SYM_PI));
         sine = ast_MakeUnary(OP_SIN, ast_Copy(angle)); /*before the cos, an oom there frees angle*/
+        if(t < 0) /*cos t - isin t, folding cos(-t) and sin(-t) is ~2.4k work a root*/
+            sine = ast_MakeBinary(OP_MULT, number(-1), sine);
         out[k] = ast_MakeBinary(OP_MULT, ast_Copy(r), ast_MakeBinary(OP_ADD, ast_MakeUnary(OP_COS, angle),
             ast_MakeBinary(OP_MULT, ast_MakeSymbol(SYM_IMAG), sine)));
         if(out[k] == NULL)
