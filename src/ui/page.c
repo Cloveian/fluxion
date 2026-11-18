@@ -171,14 +171,14 @@ void page_draw(void) {
     int top = areas.body.y + 2, list_top = top + big->ascent + big->descent + 4;
     int bottom = pg->softkeys != NULL ? areas.keys.y : areas.keys.y + areas.keys.h; /* no keys, it gets their row too */
     int list_bottom = bottom - help_h - 2;
-    int rows, i;
+    int rows, i, x0 = areas.body.x, w = areas.body.w;
     const char *help;
 
     /* title */
     screen_color(COL_ACCENT);
-    draw_text(4, top + 1, pg->title, big);
+    draw_text(x0 + 4, top + 1, pg->title, big);
     screen_color(COL_DIM);
-    screen_hline(4, list_top - 2, SCREEN_W - 8);
+    screen_hline(x0 + 4, list_top - 2, w - 8);
 
     rows = (list_bottom - list_top) / row_h;
     if(rows < 1)
@@ -201,19 +201,19 @@ void page_draw(void) {
         if(is_header(pg, n)) {
             /* just the name in accent, nothing to pick so no highlight */
             screen_color(COL_ACCENT);
-            draw_text(6, y, pg->label(n), font);
+            draw_text(x0 + 6, y, pg->label(n), font);
             continue;
         }
         value = pg->value != NULL ? pg->value(n) : NULL;
         if(n == o->sel) {
             screen_color(COL_ACCENT);
-            screen_fill(2, y - 1, SCREEN_W - 4, row_h);
+            screen_fill(x0 + 2, y - 1, w - 4, row_h);
         }
         screen_color(n == o->sel ? COL_BG : COL_FG);
-        draw_text(6, y, pg->label(n), font);
+        draw_text(x0 + 6, y, pg->label(n), font);
         if(value != NULL) {
             screen_color(n == o->sel ? COL_BG : COL_DIM);
-            draw_text(SCREEN_W - 6 - draw_text_width(value, font), y, value, font);
+            draw_text(x0 + w - 6 - draw_text_width(value, font), y, value, font);
         }
     }
 
@@ -223,16 +223,16 @@ void page_draw(void) {
         int bar_y = list_top + (list_bottom - list_top - bar_h) * o->top / (pg->count - rows);
 
         screen_color(COL_DIM);
-        screen_vline(SCREEN_W - 2, bar_y, bar_h > 2 ? bar_h : 2);
+        screen_vline(x0 + w - 2, bar_y, bar_h > 2 ? bar_h : 2);
     }
 
     /* help for the highlighted row */
     screen_color(COL_DIM);
-    screen_hline(4, list_bottom + 1, SCREEN_W - 8);
+    screen_hline(x0 + 4, list_bottom + 1, w - 8);
     help = pg->help != NULL ? pg->help(o->sel) : NULL;
     if(help != NULL) {
         screen_color(COL_FG);
-        wrapped(6, list_bottom + 4, SCREEN_W - 12, help, font, help_lines);
+        wrapped(x0 + 6, list_bottom + 4, w - 12, help, font, help_lines);
     }
 
     if(pg->softkeys != NULL)

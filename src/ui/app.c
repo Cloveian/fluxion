@@ -2148,8 +2148,8 @@ static void draw_menu(void) {
         menu_top = menu_sel - rows + 1;
 
     x = areas.keys.x + menu * (areas.keys.w / FOLDER_COUNT); /* over its key */
-    if(x + width > SCREEN_W - 1)
-        x = SCREEN_W - 1 - width;
+    if(x + width > areas.body.x + areas.body.w - 1)
+        x = areas.body.x + areas.body.w - 1 - width;
     top = bottom - rows * row_h - 2;
 
     screen_color(COL_BG);
@@ -2203,10 +2203,10 @@ static void draw_popup(void) {
     int w = POPUP_COLS * cell_w + 1, h = rows * cell_h + 1;
     int x = cur_x - w / 2, y = cur_top - h - 2, i;
 
-    if(x < 1)
-        x = 1;
-    if(x + w > SCREEN_W - 1)
-        x = SCREEN_W - 1 - w;
+    if(x < areas.body.x + 1)
+        x = areas.body.x + 1;
+    if(x + w > areas.body.x + areas.body.w - 1)
+        x = areas.body.x + areas.body.w - 1 - w;
     if(y < areas.body.y)
         y = areas.body.y;
 
@@ -2292,6 +2292,7 @@ static void draw_battery(int x, int y, int level) {
 
 static void draw_top_bar(void) {
     int h = areas.top.h, y = (h - 1 - 11) / 2;
+    int left = areas.top.x + MARGIN, right = areas.top.x + areas.top.w - MARGIN;
 
     if(battery < 0 || clock() >= battery_next) {
         battery = power_battery();
@@ -2301,22 +2302,22 @@ static void draw_top_bar(void) {
     screen_color(COL_BG);
     screen_fill(areas.top.x, areas.top.y, areas.top.w, h);
     screen_color(COL_DIM);
-    screen_hline(MARGIN, h - 1, SCREEN_W - 2 * MARGIN);
-    draw_battery(SCREEN_W - MARGIN - BATTERY_W, (h - 1 - 7) / 2, battery);
+    screen_hline(left, h - 1, right - left);
+    draw_battery(right - BATTERY_W, (h - 1 - 7) / 2, battery);
 
     if(second)
-        draw_padlock(MARGIN, y, 0, second_lock);
+        draw_padlock(left, y, 0, second_lock);
     if(alpha)
-        draw_padlock(MARGIN + LOCK_SLOT, y, 1, alpha_lock);
+        draw_padlock(left + LOCK_SLOT, y, 1, alpha_lock);
     if(ctl)
-        draw_padlock(MARGIN + 2 * LOCK_SLOT, y, 2, ctl_lock);
+        draw_padlock(left + 2 * LOCK_SLOT, y, 2, ctl_lock);
 
     /* the form, when it isn't the normal one, over by the battery */
     if(form != FORM_HAND) {
         const font_t *small = draw_label_font();
 
         screen_color(COL_DIM);
-        draw_text(SCREEN_W - MARGIN - BATTERY_W - 6 - draw_text_width(form_names[form], small), 1,
+        draw_text(right - BATTERY_W - 6 - draw_text_width(form_names[form], small), 1,
                   form_names[form], small);
     }
 }
@@ -2351,7 +2352,8 @@ static int entry_h(const entry_t *h) {
 static void draw_screen(void) {
     const font_t *small = draw_label_font();
     box_t *in = ed_layout(&ed, &draw_font, true);
-    int line_y, y, i, avail = SCREEN_W - 2 * MARGIN, first;
+    int left = areas.body.x + MARGIN, right = areas.body.x + areas.body.w - MARGIN;
+    int line_y, y, i, avail = right - left, first;
     int top = areas.body.y, bottom = areas.body.y + areas.body.h;
 
     screen_clear();
@@ -2368,7 +2370,7 @@ static void draw_screen(void) {
 
     /* input line, just above the soft keys. scrolls sideways to keep the cursor in view. */
     if(in != NULL) {
-        int x = MARGIN, base = bottom - 3 - in->descent;
+        int x = left, base = bottom - 3 - in->descent;
 
         if(in->width > avail) {
             int cx = cursor_x(in, 0), shift = cx - avail * 3 / 4;
@@ -2389,12 +2391,12 @@ static void draw_screen(void) {
     }
 
     screen_color(COL_DIM);
-    screen_hline(MARGIN, line_y, SCREEN_W - 2 * MARGIN);
+    screen_hline(left, line_y, right - left);
 
     /* messages at the right of the line */
     if(status != NULL) {
         screen_color(COL_DIM);
-        draw_text(SCREEN_W - MARGIN - draw_text_width(status, small),
+        draw_text(right - draw_text_width(status, small),
                   line_y - small->ascent - small->descent - 1, status, small);
     }
 
@@ -2427,7 +2429,7 @@ static void draw_screen(void) {
         }
 
         if(out != NULL) {
-            int base = y - out->descent, x = SCREEN_W - MARGIN - out->width;
+            int base = y - out->descent, x = right - out->width;
 
             if(i == hist && hist_out)
                 highlight(x, base, out);
@@ -2438,27 +2440,27 @@ static void draw_screen(void) {
 
                 snprintf(t, sizeof t, "%lu.%lus", h->ms / 1000, h->ms % 1000 / 100);
                 screen_color(COL_DIM);
-                draw_text(MARGIN, base - small->ascent, t, small);
+                draw_text(left, base - small->ascent, t, small);
             }
             y -= out->ascent + out->descent + 2;
         } else {
             screen_color(COL_DIM);
-            draw_text(SCREEN_W - MARGIN - draw_text_width(h->message, small),
+            draw_text(right - draw_text_width(h->message, small),
                       y - small->ascent - small->descent, h->message, small);
             y -= small->ascent + small->descent + 2;
         }
 
         if(inb != NULL) {
             if(i == hist && !hist_out)
-                highlight(MARGIN, y - inb->descent, inb);
+                highlight(left, y - inb->descent, inb);
             screen_color(COL_FG);
-            draw_box(inb, MARGIN, y - inb->descent);
+            draw_box(inb, left, y - inb->descent);
             y -= inb->ascent + inb->descent + GAP;
         }
         layout_free(browse);
 
         screen_color(COL_DIM);
-        screen_hline(MARGIN + 20, y + 1, SCREEN_W - 2 * MARGIN - 40);
+        screen_hline(left + 20, y + 1, right - left - 40);
         y -= GAP;
     }
     draw_top_bar();
@@ -2490,7 +2492,7 @@ static void draw_working(void) {
     static const unsigned char dots[8][2] = {
         { 3, 0 }, { 5, 1 }, { 6, 3 }, { 5, 5 }, { 3, 6 }, { 1, 5 }, { 0, 3 }, { 1, 1 }
     };
-    int x = SCREEN_W - MARGIN - BATTERY_W - 6 - 8, y = (areas.top.h - 1 - 8) / 2;
+    int x = areas.top.x + areas.top.w - MARGIN - BATTERY_W - 6 - 8, y = (areas.top.h - 1 - 8) / 2;
     unsigned i;
 
     /* a head and two dimmer dots behind it, going round */
@@ -2507,7 +2509,7 @@ static void draw_working(void) {
 /* "12s, [on]+[mode] stops it" after the padlocks. no guess at the total, 1/x+1/(x+1)=1 is one short line and ~17 s on the calc */
 static void draw_busy_hint(unsigned long s) {
     const font_t *small = draw_label_font();
-    int x = MARGIN + 3 * LOCK_SLOT + 4;
+    int x = areas.top.x + MARGIN + 3 * LOCK_SLOT + 4;
     char t[32];
 
     snprintf(t, sizeof t, "%lus, [on]+" CANCEL_NAME " stops it", s);
