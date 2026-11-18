@@ -811,9 +811,10 @@ static bool halve_powers(pcas_ast_t *f, Symbol var) {
         return true;
     if(isoptype(f, OP_POW) && ast_ChildGet(f, 0)->type == NODE_SYMBOL && ast_ChildGet(f, 0)->op.symbol == var) {
         p = ast_ChildGet(f, 1);
-        if(p->type != NODE_NUMBER || mp_rat_to_ints(p->op.num, &k, &den) != MP_OK || den != 1 || k % 2 != 0)
+        if(p->type != NODE_NUMBER || mp_rat_to_ints(p->op.num, &k, &den) != MP_OK || den != 1 || k % 2 != 0
+           || (c = number(k / 2)) == NULL) /*oom, an x^4 left in would read as a quartic*/
             return false;
-        replace_node(p, number(k / 2));
+        replace_node(p, c);
         return true;
     }
     for(c = ast_ChildGet(f, 0); c != NULL; c = c->next)
@@ -854,7 +855,7 @@ static int positive_roots(coefs_t *p, int m) {
 static int solve_even(pcas_ast_t *f, Symbol var, pcas_ast_t **out, int n, bool complex) {
     pcas_ast_t *g = ast_Copy(f), *u[3] = { NULL }, *dec[3], *r, *neg;  /*quadratic or cubic in u. a SOLVE_MAX array here pushs solve_factor past ix-128, +3.7 KB on the CE*/
     coefs_t p;
-    bool have;
+    bool have, keep[3];
     int m, i, pos;
 
     if(g == NULL || !halve_powers(g, var)) {
@@ -872,31 +873,33 @@ static int solve_even(pcas_ast_t *f, Symbol var, pcas_ast_t **out, int n, bool c
     for(i = 0; i < 3; i++)
         dec[i] = i < m ? approx_number(u[i]) : NULL;
     for(i = 0; i < 3; i++) {
-        bool keep = complex;
-
-        if(!keep && i < m && pos >= 0) { /*the pos biggest ones, the decimals only put them in order*/
+        keep[i] = complex && i < m;
+        if(!keep[i] && i < m && pos >= 0) { /*the pos biggest ones, the decimals only put them in order*/
             int above = 0, j;
 
             for(j = 0; j < m; j++)
                 if(j != i && dec[i] != NULL && dec[j] != NULL && mp_rat_compare(dec[j]->op.num, dec[i]->op.num) > 0)
                     above++;
-            keep = dec[i] != NULL && above < pos;
-        } else if(!keep && i < m) {
-            keep = dec[i] != NULL && mp_rat_compare_zero(dec[i]->op.num) >= 0;
-        }
-        if(i < m && keep && n + 2 <= SOLVE_MAX) {
-            if(is_zero(u[i])) {
-                n = add_root(out, n, number(0));
-            } else {
-                r = ast_MakeBinary(OP_POW, ast_Copy(u[i]), ast_MakeNumber(num_FromFraction(1, 2)));
-                simplify(r, SIMP_ALL);
-                neg = ast_MakeBinary(OP_MULT, number(-1), ast_Copy(r));
-                simplify(neg, SIMP_ALL);
-                n = add_root(out, n, neg);
-                n = add_root(out, n, r);
-            }
+            keep[i] = dec[i] != NULL && above < pos;
+        } else if(!keep[i] && i < m) {
+            keep[i] = dec[i] != NULL && mp_rat_compare_zero(dec[i]->op.num) >= 0;
         }
     }
+
+    /*the minus ones u going down then the plus ones u going up, in order already. a tiny u's
+      decimal is noise so sort_roots can't place it (3x^4-200000x^2+3)*/
+    for(i = 2; i >= 0; i--)
+        if(keep[i] && !is_zero(u[i]) && n + 1 <= SOLVE_MAX) {
+            neg = ast_MakeBinary(OP_MULT, number(-1), ast_MakeBinary(OP_POW, ast_Copy(u[i]), ast_MakeNumber(num_FromFraction(1, 2))));
+            simplify(neg, SIMP_ALL);
+            n = add_root(out, n, neg);
+        }
+    for(i = 0; i < 3; i++)
+        if(keep[i] && n + 1 <= SOLVE_MAX) {
+            r = is_zero(u[i]) ? number(0) : ast_MakeBinary(OP_POW, ast_Copy(u[i]), ast_MakeNumber(num_FromFraction(1, 2)));
+            simplify(r, SIMP_ALL);
+            n = add_root(out, n, r);
+        }
     for(i = 0; i < 3; i++) { /*after, every pass looks at all the decimals*/
         ast_Cleanup(dec[i]);
         ast_Cleanup(u[i]);  /*all 3, an unknown m can still leave some*/
@@ -940,7 +943,7 @@ static int solve_factor(pcas_ast_t *f, Symbol var, pcas_ast_t **out, int n, bool
     else if((p.deg == 4 || p.deg == 6) && p.numeric)
         n = solve_even(f, var, out, n, complex);
     else
-        n = SOLVE_UNKNOWN;      /*quartics someday, ferrari looks even worse*/
+        n = SOLVE_UNKNOWN;      /*other quartics someday, ferrari looks even worse*/
 
     coefs_free(&p);
     return n;
