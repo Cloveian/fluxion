@@ -102,6 +102,15 @@ csolve; X^3+X+1=0; X; unknown
 csolve; X^3_6X^2+12X_8=0; X; 2
 csolve; X^6_6X^4+12X^2_8=0; X; -2^(1/2),2^(1/2)
 csolve; X^6+X^2+1=0; X; unknown
+csolve; X^6=64; X; -2,2,-1_i3^(1/2),-1+i3^(1/2),1_i3^(1/2),1+i3^(1/2)
+#roots of a+bi with a < 0, those came out the wrong root (atan(b/a) is off by pi there)
+simplify; (-2+2*3^(1/2)i)^(1/2); 1+i3^(1/2)
+simplify; (-2_2*3^(1/2)i)^(1/2); 1_i3^(1/2)
+simplify; (-3+4i)^(1/2); 25^(1/4)/5^(1/2)+(2*25^(1/4)i)/5^(1/2)
+simplify; ln(-1_i); ln(2)/2+2atan(-1/(-1+2^(1/2)))i
+#a = 0 and b < 0 too, abs(-3i) gives 3i
+simplify; ln(-3i); ln(9)/2_(ipi)/2
+simplify; (-i)^(1/2); 2^(1/2)/2_(i2^(1/2))/2
 csolve; sin(iX)=1/2; X; (-ipi)/6_2ipiN,-2piNi_(5pii)/6
 
 #cubics, exact. the 1,2,3 one factors, it's there so that still goes the old way

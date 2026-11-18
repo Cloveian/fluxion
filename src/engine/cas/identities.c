@@ -13,6 +13,8 @@
     N is reserved for integers.
 
     I and J are reserved for real numbers.
+
+    Fluxion: R is a number above 0
 */
 pcas_id_t id_general[ID_NUM_GENERAL] = {
     /*logb(value, base)*/
@@ -184,14 +186,15 @@ pcas_id_t id_hyperbolic[ID_NUM_HYPERBOLIC] = {
 };
 
 pcas_id_t id_complex[ID_NUM_COMPLEX] = {
-    {"(-A)^(X/Y)", "e^(ipiX/Y)A^(X/Y"},
+    {"(-I)^(X/Y)", "e^(ipiX/Y)I^(X/Y"}, /*Fluxion: was any A, sqrt(-(2+2isqrt(3))) came out the other root*/
     {"1/i", "-i"},
     {"e^(I+Ji", "e^I(cos(J)+isin(J"},
     {"(I+Ji)^X", "e^(Xln(I+Ji"},
     {"X^(I+Ji", "e^((I+Ji)ln(X"},
     {"abs(I+Ji", "sqrt(I^2+J^2"},
     {"atan(X/0", "pi/2"}, /*Lol is this cheating?*/
-    {"ln(I+Ji", "ln(abs(I+Ji))+iatan(J/I)"},
+    {"ln(R+Ji", "ln(abs(R+Ji))+iatan(J/R)"}, /*Fluxion: atan(J/I) was off by pi for I < 0, sqrt(-2+2isqrt(3)) came out sqrt(3)-i*/
+    {"ln(I+Ji", "ln(sqrt(I^2+J^2))+2iatan(J/(sqrt(I^2+J^2)+I))"}, /*Fluxion: half angle, any I. sqrt cuz abs(-3i) is 3i*/
     {"logb(X,I+Ji", "ln(X)/ln(I+Ji"},
     {"sin(I+Ji", "sin(I)cosh(J)+icos(I)sinh(J"},
     {"cos(I+Ji", "cos(I)cosh(J)_isin(I)sinh(J)"},
@@ -277,21 +280,27 @@ void fill(pcas_ast_t *to, Dictionary dict) {
 
 }
 
+/*Fluxion: the reserved letter rules, for both kinds of match below*/
+static bool letter_fits(Symbol s, pcas_ast_t *e) {
+    if(e == NULL) /*oom placeholder*/
+        return false;
+    if(s == 'N') /*Only integers allowed*/
+        return e->type == NODE_NUMBER && mp_rat_is_integer(e->op.num);
+    if(s == 'I' || s == 'J') /*We assume something is real if it does not have an imaginary node. This could be wrong.*/
+        return !has_imaginary_node(e);
+    if(s == 'R')
+        return e->type == NODE_NUMBER && mp_rat_compare_zero(e->op.num) > 0;
+    return true;
+}
+
 bool matches(pcas_ast_t *id, pcas_ast_t *e, Dictionary dict) {
 
     if(pcas_cancelled) /*Fluxion: stop here, the answer's being thrown away*/
         return false;
 
     if(id->type == NODE_SYMBOL && id->op.symbol < SYM_IMAG) {
-        if(id->op.symbol == 'N') {
-            /*Only integers allowed*/
-            if(!(e->type == NODE_NUMBER && mp_rat_is_integer(e->op.num)))
-                return false;
-        } else if(id->op.symbol == 'I' || id->op.symbol == 'J') {
-            /*We assume something is real if it does not have an imaginary node. This could be wrong.*/
-            if(has_imaginary_node(e))
-                return false;
-        }
+        if(!letter_fits(id->op.symbol, e))
+            return false;
 
         /*Check if dictionary does not yet have value*/
         if(dict_Get(dict, id) == NULL) {
@@ -460,8 +469,7 @@ bool matches(pcas_ast_t *id, pcas_ast_t *e, Dictionary dict) {
                     simplify(c, SIMP_COMMUTATIVE);
 
                     /*If the combined parts need to be real and they are or if they don't need to be real*/
-                    /*We assume something is real if it does not have an imaginary node. This could be wrong.*/
-                    if(!((combined_character == 'I' || combined_character == 'J') && has_imaginary_node(c))) {
+                    if(letter_fits(combined_character, c)) { /*Fluxion: was the I J check alone*/
                         /*Cleanup and overwrite dummy placeholder*/
                         ast_Cleanup(dict_copy[combined_character - 'A']);
                         dict_copy[combined_character - 'A'] = c;
@@ -471,6 +479,7 @@ bool matches(pcas_ast_t *id, pcas_ast_t *e, Dictionary dict) {
                     }
 
                 } else {
+                    matched = letter_fits(combined_character, dict_copy[combined_character - 'A']); /*Fluxion: placeholder 0 isn't an R*/
                     ast_Cleanup(c);
                 }
             }

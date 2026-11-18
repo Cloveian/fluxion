@@ -241,7 +241,8 @@ simplify; cos(i; cosh(1
 simplify; e^(iX; cos(X)+isin(X
 
 #These identities are simplified twice
-simplify; (I+Ji)^X; cos(Xatan(J/I))(I^2+J^2)^(X/2)+(I^2+J^2)^(X/2)isin(Xatan(J/I))
+#Fluxion: half angle, atan(J/I) was off by pi for I < 0
+simplify; (I+Ji)^X; cos(2Xatan(J/((I^2+J^2)^(1/2)+I)))(I^2+J^2)^(X/2)+(I^2+J^2)^(X/2)isin(2Xatan(J/((I^2+J^2)^(1/2)+I)))
 simplify; X^(I+Ji; cos(ln(X)J)X^I+X^Iisin(ln(X)J)
 
 #HOW I cannot believe these actually work
