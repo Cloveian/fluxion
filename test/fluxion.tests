@@ -293,6 +293,10 @@ system; X^2+Y^2=1,X^2+2Y^2=9; XY; false
 system; X^2+Y^2+2X=3,X^2+Y^2=25; XY; false
 system; X^2=Y^2-9999,XY+10000Y^2=100000100; XY; false
 system; X^2_Y^2=7,Y^2=X; XY; 1/2+29^(1/2)/2,-(1/2+29^(1/2)/2)^(1/2) | 1/2+29^(1/2)/2,(1/2+29^(1/2)/2)^(1/2)
+#a cubic in y alone and the other one mod it first, 8cos(pi/9)^3-6cos(pi/9)-1 never folds to 0
+system; X(Y^3_3Y_1)=1,Y^3=3Y+1; XY; false
+system; XY^3=1,Y^3=3Y+1; XY; 1/(1+6cos((5pi)/9)),2cos((5pi)/9) | 1/(1+6cos((7pi)/9)),2cos((7pi)/9) | 1/(1+6cos(pi/9)),2cos(pi/9)
+system; X+Y^3=2,Y^3_3Y_1=0; XY; 1_6cos(pi/9),2cos(pi/9) | 1_6cos((5pi)/9),2cos((5pi)/9) | 1_6cos((7pi)/9),2cos((7pi)/9)
 
 #trig solve, just one turn (turn; equation; var; roots from 0 up to 2pi, sorted)
 turn; sin(X)=1/2; X; pi/6,(5pi)/6

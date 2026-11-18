@@ -576,9 +576,9 @@ static int by_substitution(pcas_ast_t **eqs, int i, int v, const Symbol *vars, p
     return result;
 }
 
-/*two equations, two letters, not both lines. a line in one of the letters (number
-  in front) goes first since solving that one is clean, then anything solve() can do*/
-static int nonlinear(pcas_ast_t **eqs, const Symbol *vars, pcas_ast_t *out[][SYSTEM_MAX]) {
+/*a line in one of the letters (number in front) goes first since solving that one is clean,
+  then anything solve() can do*/
+static int substitutions(pcas_ast_t **eqs, const Symbol *vars, pcas_ast_t *out[][SYSTEM_MAX]) {
     pcas_ast_t *lead;
     int pass, i, v, r;
     bool line;
@@ -598,6 +598,26 @@ static int nonlinear(pcas_ast_t **eqs, const Symbol *vars, pcas_ast_t *out[][SYS
                     return r;
             }
     return SOLVE_UNKNOWN;
+}
+
+/*two equations, two letters, not both lines. when one is a cubic or more in just one letter
+  the other goes mod that one first, its roots are cos and cardano forms simplify can't fold
+  back. x(y^3-3y-1)=1 with y^3=3y+1 is 3 pairs of 1/0 without it*/
+static int nonlinear(pcas_ast_t **eqs, const Symbol *vars, pcas_ast_t *out[][SYSTEM_MAX]) {
+    pcas_ast_t *cut[2], *rest;
+    int i, v, r;
+
+    for(i = 0; i < 2; i++)
+        for(v = 0; v < 2; v++)
+            if(!has_symbol(eqs[i], vars[1 - v]) && poly_degree(eqs[i], vars[v], NULL) >= 3
+               && (rest = poly_remainder(eqs[1 - i], eqs[i], vars[v])) != NULL) {
+                cut[i] = eqs[i];
+                cut[1 - i] = rest;
+                r = substitutions(cut, vars, out);
+                ast_Cleanup(rest);
+                return r;
+            }
+    return substitutions(eqs, vars, out);
 }
 
 int solve_system(pcas_ast_t **eqs, int n, const Symbol *vars, pcas_ast_t *out[][SYSTEM_MAX]) {
