@@ -312,13 +312,16 @@ bool absolute_val(pcas_ast_t *e) {
 /*returns negative if a < b, 0 if a=b, positive if a > b in terms of sorting order*/
 int compare(pcas_ast_t *a, pcas_ast_t *b, bool add) {
     pcas_ast_t *temp;
-    int multiplier = 1;
+    int multiplier = 1, order;
 
     if(pcas_cancelled) /*Fluxion: stop here, the answer's being thrown away*/
         return 0;
 
     if(a == NULL || b == NULL) /*Fluxion: oom*/
         return 0;
+
+    if(add && gm_order(a, b, &order)) /*Fluxion: terms of a sum go by their letters*/
+        return order;
 
     if(isoptype(b, OP_MULT)) {
         temp = a;
