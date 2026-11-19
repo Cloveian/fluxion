@@ -1219,8 +1219,10 @@ static bool factor_polynomial(pcas_ast_t *e) {
     }
 
     /*a factored part is a product inside this one: flatten it*/
-    if(changed)
+    if(changed) {
         simplify(e, SIMP_COMMUTATIVE);
+        while(simplify_like_terms_multiplication(e)); /*Fluxion: (X_1)(2X_2) is 2(X_1)(X_1) after the flatten*/
+    }
     return changed;
 }
 
