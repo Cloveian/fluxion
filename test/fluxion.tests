@@ -489,6 +489,11 @@ cancel; (A^3_B^3)/(A_B); A^2+AB+B^2
 cancel; (4X^2_9Y^2)/(2X+3Y); 2X_3Y
 cancel; (X^2Y_Y^3)/(XY+Y^2); X_Y
 cancel; (AX+AY)/(BX+BY); A/B
+#a bottom inside a top or bottom goes to the other side. the runner spreads the answer out after
+cancel; (X^2/2_1/2)/(X_1); X/2+1/2
+cancel; ((X^2_1)/(X+3))/((X_1)/(X+3)); X+1
+cancel; ((X^2_1)/2)/((X_1)/4); 2X+2
+cancel; (X/(X+1))/(X^2/(X^2_1)); 1_1/X
 comdenom; (1/X+1/Y)/(1/X_1/Y); (X+Y)/(Y_X)
 
 #One fraction over a common denominator (a form). comdenomf = top and bottom factored. ACT Q26

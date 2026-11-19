@@ -2,18 +2,13 @@
 #The expected value is the right answer; the comment above each case says what it gives now.
 #Move a case to fluxion.tests once it passes. (2026-10-14)
 
-#Cancel: the top isn't factored when it has fraction coefficients (cancel_fraction's light simplify
-#leaves X^2/2 as a fraction node, which factor_polynomial doesn't read). Plain simplify is no better.
-#gives: 2/(2X_2)^2+(2X^3)/(2X_2)^2_(2X^2)/(2X_2)^2_(2X)/(2X_2)^2 (right, but awful)
-cancel; (X^2/2_1/2)/(X_1); (X+1)/2
-
 #Solve: sqrt(3/2) comes out as sqrt(3)/sqrt(2), not rationalized (the Nspire gives sqrt(6)/2)
 #gives: -sqrt(3)/sqrt(2), sqrt(3)/sqrt(2). the screen (canonical form) shows sqrt(6)/2, only simplify's own answer is like this
 solve; 2X^2=3; X; -sqrt(6)/2,sqrt(6)/2
 
-#Cancel: a fraction over a fraction isn't flattened first, so nothing cancels
-#gives: X^2/(X_1)_1/(X_1)
-cancel; ((X^2_1)/(X+3))/((X_1)/(X+3)); X+1
+#Cancel: a factor that's the other one times -1 doesn't match, (A_B) and (B_A)
+#gives: (-B^2)/(-A+B)+A^2/(-A+B)
+cancel; (A^2_B^2)/(B_A); -A_B
 
 #Roots: trial division stops at 1000 (ROOT_MAX_FACTOR), so the square of a bigger prime stays inside
 #gives: sqrt(2036162)
