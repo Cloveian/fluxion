@@ -11,7 +11,8 @@
 - the Q37 thing: factor(x^2+x+1) gave 1+x(1+x), the gcd pairing grabbing x^2 and x once poly_factor found nothing. a sum in one letter skips the pairing now under factor, comdenomf tops too. upstream had 3x(x+2)+1 as a *test* for 3x^2+6x+1, changed it. the checker caught it skipping sums inside functions too, where poly_factor never looks, so sin(x^2+2x) lost its sin(x(x+2)). it only skips where factor_polynomial got to now
 - comdenom(1/(x-1)+1/(1-x)) is 0, not 0/(1-x). todo.tests 15 -> 8
 - solve 2x^2=3 was on the todo list as sqrt(3)/sqrt(2), but on screen it was actually showing sqrt((2*3))/2, *worse*. the canonical form puts a^k b^k together as (ab)^k and never multiplied two numbers out. it does now, and takes whole roots out after (sqrt(2)sqrt(6) is 2sqrt(3), cbrt(2)cbrt(4)5 is 10). bonus: the fuzz sum that was eating the 32 pass cap went 136k work -> 11k, ~91 s -> ~7 s on the calc, its sqrt((2*22)) just never settled
-- still open from that: 2sqrt(2)sqrt(3) stays like that (the 2^(3/2) split comes after the combine and leaves roots it doesnt look at), and factor((x^2+x+1)/(x^2+3x)) / factor(y(x^2+x+1)) come out as awful sums, both older than tonight
+- 2sqrt(2)sqrt(3) stayed like that, the 2^(3/2) split comes after the combine and leaves roots it didnt look at. number roots with the same index go together too now, 2sqrt(6), and 2^(3/2)5^(1/2) is 2sqrt(10)
+- still open: factor((x^2+x+1)/(x^2+3x)) and factor(y(x^2+x+1)) come out as awful sums, older than tonight
 
 ## 2026-11-18 (afternoon) - slow ones and a sort that wouldn't stop
 

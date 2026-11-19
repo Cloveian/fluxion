@@ -473,6 +473,22 @@ static void cancel_numbers(pcas_ast_t *e) {
         replace_node(e, ast_Copy(num));
 }
 
+/*Fluxion: a^k b^k for two numbers over 0 as one, worked out: sqrt(2)sqrt(6) -> 2sqrt(3). NULL otherwise, sqrt(-2)sqrt(-3) isn't sqrt(6)*/
+static pcas_ast_t *number_power(pcas_ast_t *a, pcas_ast_t *b, pcas_ast_t *k) {
+    pcas_ast_t *merged;
+    mp_rat ab;
+
+    if(a->type != NODE_NUMBER || b->type != NODE_NUMBER
+       || mp_rat_compare_zero(a->op.num) <= 0 || mp_rat_compare_zero(b->op.num) <= 0)
+        return NULL;
+
+    ab = num_Copy(a->op.num);
+    mp_rat_mul(ab, b->op.num, ab);
+    merged = ast_MakeBinary(OP_POW, ast_MakeNumber(ab), ast_Copy(k));
+    simplify(merged, SIMP_EVAL);
+    return merged;
+}
+
 /*Fluxion: pcas.tests takes 15 at most. compare() isn't one order everywhere, -1, -isqrt(44) and -ypi/2 each
   went before the next and round*/
 #define CANONICAL_PASSES_MAX 32
@@ -500,30 +516,30 @@ bool simplify_canonical_form(pcas_ast_t *e, unsigned char flags) {
                 for(i = 0; i < ast_ChildLength(e); i++) {
                     pcas_ast_t *ichild = ast_ChildGet(e, i);
 
-                    if(!isoptype(ichild, OP_POW))
+                    if(!isoptype(ichild, OP_POW) && !isoptype(ichild, OP_ROOT))
                         continue;
 
                     for(j = i + 1; j < ast_ChildLength(e); j++) {
-                        pcas_ast_t *jchild = ast_ChildGet(e, j);
+                        pcas_ast_t *jchild = ast_ChildGet(e, j), *merged = NULL;
+                        pcas_ast_t *a = ast_ChildGet(ichild, 0), *b = ast_ChildGet(jchild, 0); /*the bases, the indices for roots*/
 
-                        if(!isoptype(jchild, OP_POW))
+                        if(optype(jchild) != optype(ichild))
                             continue;
 
                         /*If the powers are the same*/
-                        if(ast_Compare(ast_ChildGet(ichild, 1), ast_ChildGet(jchild, 1))) {
-                            pcas_ast_t *a = ast_ChildGet(ichild, 0), *b = ast_ChildGet(jchild, 0), *merged;
-
-                            /*Fluxion: two numbers over 0 multiply out, sqrt(2)sqrt(3) -> sqrt(6). sqrt(-2)sqrt(-3) isn't sqrt(6)*/
-                            if(a->type == NODE_NUMBER && b->type == NODE_NUMBER
-                               && mp_rat_compare_zero(a->op.num) > 0 && mp_rat_compare_zero(b->op.num) > 0) {
-                                mp_rat ab = num_Copy(a->op.num);
-
-                                mp_rat_mul(ab, b->op.num, ab);
-                                merged = ast_MakeBinary(OP_POW, ast_MakeNumber(ab), ast_Copy(ast_ChildGet(ichild, 1)));
-                                simplify(merged, SIMP_EVAL); /*sqrt(2)sqrt(6) -> 2sqrt(3)*/
-                            } else {
+                        if(isoptype(ichild, OP_POW) && ast_Compare(ast_ChildGet(ichild, 1), ast_ChildGet(jchild, 1))) {
+                            merged = number_power(a, b, ast_ChildGet(ichild, 1));
+                            if(merged == NULL)
                                 merged = ast_MakeBinary(OP_POW, ast_MakeBinary(OP_MULT, ast_Copy(a), ast_Copy(b)), ast_Copy(ast_ChildGet(ichild, 1)));
-                            }
+                        } else if(isoptype(ichild, OP_ROOT) && ast_Compare(a, b)) {
+                            /*Fluxion: number roots only, for the 2sqrt(2) the 2^(3/2) split below hands back a pass late*/
+                            pcas_ast_t *k = ast_MakeBinary(OP_DIV, ast_MakeNumber(num_FromInt(1)), ast_Copy(a));
+
+                            merged = number_power(ast_ChildGet(ichild, 1), ast_ChildGet(jchild, 1), k);
+                            ast_Cleanup(k);
+                        }
+
+                        if(merged != NULL) {
                             ast_ChildAppend(e, merged);
 
                             ast_Cleanup(ast_ChildRemove(e, ichild));
