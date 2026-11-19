@@ -532,11 +532,13 @@ cancel; (A_B)/(B_A); -1
 cancel; (X^2+XY_X_Y)/(X+Y); X_1
 cancel; (YX^2_Y+ZX^2_Z)/(X_1); (Y+Z)(X+1)
 cancel; (WYX^2_WY+WZX^2_WZ)/(X_1); (X+1)(WY+WZ)
-#a bottom inside a top or bottom goes to the other side. the runner spreads the answer out after
+#a bottom inside a top or bottom, or one of its factors, goes to the other side. the runner spreads the answer out after
 cancel; (X^2/2_1/2)/(X_1); X/2+1/2
 cancel; ((X^2_1)/(X+3))/((X_1)/(X+3)); X+1
 cancel; ((X^2_1)/2)/((X_1)/4); 2X+2
 cancel; (X/(X+1))/(X^2/(X^2_1)); 1_1/X
+cancel; (3(1_X)(X_1))/(4(X/2_1/2)); 3/2_(3X)/2
+cancel; (X(X/(X+1))(X/2_1/2))/((X_1)/X); X^3/(2X+2)
 comdenom; (1/X+1/Y)/(1/X_1/Y); (X+Y)/(Y_X)
 
 #One fraction over a common denominator (a form). comdenomf = top and bottom factored. ACT Q26

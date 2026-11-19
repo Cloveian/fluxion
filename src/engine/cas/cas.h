@@ -135,6 +135,8 @@ bool simplify(pcas_ast_t *e, unsigned short flags);
 bool simplify_canonical_form(pcas_ast_t *e, unsigned char flags);
 /*Fluxion: AA to A^(1+1) everywhere in e, SIMP_LIKE_TERMS for products*/
 bool simplify_like_terms_multiplication(pcas_ast_t *e);
+/*Fluxion: SIMP_RATIONAL on its own, (A/B)/C to A/(BC) and A(B/C) to AB/C*/
+bool simplify_rational(pcas_ast_t *e);
 
 /*Factor A + A to A(1 + 1) where at least one part of the
 resulting multiplication can be evauated numerically*/

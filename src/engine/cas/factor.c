@@ -1353,7 +1353,7 @@ static bool opposite(pcas_ast_t *a, pcas_ast_t *b) {
 /*Fluxion: one fraction: factor the top and bottom, take out what they share. finally works*/
 static bool cancel_fraction(pcas_ast_t *e) {
     pcas_ast_t *num = ast_Copy(ast_ChildGet(e, 0)), *den = ast_Copy(ast_ChildGet(e, 1));
-    pcas_ast_t *df, *nf, *nb, *db;
+    pcas_ast_t *df, *nf, *whole;
     bool changed = false, negative = false;
 
     /*same shape as factor_polynomial()'s factors, so they compare: X_3 parses as X+-1*3*/
@@ -1371,16 +1371,11 @@ static bool cancel_fraction(pcas_ast_t *e) {
     cancel_factor(den);
 
     /*a bottom inside goes over to the other side, ((X^2_1)/(X+3))/((X_1)/(X+3)). (X^2/2_1/2) only turns into one after factoring*/
-    nb = isoptype(num, OP_DIV) ? ast_Copy(ast_ChildGet(num, 1)) : NULL;
-    db = isoptype(den, OP_DIV) ? ast_Copy(ast_ChildGet(den, 1)) : NULL;
-    if(nb != NULL)
-        replace_node(num, ast_Copy(ast_ChildGet(num, 0)));
-    if(db != NULL) {
-        replace_node(den, ast_Copy(ast_ChildGet(den, 0)));
-        num = ast_MakeBinary(OP_MULT, num, db);
-    }
-    if(nb != NULL)
-        den = ast_MakeBinary(OP_MULT, den, nb);
+    whole = ast_MakeBinary(OP_DIV, num, den);
+    while(!pcas_check() && simplify_rational(whole)); /*one pass can leave A/(B(C/D))*/
+    num = ast_ChildRemoveIndex(whole, 0);
+    den = ast_ChildRemoveIndex(whole, 0);
+    ast_Cleanup(whole);
     simplify(num, SIMP_COMMUTATIVE);
     simplify(den, SIMP_COMMUTATIVE);
 
