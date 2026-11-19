@@ -18,11 +18,6 @@ cancel; (A^2_B^2)/(A_B); A+B
 #gives: X^2/(X_1)_1/(X_1)
 cancel; ((X^2_1)/(X+3))/((X_1)/(X+3)); X+1
 
-#Comdenom: a top that cancels to 0 stays 0 over the denominator
-#gives: 0/(1_X)
-comdenom; 1/(X_1)+1/(1_X); 0
-#gives: 0/(X^2_1)
-comdenom; 1/(X_1)_1/(X+1)_2/(X^2_1); 0
 #Comdenom: top and bottom of a fraction of fractions share XY, not cancelled (one variable only)
 #gives: (XY^2+YX^2)/(XY^2_YX^2)
 comdenom; (1/X+1/Y)/(1/X_1/Y); (X+Y)/(Y_X)

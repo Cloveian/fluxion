@@ -48,6 +48,8 @@ factor; X^3_1; (X_1)(X^2+X+1)
 #and no pairing up its terms by gcd either, that was 1+X(1+X)
 factor; X^2+X+1; X^2+X+1
 factor; X^2+X_1000002; X^2+X_1000002
+#inside a function factor_polynomial doesn't look, so the pairing still does
+factor; sin(X^2+2X); sin(X(X+2))
 
 #Only even powers: roots in X^2, then an even quartic as (Px^2+Rx+S)(Px^2_Rx+S)
 factor; X^4_5X^2+6; (X^2_2)(X^2_3)
@@ -501,6 +503,8 @@ comdenom; 2/(X^2_4)+1/(X+2); X/(X^2_4)
 comdenomf; 2/(X^2_4)+1/(X+2); X/((X_2)(X+2))
 comdenomf; 1/X+1/(X+1)+1/(X+2); (3X^2+6X+2)/(X(X+1)(X+2))
 comdenomf; 1/X+1/X^2+1/X^3; (X^2+X+1)/X^3
+comdenom; 1/(X_1)+1/(1_X); 0
+comdenom; 1/(X_1)_1/(X+1)_2/(X^2_1); 0
 comdenom; 1/X+1/X^2; (X+1)/X^2
 comdenom; 1+2/X+1/X^2; (X^2+2X+1)/X^2
 comdenomf; 1+2/X+1/X^2; (X+1)^2/X^2

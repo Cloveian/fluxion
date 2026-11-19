@@ -1228,6 +1228,14 @@ static bool cancel_fraction(pcas_ast_t *e) {
     /*same shape as factor_polynomial()'s factors, so they compare: X_3 parses as X+-1*3*/
     simplify(num, SIMP_NORMALIZE | SIMP_COMMUTATIVE | SIMP_RATIONAL | SIMP_EVAL);
     simplify(den, SIMP_NORMALIZE | SIMP_COMMUTATIVE | SIMP_RATIONAL | SIMP_EVAL);
+
+    /*0/(1_X) is just 0, from comdenom(1/(X_1)+1/(1_X))*/
+    if(is_ast_int(num, 0) && !is_ast_int(den, 0)) {
+        ast_Cleanup(den);
+        replace_node(e, num);
+        return true;
+    }
+
     factor_polynomial(num);
     factor_polynomial(den);
     num = as_product(num);
