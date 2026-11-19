@@ -2002,3 +2002,14 @@ bool factor(pcas_ast_t *e, unsigned char flags) {
     }
     return changed;
 }
+
+bool factor_command(pcas_ast_t *e) {
+    bool primes;
+
+    simplify(e, SIMP_NORMALIZE | SIMP_COMMUTATIVE | SIMP_RATIONAL | SIMP_EVAL | SIMP_LIKE_TERMS); /*like terms or (ax)^2+x came out x((ax)^2/x+1)*/
+    primes = e->type == NODE_NUMBER;
+    factor(e, FAC_ALL);
+    if(!primes) /*a whole number is left as its primes, a simplify would multiply them back*/
+        simplify(e, SIMP_NORMALIZE | SIMP_COMMUTATIVE | SIMP_RATIONAL | SIMP_EVAL);
+    return primes;
+}

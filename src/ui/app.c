@@ -1007,14 +1007,8 @@ static bool run(editor_t *line) {
         expand(e, EXP_ALL);
         simplify(e, SIMP_BASIC | SIMP_EVAL | SIMP_LIKE_TERMS);
     } else if(cmd != NULL && strcmp(cmd, "factor") == 0) {
-        simplify(e, SIMP_BASIC | SIMP_EVAL | SIMP_LIKE_TERMS); /* like terms or (ax)^2+x came out x((ax)^2/x+1) */
-        /* a whole number comes back as its primes, already in order. no simplify
-           after, it'd multiply them straight back together, and no canonical form,
-           its sort puts the 5 of 2^3*3^2*5 first and 2^2*3^2 becomes (2*3)^2 */
-        primes = e->type == NODE_NUMBER;
-        factor(e, FAC_ALL);
-        if(!primes)
-            simplify(e, SIMP_BASIC | SIMP_EVAL);
+        /* primes come back in order, no canonical form. its sort puts the 5 of 2^3*3^2*5 first and 2^2*3^2 becomes (2*3)^2 */
+        primes = factor_command(e);
     } else if(cmd != NULL && strcmp(cmd, "eval") == 0) {
         simplify(e, simp_flags);
         eval(e, EVAL_ALL);

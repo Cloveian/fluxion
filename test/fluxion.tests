@@ -114,6 +114,11 @@ factor; Y(X^2_1)+Y; YX^2
 factor; (X_1)(2X_2); 2(X_1)^2
 factor; (X^2_1)(X+1); (X_1)(X+1)^2
 factor; X^4_2X^2+1; (X_1)^2(X+1)^2
+#as it's shown, after the canonical form (factortext; expression; text)
+factortext; (X^2_1)^2; (X_1)^2(X+1)^2
+factortext; X^2Y^2; (XY)^2
+factortext; 360; 2^3*3^2*5
+factortext; X^2+XY_X_Y; (X_1)(X+Y)
 
 #Solve over the reals (solve; equation; variable; roots smallest first, or true / false / unknown)
 #ACT Q1, Q9, Q33

@@ -146,6 +146,8 @@ resulting multiplication can be evauated numerically*/
 #define FAC_ALL                             0xFF
 
 bool factor(pcas_ast_t *e, unsigned char flags);
+/*Fluxion: light simplify, factor, light simplify. true for a number, the caller skips the canonical form then*/
+bool factor_command(pcas_ast_t *e);
 
 /*Fluxion: in every fraction, factors the top and bottom (FAC_POLYNOMIAL) and
 cancels what they share: (X^2_1)/(X_1) = (X+1). call before simplify(), which

@@ -27,6 +27,7 @@ typedef enum {
     TEST_TURN,      /*Fluxion: turn; equation; var; like solve, but the roots from 0 up to 2pi*/
     TEST_CSOLVE,    /*Fluxion: csolve; equation; var; like solve, with the complex roots*/
     TEST_DOMAIN,    /*Fluxion: domain; expression; var; lower <x> | upper <x> | holes <list>, o for open, or empty / unknown*/
+    TEST_FACTOR_TEXT, /*Fluxion: factortext; expression; text. factor, then the canonical form, as it's shown*/
 
     TEST_INVALID
 } TestType;

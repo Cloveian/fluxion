@@ -36,6 +36,7 @@ TestType resolve_type(char *type) {
     if(!strcmp(type, "simplify"))   return TEST_SIMPLIFY;
     if(!strcmp(type, "gcd"))        return TEST_GCD;
     if(!strcmp(type, "factor"))     return TEST_FACTOR;
+    if(!strcmp(type, "factortext")) return TEST_FACTOR_TEXT;
     if(!strcmp(type, "expand"))     return TEST_EXPAND;
     if(!strcmp(type, "deriv"))      return TEST_DERIV;
     if(!strcmp(type, "solve"))      return TEST_SOLVE;
@@ -528,14 +529,13 @@ static bool test_decimal(test_t *t) {
     return passed;
 }
 
-/*Fluxion: whole numbers compare as text, see test_Run*/
-static bool factor_text(test_t *t, pcas_ast_t *e) {
+/*Fluxion: e against arg2 as text, the way export prints it*/
+static bool check_text(test_t *t, pcas_ast_t *e) {
     pcas_error_t err;
     unsigned len;
     char *out;
     bool passed;
 
-    factor(e, FAC_ALL);
     out = (char*)export_to_binary(e, &len, str_table, &err);
     if(err != E_SUCCESS || out == NULL) {
         printf("Test failed on line %u. Error when exporting ast to text.\n", t->line);
@@ -657,21 +657,22 @@ bool test_Run(test_t *t) {
         actual = a;
 
         /*Fluxion: a whole number comes out as a product of numbers and simplifying the
-        expected would just multiply it back, so those compare as text, the way export
-        prints it (-12 is -2^2*3). after simplify so -12 counts, it parses as -1*12*/
-        simplify(actual, SIMP_NORMALIZE | SIMP_COMMUTATIVE | SIMP_RATIONAL | SIMP_EVAL | SIMP_LIKE_TERMS); /*Fluxion: same as the app's factor command, SIMP_ALL spreads Y(X^2+X+1) out*/
-        if(actual->type == NODE_NUMBER && mp_rat_is_integer(actual->op.num)) {
-            passed = factor_text(t, actual);
+        expected would just multiply it back, so those compare as text (-12 is -2^2*3)*/
+        if(factor_command(actual)) {
+            passed = check_text(t, actual);
             break;
         }
 
         /*We do this to change -1 * 23 to -23 to be able to compare*/
         simplify(expected, SIMP_NORMALIZE | SIMP_COMMUTATIVE | SIMP_RATIONAL | SIMP_EVAL);
 
-        factor(actual, FAC_ALL);
-        simplify(actual, SIMP_NORMALIZE | SIMP_COMMUTATIVE | SIMP_RATIONAL | SIMP_EVAL);
-
         passed = check(t, actual, expected);
+        break;
+    case TEST_FACTOR_TEXT:
+        /*Fluxion: what the factor command shows, the canonical form packs things back up after the tree compare*/
+        if(!factor_command(a))
+            simplify_canonical_form(a, CANONICAL_ALL);
+        passed = check_text(t, a);
         break;
     case TEST_EXPAND:
         expected = b;
