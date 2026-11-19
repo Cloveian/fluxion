@@ -573,6 +573,32 @@ static unsigned long letters(pcas_ast_t *e) {
 
 static bool one_letter_poly(pcas_ast_t *e);
 
+/*Fluxion: what every term has, out front. YX^2+XY+Y is Y(X^2+X+1), pairing two at a time makes XY+Y(X^2+1)*/
+static bool take_common(pcas_ast_t *e) {
+    pcas_ast_t *g = gcd_add(e, ast_ChildGet(e, 0)), *rest, *t;
+
+    if(g != NULL)
+        simplify(g, SIMP_ALL ^ SIMP_ID_ALL); /*what gcd() does to its answer*/
+    if(g == NULL || is_ast_int(g, 1) || (isoptype(g, OP_DIV) && ast_ChildGet(g, 1)->type != NODE_NUMBER)) { /*a shared 1/(X+3) is comdenom's, 1/2 is fine*/
+        ast_Cleanup(g);
+        return false;
+    }
+
+    rest = ast_MakeOperator(OP_ADD);
+    for(t = ast_ChildGet(e, 0); t != NULL; t = t->next) {
+        pcas_ast_t *q = gm_div(t, g);
+
+        if(q == NULL) {
+            q = ast_MakeBinary(OP_DIV, ast_Copy(t), ast_Copy(g));
+            simplify(q, SIMP_NORMALIZE | SIMP_COMMUTATIVE | SIMP_RATIONAL | SIMP_EVAL | SIMP_LIKE_TERMS);
+        }
+        ast_ChildAppend(rest, q);
+    }
+    replace_node(e, ast_MakeBinary(OP_MULT, g, rest));
+    simplify(e, SIMP_NORMALIZE | SIMP_COMMUTATIVE | SIMP_RATIONAL | SIMP_EVAL); /*the pairing does the same, or 1/2 out front prints (X+Y+Z)1/2*/
+    return true;
+}
+
 bool factor_addition(pcas_ast_t *e, unsigned char flags) {
     pcas_ast_t *child;
     bool changed = false;
@@ -588,6 +614,9 @@ bool factor_addition(pcas_ast_t *e, unsigned char flags) {
 
         changed |= factor_addition(child, reached ? flags : flags & ~FAC_POLYNOMIAL);
     }
+
+    if((flags & FAC_POLYNOMIAL) && isoptype(e, OP_ADD) && ast_ChildLength(e) > 2 && take_common(e))
+        return true;
 
     /*Fluxion: a sum in one letter there is poly_factor's, pairing up its terms only nests it (X^2+X+1 -> 1+X(1+X))*/
     if(isoptype(e, OP_ADD) && !((flags & FAC_POLYNOMIAL) && one_letter_poly(e))) {

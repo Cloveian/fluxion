@@ -97,6 +97,12 @@ factor; X^3_Y^3; (X_Y)(X^2+XY+Y^2)
 factor; A^2_B^2; (A_B)(A+B)
 factor; X^2+Y^2; X^2+Y^2
 factor; 2X^2_8Y^2; 2(X_2Y)(X+2Y)
+#what every term has comes out first, pairing two at a time gave XY+Y(X^2+1)
+factor; Y(X^2+X+1); Y(X^2+X+1)
+factor; 2XY+4Y+6; 2(XY+2Y+3)
+factor; AX+AY+AZ; A(X+Y+Z)
+factor; X^2Y+XY^2+XY; XY(X+Y+1)
+factor; Y(X^2_1)+Y; YX^2
 
 #Solve over the reals (solve; equation; variable; roots smallest first, or true / false / unknown)
 #ACT Q1, Q9, Q33
