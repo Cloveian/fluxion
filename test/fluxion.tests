@@ -60,6 +60,11 @@ factor; X^5+4X; X(X^2+2X+2)(X^2_2X+2)
 factor; X^4+1; X^4+1
 factor; X^4+16; X^4+16
 csolve; X^4+4=0; X; -1_i,-1+i,1_i,1+i
+#these segfaulted, gcd(A, -(A)) with A = -cos(pi/2)-i went round till the stack ran out
+csolve; 3X^4+4=0; X; 1/3^(1/4)+i/3^(1/4),-1/3^(1/4)+i/3^(1/4),-1/3^(1/4)_i/3^(1/4),1/3^(1/4)_i/3^(1/4)
+csolve; 5X^4+4=0; X; 1/5^(1/4)+i/5^(1/4),-1/5^(1/4)+i/5^(1/4),-1/5^(1/4)_i/5^(1/4),1/5^(1/4)_i/5^(1/4)
+#next to another factor, x is in there more than once so isolate cant have it
+csolve; X^5_X^4+2X_2=0; X; 1,1/2^(1/4)+i/2^(1/4),-1/2^(1/4)+i/2^(1/4),-1/2^(1/4)_i/2^(1/4),1/2^(1/4)_i/2^(1/4)
 csolve; X^4_5X^2+6=0; X; -3^(1/2),-2^(1/2),2^(1/2),3^(1/2)
 
 #Nothing to factor

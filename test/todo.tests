@@ -52,7 +52,3 @@ simplify; sqrt(12X^2); 2sqrt(3)abs(X)
 #Decimal: float isn't good for 6 digits after a power: pi^2 = 9.869604..., but float(pi)^2 = 9.869605
 #gives: 9.86961
 decimal; pi^2; 9.8696
-
-#Csolve: with u = +-2i/sqrt(3) from solve_even, gcd_mult and gcd_add call each other till the stack runs out
-#gives: segfault (2acbaf3 too). The parts alone, sqrt(2i/sqrt(3)) and csolve 3X^2+4, are fine
-csolve; 3X^4+4=0; X; -1/3^(1/4)_i/3^(1/4),-1/3^(1/4)+i/3^(1/4),1/3^(1/4)_i/3^(1/4),1/3^(1/4)+i/3^(1/4)

@@ -822,6 +822,7 @@ static bool halve_powers(pcas_ast_t *f, Symbol var) {
 }
 
 static int solve_factor(pcas_ast_t *f, Symbol var, pcas_ast_t **out, int n, bool complex);
+static bool nth_roots(pcas_ast_t *p, int n, pcas_ast_t **out);
 
 static int sign_of(pcas_ast_t *c) {
     return c == NULL || is_zero(c) ? 0 : mp_rat_compare_zero(c->op.num);
@@ -906,6 +907,24 @@ static int solve_even(pcas_ast_t *f, Symbol var, pcas_ast_t **out, int n, bool c
     return m < 0 ? m : n;
 }
 
+/*ax^deg+b under csolve, all deg roots by nth_roots. solve_even's sqrt(+-2i/sqrt(3)) on 3x^4+4 is 1.8M work, this ~18k*/
+static int solve_binomial(coefs_t *p, pcas_ast_t **out, int n) {
+    pcas_ast_t *c, *root;
+    int i;
+
+    if(n + p->deg > SOLVE_MAX)
+        return SOLVE_UNKNOWN;
+    c = ast_MakeBinary(OP_DIV, ast_MakeBinary(OP_MULT, number(-1), ast_Copy(p->c[0])), ast_Copy(p->lead));
+    if(c == NULL)
+        return SOLVE_UNKNOWN;
+    root = ast_MakeBinary(OP_POW, c, ast_MakeNumber(num_FromFraction(1, p->deg)));
+    if(root == NULL || !nth_roots(root, p->deg, out + n))
+        return SOLVE_UNKNOWN;
+    for(i = n; i < n + p->deg; i++)
+        simplify(out[i], SIMP_ALL);
+    return n + p->deg;
+}
+
 /*roots of one factor of the factored polynomial, added at out[n]. returns the
 new count, or SOLVE_UNKNOWN.*/
 static int solve_factor(pcas_ast_t *f, Symbol var, pcas_ast_t **out, int n, bool complex) {
@@ -939,6 +958,8 @@ static int solve_factor(pcas_ast_t *f, Symbol var, pcas_ast_t **out, int n, bool
         n = solve_quadratic_sym(&p, out, n);
     else if(p.deg == 3 && p.numeric)
         n = solve_cubic(&p, out, n, complex);
+    else if((p.deg == 4 || p.deg == 6) && p.numeric && complex && isoptype(f, OP_ADD) && ast_ChildLength(f) == 2 && !is_zero(p.c[0]))
+        n = solve_binomial(&p, out, n);
     else if((p.deg == 4 || p.deg == 6) && p.numeric)
         n = solve_even(f, var, out, n, complex);
     else

@@ -467,7 +467,25 @@ static pcas_ast_t *root_as_pow(pcas_ast_t *e) {
         ast_MakeBinary(OP_DIV, ast_MakeNumber(num_FromInt(1)), ast_Copy(ast_ChildGet(e, 0))));
 }
 
+static pcas_ast_t *gcd_body(pcas_ast_t *a, pcas_ast_t *b);
+
+/*Fluxion: tests go 7 deep at most. gcd(A, -(A)) with A = -cos(pi/2)-i went round gcd_mult and gcd_add
+  till the stack ran out (csolve 3x^4+4), 1 just means nothing cancels*/
+#define GCD_DEPTH_MAX 32
+
 pcas_ast_t *gcd(pcas_ast_t *a, pcas_ast_t *b) {
+    static int depth;
+    pcas_ast_t *ret;
+
+    if(depth >= GCD_DEPTH_MAX)
+        return ast_MakeNumber(num_FromInt(1));
+    depth++;
+    ret = gcd_body(a, b);
+    depth--;
+    return ret;
+}
+
+static pcas_ast_t *gcd_body(pcas_ast_t *a, pcas_ast_t *b) {
     pcas_ast_t *ret = NULL;
     gm_t ga, gb;
 
