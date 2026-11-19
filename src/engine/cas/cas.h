@@ -274,6 +274,9 @@ bool gm_order(pcas_ast_t *a, pcas_ast_t *b, int *val);
 /*Fluxion: gcd of two plain integers, signs dropped*/
 long gcd_small(long a, long b);
 
+/*Fluxion: z becomes its kth root, only if it's exact (z >= 0)*/
+bool int_root(mp_int z, mp_small k);
+
 /*Helper functions*/
 
 /*Cleanup a. Copy a to b and cleanup b.*/

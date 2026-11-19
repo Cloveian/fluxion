@@ -128,7 +128,7 @@ solve; X^7+3=0; X; -3^(1/7)
 #roots of a+bi with a < 0, those came out the wrong root (atan(b/a) is off by pi there)
 simplify; (-2+2*3^(1/2)i)^(1/2); 1+i3^(1/2)
 simplify; (-2_2*3^(1/2)i)^(1/2); 1_i3^(1/2)
-simplify; (-3+4i)^(1/2); 25^(1/4)/5^(1/2)+(2*25^(1/4)i)/5^(1/2)
+simplify; (-3+4i)^(1/2); 1+2i
 simplify; ln(-1_i); ln(2)/2_(3ipi)/4
 simplify; ln(-1+i); ln(2)/2+(3ipi)/4
 simplify; atan(1+sqrt(2)); (3pi)/8
@@ -376,6 +376,11 @@ simplify; 4root(48); 2*3^(1/4)
 simplify; sqrt(-8); 2^(3/2)i
 simplify; sqrt(8/9); 2^(3/2)/3
 simplify; sqrt(9/4); 3/2
+#a square under a 4th root and so on, the root's index comes down
+simplify; 4^(1/4); 2^(1/2)
+simplify; 1000^(1/6); 10^(1/2)
+simplify; 64^(1/4); 2^(3/2)
+simplify; 8^(2/9); 8^(2/9)
 simplify; sqrt(12)X; 2sqrt(3)X
 simplify; 2sqrt(8); 4sqrt(2)
 simplify; sqrt(12)*sqrt(3); 6

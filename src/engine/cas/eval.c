@@ -418,6 +418,27 @@ static bool eval_root_factors(pcas_ast_t *e, mp_int n, mp_small k, pcas_ast_t *e
     return changed;
 }
 
+/*Fluxion: n^(1/k) with n a d-th power for a d dividing k, 4^(1/4) is 2^(1/2) and 1000^(1/6) sqrt(10). the biggest d first.
+  kept out of eval_root_factors, its p/q caller wants s*r^(1/q) back with its own q*/
+static bool eval_root_down(pcas_ast_t *e, mp_int n, mp_small k) {
+    mp_rat base;
+    mp_small d = mp_int_count_bits(n); /*a d-th power is over d bits. every divisor of 720720 would be ~30 s on the PC*/
+
+    if(d > k - 1)
+        d = k - 1;
+    for(; d > 1; d--) {
+        if(k % d != 0 || (base = num_FromInt(1)) == NULL)
+            continue;
+        if(mp_int_copy(n, &base->num) == MP_OK && int_root(&base->num, d)) {
+            replace_node(e, ast_MakeBinary(OP_POW, ast_MakeNumber(base),
+                                ast_MakeBinary(OP_DIV, ast_MakeNumber(num_FromInt(1)), ast_MakeNumber(num_FromInt(k / d)))));
+            return true;
+        }
+        num_Cleanup(base);
+    }
+    return false;
+}
+
 static bool eval_pow(pcas_ast_t *e, unsigned short flags) {
     /*a^b*/
     pcas_ast_t *a, *b;
@@ -569,7 +590,7 @@ static bool eval_pow(pcas_ast_t *e, unsigned short flags) {
                 changed = true;
             } else {
                 /*Fluxion: not a perfect power, but maybe part of it is (trial division only to 1000, too slow otherwise)*/
-                changed = eval_root_factors(e, &b->op.num->num, small, temp);
+                changed = eval_root_factors(e, &b->op.num->num, small, temp) || eval_root_down(e, &b->op.num->num, small);
             }
 
             mp_int_free(check);

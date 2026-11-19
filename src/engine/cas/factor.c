@@ -1038,8 +1038,6 @@ static bool poly_even(poly_t *poly) {
     return poly->deg % 2 == 0;
 }
 
-static bool int_root(mp_int z, mp_small k);
-
 /*an even quartic with no roots in X or X^2 can still be (Px^2 + Rx + S)(Px^2 - Rx + S) = (Px^2 + S)^2 - R^2x^2,
   so P^2 the top, S^2 the bottom and R^2 = 2PS - middle, S either sign. x^4+4 is (x^2+2x+2)(x^2-2x+2).
   any other split of an even one is two even ones, those were roots in X^2*/
@@ -1575,8 +1573,8 @@ static bool mono_mul(const mono_t *a, const mono_t *b, mp_small k, mono_t *out) 
            && mp_rat_mul(out->c, b->c, out->c) == MP_OK;
 }
 
-/*Fluxion: z becomes its kth root, only if it's exact (z >= 0). mp_int_root rounds down, hence raising it back to check*/
-static bool int_root(mp_int z, mp_small k) {
+/*Fluxion: mp_int_root rounds down, hence raising it back to check*/
+bool int_root(mp_int z, mp_small k) {
     mp_int r = mp_int_alloc(), back = mp_int_alloc();
     bool ok = r != NULL && back != NULL && mp_int_root(z, k, r) == MP_OK && mp_int_expt(r, k, back) == MP_OK
               && mp_int_compare(back, z) == 0 && mp_int_copy(r, z) == MP_OK;
