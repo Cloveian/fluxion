@@ -527,7 +527,9 @@ bool simplify_canonical_form(pcas_ast_t *e, unsigned char flags) {
                             continue;
 
                         /*If the powers are the same*/
-                        if(isoptype(ichild, OP_POW) && ast_Compare(ast_ChildGet(ichild, 1), ast_ChildGet(jchild, 1))) {
+                        /*Fluxion: not for sums, (X_1)^2(X+1)^2 is what factor handed back*/
+                        if(isoptype(ichild, OP_POW) && ast_Compare(ast_ChildGet(ichild, 1), ast_ChildGet(jchild, 1))
+                           && !isoptype(a, OP_ADD) && !isoptype(b, OP_ADD)) {
                             merged = number_power(a, b, ast_ChildGet(ichild, 1));
                             if(merged == NULL)
                                 merged = ast_MakeBinary(OP_POW, ast_MakeBinary(OP_MULT, ast_Copy(a), ast_Copy(b)), ast_Copy(ast_ChildGet(ichild, 1)));

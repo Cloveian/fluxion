@@ -113,6 +113,7 @@ factor; Y(X^2_1)+Y; YX^2
 #the factor command gets a product as it is, equal factors collect
 factor; (X_1)(2X_2); 2(X_1)^2
 factor; (X^2_1)(X+1); (X_1)(X+1)^2
+factor; X^4_2X^2+1; (X_1)^2(X+1)^2
 
 #Solve over the reals (solve; equation; variable; roots smallest first, or true / false / unknown)
 #ACT Q1, Q9, Q33
