@@ -157,8 +157,14 @@ static pcas_ast_t *gcd_pow(pcas_ast_t *pow, pcas_ast_t *b) {
         num_Cleanup(value1);
         num_Cleanup(value2);
 
-    } else if(power1->type == NODE_NUMBER && mp_rat_compare_value(power1->op.num, 1, 1) >= 0 && ast_Compare(base1, b)) {
-        return ast_Copy(b);
+    } else {
+        /*Fluxion: a power >= 1 has a whole base in it, gcd(2^(3/2), -2) is 2. the atan in ln(-2+2i) needed that one*/
+        mp_rat value1 = pow_value(power1);
+        bool whole = value1 != NULL && mp_rat_compare_value(value1, 1, 1) >= 0;
+
+        num_Cleanup(value1);
+        if(whole && (ast_Compare(base1, b) || (base1->type == NODE_NUMBER && b->type == NODE_NUMBER)))
+            return gcd(base1, b);
     }
 
     return ast_MakeNumber(num_FromInt(1));

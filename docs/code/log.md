@@ -7,7 +7,7 @@
 - 4^(1/4) is sqrt(2), 1000^(1/6) is sqrt(10), 64^(1/4) is 2^(3/2). eval_pow tries n as a d-th power for each d *dih*viding k, biggest first. first go was inside eval_root_factors and made 8^(2/9) into 4 (its p/q caller wants s\*r^(1/q) back with *its* q), so it's its own helper. sqrt(-3+4i) comes out 1+2i on the way
 - 180 random ax^n+b against sympy, 0 wrong 0 unknown
 - (later) the p/q path gets it too, after eval_root_factors gives up: 8^(2/9) -> 2^(2/3), 64^(5/12) -> 2^(5/2). one system answer got shorter from it, 600 systems + 4000 rationals otherwise the same
-- still open: ln(-2+2i), same as this afternoon
+- ln(-2+2i) is ln(8)/2+3ipi/4. sqrt(8) is 2^(3/2) by the time the atan gets built, and gcd(2^(3/2), -2) was 1, upstream only took a gcd off a power against the same base with a plain number power. so 2/(-2+2^(3/2)) never cancelled to the 1/(-1+sqrt(2)) the table has. any power >= 1 gives up its whole base now, nothing else in the harnesses moved and 1800 fuzz sums didn't hang
 
 ## 2026-11-18 (afternoon) - slow ones and a sort that wouldn't stop
 
