@@ -511,19 +511,26 @@ bool simplify_canonical_form(pcas_ast_t *e, unsigned char flags) {
 
                         /*If the powers are the same*/
                         if(ast_Compare(ast_ChildGet(ichild, 1), ast_ChildGet(jchild, 1))) {
+                            pcas_ast_t *a = ast_ChildGet(ichild, 0), *b = ast_ChildGet(jchild, 0), *merged;
 
-                            ast_ChildAppend(e, ast_MakeBinary(OP_POW,
-                                                    ast_MakeBinary(OP_MULT,
-                                                        ast_Copy(ast_ChildGet(ichild, 0)),
-                                                        ast_Copy(ast_ChildGet(jchild, 0))
-                                                    ),
-                                                    ast_Copy(ast_ChildGet(ichild, 1))
-                            ));
+                            /*Fluxion: two numbers over 0 multiply out, sqrt(2)sqrt(3) -> sqrt(6). sqrt(-2)sqrt(-3) isn't sqrt(6)*/
+                            if(a->type == NODE_NUMBER && b->type == NODE_NUMBER
+                               && mp_rat_compare_zero(a->op.num) > 0 && mp_rat_compare_zero(b->op.num) > 0) {
+                                mp_rat ab = num_Copy(a->op.num);
+
+                                mp_rat_mul(ab, b->op.num, ab);
+                                merged = ast_MakeBinary(OP_POW, ast_MakeNumber(ab), ast_Copy(ast_ChildGet(ichild, 1)));
+                                simplify(merged, SIMP_EVAL); /*sqrt(2)sqrt(6) -> 2sqrt(3)*/
+                            } else {
+                                merged = ast_MakeBinary(OP_POW, ast_MakeBinary(OP_MULT, ast_Copy(a), ast_Copy(b)), ast_Copy(ast_ChildGet(ichild, 1)));
+                            }
+                            ast_ChildAppend(e, merged);
 
                             ast_Cleanup(ast_ChildRemove(e, ichild));
                             ast_Cleanup(ast_ChildRemove(e, jchild));
 
-                            simplify(e, SIMP_COMMUTATIVE);
+                            /*Fluxion: a 2 or 2sqrt(3) coming back flattens in next to the 3 in 3Xcbrt(2)cbrt(4) or 3Xsqrt(2)sqrt(6), eval multiplies them*/
+                            simplify(e, isoptype(merged, OP_POW) ? SIMP_COMMUTATIVE : SIMP_COMMUTATIVE | SIMP_EVAL);
 
                             inner_intermediate = intermediate_change = changed = true;
 
