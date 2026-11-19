@@ -1300,13 +1300,9 @@ static void set_power(pcas_ast_t *f, pcas_ast_t *base, mp_small n) {
 }
 
 static pcas_ast_t *as_product(pcas_ast_t *e) {
-    pcas_ast_t *m;
-
-    if(isoptype(e, OP_MULT))
+    if(e == NULL || isoptype(e, OP_MULT))
         return e;
-    m = ast_MakeOperator(OP_MULT);
-    ast_ChildAppend(m, e);
-    return m;
+    return ast_MakeUnary(OP_MULT, e);
 }
 
 static bool factor_patterns(pcas_ast_t *e);
@@ -1314,6 +1310,9 @@ static bool factor_patterns(pcas_ast_t *e);
 /*Fluxion: a top or bottom as a product cancel can use. one letter, the patterns, what every term shares and then those, or two pairs*/
 static void cancel_factor(pcas_ast_t *e) {
     pcas_ast_t *f;
+
+    if(pcas_cancelled)
+        return;
 
     /*a power's base and a product's factors one at a time, (A^2_B^2)^2 and 2(A^2_B^2). the power goes over the factors after*/
     if(isoptype(e, OP_POW)) {
@@ -1359,6 +1358,8 @@ static bool cancel_fraction(pcas_ast_t *e) {
     /*same shape as factor_polynomial()'s factors, so they compare: X_3 parses as X+-1*3*/
     simplify(num, SIMP_NORMALIZE | SIMP_COMMUTATIVE | SIMP_RATIONAL | SIMP_EVAL);
     simplify(den, SIMP_NORMALIZE | SIMP_COMMUTATIVE | SIMP_RATIONAL | SIMP_EVAL);
+    if(pcas_cancelled)
+        goto out;
 
     /*0/(1_X) is just 0, from comdenom(1/(X_1)+1/(1_X))*/
     if(is_ast_int(num, 0) && !is_ast_int(den, 0)) {
@@ -1381,6 +1382,8 @@ static bool cancel_fraction(pcas_ast_t *e) {
 
     num = as_product(num);
     den = as_product(den);
+    if(pcas_cancelled)
+        goto out;
 
     for(df = ast_ChildGet(den, 0); df != NULL; df = df->next) {
         mp_small nd, nn;
@@ -1416,11 +1419,13 @@ static bool cancel_fraction(pcas_ast_t *e) {
         replace_node(ast_ChildGet(e, 0), num);
         replace_node(ast_ChildGet(e, 1), den);
         simplify(e, SIMP_COMMUTATIVE | SIMP_EVAL);
-    } else {
-        ast_Cleanup(num);
-        ast_Cleanup(den);
+        return true;
     }
-    return changed;
+
+out: /*num or den can be NULL after an oom*/
+    ast_Cleanup(num);
+    ast_Cleanup(den);
+    return false;
 }
 
 bool cancel_fractions(pcas_ast_t *e) {

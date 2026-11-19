@@ -48,7 +48,9 @@ bool simplify_commutative(pcas_ast_t *e) {
 void replace_node(pcas_ast_t *a, pcas_ast_t *b) {
 
     if(pcas_cancelled) { /*Fluxion: stop here, the answer's being thrown away. b is ours to free*/
-        ast_Cleanup(b);
+        /*unless it's still a's, eval_pow does replace_node(e, a)*/
+        if(ast_ChildIndexOf(a, b) == (LSIZE)-1)
+            ast_Cleanup(b);
         return;
     }
 
@@ -1038,7 +1040,7 @@ static bool real_odd_roots(pcas_ast_t *e) {
     mp_small p, q;
     bool changed = false;
 
-    if(e == NULL || e->type != NODE_OPERATOR)
+    if(pcas_cancelled || e == NULL || e->type != NODE_OPERATOR) /*oom can leave a power with no exponent*/
         return false;
     for(child = ast_ChildGet(e, 0); child != NULL; child = child->next)
         changed |= real_odd_roots(child);
