@@ -655,6 +655,13 @@ static bool eval_pow(pcas_ast_t *e, unsigned short flags) {
                                     rest
                                 ));
                 changed = true;
+            } else if(tmp != NULL && eval_root_down(tmp, &a->op.num->num, q)) {
+                /*Fluxion: tmp is base^(1/q') now, 8^(2/9) -> 2^(2/3). p and q' still coprime*/
+                pcas_ast_t *down = ast_ChildGet(tmp, 1);
+
+                replace_node(e, ast_MakeBinary(OP_POW, ast_Copy(ast_ChildGet(tmp, 0)),
+                                    ast_MakeBinary(OP_DIV, ast_MakeNumber(num_FromInt(p)), ast_Copy(ast_ChildGet(down, 1)))));
+                changed = true;
             }
 
             ast_Cleanup(tmp);

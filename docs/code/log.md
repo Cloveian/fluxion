@@ -1,5 +1,14 @@
 # Log
 
+## 2026-11-18 (evening) - a segfault and some roots that could be smaller
+
+- csolve 3x^4+4=0 (and 5x^4+4) segfaulted, older than anything from today, a crash scan found it. the gcd went gcd(A, -A) -> gcd(-A, A) -> ... until the stack ran out. it stops 32 deep now (real inputs never go past 7), and that alone turned the crash into 1.8M work, ~1.8 *hours* on the calc. so a two term ax^4+b or ax^6+b skips the quartic stuff under csolve and goes straight to nth_roots: 18k, about a minute
+- my first version of that just skipped them and the checker caught (x-1)(x^4+2) coming out unknown, cuz the factor got skipped but nothing solved it either. solve_binomial does them in solve_factor now, with a test
+- 4^(1/4) is sqrt(2), 1000^(1/6) is sqrt(10), 64^(1/4) is 2^(3/2). eval_pow tries n as a d-th power for each d *dih*viding k, biggest first. first go was inside eval_root_factors and made 8^(2/9) into 4 (its p/q caller wants s\*r^(1/q) back with *its* q), so it's its own helper. sqrt(-3+4i) comes out 1+2i on the way
+- 180 random ax^n+b against sympy, 0 wrong 0 unknown
+- (later) the p/q path gets it too, after eval_root_factors gives up: 8^(2/9) -> 2^(2/3), 64^(5/12) -> 2^(5/2). one system answer got shorter from it, 600 systems + 4000 rationals otherwise the same
+- still open: ln(-2+2i), same as this afternoon
+
 ## 2026-11-18 (afternoon) - slow ones and a sort that wouldn't stop
 
 - okie so csolve 2x^6+3=0 was guessed at ~12 *minutes* on the calc (157k work). the minus on -3/2 never got seen, simplify hands it back as a/b and nth_roots only checked for a number node, so every root started as (-3/2)^(1/6)(cos+isin) and the identities turned it complex six separate times. folding it first + building cos t - isin t for the negative angles: 31k, ~106 s. still slow-ish but its just the simplifier merging 3^(1/6)/2^(1/6) into each root now, ~4.5k a go
