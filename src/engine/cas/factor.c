@@ -1276,11 +1276,25 @@ static void cancel_factor(pcas_ast_t *e) {
     simplify(e, SIMP_COMMUTATIVE);
 }
 
+/*Fluxion: a and b are sums with a+b = 0, X_Y and Y_X*/
+static bool opposite(pcas_ast_t *a, pcas_ast_t *b) {
+    pcas_ast_t *sum;
+    bool zero;
+
+    if(!isoptype(a, OP_ADD) || !isoptype(b, OP_ADD) || ast_ChildLength(a) != ast_ChildLength(b))
+        return false;
+    sum = ast_MakeBinary(OP_ADD, ast_Copy(a), ast_Copy(b));
+    simplify(sum, SIMP_NORMALIZE | SIMP_COMMUTATIVE | SIMP_RATIONAL | SIMP_EVAL | SIMP_LIKE_TERMS);
+    zero = is_ast_int(sum, 0);
+    ast_Cleanup(sum);
+    return zero;
+}
+
 /*Fluxion: one fraction: factor the top and bottom, take out what they share. finally works*/
 static bool cancel_fraction(pcas_ast_t *e) {
     pcas_ast_t *num = ast_Copy(ast_ChildGet(e, 0)), *den = ast_Copy(ast_ChildGet(e, 1));
     pcas_ast_t *df, *nf, *nb, *db;
-    bool changed = false;
+    bool changed = false, negative = false;
 
     /*same shape as factor_polynomial()'s factors, so they compare: X_3 parses as X+-1*3*/
     simplify(num, SIMP_NORMALIZE | SIMP_COMMUTATIVE | SIMP_RATIONAL | SIMP_EVAL);
@@ -1323,15 +1337,18 @@ static bool cancel_fraction(pcas_ast_t *e) {
         for(nf = ast_ChildGet(num, 0); nf != NULL; nf = nf->next) {
             pcas_ast_t *bn = power_base(nf, &nn);
 
-            if(ast_Compare(bn, bd)) {
+            bool flip = !ast_Compare(bn, bd) && opposite(bn, bd);
+
+            if(flip || ast_Compare(bn, bd)) {
                 mp_small k = nn < nd ? nn : nd;
 
                 /*bd goes away with df, so copy it first*/
                 pcas_ast_t *base = ast_Copy(bd);
 
-                set_power(nf, base, nn - k);
+                set_power(nf, bn, nn - k); /*its own base, bd is its negative on a flip*/
                 set_power(df, base, nd - k);
                 ast_Cleanup(base);
+                negative ^= flip && k % 2 == 1;
                 changed = true;
                 break;
             }
@@ -1339,6 +1356,8 @@ static bool cancel_fraction(pcas_ast_t *e) {
     }
 
     if(changed) {
+        if(negative)
+            num = ast_MakeBinary(OP_MULT, ast_MakeNumber(num_FromInt(-1)), num);
         replace_node(ast_ChildGet(e, 0), num);
         replace_node(ast_ChildGet(e, 1), den);
         simplify(e, SIMP_COMMUTATIVE | SIMP_EVAL);

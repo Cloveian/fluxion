@@ -17,7 +17,8 @@
 - and a fraction over a fraction, ((x^2-1)/(x+3))/((x-1)/(x+3)) is x+1 now. the bottoms inside go over to the other side after factoring, (x^2/2-1/2)/(x-1) only grows its /2 once its factored lol. todo 6 -> 5 (well, 6 -> 4 and then the checker found (a^2-b^2)/(b-a) for it)
 - sqrt(2)+sqrt(2)/7 didnt collect. like, at all. gcd went to the power case before the fraction one and the power case cant see into a fraction, so the gcd was 1. fractions first now, 3sqrt(2)-10sqrt(2)/7 = 11sqrt(2)/7. costs ~2% more work on the tests
 - cancel goes into products and powers too, 2(a^2-b^2)/(a-b) = 2a+2b, (a^2-b^2)^2/(a-b) = (a-b)(a+b)^2
-- still open: factor(yx^2-y+zx^2-z) wants grouping, (x-1)(x+1)(y+z). the CLI/test runner factor with fractions still says x/(x(x+3))+(x+1/x)/(x+3), the app paths do comdenom or never split it so they're fine. cancel with a fraction inside a product (2((x-1)/3)), and the fraction moving in cancel_fraction is a copy of what simplify_rational does, try reusing it when im awake
+- and a factor against its negative, (a^2-b^2)/(b-a) = -a-b. todo 6 -> 5
+- still open: factor(yx^2-y+zx^2-z) wants grouping, (x-1)(x+1)(y+z). the CLI/test runner factor with fractions still says x/(x(x+3))+(x+1/x)/(x+3), the app paths do comdenom or never split it so they're fine. the fraction moving in cancel_fraction is a copy of what simplify_rational does, try reusing it when im awake
 
 ## 2026-11-18 (afternoon) - slow ones and a sort that wouldn't stop
 

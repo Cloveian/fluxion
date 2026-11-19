@@ -496,6 +496,11 @@ cancel; (AX+AY)/(BX+BY); A/B
 cancel; (2(A^2_B^2))/(A_B); 2A+2B
 cancel; ((A^2_B^2)(X^2_1))/((A_B)(X_1)); (A+B)(X+1)
 cancel; (A^2_B^2)^2/(A_B); A(A+B)^2_B(A+B)^2
+#a factor against its negative, (A_B) and (B_A)
+cancel; (A^2_B^2)/(B_A); -A_B
+cancel; (X_1)^3/(1_X)^2; X_1
+cancel; (A_B)^3/(B_A)^2; A_B
+cancel; (A_B)/(B_A); -1
 #a bottom inside a top or bottom goes to the other side. the runner spreads the answer out after
 cancel; (X^2/2_1/2)/(X_1); X/2+1/2
 cancel; ((X^2_1)/(X+3))/((X_1)/(X+3)); X+1
