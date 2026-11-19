@@ -20,3 +20,7 @@ simplify; sqrt(12X^2); 2sqrt(3)abs(X)
 #Decimal: float isn't good for 6 digits after a power: pi^2 = 9.869604..., but float(pi)^2 = 9.869605
 #gives: 9.86961
 decimal; pi^2; 9.8696
+
+#Simplify: a root against twice the root over a number, a/g comes out 2sqrt(2)/(7sqrt(2)) and the light simplify cant cancel it
+#gives: (2sqrt(2))/7+3sqrt(2)
+simplify; 3*2^(1/2)+(2*2^(1/2))/7; (23sqrt(2))/7

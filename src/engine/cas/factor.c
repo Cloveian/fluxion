@@ -537,14 +537,14 @@ static pcas_ast_t *gcd_body(pcas_ast_t *a, pcas_ast_t *b) {
         ret = gcd_add(a, b);
     else if(isoptype(b, OP_ADD))
         ret = gcd_add(b, a);
+    else if(isoptype(a, OP_DIV)) /*Fluxion: fractions before powers, gcd_pow can't see into one. sqrt(2)+sqrt(2)/7 never collected*/
+        ret = gcd_div(a, b);
+    else if(isoptype(b, OP_DIV))
+        ret = gcd_div(b, a);
     else if(isoptype(a, OP_POW))
         ret = gcd_pow(a, b);
     else if(isoptype(b, OP_POW))
         ret = gcd_pow(b, a);
-    else if(isoptype(a, OP_DIV))
-        ret = gcd_div(a, b);
-    else if(isoptype(b, OP_DIV))
-        ret = gcd_div(b, a);
 
     if(ret != NULL) {
         /*Don't simplify identities*/
