@@ -1331,15 +1331,9 @@ static void cancel_factor(pcas_ast_t *e) {
 
     if(factor_polynomial(e) || factor_patterns(e) || !isoptype(e, OP_ADD))
         return;
-    if(!take_common(e)) {
-        if(take_pairs(e))
-            cancel_factor(e); /*the pieces can still factor, (X^2_1)(Y+Z)*/
-        return;
-    }
-    for(f = ast_ChildGet(e, 0); f != NULL; f = f->next)
-        if(isoptype(f, OP_ADD) && !factor_polynomial(f) && !factor_patterns(f) && take_pairs(f))
-            cancel_factor(f);
-    simplify(e, SIMP_COMMUTATIVE);
+    /*the pieces can still factor, W(X^2_1)(Y+Z). both leave a product so this only walks the pieces*/
+    if(take_common(e) || take_pairs(e))
+        cancel_factor(e);
 }
 
 /*Fluxion: a and b are sums with a+b = 0, X_Y and Y_X*/
