@@ -270,6 +270,28 @@ static bool eval_div(pcas_ast_t *e, unsigned short flags) {
             replace_node(e, num);
             return true;
         }
+
+        /*Fluxion: an i below goes on top as -i, 5pi/(6i) is -5ipi/6. a lone 1/i is the identity's, and an i on both sides cancels the usual way (4i/(2i))*/
+        if(isoptype(den, OP_MULT) && !has_imaginary_node(num)) {
+            pcas_ast_t *k;
+
+            for(k = ast_ChildGet(den, 0); k != NULL; k = k->next) {
+                if(k->type == NODE_SYMBOL && k->op.symbol == SYM_IMAG) {
+                    ast_Cleanup(ast_ChildRemove(den, k));
+                    if(!isoptype(num, OP_MULT)) {
+                        pcas_ast_t *m = ast_MakeOperator(OP_MULT);
+
+                        ast_ChildAppend(m, ast_Copy(num));
+                        replace_node(num, m);
+                    }
+                    ast_ChildAppend(num, ast_MakeNumber(num_FromInt(-1)));
+                    ast_ChildAppend(num, ast_MakeSymbol(SYM_IMAG));
+                    if(ast_ChildLength(den) == 1)
+                        replace_node(den, ast_Copy(ast_ChildGet(den, 0)));
+                    return true;
+                }
+            }
+        }
     }
 
     if(!(flags & EVAL_DIVISION))

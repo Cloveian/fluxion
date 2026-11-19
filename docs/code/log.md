@@ -18,6 +18,8 @@
 - sqrt(2)+sqrt(2)/7 didnt collect. like, at all. gcd went to the power case before the fraction one and the power case cant see into a fraction, so the gcd was 1. fractions first now, 3sqrt(2)-10sqrt(2)/7 = 11sqrt(2)/7. costs ~2% more work on the tests
 - cancel goes into products and powers too, 2(a^2-b^2)/(a-b) = 2a+2b, (a^2-b^2)^2/(a-b) = (a-b)(a+b)^2
 - and a factor against its negative, (a^2-b^2)/(b-a) = -a-b. todo 6 -> 5
+- and the like terms thing for real: (3a)/b-(10a)/(7b) didnt collect either, only under the full simplify. -10/7 is a tree, not a number node, so the pairing said "not numbers". systems got shorter from it (9 of 600, cardano y's collect into /72s), checked in sympy, same to 12 digits. it made sin(ix)=1/2 come out 5pi/(6i) so an i below goes on top as -i now too
+- found on the way: the decimal command is garbage on those long cardano y's, -4307 and 312 where its 3.48 and -1.62. float eating the cancellation. old builds too
 - still open: factor(yx^2-y+zx^2-z) wants grouping, (x-1)(x+1)(y+z). the CLI/test runner factor with fractions still says x/(x(x+3))+(x+1/x)/(x+3), the app paths do comdenom or never split it so they're fine. the fraction moving in cancel_fraction is a copy of what simplify_rational does, try reusing it when im awake
 
 ## 2026-11-18 (afternoon) - slow ones and a sort that wouldn't stop

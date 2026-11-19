@@ -77,7 +77,7 @@ static pcas_ast_t *gcd_div(pcas_ast_t *div, pcas_ast_t *b) {
     return ast_MakeBinary(OP_DIV, num_g, den_g);
 }
 
-/*Fluxion: a power as a fraction, or NULL. 3^(1/2) keeps its power as a div of two
+/*Fluxion: a power or a coefficient as a fraction, or NULL. 3^(1/2) keeps its power as a div of two
 numbers, not a number node, so sqrt(3) and 3^(3/2) never got a gcd*/
 static mp_rat pow_value(pcas_ast_t *p) {
     pcas_ast_t *num, *den;
@@ -646,6 +646,7 @@ bool factor_addition(pcas_ast_t *e, unsigned char flags) {
                 if(!is_ast_int(g, 1)) {
                     bool can_factor;
                     pcas_ast_t *append, *first, *second;
+                    mp_rat fv, sv;
 
                     first = ast_MakeBinary(OP_DIV,
                                             ast_Copy(a),
@@ -673,10 +674,15 @@ bool factor_addition(pcas_ast_t *e, unsigned char flags) {
                         break;
                     }
 
-                    if(first->type == NODE_NUMBER && second->type == NODE_NUMBER)
+                    /*Fluxion: a -10/7 stays a tree, it counts as a number too. (3A)/B_(10A)/(7B) never collected*/
+                    fv = pow_value(first);
+                    sv = pow_value(second);
+                    if(fv != NULL && sv != NULL)
                         can_factor = flags & FAC_SIMPLE_ADDITION_EVALUATEABLE;
                     else
                         can_factor = flags & FAC_SIMPLE_ADDITION_NONEVALUATEABLE;
+                    num_Cleanup(fv);
+                    num_Cleanup(sv);
 
                     if(can_factor) {
                         simplify(append, SIMP_NORMALIZE | SIMP_RATIONAL | SIMP_EVAL);
