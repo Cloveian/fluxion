@@ -169,7 +169,15 @@ pcas_id_t id_trig_inv_constants[ID_NUM_TRIG_INV_CONSTANTS] = {
     {"atan(0", "0"},
     {"atan(1/sqrt(3", "pi/6"},
     {"atan(1", "pi/4"},
-    {"atan(sqrt(3", "pi/3"}
+    {"atan(sqrt(3", "pi/3"},
+
+    /*Fluxion: the half angle of ln(-1+i) lands on pi/8 and 3pi/8. 1/(sqrt(2)-1) is how 3pi/8 comes out of there*/
+    {"atan(1+sqrt(2", "3pi/8"},
+    {"atan(-1+sqrt(2", "pi/8"},
+    {"atan(1/(-1+sqrt(2", "3pi/8"},
+    {"atan(-1_sqrt(2", "-3pi/8"},
+    {"atan(1_sqrt(2", "-pi/8"},
+    {"atan(-1/(-1+sqrt(2", "-3pi/8"}
 };
 
 pcas_id_t id_hyperbolic[ID_NUM_HYPERBOLIC] = {

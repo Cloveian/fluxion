@@ -129,7 +129,12 @@ solve; X^7+3=0; X; -3^(1/7)
 simplify; (-2+2*3^(1/2)i)^(1/2); 1+i3^(1/2)
 simplify; (-2_2*3^(1/2)i)^(1/2); 1_i3^(1/2)
 simplify; (-3+4i)^(1/2); 25^(1/4)/5^(1/2)+(2*25^(1/4)i)/5^(1/2)
-simplify; ln(-1_i); ln(2)/2+2atan(-1/(-1+2^(1/2)))i
+simplify; ln(-1_i); ln(2)/2_(3ipi)/4
+simplify; ln(-1+i); ln(2)/2+(3ipi)/4
+simplify; atan(1+sqrt(2)); (3pi)/8
+simplify; atan(1_sqrt(2)); (-pi)/8
+simplify; atan(-1+sqrt(2)); pi/8
+simplify; atan(-1_sqrt(2)); (-3pi)/8
 #a = 0 and b < 0 too
 simplify; ln(-3i); ln(9)/2_(ipi)/2
 simplify; (-i)^(1/2); 2^(1/2)/2_(i2^(1/2))/2
