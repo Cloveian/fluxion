@@ -1254,6 +1254,20 @@ static bool factor_patterns(pcas_ast_t *e);
 static void cancel_factor(pcas_ast_t *e) {
     pcas_ast_t *f;
 
+    /*a power's base and a product's factors one at a time, (A^2_B^2)^2 and 2(A^2_B^2). the power goes over the factors after*/
+    if(isoptype(e, OP_POW)) {
+        cancel_factor(ast_ChildGet(e, 0));
+        expand(e, EXP_DISTRIB_POWERS);
+        simplify(e, SIMP_COMMUTATIVE);
+        return;
+    }
+    if(isoptype(e, OP_MULT)) {
+        for(f = ast_ChildGet(e, 0); f != NULL; f = f->next)
+            cancel_factor(f);
+        simplify(e, SIMP_COMMUTATIVE);
+        return;
+    }
+
     if(factor_polynomial(e) || factor_patterns(e) || !isoptype(e, OP_ADD) || !take_common(e))
         return;
     for(f = ast_ChildGet(e, 0); f != NULL; f = f->next)

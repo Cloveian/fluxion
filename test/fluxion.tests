@@ -493,6 +493,9 @@ cancel; (A^3_B^3)/(A_B); A^2+AB+B^2
 cancel; (4X^2_9Y^2)/(2X+3Y); 2X_3Y
 cancel; (X^2Y_Y^3)/(XY+Y^2); X_Y
 cancel; (AX+AY)/(BX+BY); A/B
+cancel; (2(A^2_B^2))/(A_B); 2A+2B
+cancel; ((A^2_B^2)(X^2_1))/((A_B)(X_1)); (A+B)(X+1)
+cancel; (A^2_B^2)^2/(A_B); A(A+B)^2_B(A+B)^2
 #a bottom inside a top or bottom goes to the other side. the runner spreads the answer out after
 cancel; (X^2/2_1/2)/(X_1); X/2+1/2
 cancel; ((X^2_1)/(X+3))/((X_1)/(X+3)); X+1
