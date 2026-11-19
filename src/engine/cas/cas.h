@@ -276,6 +276,8 @@ long gcd_small(long a, long b);
 
 /*Fluxion: z becomes its kth root, only if it's exact (z >= 0)*/
 bool int_root(mp_int z, mp_small k);
+/*Fluxion: a number, or a number over a number, as one new fraction. NULL for anything else*/
+mp_rat pow_value(pcas_ast_t *p);
 
 /*Helper functions*/
 

@@ -79,7 +79,7 @@ static pcas_ast_t *gcd_div(pcas_ast_t *div, pcas_ast_t *b) {
 
 /*Fluxion: a power or a coefficient as a fraction, or NULL. 3^(1/2) keeps its power as a div of two
 numbers, not a number node, so sqrt(3) and 3^(3/2) never got a gcd*/
-static mp_rat pow_value(pcas_ast_t *p) {
+mp_rat pow_value(pcas_ast_t *p) {
     pcas_ast_t *num, *den;
     mp_rat r;
 

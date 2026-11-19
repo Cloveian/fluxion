@@ -64,7 +64,18 @@ static bool value(pcas_ast_t *e, real *x) {
         *x = a / b;
         break;
     case OP_POW:
-        if(a < 0 && !is_whole(b)) return false;
+        if(a < 0 && !is_whole(b)) {
+            /*odd roots of negatives are real, (540-12sqrt(2037))^(2/3). b as a float can't tell 1/3 from 0.333, the tree can*/
+            mp_rat r = pow_value(ast_ChildGet(e, 1));
+            bool odd_bottom = r != NULL && mp_int_is_odd(mp_rat_denom_ref(r));
+            bool odd_top = r != NULL && mp_int_is_odd(mp_rat_numer_ref(r));
+
+            num_Cleanup(r);
+            if(!odd_bottom)
+                return false;
+            *x = odd_top ? -powf(-a, b) : powf(-a, b);
+            break;
+        }
         *x = powf(a, b);
         break;
     case OP_ROOT:

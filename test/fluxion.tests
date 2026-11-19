@@ -228,6 +228,10 @@ simplify; (1+i)^8; 16
 decimal; 2cos(8pi/9); -1.87939
 decimal; 2cos(4pi/9); 0.347296
 decimal; 2cos(2pi/9); 1.53209
+#odd roots of a negative that isnt a plain number, powf alone says not a number
+decimal; (1_sqrt(2))^(1/3); -0.745432
+decimal; (1_sqrt(2))^(2/3); 0.555669
+decimal; (1_sqrt(2))^(5/3); -0.230166
 decimal; (-108+12*93^(1/2))^(1/3)/6_((108+12*93^(1/2))^(1/3))/6; -0.682328
 
 #Linear
