@@ -309,6 +309,11 @@ bool absolute_val(pcas_ast_t *e) {
     return false;
 }
 #include <stdio.h>
+/*Fluxion: how deep compare is in its own divide by the gcd. the tests never go past 1, a/g and b/g growing
+  each time (-isqrt(3)-sqrt(99)-pi+sqrt(3)/2) went 400 terms deep*/
+#define COMPARE_DEPTH_MAX 4
+static int compare_depth;
+
 /*returns negative if a < b, 0 if a=b, positive if a > b in terms of sorting order*/
 int compare(pcas_ast_t *a, pcas_ast_t *b, bool add) {
     pcas_ast_t *temp;
@@ -330,7 +335,7 @@ int compare(pcas_ast_t *a, pcas_ast_t *b, bool add) {
         multiplier *= -1;
     }
 
-    if(isoptype(a, OP_MULT)) {
+    if(isoptype(a, OP_MULT) && compare_depth < COMPARE_DEPTH_MAX) { /*Fluxion*/
         pcas_ast_t *g = gcd(a, b);
 
         if(!is_ast_int(g, 1)) {
@@ -349,7 +354,9 @@ int compare(pcas_ast_t *a, pcas_ast_t *b, bool add) {
                 simplify(newb, SIMP_NORMALIZE | SIMP_RATIONAL | SIMP_EVAL);
             }
 
+            compare_depth++;
             val = compare(newa, newb, add);
+            compare_depth--;
 
             ast_Cleanup(g);
             ast_Cleanup(newa);
@@ -441,9 +448,14 @@ static bool small_fraction(pcas_ast_t *power, mp_small *p, mp_small *q) {
     return *p > 0 && *q > 0 && *p <= 64 && *q <= 64;
 }
 
+/*Fluxion: pcas.tests takes 15 at most. compare() isn't one order everywhere, -1, -isqrt(44) and -ypi/2 each
+  went before the next and round*/
+#define CANONICAL_PASSES_MAX 32
+
 bool simplify_canonical_form(pcas_ast_t *e, unsigned char flags) {
     bool changed = false, intermediate_change;
     unsigned i;
+    int passes = 0; /*Fluxion*/
 
     if(pcas_cancelled)
         return false;
@@ -595,7 +607,7 @@ bool simplify_canonical_form(pcas_ast_t *e, unsigned char flags) {
                         child2 = ast_ChildGet(e, j);
                         val = compare(child, child2, optype(e) == OP_ADD);
 
-                        if(val < 0) {
+                        if(val < 0 && compare(child2, child, optype(e) == OP_ADD) > 0) { /*Fluxion: both ways, a pair that each said "me first" swapped forever*/
                             ast_ChildInsert(e, ast_ChildRemoveIndex(e, i), j);
                             intermediate_change = changed = true;
                         }
@@ -639,7 +651,7 @@ bool simplify_canonical_form(pcas_ast_t *e, unsigned char flags) {
             }
         }
 
-    } while(intermediate_change && !pcas_check());
+    } while(intermediate_change && !pcas_check() && ++passes < CANONICAL_PASSES_MAX); /*Fluxion*/
 
     return changed;
 }

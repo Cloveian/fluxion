@@ -148,6 +148,11 @@ simplify; abs(XY); abs(XY)
 #the canonical sort on these went round forever, gcd(sqrt(2), 2^(1/2)) was 1 (every test runs the canonical form after)
 simplify; -2^(1/2)(1+i); -2^(1/2)_2^(1/2)i
 simplify; -3^(1/2)_3^(1/2)i; -3^(1/2)_3^(1/2)i
+#and these from a fuzz: a pair that both went first, three going round, and compare dividing by a gcd 400 deep
+simplify; -2^(1/2)_2^(1/2)3^(1/2); -2^(1/2)_2^(1/2)3^(1/2)
+simplify; -1/2*pi*Y_1+1/2*5^(1/2)_22^(1/2)*i*2^(1/2); -1+5^(1/2)/2_2^(1/2)22^(1/2)i_(Ypi)/2
+simplify; -3^(1/2)*i_33^(1/2)*3^(1/2)_pi+1/2*3^(1/2); 3^(1/2)/2_33^(1/2)3^(1/2)_i3^(1/2)_pi
+simplify; 32^(1/2)+22^(1/2)+3^(1/2)*i+1/2*i; i/2+3^(1/2)i+4*2^(1/2)+22^(1/2)
 
 #cubics, exact. the 1,2,3 one factors, it's there so that still goes the old way
 solve; X^3_3X+1=0; X; 2cos(8pi/9),2cos(4pi/9),2cos(2pi/9)
