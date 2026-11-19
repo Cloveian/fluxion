@@ -621,9 +621,11 @@ static bool take_pairs(pcas_ast_t *e) {
     pcas_ast_t *t[4], *g1, *g2, *s1, *s2;
     int i, k;
 
+    if(!isoptype(e, OP_ADD) || ast_ChildLength(e) != 4 || one_letter_poly(e))
+        return false;
     for(i = 0; i < 4; i++)
         t[i] = ast_ChildGet(e, i);
-    for(k = 0; k < 3; k++) {
+    for(k = 0; k < 3 && !pcas_check(); k++) {
         s1 = pair_rest(t[split[k][0]], t[split[k][1]], &g1);
         s2 = pair_rest(t[split[k][2]], t[split[k][3]], &g2);
 
@@ -659,9 +661,14 @@ bool factor_addition(pcas_ast_t *e, unsigned char flags) {
         changed |= factor_addition(child, reached ? flags : flags & ~FAC_POLYNOMIAL);
     }
 
-    if((flags & FAC_POLYNOMIAL) && isoptype(e, OP_ADD) && ast_ChildLength(e) > 2 && take_common(e))
+    if((flags & FAC_POLYNOMIAL) && isoptype(e, OP_ADD) && ast_ChildLength(e) > 2 && take_common(e)) {
+        /*Fluxion: whats left can still be two pairs, Z(XY+X+Y+1)*/
+        for(child = ast_ChildGet(e, 0); child != NULL; child = child->next)
+            take_pairs(child);
+        simplify(e, SIMP_COMMUTATIVE);
         return true;
-    if((flags & FAC_POLYNOMIAL) && isoptype(e, OP_ADD) && ast_ChildLength(e) == 4 && !one_letter_poly(e) && take_pairs(e))
+    }
+    if((flags & FAC_POLYNOMIAL) && take_pairs(e))
         return true;
 
     /*Fluxion: a sum in one letter there is poly_factor's, pairing up its terms only nests it (X^2+X+1 -> 1+X(1+X))*/
@@ -1304,7 +1311,7 @@ static pcas_ast_t *as_product(pcas_ast_t *e) {
 
 static bool factor_patterns(pcas_ast_t *e);
 
-/*Fluxion: a top or bottom as a product cancel can use. one letter, the patterns, or what every term shares and then those*/
+/*Fluxion: a top or bottom as a product cancel can use. one letter, the patterns, what every term shares and then those, or two pairs*/
 static void cancel_factor(pcas_ast_t *e) {
     pcas_ast_t *f;
 
@@ -1322,11 +1329,16 @@ static void cancel_factor(pcas_ast_t *e) {
         return;
     }
 
-    if(factor_polynomial(e) || factor_patterns(e) || !isoptype(e, OP_ADD) || !take_common(e))
+    if(factor_polynomial(e) || factor_patterns(e) || !isoptype(e, OP_ADD))
         return;
+    if(!take_common(e)) {
+        if(take_pairs(e))
+            cancel_factor(e); /*the pieces can still factor, (X^2_1)(Y+Z)*/
+        return;
+    }
     for(f = ast_ChildGet(e, 0); f != NULL; f = f->next)
-        if(isoptype(f, OP_ADD) && !factor_polynomial(f))
-            factor_patterns(f);
+        if(isoptype(f, OP_ADD) && !factor_polynomial(f) && !factor_patterns(f) && take_pairs(f))
+            cancel_factor(f);
     simplify(e, SIMP_COMMUTATIVE);
 }
 

@@ -107,6 +107,8 @@ factor; X^2+XY_X_Y; (X_1)(X+Y)
 factor; YX^2_Y+ZX^2_Z; (X_1)(X+1)(Y+Z)
 factor; AX_AY_BX+BY; (B_A)(Y_X)
 factor; AB+AC+BD+CD; (A+D)(B+C)
+factor; XYZ+XZ+YZ+Z; Z(X+1)(Y+1)
+factor; 2XY+2X+2Y+2; 2(X+1)(Y+1)
 factor; Y(X^2_1)+Y; YX^2
 
 #Solve over the reals (solve; equation; variable; roots smallest first, or true / false / unknown)
@@ -518,6 +520,9 @@ cancel; (A^2_B^2)/(B_A); -A_B
 cancel; (X_1)^3/(1_X)^2; X_1
 cancel; (A_B)^3/(B_A)^2; A_B
 cancel; (A_B)/(B_A); -1
+cancel; (X^2+XY_X_Y)/(X+Y); X_1
+cancel; (YX^2_Y+ZX^2_Z)/(X_1); (Y+Z)(X+1)
+cancel; (WYX^2_WY+WZX^2_WZ)/(X_1); (X+1)(WY+WZ)
 #a bottom inside a top or bottom goes to the other side. the runner spreads the answer out after
 cancel; (X^2/2_1/2)/(X_1); X/2+1/2
 cancel; ((X^2_1)/(X+3))/((X_1)/(X+3)); X+1
