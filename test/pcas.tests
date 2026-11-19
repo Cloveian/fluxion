@@ -275,7 +275,8 @@ simplify; Xderiv(sin(X),X,pi); -X
 #Factoring tests
 
 factor; sin(abs(X^2 _ 1) _ 1) + 3sin(abs(X^2 _ 1) _ 1)^4; sin(abs(X^2 _ 1) _ 1)(1 + 3sin(abs(X^2 _ 1) _ 1)^3)
-factor; 3X^2 + 6X + 1; 3X(X + 2) + 1
+#Fluxion: no rational roots, so it stays as it is. 3X(X + 2) + 1 isn't factored, just longer
+factor; 3X^2 + 6X + 1; 3X^2 + 6X + 1
 factor; 14(AX)^2 + 2X; 2X(7A^2X + 1)
 factor; AA+AB; A(A+B)
 factor; A+B+C+D+E+F+G; A+B+C+D+E+F+G

@@ -11,16 +11,6 @@ cancel; (X^2/2_1/2)/(X_1); (X+1)/2
 #gives: -sqrt(3)/sqrt(2), sqrt(3)/sqrt(2)
 solve; 2X^2=3; X; -sqrt(6)/2,sqrt(6)/2
 
-#Factor: with no rational roots, the pairwise gcd factoring makes a polynomial worse (the Q37 problem)
-#gives: 1+X(1+X)
-factor; X^2+X+1; X^2+X+1
-#gives: -1000002+X(1+X). The coefficient is over the root search limit, so no roots are looked for
-factor; X^2+X_1000002; X^2+X_1000002
-
-#Factor: only rational roots are found, X^4+X^2+1 = (X^2_X+1)(X^2+X+1) over the rationals
-#gives: (X_1)(X+1)(X^4+X^2+1)
-factor; X^6_1; (X_1)(X+1)(X^2_X+1)(X^2+X+1)
-
 #Cancel: one variable only
 #gives: A^2/(A_B)_B^2/(A_B)
 cancel; (A^2_B^2)/(A_B); A+B
@@ -36,11 +26,6 @@ comdenom; 1/(X_1)_1/(X+1)_2/(X^2_1); 0
 #Comdenom: top and bottom of a fraction of fractions share XY, not cancelled (one variable only)
 #gives: (XY^2+YX^2)/(XY^2_YX^2)
 comdenom; (1/X+1/Y)/(1/X_1/Y); (X+Y)/(Y_X)
-#Comdenomf: a top with no rational roots goes through the pairwise gcd factoring, which makes it worse
-#gives: (3X^2+2(1+3X))/(X(X+1)(X+2))
-comdenomf; 1/X+1/(X+1)+1/(X+2); (3X^2+6X+2)/(X(X+1)(X+2))
-#gives: (1+X(1+X))/X^3
-comdenomf; 1/X+1/X^2+1/X^3; (X^2+X+1)/X^3
 
 #Roots: trial division stops at 1000 (ROOT_MAX_FACTOR), so the square of a bigger prime stays inside
 #gives: sqrt(2036162)

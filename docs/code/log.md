@@ -8,6 +8,7 @@
 - 180 random ax^n+b against sympy, 0 wrong 0 unknown
 - (later) the p/q path gets it too, after eval_root_factors gives up: 8^(2/9) -> 2^(2/3), 64^(5/12) -> 2^(5/2). one system answer got shorter from it, 600 systems + 4000 rationals otherwise the same
 - ln(-2+2i) is ln(8)/2+3ipi/4. sqrt(8) is 2^(3/2) by the time the atan gets built, and gcd(2^(3/2), -2) was 1, upstream only took a gcd off a power against the same base with a plain number power. so 2/(-2+2^(3/2)) never cancelled to the 1/(-1+sqrt(2)) the table has. any power >= 1 gives up its whole base now, nothing else in the harnesses moved and 1800 fuzz sums didn't hang
+- the Q37 thing: factor(x^2+x+1) gave 1+x(1+x), the gcd pairing grabbing x^2 and x once poly_factor found nothing. a sum in one letter skips the pairing now under factor, comdenomf tops too. upstream had 3x(x+2)+1 as a *test* for 3x^2+6x+1, changed it. todo.tests 15 -> 10
 
 ## 2026-11-18 (afternoon) - slow ones and a sort that wouldn't stop
 

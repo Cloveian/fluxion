@@ -571,6 +571,8 @@ static unsigned long letters(pcas_ast_t *e) {
     return mask;
 }
 
+static bool one_letter_poly(pcas_ast_t *e);
+
 bool factor_addition(pcas_ast_t *e, unsigned char flags) {
     pcas_ast_t *child;
     bool changed = false;
@@ -580,10 +582,15 @@ bool factor_addition(pcas_ast_t *e, unsigned char flags) {
     if(pcas_cancelled || e == NULL || e->type != NODE_OPERATOR) /*Fluxion: flag first, e can be NULL under oom*/
         return false;
 
-    for(child = ast_ChildGet(e, 0); child != NULL; child = child->next)
-        changed |= factor_addition(child, flags);
+    for(child = ast_ChildGet(e, 0); child != NULL; child = child->next) {
+        /*Fluxion: only as far as factor_polynomial goes, sin(X^2+2X) is still sin(X(X+2))*/
+        bool reached = isoptype(e, OP_DIV) || isoptype(e, OP_MULT) || (isoptype(e, OP_POW) && child == ast_ChildGet(e, 0));
 
-    if(isoptype(e, OP_ADD)) {
+        changed |= factor_addition(child, reached ? flags : flags & ~FAC_POLYNOMIAL);
+    }
+
+    /*Fluxion: a sum in one letter there is poly_factor's, pairing up its terms only nests it (X^2+X+1 -> 1+X(1+X))*/
+    if(isoptype(e, OP_ADD) && !((flags & FAC_POLYNOMIAL) && one_letter_poly(e))) {
         unsigned i, j;
         pcas_ast_t *g;
 
@@ -860,6 +867,15 @@ static bool poly_read(pcas_ast_t *e, poly_t *p) {
         }
     }
     return true;
+}
+
+static bool one_letter_poly(pcas_ast_t *e) {
+    poly_t *p = poly_new();
+    bool ok = p != NULL && poly_read(e, p);
+
+    if(p != NULL)
+        poly_free(p);
+    return ok;
 }
 
 /*p /= X^n, the n lowest have to be 0*/
