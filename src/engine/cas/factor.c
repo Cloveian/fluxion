@@ -1248,6 +1248,20 @@ static pcas_ast_t *as_product(pcas_ast_t *e) {
     return m;
 }
 
+static bool factor_patterns(pcas_ast_t *e);
+
+/*Fluxion: a top or bottom as a product cancel can use. one letter, the patterns, or what every term shares and then those*/
+static void cancel_factor(pcas_ast_t *e) {
+    pcas_ast_t *f;
+
+    if(factor_polynomial(e) || factor_patterns(e) || !isoptype(e, OP_ADD) || !take_common(e))
+        return;
+    for(f = ast_ChildGet(e, 0); f != NULL; f = f->next)
+        if(isoptype(f, OP_ADD) && !factor_polynomial(f))
+            factor_patterns(f);
+    simplify(e, SIMP_COMMUTATIVE);
+}
+
 /*Fluxion: one fraction: factor the top and bottom, take out what they share. finally works*/
 static bool cancel_fraction(pcas_ast_t *e) {
     pcas_ast_t *num = ast_Copy(ast_ChildGet(e, 0)), *den = ast_Copy(ast_ChildGet(e, 1));
@@ -1265,8 +1279,8 @@ static bool cancel_fraction(pcas_ast_t *e) {
         return true;
     }
 
-    factor_polynomial(num);
-    factor_polynomial(den);
+    cancel_factor(num);
+    cancel_factor(den);
     num = as_product(num);
     den = as_product(den);
 
@@ -1727,8 +1741,6 @@ static bool mono_first(const mono_t *a, const mono_t *b, const pat_vars_t *v) {
     }
     return true;
 }
-
-static bool factor_patterns(pcas_ast_t *e);
 
 /*Fluxion: a^2_b^2 = (a_b)(a+b), and the halves again for X^4_Y^4. else a^3+b^3 =
 (a+b)(a^2_ab+b^2), the minus of a^3_b^3 rides along in b*/

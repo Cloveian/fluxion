@@ -483,6 +483,13 @@ cancel; 1/(X+1)+(X^2_1)/(X+1); X_1+1/(X+1)
 cancel; (X^2_1)/(X_1)+(X^2_4)/(X_2); 2X+3
 cancel; (X^2_1)/(X_2); X^2/(X_2)_1/(X_2)
 cancel; X+1; X+1
+#more than one letter: the patterns, and what every term shares
+cancel; (A^2_B^2)/(A_B); A+B
+cancel; (A^3_B^3)/(A_B); A^2+AB+B^2
+cancel; (4X^2_9Y^2)/(2X+3Y); 2X_3Y
+cancel; (X^2Y_Y^3)/(XY+Y^2); X_Y
+cancel; (AX+AY)/(BX+BY); A/B
+comdenom; (1/X+1/Y)/(1/X_1/Y); (X+Y)/(Y_X)
 
 #One fraction over a common denominator (a form). comdenomf = top and bottom factored. ACT Q26
 comdenomf; sqrt(2(D_C)/A); sqrt(2(D_C)/A)
