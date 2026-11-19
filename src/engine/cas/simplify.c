@@ -448,6 +448,31 @@ static bool small_fraction(pcas_ast_t *power, mp_small *p, mp_small *q) {
     return *p > 0 && *q > 0 && *p <= 64 && *q <= 64;
 }
 
+/*Fluxion: a whole number below against the number on top, (-2sqrt(2))/2 -> -sqrt(2)*/
+static void cancel_numbers(pcas_ast_t *e) {
+    pcas_ast_t *num = ast_ChildGet(e, 0), *den = ast_ChildGet(e, 1), *k = num;
+    mp_rat g;
+
+    if(den->type != NODE_NUMBER || !mp_rat_is_integer(den->op.num) || mp_rat_compare_zero(den->op.num) == 0)
+        return;
+    if(isoptype(num, OP_MULT))
+        for(k = ast_ChildGet(num, 0); k != NULL && k->type != NODE_NUMBER; k = k->next);
+    if(k == NULL || k->type != NODE_NUMBER || !mp_rat_is_integer(k->op.num) || (g = num_FromInt(1)) == NULL)
+        return;
+    mp_int_gcd(mp_rat_numer_ref(k->op.num), mp_rat_numer_ref(den->op.num), mp_rat_numer_ref(g));
+    if(mp_rat_compare_zero(den->op.num) < 0)
+        mp_rat_neg(g, g);
+    mp_rat_div(k->op.num, g, k->op.num);
+    mp_rat_div(den->op.num, g, den->op.num);
+    num_Cleanup(g);
+    if(k != num && mp_rat_compare_value(k->op.num, 1, 1) == 0 && ast_ChildLength(num) > 1)
+        ast_Cleanup(ast_ChildRemove(num, k));
+    if(isoptype(num, OP_MULT) && ast_ChildLength(num) == 1)
+        replace_node(num, ast_Copy(ast_ChildGet(num, 0)));
+    if(mp_rat_compare_value(den->op.num, 1, 1) == 0)
+        replace_node(e, ast_Copy(num));
+}
+
 /*Fluxion: pcas.tests takes 15 at most. compare() isn't one order everywhere, -1, -isqrt(44) and -ypi/2 each
   went before the next and round*/
 #define CANONICAL_PASSES_MAX 32
@@ -567,6 +592,7 @@ bool simplify_canonical_form(pcas_ast_t *e, unsigned char flags) {
 
                 simplify(num, SIMP_NORMALIZE | SIMP_COMMUTATIVE | SIMP_EVAL | SIMP_RATIONAL | SIMP_LIKE_TERMS);
                 simplify(den, SIMP_NORMALIZE | SIMP_COMMUTATIVE | SIMP_EVAL | SIMP_RATIONAL | SIMP_LIKE_TERMS);
+                cancel_numbers(e); /*Fluxion*/
 
                 intermediate_change = changed = true;
             } else if(isoptype(den, OP_MULT)) {
@@ -584,6 +610,7 @@ bool simplify_canonical_form(pcas_ast_t *e, unsigned char flags) {
 
                         simplify(num, SIMP_NORMALIZE | SIMP_COMMUTATIVE | SIMP_EVAL | SIMP_RATIONAL | SIMP_LIKE_TERMS);
                         simplify(den, SIMP_NORMALIZE | SIMP_COMMUTATIVE | SIMP_EVAL | SIMP_RATIONAL | SIMP_LIKE_TERMS);
+                        cancel_numbers(e); /*Fluxion*/
 
                         intermediate_change = changed = true;
                         break;
