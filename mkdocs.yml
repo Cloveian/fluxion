@@ -79,6 +79,7 @@ nav:
       - Rendering: design-choices/rendering.md
       - Input: design-choices/input.md
       - Screens & operations: design-choices/ui.md
+      - Show the work: design-choices/steps.md
       - Simplify cases: simplify-cases.md
       - Nspire CX II menus: design-choices/nspire-cx-ii-menus.md
   - Code:

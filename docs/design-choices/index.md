@@ -11,6 +11,7 @@ How this is gonna work
 2. [Rendering](rendering.md) - how math is drawn
 3. [Input](input.md) - how math is typed
 4. [Screens & operations](ui.md) - menus, history, what you can do to an expression
+5. [Show the work](steps.md) - steps like on paper, and the methods
 
 ---
 Back to [goals](../goals.md) · [main index](../index.md)
