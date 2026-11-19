@@ -659,7 +659,7 @@ bool test_Run(test_t *t) {
         /*Fluxion: a whole number comes out as a product of numbers and simplifying the
         expected would just multiply it back, so those compare as text, the way export
         prints it (-12 is -2^2*3). after simplify so -12 counts, it parses as -1*12*/
-        simplify(actual, SIMP_ALL);
+        simplify(actual, SIMP_NORMALIZE | SIMP_COMMUTATIVE | SIMP_RATIONAL | SIMP_EVAL | SIMP_LIKE_TERMS); /*Fluxion: same as the app's factor command, SIMP_ALL spreads Y(X^2+X+1) out*/
         if(actual->type == NODE_NUMBER && mp_rat_is_integer(actual->op.num)) {
             passed = factor_text(t, actual);
             break;
@@ -669,6 +669,7 @@ bool test_Run(test_t *t) {
         simplify(expected, SIMP_NORMALIZE | SIMP_COMMUTATIVE | SIMP_RATIONAL | SIMP_EVAL);
 
         factor(actual, FAC_ALL);
+        simplify(actual, SIMP_NORMALIZE | SIMP_COMMUTATIVE | SIMP_RATIONAL | SIMP_EVAL);
 
         passed = check(t, actual, expected);
         break;
