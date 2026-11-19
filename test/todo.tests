@@ -7,9 +7,6 @@
 solve; 2X^2=3; X; -sqrt(6)/2,sqrt(6)/2
 
 
-#Roots: trial division stops at 1000 (ROOT_MAX_FACTOR), so the square of a bigger prime stays inside
-#gives: sqrt(2036162)
-simplify; sqrt(2*1009^2); 1009sqrt(2)
 #Roots: sqrt(X^2) is X, not abs(X) (upstream behaviour)
 #gives: 2Xsqrt(3)
 simplify; sqrt(12X^2); 2sqrt(3)abs(X)
@@ -17,7 +14,3 @@ simplify; sqrt(12X^2); 2sqrt(3)abs(X)
 #Decimal: float isn't good for 6 digits after a power: pi^2 = 9.869604..., but float(pi)^2 = 9.869605
 #gives: 9.86961
 decimal; pi^2; 9.8696
-
-#Simplify: a root against twice the root over a number, a/g comes out 2sqrt(2)/(7sqrt(2)) and the light simplify cant cancel it
-#gives: (2sqrt(2))/7+3sqrt(2)
-simplify; 3*2^(1/2)+(2*2^(1/2))/7; (23sqrt(2))/7

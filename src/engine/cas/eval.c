@@ -381,8 +381,7 @@ static bool power_fits(pcas_ast_t *a, pcas_ast_t *b) {
     return mp_int_to_int(&b->op.num->num, &n) == MP_OK && n <= POWER_FIT_BITS / (mp_small)mp_int_count_bits(&a->op.num->num);
 }
 
-/*Fluxion: trial division for root factors stops here, so a k-th power of a bigger
-prime stays inside the root (still right, just not as simple)*/
+/*Fluxion: trial *dih*vision for root factors stops here. past it a k-th power only comes out when its the whole leftover, sqrt(1031316053) = sqrt(1009^2*1013) stays (still right, just not as simple)*/
 #define ROOT_MAX_FACTOR 1000
 
 /*Fluxion: n^(1/k) with n = s^k * r, s > 1, becomes s * r^(1/k): sqrt(3780) = 6sqrt(105).
@@ -417,6 +416,12 @@ static bool eval_root_factors(pcas_ast_t *e, mp_int n, mp_small k, pcas_ast_t *e
                 mp_int_mul_value(s, p, s);
             for(i = 0; i < count % k; i++)
                 mp_int_mul_value(left, p, left);
+        }
+
+        /*Fluxion: whats left past the trial *dih*vision can still be a whole k-th power, sqrt(2*1009^2)*/
+        if(mp_int_compare_value(r, 1) > 0 && mp_int_copy(r, q) == MP_OK && int_root(q, k)) {
+            mp_int_mul(s, q, s);
+            mp_int_set_value(r, 1);
         }
 
         if(mp_int_compare_value(s, 1) > 0) {

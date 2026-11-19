@@ -19,6 +19,7 @@
 - cancel goes into products and powers too, 2(a^2-b^2)/(a-b) = 2a+2b, (a^2-b^2)^2/(a-b) = (a-b)(a+b)^2
 - and a factor against its negative, (a^2-b^2)/(b-a) = -a-b. todo 6 -> 5
 - and the like terms thing for real: (3a)/b-(10a)/(7b) didnt collect either, only under the full simplify. -10/7 is a tree, not a number node, so the pairing said "not numbers". systems got shorter from it (9 of 600, cardano y's collect into /72s), checked in sympy, same to 12 digits. it made sin(ix)=1/2 come out 5pi/(6i) so an i below goes on top as -i now too
+- sqrt(2*1009^2) is 1009sqrt(2), the leftover after trial division gets checked for a whole power. that one fought back: the system with sqrt(9901009901) in it (9901^2*101) lost a real pair, the check that a pair fits had 9901^2 and 330033^2 sitting unevaluated, ~1e12, so float said no. it works them out exactly first now. todo.tests down to 3: the sqrt(3)/sqrt(2) that only the test runner sees, and two calls for awake me (sqrt(x^2) = abs(x)?, float in decimal)
 - found on the way: the decimal command is garbage on those long cardano y's, -4307 and 312 where its 3.48 and -1.62. float eating the cancellation. old builds too
 - still open: factor(yx^2-y+zx^2-z) wants grouping, (x-1)(x+1)(y+z). the CLI/test runner factor with fractions still says x/(x(x+3))+(x+1/x)/(x+3), the app paths do comdenom or never split it so they're fine. the fraction moving in cancel_fraction is a copy of what simplify_rational does, try reusing it when im awake
 

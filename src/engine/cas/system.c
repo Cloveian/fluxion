@@ -296,6 +296,11 @@ static bool fits(pcas_ast_t *eq, const Symbol *vars, pcas_ast_t **x, bool poly) 
         ast_Cleanup(e);
         return true;
     }
+    /*big whole powers left in, 9901^2 and 330033^2 when a root came out whole. a decimal of those is past the float noise*/
+    if(!zero(e) && !has_imaginary_node(e)) {
+        eval(e, EVAL_EASY | EVAL_POWERS_FIT);
+        simplify(e, SIMP_SYS);
+    }
     if(has_imaginary_node(e) || (e->type == NODE_NUMBER && !zero(e))) {
         ast_Cleanup(e);
         return false;
