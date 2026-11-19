@@ -102,6 +102,11 @@ factor; Y(X^2+X+1); Y(X^2+X+1)
 factor; 2XY+4Y+6; 2(XY+2Y+3)
 factor; AX+AY+AZ; A(X+Y+Z)
 factor; X^2Y+XY^2+XY; XY(X+Y+1)
+#grouping, four terms as two pairs
+factor; X^2+XY_X_Y; (X_1)(X+Y)
+factor; YX^2_Y+ZX^2_Z; (X_1)(X+1)(Y+Z)
+factor; AX_AY_BX+BY; (B_A)(Y_X)
+factor; AB+AC+BD+CD; (A+D)(B+C)
 factor; Y(X^2_1)+Y; YX^2
 
 #Solve over the reals (solve; equation; variable; roots smallest first, or true / false / unknown)

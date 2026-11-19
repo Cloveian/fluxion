@@ -572,6 +572,18 @@ static unsigned long letters(pcas_ast_t *e) {
 }
 
 static bool one_letter_poly(pcas_ast_t *e);
+static bool opposite(pcas_ast_t *a, pcas_ast_t *b);
+
+/*Fluxion: t/g, new. a monomial *dih*vides straight off*/
+static pcas_ast_t *quotient(pcas_ast_t *t, pcas_ast_t *g) {
+    pcas_ast_t *q = gm_div(t, g);
+
+    if(q == NULL) {
+        q = ast_MakeBinary(OP_DIV, ast_Copy(t), ast_Copy(g));
+        simplify(q, SIMP_NORMALIZE | SIMP_COMMUTATIVE | SIMP_RATIONAL | SIMP_EVAL | SIMP_LIKE_TERMS);
+    }
+    return q;
+}
 
 /*Fluxion: what every term has, out front. YX^2+XY+Y is Y(X^2+X+1), pairing two at a time makes XY+Y(X^2+1)*/
 static bool take_common(pcas_ast_t *e) {
@@ -585,18 +597,50 @@ static bool take_common(pcas_ast_t *e) {
     }
 
     rest = ast_MakeOperator(OP_ADD);
-    for(t = ast_ChildGet(e, 0); t != NULL; t = t->next) {
-        pcas_ast_t *q = gm_div(t, g);
-
-        if(q == NULL) {
-            q = ast_MakeBinary(OP_DIV, ast_Copy(t), ast_Copy(g));
-            simplify(q, SIMP_NORMALIZE | SIMP_COMMUTATIVE | SIMP_RATIONAL | SIMP_EVAL | SIMP_LIKE_TERMS);
-        }
-        ast_ChildAppend(rest, q);
-    }
+    for(t = ast_ChildGet(e, 0); t != NULL; t = t->next)
+        ast_ChildAppend(rest, quotient(t, g));
     replace_node(e, ast_MakeBinary(OP_MULT, g, rest));
     simplify(e, SIMP_NORMALIZE | SIMP_COMMUTATIVE | SIMP_RATIONAL | SIMP_EVAL); /*the pairing does the same, or 1/2 out front prints (X+Y+Z)1/2*/
     return true;
+}
+
+/*Fluxion: a+b as *g times the sum handed back, both new. *g is 1 when they share nothing*/
+static pcas_ast_t *pair_rest(pcas_ast_t *a, pcas_ast_t *b, pcas_ast_t **g) {
+    pcas_ast_t *s = ast_MakeOperator(OP_ADD);
+
+    *g = gcd(a, b);
+    ast_ChildAppend(s, quotient(a, *g));
+    ast_ChildAppend(s, quotient(b, *g));
+    simplify(s, SIMP_NORMALIZE | SIMP_COMMUTATIVE | SIMP_RATIONAL | SIMP_EVAL);
+    return s;
+}
+
+/*Fluxion: grouping, four terms as two pairs with the same sum left. X^2+XY_X_Y is X(X+Y)_(X+Y), so (X_1)(X+Y)*/
+static bool take_pairs(pcas_ast_t *e) {
+    static const int split[3][4] = {{0, 1, 2, 3}, {0, 2, 1, 3}, {0, 3, 1, 2}};
+    pcas_ast_t *t[4], *g1, *g2, *s1, *s2;
+    int i, k;
+
+    for(i = 0; i < 4; i++)
+        t[i] = ast_ChildGet(e, i);
+    for(k = 0; k < 3; k++) {
+        s1 = pair_rest(t[split[k][0]], t[split[k][1]], &g1);
+        s2 = pair_rest(t[split[k][2]], t[split[k][3]], &g2);
+
+        if(isoptype(s1, OP_ADD) && (ast_Compare(s1, s2) || opposite(s1, s2))) {
+            if(!ast_Compare(s1, s2))
+                g2 = ast_MakeBinary(OP_MULT, ast_MakeNumber(num_FromInt(-1)), g2);
+            ast_Cleanup(s2);
+            replace_node(e, ast_MakeBinary(OP_MULT, ast_MakeBinary(OP_ADD, g1, g2), s1));
+            simplify(e, SIMP_NORMALIZE | SIMP_COMMUTATIVE | SIMP_RATIONAL | SIMP_EVAL);
+            return true;
+        }
+        ast_Cleanup(g1);
+        ast_Cleanup(g2);
+        ast_Cleanup(s1);
+        ast_Cleanup(s2);
+    }
+    return false;
 }
 
 bool factor_addition(pcas_ast_t *e, unsigned char flags) {
@@ -616,6 +660,8 @@ bool factor_addition(pcas_ast_t *e, unsigned char flags) {
     }
 
     if((flags & FAC_POLYNOMIAL) && isoptype(e, OP_ADD) && ast_ChildLength(e) > 2 && take_common(e))
+        return true;
+    if((flags & FAC_POLYNOMIAL) && isoptype(e, OP_ADD) && ast_ChildLength(e) == 4 && !one_letter_poly(e) && take_pairs(e))
         return true;
 
     /*Fluxion: a sum in one letter there is poly_factor's, pairing up its terms only nests it (X^2+X+1 -> 1+X(1+X))*/
