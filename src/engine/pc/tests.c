@@ -37,6 +37,7 @@ TestType resolve_type(char *type) {
     if(!strcmp(type, "gcd"))        return TEST_GCD;
     if(!strcmp(type, "factor"))     return TEST_FACTOR;
     if(!strcmp(type, "factortext")) return TEST_FACTOR_TEXT;
+    if(!strcmp(type, "simplifytext")) return TEST_SIMPLIFY_TEXT;
     if(!strcmp(type, "expand"))     return TEST_EXPAND;
     if(!strcmp(type, "deriv"))      return TEST_DERIV;
     if(!strcmp(type, "solve"))      return TEST_SOLVE;
@@ -672,6 +673,12 @@ bool test_Run(test_t *t) {
         /*Fluxion: what the factor command shows, the canonical form packs things back up after the tree compare*/
         if(!factor_command(a))
             simplify_canonical_form(a, CANONICAL_ALL);
+        passed = check_text(t, a);
+        break;
+    case TEST_SIMPLIFY_TEXT:
+        cancel_fractions(a);
+        simplify(a, SIMP_ALL);
+        simplify_canonical_form(a, CANONICAL_ALL);
         passed = check_text(t, a);
         break;
     case TEST_EXPAND:

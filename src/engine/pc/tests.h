@@ -28,6 +28,7 @@ typedef enum {
     TEST_CSOLVE,    /*Fluxion: csolve; equation; var; like solve, with the complex roots*/
     TEST_DOMAIN,    /*Fluxion: domain; expression; var; lower <x> | upper <x> | holes <list>, o for open, or empty / unknown*/
     TEST_FACTOR_TEXT, /*Fluxion: factortext; expression; text. factor, then the canonical form, as it's shown*/
+    TEST_SIMPLIFY_TEXT, /*Fluxion: simplifytext; expression; text. cancel and simplify like enter, no form setting, as it's shown*/
 
     TEST_INVALID
 } TestType;

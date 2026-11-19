@@ -489,6 +489,32 @@ static pcas_ast_t *number_power(pcas_ast_t *a, pcas_ast_t *b, pcas_ast_t *k) {
     return merged;
 }
 
+/*Fluxion: the number in a term, the 2 of 2sqrt(3). NULL if none*/
+static pcas_ast_t *term_number(pcas_ast_t *t) {
+    if(t->type == NODE_NUMBER)
+        return t;
+    if(!isoptype(t, OP_MULT) || ast_ChildLength(t) != 2)
+        return NULL;
+    if(ast_ChildGet(t, 0)->type == NODE_NUMBER)
+        return ast_ChildGet(t, 0);
+    if(ast_ChildGet(t, 1)->type == NODE_NUMBER)
+        return ast_ChildGet(t, 1);
+    return NULL;
+}
+
+/*Fluxion: a number, or a number times sqrt(number). *root for the second*/
+static bool surd_term(pcas_ast_t *t, bool *root) {
+    pcas_ast_t *k = term_number(t), *r = t;
+
+    *root = false;
+    if(t->type == NODE_NUMBER)
+        return true;
+    if(k != NULL)
+        r = k == ast_ChildGet(t, 0) ? ast_ChildGet(t, 1) : ast_ChildGet(t, 0);
+    *root = isoptype(r, OP_ROOT) && is_ast_int(ast_ChildGet(r, 0), 2) && ast_ChildGet(r, 1)->type == NODE_NUMBER;
+    return *root;
+}
+
 /*Fluxion: pcas.tests takes 15 at most. compare() isn't one order everywhere, -1, -isqrt(44) and -ypi/2 each
   went before the next and round*/
 #define CANONICAL_PASSES_MAX 32
@@ -598,6 +624,7 @@ bool simplify_canonical_form(pcas_ast_t *e, unsigned char flags) {
 
         if((flags & CANONICAL_RATIONALIZE) && isoptype(e, OP_DIV)) {
             pcas_ast_t *num, *den;
+            bool root0, root1;
 
             /*Rationalize denominator*/
 
@@ -640,6 +667,41 @@ bool simplify_canonical_form(pcas_ast_t *e, unsigned char flags) {
                         intermediate_change = changed = true;
                         break;
                     }
+                }
+            } else if(isoptype(den, OP_ADD) && ast_ChildLength(den) == 2
+                      && surd_term(ast_ChildGet(den, 0), &root0) && surd_term(ast_ChildGet(den, 1), &root1) && (root0 || root1)) {
+                /*Fluxion: a+b times a-b is a^2-b^2, a number with square roots of numbers. 1/(sqrt(2)_1) = sqrt(2)+1*/
+                pcas_ast_t *conj = ast_Copy(den), *square, *k0, *k1;
+                mp_rat g = num_FromInt(1);
+
+                replace_node(ast_ChildGet(conj, 1), ast_MakeBinary(OP_MULT, ast_MakeNumber(num_FromInt(-1)), ast_Copy(ast_ChildGet(conj, 1))));
+
+                /*what both terms share comes off a-b, or 1/(2sqrt(2)+2) is (2sqrt(2)_2)/4*/
+                k0 = term_number(ast_ChildGet(den, 0));
+                k1 = term_number(ast_ChildGet(den, 1));
+                if(k0 != NULL && k1 != NULL && mp_rat_is_integer(k0->op.num) && mp_rat_is_integer(k1->op.num)) {
+                    mp_int_gcd(mp_rat_numer_ref(k0->op.num), mp_rat_numer_ref(k1->op.num), mp_rat_numer_ref(g));
+                    mp_rat_recip(g, g);
+                    conj = ast_MakeBinary(OP_MULT, ast_MakeNumber(g), conj);
+                    expand(conj, EXP_ALL);
+                    simplify(conj, SIMP_NORMALIZE | SIMP_COMMUTATIVE | SIMP_EVAL | SIMP_RATIONAL | SIMP_LIKE_TERMS);
+                } else {
+                    num_Cleanup(g);
+                }
+
+                square = ast_MakeBinary(OP_MULT, ast_Copy(den), ast_Copy(conj));
+                expand(square, EXP_ALL);
+                simplify(square, SIMP_NORMALIZE | SIMP_COMMUTATIVE | SIMP_EVAL | SIMP_RATIONAL | SIMP_LIKE_TERMS);
+
+                /*anything else would just come round again next pass*/
+                if(square != NULL && square->type == NODE_NUMBER && mp_rat_compare_zero(square->op.num) != 0) {
+                    mp_rat_recip(square->op.num, square->op.num);
+                    replace_node(e, ast_MakeBinary(OP_MULT, square, ast_MakeBinary(OP_MULT, ast_Copy(num), conj)));
+                    simplify(e, SIMP_NORMALIZE | SIMP_COMMUTATIVE | SIMP_EVAL | SIMP_RATIONAL | SIMP_LIKE_TERMS);
+                    intermediate_change = changed = true;
+                } else {
+                    ast_Cleanup(square);
+                    ast_Cleanup(conj);
                 }
             }
         }

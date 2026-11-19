@@ -439,6 +439,15 @@ simplify; sqrt(2)+sqrt(2)/7; (8sqrt(2))/7
 simplify; 3sqrt(2)_(10sqrt(2))/7; (11sqrt(2))/7
 simplify; 3*5^(1/3)+(2*5^(1/3))/7; (23*5^(1/3))/7
 simplify; 3*2^(1/2)+(2*2^(1/2))/7; (23sqrt(2))/7
+#roots out of a two term bottom, times a_b over a_b. as it's shown (simplifytext; expression; text), the canonical form does it
+simplifytext; 2/(2sqrt(2)_2); sqrt(2)+1
+simplifytext; 1/(sqrt(3)+1); (sqrt(3)_1)/2
+simplifytext; 7/(6_2sqrt(2)); (sqrt(2)+3)/2
+simplifytext; 1/(sqrt(2)+sqrt(3)); sqrt(3)_sqrt(2)
+simplifytext; X/(2+sqrt(5)); X(sqrt(5)_2)
+simplifytext; -1/(2+2^(3/2)); (1_sqrt(2))/2
+simplifytext; 1/(sqrt(X)+1); 1/(sqrt(X)+1)
+simplifytext; 1/(2+3^(1/3)); 1/(3root3+2)
 
 #the cardano shape, cube roots of a fraction with a sqrt in it. hung in compare(), the gcd kept handing 2^(1/3) back and forth
 simplify; (93^(1/2)/18_1/2)^(1/3)_(93^(1/2)/18+1/2)^(1/3); 3root(sqrt(93)/18_1/2)_(3root(1/2+sqrt(93)/18))
