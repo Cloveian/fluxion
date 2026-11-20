@@ -18,6 +18,7 @@ static const char *const method_keys[5] = { "optimal", "root", "factor", "square
 
 static bool open;
 static pcas_ast_t *lhs, *rhs;
+static pcas_ast_t *deriv; /* d/dx node for derivative steps, else NULL */
 static Symbol var;
 static Method method;
 static box_t *rows[ROWS_MAX];
@@ -68,11 +69,20 @@ static box_t *right_box(const step_eq_t *q) {
     return frac;
 }
 
-/* x+2 = 0  or  x+3 = 0, a = 1, b = 6 */
-static box_t *line_box(const step_t *l) {
+/* x+2 = 0  or  x+3 = 0, a = 1, b = 6  or  = 2x sin(x) */
+static box_t *line_box(const step_t *l, bool first) {
     box_t *row = layout_box(BOX_ROW, 0);
     int j;
 
+    if(l->eq[0].right == NULL && l->eq[0].pm == NULL) {
+        if(!first) {
+            layout_add(row, layout_text("=", 0));
+            layout_add(row, layout_space(LAYOUT_SPACE(0)));
+        }
+        layout_add(row, layout_build(l->eq[0].left, &draw_font));
+        layout_finish(row, &draw_font);
+        return row;
+    }
     for(j = 0; j < l->eqs; j++) {
         if(j > 0 && l->list) {
             layout_add(row, layout_text(",", 0));
@@ -94,7 +104,18 @@ static box_t *line_box(const step_t *l) {
 static box_t *move_box(const step_t *l) {
     box_t *row = layout_box(BOX_ROW, 0), *by, *root;
 
-    if(l->move == 'r') {
+    if(l->move == 'n') {
+        /* product rule, chain rule */
+        char names[64] = "";
+        int k;
+
+        for(k = 0; k < STEP_RULES_MAX && l->rules[k] != NULL; k++) {
+            if(k > 0)
+                strncat(names, ", ", sizeof(names) - strlen(names) - 1);
+            strncat(names, l->rules[k], sizeof(names) - strlen(names) - 1);
+        }
+        layout_add(row, layout_text(names, 0));
+    } else if(l->move == 'r') {
         root = layout_box(BOX_ROOT, 0);
         layout_add(root, layout_text("  ", 0)); /* a space box has no height, the sign came out flat */
         layout_add(row, root);
@@ -121,17 +142,17 @@ static void free_rows(void) {
     nrows = top = 0;
 }
 
-/* the steps for method into rows, false if it doesn't do this one */
+/* the steps into rows, false if it doesn't do this one */
 static bool build(void) {
     static steps_t s; /* 24 lines, ~1 KB on the CE */
     int i;
 
-    if(!steps_solve(lhs, rhs, var, method, &s))
+    if(deriv != NULL ? !steps_derivative(deriv, &s) : !steps_solve(lhs, rhs, var, method, &s))
         return false;
     free_rows();
     for(i = 0; i < s.n && nrows < ROWS_MAX; i++) {
         is_move[nrows] = false;
-        rows[nrows++] = line_box(&s.line[i]);
+        rows[nrows++] = line_box(&s.line[i], i == 0);
         if(s.line[i].move != 0 && nrows < ROWS_MAX) {
             is_move[nrows] = true;
             rows[nrows++] = move_box(&s.line[i]);
@@ -169,6 +190,16 @@ const char *work_open(char *src) {
     return NULL;
 }
 
+const char *work_open_deriv(pcas_ast_t *d) {
+    deriv = d;
+    if(!build()) {
+        work_close();
+        return "no steps for this one yet";
+    }
+    open = true;
+    return NULL;
+}
+
 bool work_is_open(void) {
     return open;
 }
@@ -177,12 +208,13 @@ void work_close(void) {
     free_rows();
     ast_Cleanup(lhs);
     ast_Cleanup(rhs);
-    lhs = rhs = NULL;
+    ast_Cleanup(deriv);
+    lhs = rhs = deriv = NULL;
     open = false;
 }
 
 void work_key(keypress_t p) {
-    if(p.key >= K_YEQU && p.key <= K_GRAPH) {
+    if(p.key >= K_YEQU && p.key <= K_GRAPH && deriv == NULL) {
         Method m = (Method)(p.key - K_YEQU);
 
         /* one that doesn't fit leaves the steps as they are */
@@ -237,5 +269,6 @@ void work_draw(void) {
         screen_color(COL_DIM);
         screen_vline(x0 + w - 2, y0 + (bottom - y0) * top / nrows, bar_h > 2 ? bar_h : 2);
     }
-    draw_softkeys(&areas.keys, method_keys, (int)method, off);
+    if(deriv == NULL)
+        draw_softkeys(&areas.keys, method_keys, (int)method, off);
 }
