@@ -347,8 +347,8 @@ static void steps_text(const steps_t *s, char *got, unsigned size) {
     }
 }
 
-/*Fluxion: steps; deriv(f,X,X); X; the lines | the rules | lines, or none. the last line has to be what simplify makes of it*/
-static bool test_deriv_steps(test_t *t) {
+/*Fluxion: steps; deriv(f,X,X) or limit(f,X,a); X; the lines | the rules | lines, or none. the last line has to be what simplify makes of it*/
+static bool test_calc_steps(test_t *t) {
     pcas_error_t err;
     pcas_ast_t *e = parse((uint8_t*)t->arg1, strlen(t->arg1), str_table, &err), *d;
     char got[MAX_PAR * 2] = "";
@@ -359,7 +359,7 @@ static bool test_deriv_steps(test_t *t) {
         printf("Test failed on line %u. Unable to parse %s\n", t->line, t->arg1);
         return false;
     }
-    if(!steps_derivative(e, &s))
+    if(!(isoptype(e, OP_LIMIT) ? steps_limit(e, &s) : steps_derivative(e, &s)))
         strcpy(got, "none");
     else
         steps_text(&s, got, sizeof(got));
@@ -396,7 +396,7 @@ static bool test_steps(test_t *t) {
     bool passed;
 
     if(eq == NULL)
-        return test_deriv_steps(t);
+        return test_calc_steps(t);
     for(m = 0; m < METHOD_COUNT && strcmp(t->arg2 + 1, methods[m]) != 0; m++);
     if(m == METHOD_COUNT) {
         printf("Test failed on line %u. steps; equation; var and method; lines\n", t->line);

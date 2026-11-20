@@ -12,8 +12,8 @@
 
 /* src is the line inside solve( ), it gets cut up. NULL when it opened, or what to say */
 const char *work_open(char *src);
-/* the steps for d/dx(...), d is the deriv node and the page keeps it */
-const char *work_open_deriv(pcas_ast_t *d);
+/* the steps for d/dx(...) or a limit, e is that node and the page keeps it */
+const char *work_open_calc(pcas_ast_t *e);
 bool work_is_open(void);
 void work_close(void);
 void work_key(keypress_t p);

@@ -1074,7 +1074,7 @@ static bool is_action(const item_t *it) {
     return strcmp(it->label, "clear history") == 0 || strcmp(it->label, "show steps") == 0;
 }
 
-/* the steps page for the answer highlighted when the menu opened, or the last one. solve( and d/dx for now */
+/* the steps page for the answer highlighted when the menu opened, or the last one. solve(, d/dx and limit( for now */
 static void show_steps(void) {
     int at = menu_from >= 0 ? menu_from : history_len - 1;
     const char *cmd;
@@ -1086,21 +1086,21 @@ static void show_steps(void) {
     }
     cmd = ed_command(&view);
     if(cmd == NULL) {
-        /* d/dx(...) is the whole line, or it isn't one */
+        /* d/dx(...) or limit(...) is the whole line, or it isn't one */
         pcas_error_t err;
         pcas_ast_t *e;
 
         src = ed_to_engine(&view);
         e = src != NULL ? args_parse_deg(src, &err) : NULL; /* like run(), so the steps end at its answer */
         free(src);
-        if(e != NULL && isoptype(e, OP_DERIV)) {
-            status = work_open_deriv(e);
+        if(e != NULL && (isoptype(e, OP_DERIV) || isoptype(e, OP_LIMIT))) {
+            status = work_open_calc(e);
             return;
         }
         ast_Cleanup(e);
     }
     if(cmd == NULL || (strcmp(cmd, "solve") != 0 && strcmp(cmd, "roots") != 0)) {
-        status = "steps are for solve( and d/dx for now";
+        status = "steps are for solve(, d/dx and limit( for now";
         return;
     }
     src = ed_command_arg(&view);

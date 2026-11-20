@@ -20,7 +20,7 @@ typedef enum {
 #define STEP_RULES_MAX 4
 
 /*left = right, or left = (right +- pm)/den when pm isn't NULL: x=+-3 (right NULL), x=_3+-2sqrt(2), the formula.
-just left with neither: an expression, = the line above (*dih*rivative steps)*/
+just left with neither: an expression, = the line above (*dih*rivative and limit steps)*/
 typedef struct {
     pcas_ast_t *left, *right, *pm, *den;
 } step_eq_t;
@@ -47,6 +47,13 @@ bool steps_fit(pcas_ast_t *left, pcas_ast_t *right, Symbol var, Method m);
 /*d/dx(f) one rule at a time, every d/dx still left gets one per line. d is the deriv node, false if it's
 evaluated at a value or a rule doesn't fit*/
 bool steps_derivative(pcas_ast_t *d, steps_t *out);
+/*lim(f) like on paper: plug in, or on 0/0 cancel / l'hopital first. l is the limit node, false if there isn't one*/
+bool steps_limit(pcas_ast_t *l, steps_t *out);
 void steps_free(steps_t *s);
+
+/*for limit.c, which works its steps out in its own loop*/
+step_t *steps_expr(steps_t *s, pcas_ast_t *e); /*a line that's just e, = the one above. takes e*/
+void steps_rule(step_t *l, const char *name); /*name on l, move n. once each, two power rules on a line read as one*/
+void steps_shown(steps_t *s); /*every tree in the canonical form, at the end. 3X+5 and not 5+3X*/
 
 #endif

@@ -1,6 +1,7 @@
 /*Fluxion: limits, worked out the way you would on paper. not in upstream PineappleCAS.*/
 
 #include "cas.h"
+#include "steps.h"
 
 #define TRIES_MAX 6 /*cancels and l'hopitals before it gives up, (1-cos(x))/x^2 takes 2*/
 
@@ -69,21 +70,65 @@ static bool defined_at(pcas_ast_t *e, pcas_ast_t *var, pcas_ast_t *a) {
     }
 }
 
-/*new, NULL when there isn't one or it gives up*/
-static pcas_ast_t *limit_of(pcas_ast_t *f, pcas_ast_t *var, pcas_ast_t *a) {
+/*lim of f as var -> a, a line for the steps. new*/
+static pcas_ast_t *lim(pcas_ast_t *f, pcas_ast_t *var, pcas_ast_t *a) {
+    pcas_ast_t *l = ast_MakeOperator(OP_LIMIT);
+
+    if(l == NULL)
+        return NULL;
+    ast_ChildAppend(l, ast_Copy(f));
+    ast_ChildAppend(l, ast_Copy(var));
+    ast_ChildAppend(l, ast_Copy(a));
+    return l;
+}
+
+/*on the way to e, by rule, when there's steps to keep. takes e*/
+static step_t *step(steps_t *s, step_t *l, const char *rule, pcas_ast_t *e) {
+    if(s == NULL) {
+        ast_Cleanup(e);
+        return NULL;
+    }
+    if(rule != NULL)
+        steps_rule(l, rule);
+    return steps_expr(s, e);
+}
+
+/*plugged in: e with a in it as written, then v. hands v back*/
+static pcas_ast_t *plug_in(steps_t *s, step_t *l, pcas_ast_t *e, pcas_ast_t *var, pcas_ast_t *a, pcas_ast_t *v) {
+    pcas_ast_t *raw;
+
+    if(s == NULL)
+        return v;
+    raw = ast_Copy(e);
+    substitute(raw, var, a);
+    l = step(s, l, "plug in", raw);
+    step(s, l, NULL, ast_Copy(v));
+    return v;
+}
+
+/*new, NULL when there isn't one or it gives up. s NULL for no steps*/
+static pcas_ast_t *limit_of(pcas_ast_t *f, pcas_ast_t *var, pcas_ast_t *a, steps_t *s) {
     pcas_ast_t *g = ast_Copy(f), *top, *bottom, *t, *b, *out = NULL;
+    step_t *l = NULL;
     bool cancelled;
     int tries;
 
-    if(defined_at(f, var, a)) { /*plugs straight in*/
+    if(s != NULL) {
+        t = lim(f, var, a);
+        simplify(ast_ChildGet(t, 0), SIMP_NORMALIZE | SIMP_COMMUTATIVE | SIMP_RATIONAL | SIMP_EVAL); /*x^2_1 parses as x^2+-1*1, it showed a lone minus*/
+        l = steps_expr(s, t);
+    }
+    if(defined_at(f, var, a)) {
         ast_Cleanup(g);
-        return value_at(f, var, a);
+        return plug_in(s, l, f, var, a, value_at(f, var, a));
     }
     comdenom(g, true); /*one fraction, top and bottom factored*/
     if(!isoptype(g, OP_DIV)) { /*not a fraction and not defined there, e^(1/x) at 0*/
         ast_Cleanup(g);
         return NULL;
     }
+    if(!ast_Compare(g, f))
+        l = step(s, l, "one fraction", lim(g, var, a));
     top = ast_Copy(ast_ChildGet(g, 0));
     bottom = ast_Copy(ast_ChildGet(g, 1));
     ast_Cleanup(g);
@@ -94,9 +139,12 @@ static pcas_ast_t *limit_of(pcas_ast_t *f, pcas_ast_t *var, pcas_ast_t *a) {
         t = value_at(top, var, a);
         b = value_at(bottom, var, a);
 
-        if(!is_ast_int(b, 0)) { /*plugs straight in*/
+        if(!is_ast_int(b, 0)) {
             out = ast_MakeBinary(OP_DIV, t, b);
             simplify(out, SIMP_ALL);
+            g = ast_MakeBinary(OP_DIV, ast_Copy(top), ast_Copy(bottom));
+            plug_in(s, l, g, var, a, out);
+            ast_Cleanup(g);
             break;
         }
         if(!is_ast_int(t, 0)) { /*something over 0, no limit*/
@@ -111,7 +159,8 @@ static pcas_ast_t *limit_of(pcas_ast_t *f, pcas_ast_t *var, pcas_ast_t *a) {
         g = ast_MakeBinary(OP_DIV, ast_Copy(top), ast_Copy(bottom));
         cancelled = cancel_fractions(g);
         if(!isoptype(g, OP_DIV)) { /*cancelled all the way down*/
-            out = defined_at(g, var, a) ? value_at(g, var, a) : NULL;
+            l = step(s, l, "0/0, factor and cancel", lim(g, var, a));
+            out = defined_at(g, var, a) ? plug_in(s, l, g, var, a, value_at(g, var, a)) : NULL;
             ast_Cleanup(g);
             break;
         }
@@ -120,6 +169,7 @@ static pcas_ast_t *limit_of(pcas_ast_t *f, pcas_ast_t *var, pcas_ast_t *a) {
             ast_Cleanup(bottom);
             top = ast_Copy(ast_ChildGet(g, 0));
             bottom = ast_Copy(ast_ChildGet(g, 1));
+            l = step(s, l, "0/0, factor and cancel", lim(g, var, a));
         } else {
             t = slope(top, var);
             b = slope(bottom, var);
@@ -127,6 +177,9 @@ static pcas_ast_t *limit_of(pcas_ast_t *f, pcas_ast_t *var, pcas_ast_t *a) {
             ast_Cleanup(bottom);
             top = t;
             bottom = b;
+            ast_Cleanup(g);
+            g = ast_MakeBinary(OP_DIV, ast_Copy(top), ast_Copy(bottom));
+            l = step(s, l, "0/0, l'Hopital", lim(g, var, a));
         }
         ast_Cleanup(g);
     }
@@ -146,9 +199,26 @@ bool eval_limit_nodes(pcas_ast_t *e) {
     if(!isoptype(e, OP_LIMIT) || ast_ChildGet(e, 1)->type != NODE_SYMBOL)
         return changed;
 
-    out = limit_of(ast_ChildGet(e, 0), ast_ChildGet(e, 1), ast_ChildGet(e, 2));
+    out = limit_of(ast_ChildGet(e, 0), ast_ChildGet(e, 1), ast_ChildGet(e, 2), NULL);
     if(out == NULL)
         return changed;
     replace_node(e, out);
+    return true;
+}
+
+bool steps_limit(pcas_ast_t *l, steps_t *out) {
+    pcas_ast_t *v;
+
+    out->n = 0;
+    if(!isoptype(l, OP_LIMIT) || ast_ChildGet(l, 1)->type != NODE_SYMBOL)
+        return false;
+    v = limit_of(ast_ChildGet(l, 0), ast_ChildGet(l, 1), ast_ChildGet(l, 2), out);
+    if(v == NULL || pcas_cancelled) {
+        ast_Cleanup(v);
+        steps_free(out);
+        return false;
+    }
+    ast_Cleanup(v);
+    steps_shown(out);
     return true;
 }

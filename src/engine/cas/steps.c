@@ -639,10 +639,7 @@ static bool formula(pcas_ast_t *left, pcas_ast_t *right, Symbol var, side_t *sid
 
 #define DERIVS_MAX 16
 
-static void shown(steps_t *s);
-
-/*a line that's just an expression, = the one above. takes e*/
-static step_t *add_expr(steps_t *s, pcas_ast_t *e) {
+step_t *steps_expr(steps_t *s, pcas_ast_t *e) {
     step_t *l = e != NULL ? new_line(s) : NULL;
 
     if(l == NULL) {
@@ -778,10 +775,12 @@ static void quiet_rules(pcas_ast_t *e, Symbol var) {
     simplify(e, SIMP_LIGHT);
 }
 
-/*once each, two power rules on a line read as one*/
-static void add_rule(step_t *l, const char *name) {
+void steps_rule(step_t *l, const char *name) {
     int i;
 
+    if(l == NULL)
+        return;
+    l->move = 'n';
     for(i = 0; i < STEP_RULES_MAX && l->rules[i] != NULL; i++)
         if(strcmp(l->rules[i], name) == 0)
             return;
@@ -804,12 +803,11 @@ bool steps_derivative(pcas_ast_t *d, steps_t *out) {
 
     first = ast_Copy(d);
     simplify(ast_ChildGet(first, 0), SIMP_LIGHT); /*the shape degrees_out knows, like the answer's. the rational pass makes (x pi)/180*/
-    l = add_expr(out, first);
+    l = steps_expr(out, first);
     cur = ast_Copy(d);
     simplify(ast_ChildGet(cur, 0), SIMP_NORMALIZE | SIMP_COMMUTATIVE | SIMP_EVAL); /*sqrt(x) is x^(1/2) for the rules, a+b+c one sum*/
 
     while(l != NULL && (n = find_derivs(cur, found, 0)) > 0 && !pcas_cancelled) {
-        l->move = 'n';
         any_chain = false;
         for(i = 0; i < n; i++) {
             if((name = one_rule(found[i], var, &chain)) == NULL) {
@@ -817,13 +815,13 @@ bool steps_derivative(pcas_ast_t *d, steps_t *out) {
                 steps_free(out);
                 return false;
             }
-            add_rule(l, name);
+            steps_rule(l, name);
             any_chain |= chain;
         }
         if(any_chain)
-            add_rule(l, "chain rule");
+            steps_rule(l, "chain rule");
         quiet_rules(cur, var);
-        l = add_expr(out, ast_Copy(cur));
+        l = steps_expr(out, ast_Copy(cur));
     }
     if(l == NULL || pcas_cancelled) { /*ran out of lines*/
         ast_Cleanup(cur);
@@ -835,16 +833,15 @@ bool steps_derivative(pcas_ast_t *d, steps_t *out) {
     done = ast_Copy(cur);
     simplify(done, SIMP_LIGHT | SIMP_LIKE_TERMS);
     if(dbg_count_nodes(done) < dbg_count_nodes(cur))
-        add_expr(out, done);
+        steps_expr(out, done);
     else
         ast_Cleanup(done);
     ast_Cleanup(cur);
-    shown(out);
+    steps_shown(out);
     return true;
 }
 
-/*every tree in the canonical form, the lines are only ever drawn. 3X+5 and not 5+3X*/
-static void shown(steps_t *s) {
+void steps_shown(steps_t *s) {
     int i, j;
 
     for(i = 0; i < s->n; i++) {
@@ -985,7 +982,7 @@ bool steps_solve(pcas_ast_t *left, pcas_ast_t *right, Symbol var, Method m, step
     if(!ok)
         steps_free(out);
     else
-        shown(out);
+        steps_shown(out);
     return ok;
 }
 

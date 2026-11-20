@@ -19,7 +19,7 @@ static const char *const method_keys[5] = { "optimal", "root", "factor", "square
 
 static bool open;
 static pcas_ast_t *lhs, *rhs;
-static pcas_ast_t *deriv; /* d/dx node for derivative steps, else NULL */
+static pcas_ast_t *calc; /* the d/dx or limit node for those steps, else NULL */
 static Symbol var;
 static Method method;
 static box_t *rows[ROWS_MAX];
@@ -163,9 +163,16 @@ static void lines_out(steps_t *s) {
 /* the steps into rows, false if it doesn't do this one */
 static bool build(void) {
     static steps_t s; /* 24 lines, ~1 KB on the CE */
+    bool ok;
     int i;
 
-    if(deriv != NULL ? !steps_derivative(deriv, &s) : !steps_solve(lhs, rhs, var, method, &s))
+    if(calc == NULL)
+        ok = steps_solve(lhs, rhs, var, method, &s);
+    else if(isoptype(calc, OP_LIMIT))
+        ok = steps_limit(calc, &s);
+    else
+        ok = steps_derivative(calc, &s);
+    if(!ok)
         return false;
     if(setting_angle == ANGLE_DEGREES)
         lines_out(&s);
@@ -210,8 +217,8 @@ const char *work_open(char *src) {
     return NULL;
 }
 
-const char *work_open_deriv(pcas_ast_t *d) {
-    deriv = d;
+const char *work_open_calc(pcas_ast_t *e) {
+    calc = e;
     if(!build()) {
         work_close();
         return "no steps for this one yet";
@@ -228,13 +235,13 @@ void work_close(void) {
     free_rows();
     ast_Cleanup(lhs);
     ast_Cleanup(rhs);
-    ast_Cleanup(deriv);
-    lhs = rhs = deriv = NULL;
+    ast_Cleanup(calc);
+    lhs = rhs = calc = NULL;
     open = false;
 }
 
 void work_key(keypress_t p) {
-    if(p.key >= K_YEQU && p.key <= K_GRAPH && deriv == NULL) {
+    if(p.key >= K_YEQU && p.key <= K_GRAPH && calc == NULL) {
         Method m = (Method)(p.key - K_YEQU);
 
         /* one that doesn't fit leaves the steps as they are */
@@ -289,6 +296,6 @@ void work_draw(void) {
         screen_color(COL_DIM);
         screen_vline(x0 + w - 2, y0 + (bottom - y0) * top / nrows, bar_h > 2 ? bar_h : 2);
     }
-    if(deriv == NULL)
+    if(calc == NULL)
         draw_softkeys(&areas.keys, method_keys, (int)method, off);
 }
