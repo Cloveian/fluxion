@@ -74,7 +74,7 @@ x^2 cos x + 2x sin x
 - 3x^2 is the constant multiple rule, not the product rule with a d/dx(3) to throw away
 - chain rule gets named next to the rule that left a d/dx of something that isn't just x
 - the last line gets like terms collected if that makes it shorter, not enter's full simplify: that one takes ~7 s on the CE for x^2 sin x, and turns (1-ln x)/x^2 into 1/x^2 - ln(x)/x^2
-- d/dx at a value (deriv(f,x,3)) has no steps yet
+- d/dx at a value (deriv(f,x,3)) is the same rules at x, then the value plugged in as written and what it comes to: 2x, 2\*3, 6. if there's no x left by then (d/dx(3x) is just 3) there's nothing to plug in
 - d/dx(x) on its own is 1 by the power rule (x is x^1), a proposal like the rest
 
 ### Proposal

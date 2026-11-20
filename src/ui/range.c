@@ -13,7 +13,7 @@
 #include "render/draw.h"
 
 /*
-    range(f, x). the engine has no limits, so it goes in pieces. domain() and
+    range(f, x). the engine has no limits at infinity, so it goes in pieces. domain() and
     asym() cut the x line wherever f stops being continuous (a bound, a hole, a
     vertical asymptote), and on each piece the y values run between the biggest
     and smallest of what f hits (turning points from f' = 0, closed ends) and

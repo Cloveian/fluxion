@@ -797,7 +797,7 @@ bool steps_derivative(pcas_ast_t *d, steps_t *out) {
     int n, i;
 
     out->n = 0;
-    if(!isoptype(d, OP_DERIV) || ast_ChildGet(d, 1)->type != NODE_SYMBOL || !ast_Compare(ast_ChildGet(d, 1), ast_ChildGet(d, 2)))
+    if(!isoptype(d, OP_DERIV) || ast_ChildGet(d, 1)->type != NODE_SYMBOL)
         return false;
     var = ast_ChildGet(d, 1)->op.symbol;
 
@@ -806,6 +806,8 @@ bool steps_derivative(pcas_ast_t *d, steps_t *out) {
     l = steps_expr(out, first);
     cur = ast_Copy(d);
     simplify(ast_ChildGet(cur, 0), SIMP_NORMALIZE | SIMP_COMMUTATIVE | SIMP_EVAL); /*sqrt(x) is x^(1/2) for the rules, a+b+c one sum*/
+    if(cur != NULL) /*d/dx at 3: the rules on d/dx at x, the 3 goes in at the end*/
+        replace_node(ast_ChildGet(cur, 2), ast_Copy(ast_ChildGet(d, 1)));
 
     while(l != NULL && (n = find_derivs(cur, found, 0)) > 0 && !pcas_cancelled) {
         any_chain = false;
@@ -832,10 +834,25 @@ bool steps_derivative(pcas_ast_t *d, steps_t *out) {
     /*and like terms collected, if that's shorter. not enter's SIMP_ALL: ~7 s on the CE for x^2sin(x), and (1-ln(x))/x^2 came out 1/x^2-ln(x)/x^2*/
     done = ast_Copy(cur);
     simplify(done, SIMP_LIGHT | SIMP_LIKE_TERMS);
-    if(dbg_count_nodes(done) < dbg_count_nodes(cur))
-        steps_expr(out, done);
-    else
+    if(dbg_count_nodes(done) < dbg_count_nodes(cur)) {
+        l = steps_expr(out, ast_Copy(done));
+        ast_Cleanup(cur);
+        cur = done;
+    } else {
         ast_Cleanup(done);
+    }
+
+    /*at a value: the value in as written, then what that comes to. no x left in it is no plug in*/
+    if(!ast_Compare(ast_ChildGet(d, 1), ast_ChildGet(d, 2)) && substitute(cur, ast_ChildGet(d, 1), ast_ChildGet(d, 2))) {
+        steps_rule(l, "plug in");
+        steps_expr(out, ast_Copy(cur));
+        done = ast_Copy(cur);
+        simplify(done, SIMP_ALL);
+        if(ast_Compare(done, cur)) /*2y at y*/
+            ast_Cleanup(done);
+        else
+            steps_expr(out, done);
+    }
     ast_Cleanup(cur);
     steps_shown(out);
     return true;

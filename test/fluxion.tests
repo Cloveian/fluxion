@@ -814,7 +814,12 @@ steps; deriv(sin(X^2),X,X); X; deriv(sin(X^2), X, X) | trig rule, chain rule | d
 steps; deriv(e^(3X),X,X); X; deriv(e^(3X), X, X) | exp rule, chain rule | 3e^(3X)
 steps; deriv(ln(X)/X,X,X); X; deriv(ln(X)/X, X, X) | quotient rule | (Xderiv(ln(X), X, X)_ln(X))/X^2 | log rule | (1_ln(X))/X^2
 steps; deriv(sqrt(X),X,X); X; deriv(sqrt(X), X, X) | power rule | sqrt(X)/(2X)
-steps; deriv(X^2,X,3); X; none
+#at a value, the rules on d/dx at x then the value plugged in
+steps; deriv(X^2,X,3); X; deriv(X^2,X,3) | power rule | 2X | plug in | 2*3 | 6
+steps; deriv(X^2sin(X),X,pi); X; deriv(X^2sin(X),X,pi) | product rule | X^2deriv(sin(X),X,X)+deriv(X^2,X,X)sin(X) | power rule, trig rule | X^2cos(X)+2Xsin(X) | plug in | 2pisin(pi)+pi^2cos(pi) | -pi^2
+steps; deriv(3X^2+2X+1,X,1); X; deriv(3X^2+2X+1,X,1) | sum rule | deriv(3X^2,X,X)+2 | constant multiple | 3deriv(X^2,X,X)+2 | power rule | 6X+2 | plug in | 2+6 | 8
+steps; deriv(3X,X,5); X; deriv(3X,X,5) | constant multiple | 3
+steps; deriv(X^2,X,Y); X; deriv(X^2,X,Y) | power rule | 2X | plug in | 2Y
 steps; deriv((2X+1)^3,X,X); X; deriv((2X+1)^3, X, X) | power rule, chain rule | 6(2X+1)^2
 steps; deriv(Xe^X,X,X); X; deriv(Xe^X, X, X) | product rule | Xderiv(e^X, X, X)+e^X | exp rule | Xe^X+e^X
 #limits shown like on paper, same steps type: the rules between are plug in, one fraction, 0/0 cancel or 0/0 l'Hopital

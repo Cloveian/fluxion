@@ -44,8 +44,7 @@ typedef struct {
 bool steps_solve(pcas_ast_t *left, pcas_ast_t *right, Symbol var, Method m, steps_t *out);
 /*just the check, for greying out the method menu*/
 bool steps_fit(pcas_ast_t *left, pcas_ast_t *right, Symbol var, Method m);
-/*d/dx(f) one rule at a time, every d/dx still left gets one per line. d is the deriv node, false if it's
-evaluated at a value or a rule doesn't fit*/
+/*d/dx(f) one rule at a time, every d/dx still left gets one per line, then the value plugged in if it's at one. d is the deriv node, false if a rule doesn't fit*/
 bool steps_derivative(pcas_ast_t *d, steps_t *out);
 /*lim(f) like on paper: plug in, or on 0/0 cancel / l'hopital first. l is the limit node, false if there isn't one*/
 bool steps_limit(pcas_ast_t *l, steps_t *out);
