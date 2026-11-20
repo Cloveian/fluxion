@@ -283,14 +283,14 @@ static unsigned _to_binary(pcas_ast_t *e, uint8_t *data, unsigned index, struct 
             add_token(TOK_CLOSE_PAR);
 
             break;
-        }  case OP_DERIV: {
+        }  case OP_DERIV: case OP_LIMIT: { /*Fluxion: limit(f,x,a) the same shape*/
             pcas_ast_t *a, *b, *c;
 
             a = ast_ChildGet(e, 0);
             b = ast_ChildGet(e, 1);
             c = ast_ChildGet(e, 2);
 
-            add_token(TOK_DERIV);
+            add_token(optype(e) == OP_LIMIT ? TOK_LIMIT : TOK_DERIV);
             index = _to_binary(a, data, index, lookup, err);
             add_token(TOK_COMMA);
             index = _to_binary(b, data, index, lookup, err);

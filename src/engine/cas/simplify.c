@@ -1101,6 +1101,7 @@ bool simplify(pcas_ast_t *e, unsigned short flags) {
         
         if(flags & SIMP_DERIV) {
             intermediate_change |= eval_derivative_nodes(e);
+            intermediate_change |= eval_limit_nodes(e); /*Fluxion*/
             did_change |= intermediate_change;
         }
 

@@ -474,6 +474,19 @@ static box_t *build_deriv(pcas_ast_t *e, unsigned char level) {
     return row;
 }
 
+/* lim with x->a lowered next to it like a log's base, then (f) */
+static box_t *build_limit(pcas_ast_t *e, unsigned char level) {
+    box_t *row = new_box(BOX_ROW, level), *to = new_box(BOX_ROW, level + 1);
+    char arrow[2] = { CH_ARROW, '\0' };
+
+    add(to, build(ast_ChildGet(e, 1), level + 1));
+    add(to, new_text(arrow, level + 1));
+    add(to, build(ast_ChildGet(e, 2), level + 1));
+    add(row, pair(BOX_SUB, new_text("lim", level), to, level));
+    add(row, wrap(BOX_PARENS, build(ast_ChildGet(e, 0), level), level));
+    return row;
+}
+
 static box_t *build_operator(pcas_ast_t *e, unsigned char level) {
     pcas_ast_t *a = ast_ChildGet(e, 0), *b = a != NULL ? a->next : NULL;
 
@@ -514,6 +527,8 @@ static box_t *build_operator(pcas_ast_t *e, unsigned char level) {
         return build_log(e, level);
     case OP_DERIV:
         return build_deriv(e, level);
+    case OP_LIMIT:
+        return build_limit(e, level);
     case OP_FACTORIAL:
         return pair(BOX_ROW, build_parens(a, level, parens_as_base(a)), new_text("!", level), level);
     case OP_ABS:

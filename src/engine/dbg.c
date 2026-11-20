@@ -20,7 +20,8 @@ const char *operators[AMOUNT_OPS] = {
     "abs", "sin", "asin", "cos", "acos", "tan", "atan",
     "cot", "sec", "csc",
     "sinh", "asinh", "cosh", "acosh", "tanh", "atanh",
-    "gcd", "lcm", "nCr", "nPr"
+    "gcd", "lcm", "nCr", "nPr",
+    "limit"
 };
 
 const char *symbols[SYM_THETA - SYM_IMAG + 1] = {

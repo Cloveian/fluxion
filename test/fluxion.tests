@@ -747,6 +747,17 @@ simplify; 3root(-54); -3*2^(1/3)
 #cbrt( typed out, its name had the wrong length
 simplify; cbrt(8); 2
 simplify; cbrt(-27); -3
+
+#limit(f, x, a): straight in, on 0/0 cancel then l'hopital. no limit (a number over 0) stays a limit
+simplify; limit(X^2,X,3); 9
+simplify; limit((X^2_1)/(X_1),X,1); 2
+simplify; limit((X^2_4)/(X_2),X,2); 4
+simplify; limit(sin(X)/X,X,0); 1
+simplify; limit((1_cos(X))/X^2,X,0); 1/2
+simplify; limit((sqrt(X)_2)/(X_4),X,4); 1/4
+simplify; limit((e^X_1)/X,X,0); 1
+simplify; limit(1/X,X,0); limit(1/X,X,0)
+simplify; limit(X,X,3)+2; 5
 decimal; 3root(-8); -2
 
 #show the work (steps; equation; var and method; lines | the move | lines). the last line has to be solve's roots

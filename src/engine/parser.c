@@ -22,6 +22,7 @@ struct Identifier ti_table[AMOUNT_TOKENS] = {
     {1, {0x25}},                /*TOK_DERIV*/
     {2, {0xBB, 0x09}}, {2, {0xBB, 0x08}},   /*TOK_GCD, TOK_LCM*/
     {2, {0xBB, 0xF3}}, {2, {0xBB, 0xF4}},   /*TOK_NCR, TOK_NPR. Fluxion: made up, the TI's nCr and nPr go between the numbers*/
+    {2, {0xBB, 0xF5}},          /*TOK_LIMIT. Fluxion: made up, the TI has no limit*/
 
     {1, {0xB1}}, {1, {0xB2}},   /*TOK_INT, TOK_ABS*/
     {1, {0xBC}}, {1, {0xBD}},   /*TOK_SQRT, TOK_CUBED_ROOT*/
@@ -64,6 +65,7 @@ struct Identifier str_table[AMOUNT_TOKENS] = {
     {6, "deriv("},                  /*TOK_DERIV*/
     {4, "gcd("}, {4, "lcm("},       /*TOK_GCD, TOK_LCM*/
     {4, "nCr("}, {4, "nPr("},       /*TOK_NCR, TOK_NPR*/
+    {6, "limit("},                  /*TOK_LIMIT*/
 
     {4, "int("}, {4, "abs("},       /*TOK_INT, TOK_ABS*/
     {5, "sqrt("}, {5, "cbrt("},     /*TOK_SQRT, TOK_CUBED_ROOT. Fluxion: 7 upstream, cbrt( never matched*/
@@ -316,7 +318,7 @@ uint8_t operand_count(TokenType type) {
     if(type >= TOK_GCD && type <= TOK_NPR)
         return 2;
 
-    if(type == TOK_DERIV)
+    if(type == TOK_DERIV || type == TOK_LIMIT) /*Fluxion: limit(f, x, a)*/
         return 3;
 
     return 0;
@@ -379,6 +381,7 @@ void translate(pcas_ast_t *e) {
     case TOK_LCM:        optype(e) = OP_LCM; break;
     case TOK_NCR:        optype(e) = OP_NCR; break;
     case TOK_NPR:        optype(e) = OP_NPR; break;
+    case TOK_LIMIT:      optype(e) = OP_LIMIT; break; /*Fluxion*/
     case TOK_INT:        optype(e) = OP_INT; break;
     case TOK_ABS:        optype(e) = OP_ABS; break;
     case TOK_SQRT:

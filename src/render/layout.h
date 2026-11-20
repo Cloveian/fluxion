@@ -28,6 +28,7 @@
 #define CH_CDOT     '\x04'      /* multiplication dot, only between two numbers */
 #define CH_EULER    '\x05'      /* the constant e, bold so it isn't the variable e */
 #define CH_IMAG     '\x06'      /* the constant i, bold so it isn't the variable i */
+#define CH_ARROW    '\x15'      /* x->a under a lim. the same glyph as the editor's sto-> */
 
 /*
     spacing, in pixels. copied from TeX's habits: room around + and -, none for

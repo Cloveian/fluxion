@@ -49,6 +49,8 @@ typedef enum {
 
     /*Fluxion: two arguments, so past the unary range on purpose*/
     OP_GCD, OP_LCM, OP_NCR, OP_NPR,
+    /*Fluxion: lim of the 1st child as the 2nd (the var) goes to the 3rd, same children as OP_DERIV*/
+    OP_LIMIT,
 
     AMOUNT_OPS
 } OperatorType;

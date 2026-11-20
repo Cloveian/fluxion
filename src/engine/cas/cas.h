@@ -262,6 +262,8 @@ float approx_int(mp_int z);
 
 /*Replaces all instances of from ast to to ast in e*/
 bool substitute(pcas_ast_t *e, pcas_ast_t *from, pcas_ast_t *to);
+/*Fluxion: every limit(f,x,a) node in e worked out, SIMP_DERIV runs it. one with no limit stays a limit*/
+bool eval_limit_nodes(pcas_ast_t *e);
 
 /*Returns the greatest common divisor of two expressions.
 gcd(X(X+1)^2, AX) = X 
