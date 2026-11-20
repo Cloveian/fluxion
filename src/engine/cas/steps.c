@@ -739,6 +739,11 @@ static const char *one_rule(pcas_ast_t *e, Symbol var, bool *chain) {
         ast_Cleanup(rest);
         return id_Execute(e, &id_deriv_product_rule, false) ? "product rule" : NULL;
     }
+    if(isoptype(f, OP_DIV) && !has_symbol(ast_ChildGet(f, 1), var)) {
+        /*x^2/2, and log(x) is ln(x)/ln(10) off the table. the quotient rule would d/dx the bottom for nothing*/
+        replace_node(e, ast_MakeBinary(OP_DIV, deriv_of(ast_Copy(ast_ChildGet(f, 0)), e), ast_Copy(ast_ChildGet(f, 1))));
+        return "constant multiple";
+    }
     if(isoptype(f, OP_POW) && !has_symbol(ast_ChildGet(f, 1), var)) {
         *chain = ast_ChildGet(f, 0)->type != NODE_SYMBOL;
         return id_Execute(e, &id_deriv_power_rule, false) ? "power rule" : NULL;

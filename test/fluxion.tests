@@ -809,6 +809,10 @@ steps; deriv(X^2,X,X); X; deriv(X^2, X, X) | power rule | 2X
 steps; deriv(X,X,X); X; deriv(X, X, X) | power rule | 1
 steps; deriv(sin(X),X,X); X; deriv(sin(X), X, X) | trig rule | cos(X)
 steps; deriv(e^X,X,X); X; deriv(e^X, X, X) | exp rule | e^X
+#a bottom with no x is a constant multiple, no quotient rule
+steps; deriv(X^2/2,X,X); X; deriv(X^2/2, X, X) | constant multiple | deriv(X^2, X, X)/2 | power rule | X
+steps; deriv(sin(X)/3,X,X); X; deriv(sin(X)/3, X, X) | constant multiple | deriv(sin(X), X, X)/3 | trig rule | cos(X)/3
+steps; deriv(log(X),X,X); X; deriv(log(X), X, X) | log rule | deriv(ln(X)/ln(10), X, X) | constant multiple | deriv(ln(X), X, X)/ln(10) | log rule | 1/(Xln(10))
 steps; deriv(X^2sin(piX/180),X,X); X; deriv(X^2sin((Xpi)/180), X, X) | product rule | X^2deriv(sin((Xpi)/180), X, X)+deriv(X^2, X, X)sin((Xpi)/180) | power rule, trig rule, chain rule | 2Xsin((Xpi)/180)+(picos((Xpi)/180)X^2)/180
 steps; deriv(3X^2+2X+1,X,X); X; deriv(3X^2+2X+1, X, X) | sum rule | deriv(3X^2, X, X)+2 | constant multiple | 3deriv(X^2, X, X)+2 | power rule | 6X+2
 steps; deriv(X^2sin(X),X,X); X; deriv(X^2sin(X), X, X) | product rule | X^2deriv(sin(X), X, X)+deriv(X^2, X, X)sin(X) | power rule, trig rule | X^2cos(X)+2Xsin(X)
