@@ -22,23 +22,75 @@ static pcas_ast_t *slope(pcas_ast_t *e, pcas_ast_t *var) {
     return d;
 }
 
+static bool is_int_at(pcas_ast_t *e, pcas_ast_t *var, pcas_ast_t *a, int n) {
+    pcas_ast_t *v = value_at(e, var, a);
+    bool is = is_ast_int(v, n);
+
+    ast_Cleanup(v);
+    return is;
+}
+
+/*a value at var = a on paper: no 0 below, no ln(0) or log base 0 / 1, no 0^0 or 0^-1, no tan(pi/2). on the tree as it is, a
+simplify after eats it, 0*e^(1/0) came out 0*/
+static bool defined_at(pcas_ast_t *e, pcas_ast_t *var, pcas_ast_t *a) {
+    pcas_ast_t *c, *v, *base, *trig;
+    bool ok = true;
+
+    if(e->type != NODE_OPERATOR)
+        return true;
+    for(c = ast_ChildGet(e, 0); c != NULL; c = c->next)
+        if(!defined_at(c, var, a))
+            return false;
+    if(!has_symbol(e, var->op.symbol))
+        return true;
+
+    switch(optype(e)) {
+    case OP_DIV:
+        return !is_int_at(ast_ChildGet(e, 1), var, a, 0);
+    case OP_LOG:
+        base = ast_ChildGet(e, 0);
+        if(has_symbol(base, var->op.symbol) && (is_int_at(base, var, a, 0) || is_int_at(base, var, a, 1)))
+            return false;
+        return !is_int_at(ast_ChildGet(e, 1), var, a, 0);
+    case OP_POW:
+        if(!is_int_at(ast_ChildGet(e, 0), var, a, 0))
+            return true;
+        v = value_at(ast_ChildGet(e, 1), var, a);
+        ok = v->type == NODE_NUMBER && mp_rat_compare_zero(v->op.num) > 0;
+        ast_Cleanup(v);
+        return ok;
+    case OP_TAN: case OP_SEC: case OP_COT: case OP_CSC:
+        trig = ast_MakeUnary(optype(e) == OP_TAN || optype(e) == OP_SEC ? OP_COS : OP_SIN, ast_Copy(ast_ChildGet(e, 0)));
+        ok = !is_int_at(trig, var, a, 0);
+        ast_Cleanup(trig);
+        return ok;
+    default:
+        return true;
+    }
+}
+
 /*new, NULL when there isn't one or it gives up*/
 static pcas_ast_t *limit_of(pcas_ast_t *f, pcas_ast_t *var, pcas_ast_t *a) {
     pcas_ast_t *g = ast_Copy(f), *top, *bottom, *t, *b, *out = NULL;
     bool cancelled;
     int tries;
 
-    comdenom(g, true); /*one fraction, top and bottom factored*/
-    if(!isoptype(g, OP_DIV)) {
-        out = value_at(g, var, a);
+    if(defined_at(f, var, a)) { /*plugs straight in*/
         ast_Cleanup(g);
-        return out;
+        return value_at(f, var, a);
+    }
+    comdenom(g, true); /*one fraction, top and bottom factored*/
+    if(!isoptype(g, OP_DIV)) { /*not a fraction and not defined there, e^(1/x) at 0*/
+        ast_Cleanup(g);
+        return NULL;
     }
     top = ast_Copy(ast_ChildGet(g, 0));
     bottom = ast_Copy(ast_ChildGet(g, 1));
     ast_Cleanup(g);
 
     for(tries = 0; tries < TRIES_MAX && !pcas_cancelled; tries++) {
+        if(!defined_at(top, var, a) || !defined_at(bottom, var, a)) /*x e^(1/x) over 1, no limit to find this way*/
+            break;
         t = value_at(top, var, a);
         b = value_at(bottom, var, a);
 
@@ -59,7 +111,7 @@ static pcas_ast_t *limit_of(pcas_ast_t *f, pcas_ast_t *var, pcas_ast_t *a) {
         g = ast_MakeBinary(OP_DIV, ast_Copy(top), ast_Copy(bottom));
         cancelled = cancel_fractions(g);
         if(!isoptype(g, OP_DIV)) { /*cancelled all the way down*/
-            out = value_at(g, var, a);
+            out = defined_at(g, var, a) ? value_at(g, var, a) : NULL;
             ast_Cleanup(g);
             break;
         }

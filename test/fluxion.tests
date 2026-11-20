@@ -758,6 +758,13 @@ simplify; limit((sqrt(X)_2)/(X_4),X,4); 1/4
 simplify; limit((e^X_1)/X,X,0); 1
 simplify; limit(1/X,X,0); limit(1/X,X,0)
 simplify; limit(X,X,3)+2; 5
+#not defined there and nothing to cancel, they stay. x e^(1/x) at 0 came out 0, the simplify ate the e^(1/0)
+simplify; limit(X*e^(1/X),X,0); limit(X*e^(1/X),X,0)
+simplify; limit(ln(X),X,0); limit(ln(X),X,0)
+simplify; limit(logb(2,X),X,1); limit(logb(2,X),X,1)
+simplify; limit(tan(X),X,pi/2); limit(tan(X),X,pi/2)
+simplify; limit(sin(1/X),X,0); limit(sin(1/X),X,0)
+simplify; limit(ln(X),X,1); 0
 decimal; 3root(-8); -2
 
 #show the work (steps; equation; var and method; lines | the move | lines). the last line has to be solve's roots
