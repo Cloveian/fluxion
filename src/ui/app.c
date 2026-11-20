@@ -1091,7 +1091,7 @@ static void show_steps(void) {
         pcas_ast_t *e;
 
         src = ed_to_engine(&view);
-        e = src != NULL ? args_parse(src, &err) : NULL;
+        e = src != NULL ? args_parse_deg(src, &err) : NULL; /* like run(), so the steps end at its answer */
         free(src);
         if(e != NULL && isoptype(e, OP_DERIV)) {
             status = work_open_deriv(e);

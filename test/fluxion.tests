@@ -783,6 +783,7 @@ steps; X^2+3X+1=0; Xsquare; X^2+3X+1=0 | _1 | X^2+3X=-1 | +9/4 | X^2+3X+9/4=5/4 
 #derivatives, steps; deriv(f,X,X); X; lines | the rules used | lines. every d/dx left gets one rule a line, d/dx of a constant or of ax+b goes quietly
 steps; deriv(X^2,X,X); X; deriv(X^2, X, X) | power rule | 2X
 steps; deriv(X,X,X); X; deriv(X, X, X) | power rule | 1
+steps; deriv(X^2sin(piX/180),X,X); X; deriv(X^2sin((Xpi)/180), X, X) | product rule | X^2deriv(sin((Xpi)/180), X, X)+deriv(X^2, X, X)sin((Xpi)/180) | power rule, trig rule, chain rule | 2Xsin((Xpi)/180)+(picos((Xpi)/180)X^2)/180
 steps; deriv(3X^2+2X+1,X,X); X; deriv(3X^2+2X+1, X, X) | sum rule | deriv(3X^2, X, X)+2 | constant multiple | 3deriv(X^2, X, X)+2 | power rule | 6X+2
 steps; deriv(X^2sin(X),X,X); X; deriv(X^2sin(X), X, X) | product rule | X^2deriv(sin(X), X, X)+deriv(X^2, X, X)sin(X) | power rule, trig rule | X^2cos(X)+2Xsin(X)
 steps; deriv(sin(X^2),X,X); X; deriv(sin(X^2), X, X) | trig rule, chain rule | deriv(X^2, X, X)cos(X^2) | power rule | 2Xcos(X^2)

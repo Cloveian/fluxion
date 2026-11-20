@@ -761,19 +761,17 @@ static const char *one_rule(pcas_ast_t *e, Symbol var, bool *chain) {
 /*d/dx(5) is 0 and d/dx(2x+1) is 2 without a line of their own, like on paper, then a light tidy: 1*2x^(2_1) is 2x*/
 static void quiet_rules(pcas_ast_t *e, Symbol var) {
     pcas_ast_t *d[DERIVS_MAX], *c[3];
-    mp_rat slope;
     int n = find_derivs(e, d, 0), i, k, deg;
 
     for(i = 0; i < n; i++) {
-        slope = NULL;
         deg = poly_coefs(ast_ChildGet(d[i], 0), var, c);
-        if(deg == 0)
-            slope = num_FromInt(0);
-        else if(deg == 1)
-            slope = pow_value(c[1]); /*NULL with a letter in it, that one gets its rules*/
-        if(slope != NULL)
-            replace_node(d[i], number(slope));
-        num_Cleanup(slope);
+        if(deg == 0) {
+            replace_node(d[i], ast_MakeNumber(num_FromInt(0)));
+        } else if(deg == 1) {
+            /*any slope, pi/180 from degrees too*/
+            replace_node(d[i], c[1]);
+            c[1] = NULL;
+        }
         for(k = 0; k < 3; k++)
             ast_Cleanup(c[k]);
     }
