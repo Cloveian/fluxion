@@ -809,7 +809,7 @@ bool steps_derivative(pcas_ast_t *d, steps_t *out) {
     if(cur != NULL) /*d/dx at 3: the rules on d/dx at x, the 3 goes in at the end*/
         replace_node(ast_ChildGet(cur, 2), ast_Copy(ast_ChildGet(d, 1)));
 
-    while(l != NULL && (n = find_derivs(cur, found, 0)) > 0 && !pcas_cancelled) {
+    while(l != NULL && !pcas_cancelled && (n = find_derivs(cur, found, 0)) > 0) { /*cur can be NULL after an oom*/
         any_chain = false;
         for(i = 0; i < n; i++) {
             if((name = one_rule(found[i], var, &chain)) == NULL) {
@@ -834,6 +834,12 @@ bool steps_derivative(pcas_ast_t *d, steps_t *out) {
     /*and like terms collected, if that's shorter. not enter's SIMP_ALL: ~7 s on the CE for x^2sin(x), and (1-ln(x))/x^2 came out 1/x^2-ln(x)/x^2*/
     done = ast_Copy(cur);
     simplify(done, SIMP_LIGHT | SIMP_LIKE_TERMS);
+    if(done == NULL || pcas_cancelled) { /*oom*/
+        ast_Cleanup(done);
+        ast_Cleanup(cur);
+        steps_free(out);
+        return false;
+    }
     if(dbg_count_nodes(done) < dbg_count_nodes(cur)) {
         l = steps_expr(out, ast_Copy(done));
         ast_Cleanup(cur);
