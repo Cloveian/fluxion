@@ -454,7 +454,8 @@ static bool coef_rat(pcas_ast_t *e, mp_rat r) {
     }
     if(e->type == NODE_NUMBER)
         return mp_rat_copy(e->op.num, r) == MP_OK;
-    if(isoptype(e, OP_DIV) && ast_ChildGet(e, 0)->type == NODE_NUMBER && ast_ChildGet(e, 1)->type == NODE_NUMBER
+    if(isoptype(e, OP_DIV) && ast_ChildLength(e) == 2 /*oom leaves a child out*/
+       && ast_ChildGet(e, 0)->type == NODE_NUMBER && ast_ChildGet(e, 1)->type == NODE_NUMBER
        && !is_zero(ast_ChildGet(e, 1)))
         return mp_rat_div(ast_ChildGet(e, 0)->op.num, ast_ChildGet(e, 1)->op.num, r) == MP_OK;
     return false;
