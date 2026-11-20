@@ -253,13 +253,17 @@ static void add_split(steps_t *s, Symbol var, pcas_ast_t *base, pcas_ast_t *pm, 
     step_t *l;
     int i;
 
+    /*base/den +- pm/den, each half cancels on its own: (_6+4sqrt(2))/2 is _3+2sqrt(2) with no identity pass*/
     for(i = 0; i < 2; i++) {
-        x[i] = ast_MakeBinary(OP_MULT, ast_MakeNumber(num_FromInt(i == 0 ? 1 : -1)), ast_Copy(pm));
-        if(base != NULL)
-            x[i] = ast_MakeBinary(OP_ADD, ast_Copy(base), x[i]);
-        if(den != NULL)
-            x[i] = ast_MakeBinary(OP_DIV, x[i], ast_Copy(den));
-        simplify(x[i], SIMP_ALL); /*_3+2sqrt(2) or (_6+4i)/2 at most*/
+        pcas_ast_t *b = base != NULL ? ast_Copy(base) : ast_MakeNumber(num_FromInt(0));
+        pcas_ast_t *p = ast_MakeBinary(OP_MULT, ast_MakeNumber(num_FromInt(i == 0 ? 1 : -1)), ast_Copy(pm));
+
+        if(den != NULL) {
+            b = ast_MakeBinary(OP_DIV, b, ast_Copy(den));
+            p = ast_MakeBinary(OP_DIV, p, ast_Copy(den));
+        }
+        x[i] = ast_MakeBinary(OP_ADD, b, p);
+        simplify(x[i], SIMP_LIGHT | SIMP_LIKE_TERMS);
     }
     ast_Cleanup(base);
     ast_Cleanup(pm);
@@ -280,6 +284,23 @@ static pcas_ast_t *sqrt_of(pcas_ast_t *v) {
     return ast_MakeBinary(OP_POW, v, ast_MakeBinary(OP_DIV, ast_MakeNumber(num_FromInt(1)), ast_MakeNumber(num_FromInt(2))));
 }
 
+/*sqrt(v) worked out: 2sqrt(2), 3/2, and 2i for -4. sqrt(-n) is i sqrt(n) by hand, the identity passes took ~10 s on the CE for it*/
+static pcas_ast_t *root_of(mp_rat v) {
+    mp_rat size = num_FromInt(0);
+    pcas_ast_t *r;
+
+    mp_rat_abs(v, size);
+    /*sqrt(p)/sqrt(q), the light simplify doesn't root a fraction: sqrt(1/4) stayed*/
+    r = sqrt_of(int_number(mp_rat_numer_ref(size)));
+    if(!mp_rat_is_integer(size))
+        r = ast_MakeBinary(OP_DIV, r, sqrt_of(int_number(mp_rat_denom_ref(size))));
+    if(mp_rat_compare_zero(v) < 0)
+        r = ast_MakeBinary(OP_MULT, ast_MakeSymbol(SYM_IMAG), r);
+    simplify(r, SIMP_LIGHT);
+    num_Cleanup(size);
+    return r;
+}
+
 /*left = v, square root of both sides: left = +-sqrt(8), then left = +-2sqrt(2) when it isn't just a number
 (x^2=9 goes straight to x = +-3). gives the root as it ended up, or NULL for v = 0 (left = 0). takes left*/
 static pcas_ast_t *root_both(steps_t *s, pcas_ast_t *left, mp_rat v) {
@@ -291,8 +312,7 @@ static pcas_ast_t *root_both(steps_t *s, pcas_ast_t *left, mp_rat v) {
         return NULL;
     }
     root = sqrt_of(number(v));
-    done = ast_Copy(root);
-    simplify(done, SIMP_ALL); /*the light one leaves sqrt(-4), it's only a number so it's cheap*/
+    done = root_of(v);
     if(done != NULL && !ast_Compare(root, done) && !is_number(done))
         add_pm(s, ast_Copy(left), NULL, root, NULL);
     else
@@ -597,8 +617,7 @@ static bool formula(pcas_ast_t *left, pcas_ast_t *right, Symbol var, side_t *sid
 
     /*sqrt(32) is 4sqrt(2), sqrt(-16) is 4i*/
     raw = sqrt_of(number(d));
-    done = ast_Copy(raw);
-    simplify(done, SIMP_ALL);
+    done = root_of(d);
     if(!ast_Compare(raw, done))
         add_pm(s, ast_MakeSymbol(var), number(nb), ast_Copy(done), number(two_a));
     ast_Cleanup(raw);
@@ -728,6 +747,10 @@ static const char *one_rule(pcas_ast_t *e, Symbol var, bool *chain) {
         *chain = ast_ChildGet(f, 0)->type != NODE_SYMBOL;
         return id_Execute(e, &id_deriv_power_rule, false) ? "power rule" : NULL;
     }
+    if(f->type == NODE_SYMBOL) { /*just x, it's x^1*/
+        replace_node(e, ast_MakeNumber(num_FromInt(1)));
+        return "power rule";
+    }
     if(f->type != NODE_OPERATOR)
         return NULL;
     name = table_rule(f, &arg);
@@ -808,9 +831,9 @@ bool steps_derivative(pcas_ast_t *d, steps_t *out) {
         return false;
     }
 
-    /*and tidied like enter would, if that's shorter. (1-ln(x))/x^2 is better than enter's 1/x^2-ln(x)/x^2*/
+    /*and like terms collected, if that's shorter. not enter's SIMP_ALL: ~7 s on the CE for x^2sin(x), and (1-ln(x))/x^2 came out 1/x^2-ln(x)/x^2*/
     done = ast_Copy(cur);
-    simplify(done, SIMP_ALL);
+    simplify(done, SIMP_LIGHT | SIMP_LIKE_TERMS);
     if(dbg_count_nodes(done) < dbg_count_nodes(cur))
         add_expr(out, done);
     else

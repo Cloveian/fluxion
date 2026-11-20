@@ -1093,7 +1093,7 @@ static void poly_divide(poly_t *poly, mp_small p, mp_small q, int s) {
     poly_drop_low(poly, s);
 }
 
-static pcas_ast_t *int_number(mp_int z) {
+pcas_ast_t *int_number(mp_int z) {
     mp_rat r = mp_rat_alloc();
 
     mp_int_copy(z, mp_rat_numer_ref(r));

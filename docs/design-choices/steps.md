@@ -73,8 +73,9 @@ x^2 cos x + 2x sin x
 - d/dx of a constant or of ax+b goes without a line, on paper nobody writes d/dx(2x+1) = 2 out
 - 3x^2 is the constant multiple rule, not the product rule with a d/dx(3) to throw away
 - chain rule gets named next to the rule that left a d/dx of something that isn't just x
-- the last line is what enter gives, unless that's longer: (1-ln x)/x^2 over enter's 1/x^2 - ln(x)/x^2
+- the last line gets like terms collected if that makes it shorter, not enter's full simplify: that one takes ~7 s on the CE for x^2 sin x, and turns (1-ln x)/x^2 into 1/x^2 - ln(x)/x^2
 - d/dx at a value (deriv(f,x,3)) has no steps yet
+- d/dx(x) on its own is 1 by the power rule (x is x^1), a proposal like the rest
 
 ### Proposal
 the rule names centered between the lines, every d/dx one rule a line. a default, not decided yet
