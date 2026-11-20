@@ -1344,7 +1344,7 @@ static bool opposite(pcas_ast_t *a, pcas_ast_t *b) {
         return false;
     sum = ast_MakeBinary(OP_ADD, ast_Copy(a), ast_Copy(b));
     simplify(sum, SIMP_NORMALIZE | SIMP_COMMUTATIVE | SIMP_RATIONAL | SIMP_EVAL | SIMP_LIKE_TERMS);
-    zero = is_ast_int(sum, 0);
+    zero = sum != NULL && is_ast_int(sum, 0); /*oom*/
     ast_Cleanup(sum);
     return zero;
 }

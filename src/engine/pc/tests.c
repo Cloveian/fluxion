@@ -292,7 +292,7 @@ static bool same_value(pcas_ast_t *a, pcas_ast_t *b) {
     bool same;
 
     simplify(d, SIMP_ALL);
-    same = is_ast_int(d, 0);
+    same = d != NULL && is_ast_int(d, 0);
     ast_Cleanup(d);
     if(same)
         return true;
@@ -302,7 +302,7 @@ static bool same_value(pcas_ast_t *a, pcas_ast_t *b) {
     simplify(y, SIMP_ALL);
     simplify_canonical_form(x, CANONICAL_ALL);
     simplify_canonical_form(y, CANONICAL_ALL);
-    same = ast_Compare(x, y);
+    same = !pcas_cancelled && ast_Compare(x, y); /*oom, two NULLs compare equal*/
     ast_Cleanup(x);
     ast_Cleanup(y);
     return same;

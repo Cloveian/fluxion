@@ -5,27 +5,39 @@
 
 #define TRIES_MAX 6 /*cancels and l'hopitals before it gives up, (1-cos(x))/x^2 takes 2*/
 
-/*e with var = a and simplified, new*/
+/*e with var = a and simplified, new. NULL once cancelled or out of memory*/
 static pcas_ast_t *value_at(pcas_ast_t *e, pcas_ast_t *var, pcas_ast_t *a) {
     pcas_ast_t *v = ast_Copy(e);
 
+    if(v == NULL)
+        return NULL;
     substitute(v, var, a);
     simplify(v, SIMP_ALL);
+    if(pcas_cancelled) {
+        ast_Cleanup(v);
+        return NULL;
+    }
     return v;
 }
 
-/*d/dx of e, new and simplified*/
+/*d/dx of e, new and simplified. NULL the same way*/
 static pcas_ast_t *slope(pcas_ast_t *e, pcas_ast_t *var) {
     pcas_ast_t *d = ast_Copy(e);
 
+    if(d == NULL)
+        return NULL;
     derivative(d, var, var);
     simplify(d, SIMP_ALL);
+    if(pcas_cancelled) {
+        ast_Cleanup(d);
+        return NULL;
+    }
     return d;
 }
 
 static bool is_int_at(pcas_ast_t *e, pcas_ast_t *var, pcas_ast_t *a, int n) {
     pcas_ast_t *v = value_at(e, var, a);
-    bool is = is_ast_int(v, n);
+    bool is = v != NULL && is_ast_int(v, n);
 
     ast_Cleanup(v);
     return is;
@@ -37,6 +49,8 @@ static bool defined_at(pcas_ast_t *e, pcas_ast_t *var, pcas_ast_t *a) {
     pcas_ast_t *c, *v, *base, *trig;
     bool ok = true;
 
+    if(e == NULL || pcas_cancelled) /*oom, the limit is given up on*/
+        return false;
     if(e->type != NODE_OPERATOR)
         return true;
     for(c = ast_ChildGet(e, 0); c != NULL; c = c->next)
@@ -57,7 +71,7 @@ static bool defined_at(pcas_ast_t *e, pcas_ast_t *var, pcas_ast_t *a) {
         if(!is_int_at(ast_ChildGet(e, 0), var, a, 0))
             return true;
         v = value_at(ast_ChildGet(e, 1), var, a);
-        ok = v->type == NODE_NUMBER && mp_rat_compare_zero(v->op.num) > 0;
+        ok = v != NULL && v->type == NODE_NUMBER && mp_rat_compare_zero(v->op.num) > 0;
         ast_Cleanup(v);
         return ok;
     case OP_TAN: case OP_SEC: case OP_COT: case OP_CSC:
@@ -100,7 +114,8 @@ static pcas_ast_t *plug_in(steps_t *s, step_t *l, pcas_ast_t *e, pcas_ast_t *var
     if(s == NULL)
         return v;
     raw = ast_Copy(e);
-    substitute(raw, var, a);
+    if(raw != NULL)
+        substitute(raw, var, a);
     l = step(s, l, "plug in", raw);
     step(s, l, NULL, ast_Copy(v));
     return v;
@@ -113,14 +128,17 @@ static pcas_ast_t *limit_of(pcas_ast_t *f, pcas_ast_t *var, pcas_ast_t *a, steps
     bool cancelled;
     int tries;
 
-    if(s != NULL) {
-        t = lim(f, var, a);
+    if(s != NULL && (t = lim(f, var, a)) != NULL) {
         simplify(ast_ChildGet(t, 0), SIMP_NORMALIZE | SIMP_COMMUTATIVE | SIMP_RATIONAL | SIMP_EVAL); /*x^2_1 parses as x^2+-1*1, it showed a lone minus*/
         l = steps_expr(s, t);
     }
     if(defined_at(f, var, a)) {
         ast_Cleanup(g);
         return plug_in(s, l, f, var, a, value_at(f, var, a));
+    }
+    if(g == NULL || pcas_cancelled) {
+        ast_Cleanup(g);
+        return NULL;
     }
     comdenom(g, true); /*one fraction, top and bottom factored*/
     if(!isoptype(g, OP_DIV)) { /*not a fraction and not defined there, e^(1/x) at 0*/
@@ -138,6 +156,11 @@ static pcas_ast_t *limit_of(pcas_ast_t *f, pcas_ast_t *var, pcas_ast_t *a, steps
             break;
         t = value_at(top, var, a);
         b = value_at(bottom, var, a);
+        if(t == NULL || b == NULL) {
+            ast_Cleanup(t);
+            ast_Cleanup(b);
+            break;
+        }
 
         if(!is_ast_int(b, 0)) {
             out = ast_MakeBinary(OP_DIV, t, b);
@@ -157,6 +180,8 @@ static pcas_ast_t *limit_of(pcas_ast_t *f, pcas_ast_t *var, pcas_ast_t *a, steps
 
         /*0/0: what top and bottom share comes off first, then l'hopital*/
         g = ast_MakeBinary(OP_DIV, ast_Copy(top), ast_Copy(bottom));
+        if(g == NULL)
+            break;
         cancelled = cancel_fractions(g);
         if(!isoptype(g, OP_DIV)) { /*cancelled all the way down*/
             l = step(s, l, "0/0, factor and cancel", lim(g, var, a));

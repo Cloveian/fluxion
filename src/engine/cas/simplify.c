@@ -900,6 +900,11 @@ bool simplify_periodic(pcas_ast_t *e) {
     copy = ast_MakeBinary(OP_DIV, ast_Copy(ast_ChildGet(e, 0)), ast_MakeSymbol(SYM_PI));
     simplify(copy, SIMP_NORMALIZE | SIMP_COMMUTATIVE | SIMP_RATIONAL | SIMP_EVAL);
 
+    if(pcas_cancelled || copy == NULL) { /*Fluxion: oom, copy or a child of it can be NULL*/
+        ast_Cleanup(copy);
+        return false;
+    }
+
     if(!isoptype(copy, OP_DIV) && copy->type != NODE_NUMBER) {
         ast_Cleanup(copy);
         return false;
