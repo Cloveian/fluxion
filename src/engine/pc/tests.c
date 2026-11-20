@@ -8,6 +8,7 @@
 #include "../parser.h"
 #include "../ast.h"
 #include "../cas/cas.h"
+#include "../cas/steps.h"
 
 #include "../dbg.h"
 
@@ -38,6 +39,7 @@ TestType resolve_type(char *type) {
     if(!strcmp(type, "factor"))     return TEST_FACTOR;
     if(!strcmp(type, "factortext")) return TEST_FACTOR_TEXT;
     if(!strcmp(type, "simplifytext")) return TEST_SIMPLIFY_TEXT;
+    if(!strcmp(type, "steps"))      return TEST_STEPS;
     if(!strcmp(type, "expand"))     return TEST_EXPAND;
     if(!strcmp(type, "deriv"))      return TEST_DERIV;
     if(!strcmp(type, "solve"))      return TEST_SOLVE;
@@ -281,6 +283,117 @@ static bool test_csolve(test_t *t) {
 /*Fluxion: turn; equation; var; the roots from 0 up to 2pi, smallest first*/
 static bool test_turn(test_t *t) {
     return solve_roots(t, true, false);
+}
+
+/*Fluxion: e exproted onto the end of buf, ? if it won't export*/
+static void append_tree(char *buf, unsigned size, pcas_ast_t *e) {
+    pcas_error_t err;
+    unsigned len;
+    char *out = (char*)export_to_binary(e, &len, str_table, &err);
+
+    if(out == NULL || err != E_SUCCESS) {
+        strncat(buf, "?", size - strlen(buf) - 1);
+    } else {
+        if(len > size - strlen(buf) - 1)
+            len = size - strlen(buf) - 1;
+        strncat(buf, out, len); /*out isn't null terminated*/
+    }
+    free(out);
+}
+
+/*Fluxion: steps; equation; var and a method (X, Xformula, ...); the lines joinned with |, the move between
+two lines as its sign and what it uses (_5, /3), or none. a last line of var = numbers has to be what solve says*/
+static bool test_steps(test_t *t) {
+    static const char *const methods[METHOD_COUNT] = { "", "root", "factor", "square", "formula" };
+    pcas_ast_t *left, *right, *e, *roots[SOLVE_MAX] = {0};
+    char *eq = strchr(t->arg1, '='), got[MAX_PAR * 2] = "";
+    pcas_error_t err;
+    steps_t s;
+    step_t *last;
+    int m, i, j, n;
+    bool passed;
+
+    for(m = 0; m < METHOD_COUNT && strcmp(t->arg2 + 1, methods[m]) != 0; m++);
+    if(eq == NULL || m == METHOD_COUNT) {
+        printf("Test failed on line %u. steps; equation; var and method; lines\n", t->line);
+        return false;
+    }
+    *eq = '\0';
+    left = parse((uint8_t*)t->arg1, strlen(t->arg1), str_table, &err);
+    right = err == E_SUCCESS ? parse((uint8_t*)eq + 1, strlen(eq + 1), str_table, &err) : NULL;
+    if(err != E_SUCCESS || left == NULL || right == NULL) {
+        printf("Test failed on line %u. Unable to parse the equation\n", t->line);
+        ast_Cleanup(left);
+        ast_Cleanup(right);
+        return false;
+    }
+
+    if(!steps_solve(left, right, (Symbol)t->arg2[0], (Method)m, &s)) {
+        strcpy(got, "none");
+    } else {
+        for(i = 0; i < s.n; i++) {
+            for(j = 0; j < s.line[i].eqs; j++) {
+                step_eq_t *q = &s.line[i].eq[j];
+
+                if(i > 0 || j > 0)
+                    strncat(got, j > 0 ? "or" : "|", sizeof(got) - strlen(got) - 1);
+                append_tree(got, sizeof(got), q->left);
+                strncat(got, q->den != NULL ? "=(" : "=", sizeof(got) - strlen(got) - 1);
+                if(q->right != NULL)
+                    append_tree(got, sizeof(got), q->right);
+                if(q->pm != NULL) {
+                    strncat(got, "+-", sizeof(got) - strlen(got) - 1);
+                    append_tree(got, sizeof(got), q->pm);
+                }
+                if(q->den != NULL) {
+                    strncat(got, ")/", sizeof(got) - strlen(got) - 1);
+                    append_tree(got, sizeof(got), q->den);
+                }
+            }
+            if(s.line[i].move != 0) {
+                char move[3] = "|?";
+
+                move[1] = s.line[i].move;
+                strncat(got, move, sizeof(got) - strlen(got) - 1);
+                append_tree(got, sizeof(got), s.line[i].by);
+            }
+        }
+    }
+    passed = strcmp(got, t->arg3) == 0;
+    if(!passed)
+        printf("Test failed on line %u. Expected %s but got %s\n", t->line, t->arg3, got);
+
+    /*the last line against solve, var = a number each*/
+    last = s.n > 0 ? &s.line[s.n - 1] : NULL;
+    if(passed && last != NULL && last->eq[0].left->type == NODE_SYMBOL && last->eq[0].pm == NULL) {
+        e = ast_MakeBinary(OP_ADD, ast_Copy(left), ast_MakeBinary(OP_MULT, ast_MakeNumber(num_FromInt(-1)), ast_Copy(right)));
+        n = solve_ex(e, (Symbol)t->arg2[0], roots, false);
+        for(j = 0; j < last->eqs; j++) {
+            pcas_ast_t *x = ast_Copy(last->eq[j].right);
+
+            simplify(x, SIMP_NORMALIZE | SIMP_COMMUTATIVE | SIMP_RATIONAL | SIMP_EVAL);
+            for(i = 0; i < n && !ast_Compare(roots[i], x); i++);
+            ast_Cleanup(x);
+            if(n < 0 || i == n) {
+                printf("Test failed on line %u. The steps end at a root solve doesn't have\n", t->line);
+                passed = false;
+                break;
+            }
+        }
+        if(passed && n != last->eqs) {
+            printf("Test failed on line %u. solve has %d roots, the steps %d\n", t->line, n, last->eqs);
+            passed = false;
+        }
+        for(i = 0; i < n; i++)
+            ast_Cleanup(roots[i]);
+        ast_Cleanup(e);
+    }
+
+    if(s.n > 0)
+        steps_free(&s);
+    ast_Cleanup(left);
+    ast_Cleanup(right);
+    return passed;
 }
 
 /*Fluxion: the values exported like test_solve prints its roots, joined with commas, - for none*/
@@ -571,6 +684,8 @@ bool test_Run(test_t *t) {
         return test_domain(t);
     if(t->type == TEST_SYSTEM)
         return test_system(t);
+    if(t->type == TEST_STEPS)
+        return test_steps(t);
 
     a = parse((uint8_t*)t->arg1, strlen(t->arg1), str_table, &err);
     if(err != E_SUCCESS) {

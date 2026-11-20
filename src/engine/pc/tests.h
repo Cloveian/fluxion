@@ -29,6 +29,7 @@ typedef enum {
     TEST_DOMAIN,    /*Fluxion: domain; expression; var; lower <x> | upper <x> | holes <list>, o for open, or empty / unknown*/
     TEST_FACTOR_TEXT, /*Fluxion: factortext; expression; text. factor, then the canonical form, as it's shown*/
     TEST_SIMPLIFY_TEXT, /*Fluxion: simplifytext; expression; text. cancel and simplify like enter, no form setting, as it's shown*/
+    TEST_STEPS,     /*Fluxion: steps; equation; var and method; the lines | the move | lines*/
 
     TEST_INVALID
 } TestType;

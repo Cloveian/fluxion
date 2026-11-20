@@ -220,26 +220,50 @@ static bool read_poly(pcas_ast_t *e, Symbol var, coefs_t *p) {
     return true;
 }
 
-int poly_degree(pcas_ast_t *expr, Symbol var, pcas_ast_t **lead) {
+/*expr left alone, a copy gets simplified and expanded first*/
+static bool read_copy(pcas_ast_t *expr, Symbol var, coefs_t *p) {
     pcas_ast_t *e = ast_Copy(expr);
-    coefs_t p;
-    int deg = -1;
+    bool ok;
 
     if(e == NULL)
-        return -1;
+        return false;
     simplify(e, SIMP_SOLVE);
     expand(e, EXP_ALL);
     simplify(e, SIMP_SOLVE);
-    if(!pcas_cancelled && read_poly(e, var, &p)) {
-        deg = p.deg;
-        if(lead != NULL) {
-            *lead = p.lead;
-            p.lead = NULL;
-        }
-        coefs_free(&p);
-    }
+    ok = !pcas_cancelled && read_poly(e, var, p);
     ast_Cleanup(e);
+    return ok;
+}
+
+int poly_degree(pcas_ast_t *expr, Symbol var, pcas_ast_t **lead) {
+    coefs_t p;
+    int deg;
+
+    if(!read_copy(expr, var, &p))
+        return -1;
+    deg = p.deg;
+    if(lead != NULL) {
+        *lead = p.lead;
+        p.lead = NULL;
+    }
+    coefs_free(&p);
     return deg;
+}
+
+int poly_coefs(pcas_ast_t *expr, Symbol var, pcas_ast_t *c[3]) {
+    coefs_t p;
+    int i;
+
+    for(i = 0; i < 3; i++)
+        c[i] = NULL;
+    if(!read_copy(expr, var, &p))
+        return -1;
+    for(i = 0; i < 3; i++) {
+        c[i] = p.c[i];
+        p.c[i] = NULL;
+    }
+    coefs_free(&p);
+    return p.deg;
 }
 
 /*-c[0] / c[1]*/

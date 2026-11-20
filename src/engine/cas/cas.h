@@ -349,5 +349,7 @@ int solve_system(pcas_ast_t **eqs, int n, const Symbol *vars, pcas_ast_t *out[][
 /*Fluxion: degree of e (simplified and expanded) as a polynomial in var, -1 if it
   isn't one. the leading coefficient goes in *lead if that's not NULL (new tree)*/
 int poly_degree(pcas_ast_t *e, Symbol var, pcas_ast_t **lead);
+/*Fluxion: the same, and c[0] + c[1]var + c[2]var^2 into c (new trees, NULL for 0, all NULL at -1). higher terms are left out*/
+int poly_coefs(pcas_ast_t *e, Symbol var, pcas_ast_t *c[3]);
 
 #endif
