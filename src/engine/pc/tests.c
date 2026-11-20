@@ -335,8 +335,10 @@ static bool test_steps(test_t *t) {
             for(j = 0; j < s.line[i].eqs; j++) {
                 step_eq_t *q = &s.line[i].eq[j];
 
-                if(i > 0 || j > 0)
-                    strncat(got, j > 0 ? "or" : "|", sizeof(got) - strlen(got) - 1);
+                if(j > 0)
+                    strncat(got, s.line[i].list ? "," : "or", sizeof(got) - strlen(got) - 1);
+                else if(i > 0)
+                    strncat(got, "|", sizeof(got) - strlen(got) - 1);
                 append_tree(got, sizeof(got), q->left);
                 strncat(got, q->den != NULL ? "=(" : "=", sizeof(got) - strlen(got) - 1);
                 if(q->right != NULL)
@@ -363,17 +365,24 @@ static bool test_steps(test_t *t) {
     if(!passed)
         printf("Test failed on line %u. Expected %s but got %s\n", t->line, t->arg3, got);
 
-    /*the last line against solve, var = a number each*/
+    /*the last line against solve, var = a number each. complex like the app's solve*/
     last = s.n > 0 ? &s.line[s.n - 1] : NULL;
     if(passed && last != NULL && last->eq[0].left->type == NODE_SYMBOL && last->eq[0].pm == NULL) {
         e = ast_MakeBinary(OP_ADD, ast_Copy(left), ast_MakeBinary(OP_MULT, ast_MakeNumber(num_FromInt(-1)), ast_Copy(right)));
-        n = solve_ex(e, (Symbol)t->arg2[0], roots, false);
+        n = solve_ex(e, (Symbol)t->arg2[0], roots, true);
         for(j = 0; j < last->eqs; j++) {
-            pcas_ast_t *x = ast_Copy(last->eq[j].right);
+            /*root - x simplifies to 0, 2sqrt(2) is solve's 2^(3/2)*/
+            for(i = 0; i < n; i++) {
+                pcas_ast_t *d = ast_MakeBinary(OP_ADD, ast_Copy(roots[i]),
+                                               ast_MakeBinary(OP_MULT, ast_MakeNumber(num_FromInt(-1)), ast_Copy(last->eq[j].right)));
+                bool same;
 
-            simplify(x, SIMP_NORMALIZE | SIMP_COMMUTATIVE | SIMP_RATIONAL | SIMP_EVAL);
-            for(i = 0; i < n && !ast_Compare(roots[i], x); i++);
-            ast_Cleanup(x);
+                simplify(d, SIMP_ALL);
+                same = is_ast_int(d, 0);
+                ast_Cleanup(d);
+                if(same)
+                    break;
+            }
             if(n < 0 || i == n) {
                 printf("Test failed on line %u. The steps end at a root solve doesn't have\n", t->line);
                 passed = false;

@@ -25,6 +25,14 @@ static pcas_ast_t *number(mp_rat r) {
     return ast_MakeBinary(OP_DIV, ast_MakeNumber(top), ast_MakeNumber(bottom));
 }
 
+/*3 or 3/2, nothing with a root or an i in it*/
+static bool is_number(pcas_ast_t *e) {
+    mp_rat r = pow_value(e);
+
+    num_Cleanup(r);
+    return r != NULL;
+}
+
 static void side_free(side_t *s) {
     int i;
 
@@ -53,35 +61,76 @@ static bool read_side(pcas_ast_t *e, Symbol var, side_t *s) {
     return true;
 }
 
-/*ax + b as you'd write it: x, -x, 3x, 3x+5, just 5*/
-static pcas_ast_t *linear_side(mp_rat a, mp_rat b, Symbol var) {
-    pcas_ast_t *x = NULL;
+/*a x^p as you'd write it: x, -x, 3x, 3x^2, just a for p = 0*/
+static pcas_ast_t *term(mp_rat a, Symbol var, int p) {
+    pcas_ast_t *x;
 
-    if(mp_rat_compare_zero(a) != 0) {
-        x = ast_MakeSymbol(var);
-        if(mp_rat_compare_value(a, 1, 1) != 0)
-            x = ast_MakeBinary(OP_MULT, number(a), x);
-    }
-    if(x == NULL)
-        return number(b);
-    if(mp_rat_compare_zero(b) == 0)
-        return x;
-    return ast_MakeBinary(OP_ADD, x, number(b));
+    if(p == 0)
+        return number(a);
+    x = ast_MakeSymbol(var);
+    if(p > 1)
+        x = ast_MakeBinary(OP_POW, x, ast_MakeNumber(num_FromInt(p)));
+    if(mp_rat_compare_value(a, 1, 1) != 0)
+        x = ast_MakeBinary(OP_MULT, number(a), x);
+    return x;
+}
+
+/*c[2]x^2 + c[1]x + c[0], 0 if there's nothing*/
+static pcas_ast_t *side_tree(mp_rat *c, Symbol var) {
+    pcas_ast_t *sum = ast_MakeOperator(OP_ADD), *t;
+    int p;
+
+    if(sum == NULL)
+        return NULL;
+    for(p = 2; p >= 0; p--)
+        if(mp_rat_compare_zero(c[p]) != 0)
+            ast_ChildAppend(sum, term(c[p], var, p));
+    if(ast_ChildLength(sum) > 1)
+        return sum;
+    t = ast_ChildLength(sum) == 1 ? ast_ChildRemoveIndex(sum, 0) : ast_MakeNumber(num_FromInt(0));
+    ast_Cleanup(sum);
+    return t;
+}
+
+/*an empty line on the end, NULL when it's full*/
+static step_t *new_line(steps_t *s) {
+    step_t *l;
+
+    if(s->n == STEPS_MAX)
+        return NULL;
+    l = &s->line[s->n++];
+    memset(l, 0, sizeof(*l));
+    l->eqs = 1;
+    return l;
 }
 
 static step_t *add_line(steps_t *s, pcas_ast_t *left, pcas_ast_t *right) {
-    step_t *l;
+    step_t *l = left != NULL && right != NULL ? new_line(s) : NULL;
 
-    if(s->n == STEPS_MAX || left == NULL || right == NULL) {
+    if(l == NULL) {
         ast_Cleanup(left);
         ast_Cleanup(right);
         return NULL;
     }
-    l = &s->line[s->n++];
-    memset(l, 0, sizeof(*l));
     l->eq[0].left = left;
     l->eq[0].right = right;
-    l->eqs = 1;
+    return l;
+}
+
+/*x = (right +- pm)/den, right and den can be NULL: x=+-3*/
+static step_t *add_pm(steps_t *s, Symbol var, pcas_ast_t *right, pcas_ast_t *pm, pcas_ast_t *den) {
+    step_t *l = pm != NULL ? new_line(s) : NULL;
+
+    if(l == NULL) {
+        ast_Cleanup(right);
+        ast_Cleanup(pm);
+        ast_Cleanup(den);
+        return NULL;
+    }
+    l->eq[0].left = ast_MakeSymbol(var);
+    l->eq[0].right = right;
+    l->eq[0].pm = pm;
+    l->eq[0].den = den;
     return l;
 }
 
@@ -101,93 +150,144 @@ static char take_away(mp_rat r, mp_rat size) {
     return mp_rat_compare_zero(r) > 0 ? '_' : '+';
 }
 
-/*ax+b = cx+d. x stays on the side where there's more of it, like on paper*/
-static bool linear(pcas_ast_t *left, pcas_ast_t *right, Symbol var, side_t *side, steps_t *s) {
-    mp_rat a[2], b[2], size = num_FromInt(0), zero = num_FromInt(0);
+static void add_sides(steps_t *s, side_t *side, Symbol var) {
+    add_line(s, side_tree(side[0].c, var), side_tree(side[1].c, var));
+}
+
+/*the line as typed, then the fractions cleared (x/2+1=4 is x+2=8) or the sides tidyed (2(x+3) is 2x+6)*/
+static void prep(pcas_ast_t *left, pcas_ast_t *right, Symbol var, side_t *side, steps_t *s) {
     mp_int d = mp_int_alloc();
-    pcas_ast_t *l, *r, *want[2];
-    bool tidy;
-    int k, o, i;
-    char op;
+    pcas_ast_t *l = ast_Copy(left), *r = ast_Copy(right), *want;
+    bool tidy = false;
+    int i, p;
 
-    for(i = 0; i < 2; i++) {
-        a[i] = side[i].c[1];
-        b[i] = side[i].c[0];
-    }
-    k = mp_rat_compare_zero(a[1]) == 0 ? 0 : mp_rat_compare_zero(a[0]) == 0 ? 1 : mp_rat_compare(a[0], a[1]) >= 0 ? 0 : 1;
-    o = 1 - k;
-
-    /*as typed, but X_1 parses as X+-1*1 and shows a lone minus*/
-    l = ast_Copy(left);
-    r = ast_Copy(right);
+    /*X_1 parses as X+-1*1 and shows a lone minus*/
     simplify(l, SIMP_NORMALIZE | SIMP_EVAL);
     simplify(r, SIMP_NORMALIZE | SIMP_EVAL);
     add_line(s, l, r);
 
-    /*fractions: times every bottom first, x/2+1=4 is x+2=8*/
     mp_int_set_value(d, 1);
-    for(i = 0; i < 2; i++) {
-        mp_int_lcm(d, mp_rat_denom_ref(a[i]), d);
-        mp_int_lcm(d, mp_rat_denom_ref(b[i]), d);
-    }
+    for(i = 0; i < 2; i++)
+        for(p = 0; p < 3; p++)
+            mp_int_lcm(d, mp_rat_denom_ref(side[i].c[p]), d);
     if(mp_int_compare_value(d, 1) != 0) {
         mp_rat m = num_FromInt(1);
 
         mp_int_copy(d, mp_rat_numer_ref(m));
         add_move(s, '*', number(m));
-        for(i = 0; i < 2; i++) {
-            mp_rat_mul(a[i], m, a[i]);
-            mp_rat_mul(b[i], m, b[i]);
-        }
+        for(i = 0; i < 2; i++)
+            for(p = 0; p < 3; p++)
+                mp_rat_mul(side[i].c[p], m, side[i].c[p]);
         num_Cleanup(m);
         tidy = true;
     } else {
-        /*2(x+3) or 3x+2x+1 gets a line of its own before anything moves*/
-        l = ast_Copy(left);
-        r = ast_Copy(right);
-        want[0] = linear_side(a[0], b[0], var);
-        want[1] = linear_side(a[1], b[1], var);
-        simplify(l, SIMP_LIGHT);
-        simplify(r, SIMP_LIGHT);
-        tidy = !ast_Compare(l, want[0]) || !ast_Compare(r, want[1]);
-        ast_Cleanup(l);
-        ast_Cleanup(r);
-        ast_Cleanup(want[0]);
-        ast_Cleanup(want[1]);
+        for(i = 0; i < 2; i++) {
+            l = ast_Copy(i == 0 ? left : right);
+            want = side_tree(side[i].c, var);
+            simplify(l, SIMP_LIGHT);
+            tidy |= !ast_Compare(l, want);
+            ast_Cleanup(l);
+            ast_Cleanup(want);
+        }
     }
     if(tidy)
-        add_line(s, linear_side(a[0], b[0], var), linear_side(a[1], b[1], var));
+        add_sides(s, side, var);
+    mp_int_free(d);
+}
 
-    /*the x term over, then the number, then divide*/
-    if(mp_rat_compare_zero(a[o]) != 0) {
-        op = take_away(a[o], size);
-        add_move(s, op, linear_side(size, zero, var));
-        mp_rat_sub(a[k], a[o], a[k]);
-        mp_rat_set_value(a[o], 0, 1);
-        add_line(s, linear_side(a[0], b[0], var), linear_side(a[1], b[1], var));
+/*the x^p terms over to the side with more of them, the number to the other side, divide. the side they
+ended up on, written x^p = v, or -1 when they cancelled out (5=5, 5=3)*/
+static int isolate(steps_t *s, side_t *side, Symbol var, int p) {
+    mp_rat size = num_FromInt(0);
+    int k = 0, o;
+    char op;
+
+    if(mp_rat_compare_zero(side[0].c[p]) == 0)
+        k = 1;
+    else if(mp_rat_compare_zero(side[1].c[p]) != 0 && mp_rat_compare(side[1].c[p], side[0].c[p]) > 0)
+        k = 1;
+    o = 1 - k;
+
+    if(mp_rat_compare_zero(side[o].c[p]) != 0) {
+        op = take_away(side[o].c[p], size); /*before term() reads size*/
+        add_move(s, op, term(size, var, p));
+        mp_rat_sub(side[k].c[p], side[o].c[p], side[k].c[p]);
+        mp_rat_set_value(side[o].c[p], 0, 1);
+        add_sides(s, side, var);
     }
-    if(mp_rat_compare_zero(a[k]) == 0) /*5=5 or 5=3, that's the answer*/
-        goto done;
-    if(mp_rat_compare_zero(b[k]) != 0) {
-        op = take_away(b[k], size);
+    if(mp_rat_compare_zero(side[k].c[p]) == 0) {
+        num_Cleanup(size);
+        return -1;
+    }
+    if(mp_rat_compare_zero(side[k].c[0]) != 0) {
+        op = take_away(side[k].c[0], size);
         add_move(s, op, number(size));
-        mp_rat_sub(b[o], b[k], b[o]);
-        mp_rat_set_value(b[k], 0, 1);
-        add_line(s, linear_side(a[0], b[0], var), linear_side(a[1], b[1], var));
+        mp_rat_sub(side[o].c[0], side[k].c[0], side[o].c[0]);
+        mp_rat_set_value(side[k].c[0], 0, 1);
+        add_sides(s, side, var);
     }
-    if(mp_rat_compare_value(a[k], 1, 1) != 0) {
-        add_move(s, '/', number(a[k]));
-        mp_rat_div(b[o], a[k], b[o]);
-        mp_rat_set_value(a[k], 1, 1);
-        add_line(s, linear_side(a[0], b[0], var), linear_side(a[1], b[1], var));
+    if(mp_rat_compare_value(side[k].c[p], 1, 1) != 0) {
+        add_move(s, '/', number(side[k].c[p]));
+        mp_rat_div(side[o].c[0], side[k].c[p], side[o].c[0]);
+        mp_rat_set_value(side[k].c[p], 1, 1);
+        add_sides(s, side, var);
     }
     if(k == 1) /*4/3 = x, written the other way round*/
-        add_line(s, ast_MakeSymbol(var), number(b[0]));
-
-done:
+        add_line(s, term(side[1].c[p], var, p), number(side[0].c[0]));
     num_Cleanup(size);
-    num_Cleanup(zero);
-    mp_int_free(d);
+    return k;
+}
+
+/*ax+b = cx+d*/
+static bool linear(pcas_ast_t *left, pcas_ast_t *right, Symbol var, side_t *side, steps_t *s) {
+    prep(left, right, var, side, s);
+    isolate(s, side, var, 1);
+    return !pcas_cancelled;
+}
+
+/*x = r or x = -r, the last line of the root methods*/
+static void add_both(steps_t *s, Symbol var, pcas_ast_t *r) {
+    pcas_ast_t *neg = ast_MakeBinary(OP_MULT, ast_MakeNumber(num_FromInt(-1)), ast_Copy(r));
+    step_t *l;
+
+    simplify(neg, SIMP_LIGHT);
+    l = add_line(s, ast_MakeSymbol(var), r);
+    if(l == NULL) {
+        ast_Cleanup(neg);
+        return;
+    }
+    l->eq[1].left = ast_MakeSymbol(var);
+    l->eq[1].right = neg;
+    l->eqs = 2;
+}
+
+/*no x term: x^2 = v like a linear one, then the square root of both sides. x^2=-4 carries on with i like solve*/
+static bool square_root(pcas_ast_t *left, pcas_ast_t *right, Symbol var, side_t *side, steps_t *s) {
+    pcas_ast_t *root, *done;
+    int k;
+
+    prep(left, right, var, side, s);
+    k = isolate(s, side, var, 2);
+    if(k < 0)
+        return !pcas_cancelled;
+
+    add_move(s, 'r', NULL);
+    if(mp_rat_compare_zero(side[1 - k].c[0]) == 0) {
+        add_line(s, ast_MakeSymbol(var), ast_MakeNumber(num_FromInt(0)));
+        return !pcas_cancelled;
+    }
+
+    /*x = +-sqrt(8) then x = +-2sqrt(2), but x^2=9 goes straight to x = +-3*/
+    root = ast_MakeBinary(OP_POW, number(side[1 - k].c[0]),
+                          ast_MakeBinary(OP_DIV, ast_MakeNumber(num_FromInt(1)), ast_MakeNumber(num_FromInt(2))));
+    done = ast_Copy(root);
+    simplify(done, SIMP_ALL); /*the light one leaves sqrt(-4), it's only a number so it's cheap*/
+    if(!ast_Compare(root, done) && !is_number(done))
+        add_pm(s, var, NULL, root, NULL);
+    else
+        ast_Cleanup(root);
+    add_pm(s, var, NULL, ast_Copy(done), NULL);
+    add_both(s, var, done);
     return !pcas_cancelled;
 }
 
@@ -196,7 +296,7 @@ static void shown(steps_t *s) {
     int i, j;
 
     for(i = 0; i < s->n; i++) {
-        for(j = 0; j < s->line[i].eqs; j++) {
+        for(j = 0; j < s->line[i].eqs && !s->line[i].as_is; j++) {
             step_eq_t *q = &s->line[i].eq[j];
 
             if(q->left != NULL)
@@ -229,13 +329,36 @@ static bool is_linear(side_t *side) {
            && (mp_rat_compare_zero(side[0].c[1]) != 0 || mp_rat_compare_zero(side[1].c[1]) != 0);
 }
 
+/*an x^2 that doesn't cancel out*/
+static bool is_quadratic(side_t *side) {
+    return mp_rat_compare(side[0].c[2], side[1].c[2]) != 0;
+}
+
+static bool fits(side_t *side, Method m) {
+    switch(m) {
+    case METHOD_ROOT:
+        return is_quadratic(side) && mp_rat_compare_zero(side[0].c[1]) == 0 && mp_rat_compare_zero(side[1].c[1]) == 0;
+    case METHOD_OPTIMAL:
+        return is_linear(side) || fits(side, METHOD_ROOT);
+    default:
+        return false;
+    }
+}
+
+/*what optimal means for this one, the first method that fits. OPTIMAL itself for a linear one*/
+static Method pick(side_t *side, Method m) {
+    if(m == METHOD_OPTIMAL && fits(side, METHOD_ROOT))
+        return METHOD_ROOT;
+    return m;
+}
+
 bool steps_fit(pcas_ast_t *left, pcas_ast_t *right, Symbol var, Method m) {
     side_t side[2];
     bool fit;
 
     if(!read_sides(left, right, var, side))
         return false;
-    fit = m == METHOD_OPTIMAL && is_linear(side);
+    fit = fits(side, m);
     side_free(&side[0]);
     side_free(&side[1]);
     return fit;
@@ -248,8 +371,16 @@ bool steps_solve(pcas_ast_t *left, pcas_ast_t *right, Symbol var, Method m, step
     out->n = 0;
     if(!read_sides(left, right, var, side))
         return false;
-    if(m == METHOD_OPTIMAL && is_linear(side))
-        ok = linear(left, right, var, side, out);
+    if(fits(side, m)) {
+        switch(pick(side, m)) {
+        case METHOD_ROOT:
+            ok = square_root(left, right, var, side, out);
+            break;
+        default:
+            ok = linear(left, right, var, side, out);
+            break;
+        }
+    }
 
     side_free(&side[0]);
     side_free(&side[1]);

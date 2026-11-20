@@ -5,7 +5,7 @@
 
 #include "cas.h"
 
-#define STEP_EQS_MAX 2  /*x_2=0 or x+3=0*/
+#define STEP_EQS_MAX 3  /*x_2=0 or x+3=0, and a=1, b=6, c=1*/
 #define STEPS_MAX 24
 
 typedef enum {
@@ -25,7 +25,9 @@ typedef struct {
 typedef struct {
     step_eq_t eq[STEP_EQS_MAX];
     int eqs;
-    char move;      /*done to both sides on the way to the next line: + _ * / or 0*/
+    bool list; /*eqs joined with commas*/
+    bool as_is; /*kept away from the canonical form, the formula with the numbers just put in*/
+    char move;      /*done to both sides on the way to the next line: + _ * / r or 0*/
     pcas_ast_t *by; /*the 5 of _5*/
 } step_t;
 

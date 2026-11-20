@@ -45,7 +45,7 @@ the same equation can be done more than one way, so there's a method menu on the
 | quadratic formula | always | a, b and c written in first |
 | optimal | always | the first one that fits, in that order |
 
-no real roots: the last steps get a square root of a negative, real mode stops there with "no real x" like solve says, complex mode carries on with i
+no real roots: the last steps get a square root of a negative and carry on with i, the app's solve gives the complex roots too (there's no real mode)
 
 ### Decision
 opens on optimal every time, the others are in the menu

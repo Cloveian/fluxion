@@ -751,8 +751,18 @@ steps; X/2+1=4; X; X/2+1=4 | *2 | X+2=8 | _2 | X=6
 steps; 2(X+3)=10; X; 2(X+3)=10 | 2X+6=10 | _6 | 2X=4 | /2 | X=2
 steps; X+1=X+1; X; X+1=X+1 | _X | 1=1
 steps; 5=X; X; 5=X | X=5
+#no x term, the square root method. like a linear one in x^2, then r is the square root of both sides
+steps; X^2=9; X; X^2=9 | r | X=+-3 | X=3 or X=-3
+steps; X^2=9; Xroot; X^2=9 | r | X=+-3 | X=3 or X=-3
+steps; 2X^2_16=0; X; 2X^2_16=0 | +16 | 2X^2=16 | /2 | X^2=8 | r | X=+-sqrt(8) | X=+-2sqrt(2) | X=2sqrt(2) or X=-2sqrt(2)
+steps; 3X^2=X^2+8; X; 3X^2=X^2+8 | _X^2 | 2X^2=8 | /2 | X^2=4 | r | X=+-2 | X=2 or X=-2
+steps; X^2/4=1; X; X^2/4=1 | *4 | X^2=4 | r | X=+-2 | X=2 or X=-2
+steps; 5=X^2_4; X; 5=X^2_4 | +4 | 9=X^2 | X^2=9 | r | X=+-3 | X=3 or X=-3
+steps; X^2=0; X; X^2=0 | r | X=0
+steps; X^2=-4; X; X^2=-4 | r | X=+-sqrt(-4) | X=+-2i | X=2i or X=-2i
 #not a shape it does yet, or a method that doesn't fit
-steps; X^2=4; X; none
+steps; X^2+X=2; X; none
+steps; X^2+X=2; Xroot; none
 steps; sin(X)=1; X; none
 steps; 2^X=4; X; none
 steps; 3X+5=-3; Xformula; none
