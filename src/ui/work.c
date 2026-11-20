@@ -23,6 +23,7 @@ static Method method;
 static box_t *rows[ROWS_MAX];
 static bool is_move[ROWS_MAX];
 static int nrows, top;
+static unsigned off; /* a bit per method that doesn't fit, greyed out */
 
 static box_t *text(char c) {
     char s[2] = { c, '\0' };
@@ -144,6 +145,7 @@ const char *work_open(char *src) {
     pcas_ast_t *l, *r;
     char shown, rel;
     const char *why = read_equation(src, &l, &r, &var, &shown, &rel);
+    int m;
 
     if(why != NULL)
         return why;
@@ -159,6 +161,10 @@ const char *work_open(char *src) {
         work_close();
         return "no steps for this one yet";
     }
+    off = 0;
+    for(m = 0; m < METHOD_COUNT; m++)
+        if(!steps_fit(lhs, rhs, var, (Method)m))
+            off |= 1u << m;
     open = true;
     return NULL;
 }
@@ -180,7 +186,7 @@ void work_key(keypress_t p) {
         Method m = (Method)(p.key - K_YEQU);
 
         /* one that doesn't fit leaves the steps as they are */
-        if(m != method && steps_fit(lhs, rhs, var, m)) {
+        if(m != method && !(off & (1u << m))) {
             Method was = method;
 
             method = m;
@@ -231,5 +237,5 @@ void work_draw(void) {
         screen_color(COL_DIM);
         screen_vline(x0 + w - 2, y0 + (bottom - y0) * top / nrows, bar_h > 2 ? bar_h : 2);
     }
-    draw_softkeys(&areas.keys, method_keys, (int)method);
+    draw_softkeys(&areas.keys, method_keys, (int)method, off);
 }

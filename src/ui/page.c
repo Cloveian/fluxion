@@ -236,5 +236,5 @@ void page_draw(void) {
     }
 
     if(pg->softkeys != NULL)
-        draw_softkeys(&areas.keys, pg->softkeys, -1);
+        draw_softkeys(&areas.keys, pg->softkeys, -1, 0);
 }

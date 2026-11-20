@@ -79,6 +79,7 @@ static int menu = -1;           /* open folder, -1 = none */
 static const folder_t *menu_in; /* folders[menu] or one of its subfolders */
 static int menu_sel, menu_top;
 static int menu_up_sel;         /* the subfolder's row, for going back up */
+static int menu_from = -1;      /* the answer highlighted when it opened, for show steps */
 
 static unsigned short simp_flags = SIMP_ALL;
 static unsigned char canon_flags = CANONICAL_ALL;
@@ -1073,9 +1074,9 @@ static bool is_action(const item_t *it) {
     return strcmp(it->label, "clear history") == 0 || strcmp(it->label, "show steps") == 0;
 }
 
-/* the steps page for the highlighted answer, or the last one. solve( only for now */
+/* the steps page for the answer highlighted when the menu opened, or the last one. solve( only for now */
 static void show_steps(void) {
-    int at = hist >= 0 ? hist : history_len - 1;
+    int at = menu_from >= 0 ? menu_from : history_len - 1;
     const char *cmd;
     char *src;
 
@@ -2008,6 +2009,7 @@ static bool history_key(keypress_t p, bool alp) {
         return true;
     }
 
+    menu_from = p.key >= K_YEQU && p.key <= K_GRAPH ? hist : -1;
     hist = -1;
     browsing = false;
     return false;
@@ -2018,6 +2020,8 @@ static bool handle(keypress_t p) {
     char c;
 
     status = NULL;
+    if(menu < 0)
+        menu_from = -1; /* [2nd][y=] and such open nothing */
 
     if(p.key == K_QUIT)
         return false;
@@ -2149,7 +2153,7 @@ static void draw_bar(void) {
 
     for(i = 0; i < FOLDER_COUNT; i++)
         names[i] = folders[i].name;
-    draw_softkeys(&areas.keys, names, menu);
+    draw_softkeys(&areas.keys, names, menu, 0);
 }
 
 static void draw_menu(void) {

@@ -40,7 +40,8 @@ typedef struct {
 } rect_t;
 
 /* the soft-key bar, one name over each of the five keys. lit is the one drawn
-   pressed, -1 for none. here so the pages get the same bar */
-void draw_softkeys(const rect_t *bar, const char *const names[5], int lit);
+   pressed, -1 for none. off has a bit per key that does nothing right now, drawn
+   faint (the steps methods that don't fit). here so the pages get the same bar */
+void draw_softkeys(const rect_t *bar, const char *const names[5], int lit, unsigned off);
 
 #endif
