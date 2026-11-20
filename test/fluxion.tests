@@ -744,6 +744,9 @@ simplify; sqrt(18)+sqrt(8); 5sqrt(2)
 simplify; sqrt(12)+sqrt(27); 5sqrt(3)
 simplify; 3root(-8); -2
 simplify; 3root(-54); -3*2^(1/3)
+#cbrt( typed out, its name had the wrong length
+simplify; cbrt(8); 2
+simplify; cbrt(-27); -3
 decimal; 3root(-8); -2
 
 #show the work (steps; equation; var and method; lines | the move | lines). the last line has to be solve's roots
