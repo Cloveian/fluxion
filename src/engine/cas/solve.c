@@ -121,7 +121,7 @@ static void fold_fraction(pcas_ast_t *e) {
         return;
     a = ast_ChildGet(e, 0);
     b = ast_ChildGet(e, 1);
-    if(a->type != NODE_NUMBER || b->type != NODE_NUMBER || is_zero(b))
+    if(a == NULL || b == NULL || a->type != NODE_NUMBER || b->type != NODE_NUMBER || is_zero(b)) /*oom leaves a child out*/
         return;
     r = number(0);
     if(r == NULL || mp_rat_div(a->op.num, b->op.num, r->op.num) != MP_OK) {
