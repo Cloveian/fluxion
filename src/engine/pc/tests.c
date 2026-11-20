@@ -285,6 +285,29 @@ static bool test_turn(test_t *t) {
     return solve_roots(t, true, false);
 }
 
+/*Fluxion: a - b simplifies to 0 (2sqrt(2) is 2^(3/2)), or both match once rationalized. sqrt(15)/sqrt(2) and sqrt(30)/2 never cancel as a difference*/
+static bool same_value(pcas_ast_t *a, pcas_ast_t *b) {
+    pcas_ast_t *d = ast_MakeBinary(OP_ADD, ast_Copy(a), ast_MakeBinary(OP_MULT, ast_MakeNumber(num_FromInt(-1)), ast_Copy(b)));
+    pcas_ast_t *x, *y;
+    bool same;
+
+    simplify(d, SIMP_ALL);
+    same = is_ast_int(d, 0);
+    ast_Cleanup(d);
+    if(same)
+        return true;
+    x = ast_Copy(a);
+    y = ast_Copy(b);
+    simplify(x, SIMP_ALL);
+    simplify(y, SIMP_ALL);
+    simplify_canonical_form(x, CANONICAL_ALL);
+    simplify_canonical_form(y, CANONICAL_ALL);
+    same = ast_Compare(x, y);
+    ast_Cleanup(x);
+    ast_Cleanup(y);
+    return same;
+}
+
 /*Fluxion: e exproted onto the end of buf, ? if it won't export*/
 static void append_tree(char *buf, unsigned size, pcas_ast_t *e) {
     pcas_error_t err;
@@ -350,7 +373,7 @@ static void steps_text(const steps_t *s, char *got, unsigned size) {
 /*Fluxion: steps; deriv(f,X,X) or limit(f,X,a); X; the lines | the rules | lines, or none. the last line has to be what simplify makes of it*/
 static bool test_calc_steps(test_t *t) {
     pcas_error_t err;
-    pcas_ast_t *e = parse((uint8_t*)t->arg1, strlen(t->arg1), str_table, &err), *d;
+    pcas_ast_t *e = parse((uint8_t*)t->arg1, strlen(t->arg1), str_table, &err);
     char got[MAX_PAR * 2] = "";
     steps_t s;
     bool passed;
@@ -367,15 +390,9 @@ static bool test_calc_steps(test_t *t) {
     if(!passed)
         printf("Test failed on line %u. Expected %s but got %s\n", t->line, t->arg3, got);
 
-    /*the derivative - the last line simplifies to 0*/
-    if(passed && s.n > 0) {
-        d = ast_MakeBinary(OP_ADD, ast_Copy(e), ast_MakeBinary(OP_MULT, ast_MakeNumber(num_FromInt(-1)), ast_Copy(s.line[s.n - 1].eq[0].left)));
-        simplify(d, SIMP_ALL);
-        if(!is_ast_int(d, 0)) {
-            printf("Test failed on line %u. The steps end somewhere else than the derivative\n", t->line);
-            passed = false;
-        }
-        ast_Cleanup(d);
+    if(passed && s.n > 0 && !same_value(e, s.line[s.n - 1].eq[0].left)) {
+        printf("Test failed on line %u. The steps end somewhere else than simplify\n", t->line);
+        passed = false;
     }
     if(s.n > 0)
         steps_free(&s);
@@ -426,18 +443,7 @@ static bool test_steps(test_t *t) {
         e = ast_MakeBinary(OP_ADD, ast_Copy(left), ast_MakeBinary(OP_MULT, ast_MakeNumber(num_FromInt(-1)), ast_Copy(right)));
         n = solve_ex(e, (Symbol)t->arg2[0], roots, true);
         for(j = 0; j < last->eqs; j++) {
-            /*root - x simplifies to 0, 2sqrt(2) is solve's 2^(3/2)*/
-            for(i = 0; i < n; i++) {
-                pcas_ast_t *d = ast_MakeBinary(OP_ADD, ast_Copy(roots[i]),
-                                               ast_MakeBinary(OP_MULT, ast_MakeNumber(num_FromInt(-1)), ast_Copy(last->eq[j].right)));
-                bool same;
-
-                simplify(d, SIMP_ALL);
-                same = is_ast_int(d, 0);
-                ast_Cleanup(d);
-                if(same)
-                    break;
-            }
+            for(i = 0; i < n && !same_value(roots[i], last->eq[j].right); i++);
             if(n < 0 || i == n) {
                 printf("Test failed on line %u. The steps end at a root solve doesn't have\n", t->line);
                 passed = false;

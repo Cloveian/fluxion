@@ -800,6 +800,9 @@ steps; X^2+X+1=0; X; X^2+X+1=0 | A=1, B=1, C=1 | X=(-1+-sqrt((1^2_4)))/2 | X=(-1
 steps; X^2+6X+9=0; Xformula; X^2+6X+9=0 | A=1, B=6, C=9 | X=(-6+-sqrt((6^2_4*9)))/2 | X=(-6+-sqrt(0))/2 | X=(-6+-0)/2 | X=-3
 steps; 3X^2_2X=0; Xformula; 3X^2_2X=0 | A=3, B=-2, C=0 | X=(2+-sqrt((-2^2_4*3*0)))/2*3 | X=(2+-sqrt(4))/6 | X=(2+-2)/6 | X=2/3 or X=0
 steps; X^2+5X+6=0; Xsquare; X^2+5X+6=0 | _6 | X^2+5X=-6 | +25/4 | X^2+5X+25/4=1/4 | (X+5/2)^2=1/4 | r | X+5/2=+-1/2 | _5/2 | X=-5/2+-1/2 | X=-2 or X=-3
+#solve has sqrt(15)/sqrt(2) where the steps have sqrt(30)/2, the same once rationalized
+steps; -2X^2+1=4; X; -2X^2+1=4 | _1 | -2X^2=3 | /-2 | X^2=-3/2 | r | X=+-sqrt((-3/2)) | X=+-(isqrt(6))/2 | X=(isqrt(6))/2 or X=(-isqrt(6))/2
+steps; 2X^2+8X_7=0; Xformula; 2X^2+8X_7=0 | A=2, B=8, C=-7 | X=(-8+-sqrt((8^2_4*2*-7)))/2*2 | X=(-8+-sqrt(120))/4 | X=(-8+-2sqrt(30))/4 | X=sqrt(30)/2_2 or X=(-sqrt(30))/2_2
 steps; X^2+3X+1=0; Xsquare; X^2+3X+1=0 | _1 | X^2+3X=-1 | +9/4 | X^2+3X+9/4=5/4 | (X+3/2)^2=5/4 | r | X+3/2=+-sqrt((5/4)) | X+3/2=+-sqrt(5)/2 | _3/2 | X=-3/2+-sqrt(5)/2 | X=sqrt(5)/2_3/2 or X=-3/2_(sqrt(5))/2
 #derivatives, steps; deriv(f,X,X); X; lines | the rules used | lines. every d/dx left gets one rule a line, d/dx of a constant or of ax+b goes quietly
 steps; deriv(X^2,X,X); X; deriv(X^2, X, X) | power rule | 2X
