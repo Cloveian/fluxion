@@ -3,7 +3,6 @@
 #include <string.h>
 
 #include "steps.h"
-#include "../dbg.h"
 
 #define SIMP_LIGHT (SIMP_NORMALIZE | SIMP_COMMUTATIVE | SIMP_RATIONAL | SIMP_EVAL)
 
@@ -772,7 +771,7 @@ static void quiet_rules(pcas_ast_t *e, Symbol var) {
         for(k = 0; k < 3; k++)
             ast_Cleanup(c[k]);
     }
-    simplify(e, SIMP_LIGHT | SIMP_LIKE_TERMS); /*like terms takes the 1 off cos(x)*1, it showed cos(x) twice*/
+    simplify(e, SIMP_LIGHT | SIMP_LIKE_TERMS); /*like terms takes the 1 off cos(x)*1. not SIMP_ALL, ~7 s on the CE for x^2sin(x) and it spreads (1-ln(x))/x^2 out*/
 }
 
 void steps_rule(step_t *l, const char *name) {
@@ -829,23 +828,6 @@ bool steps_derivative(pcas_ast_t *d, steps_t *out) {
         ast_Cleanup(cur);
         steps_free(out);
         return false;
-    }
-
-    /*and like terms collected, if that's shorter. not enter's SIMP_ALL: ~7 s on the CE for x^2sin(x), and (1-ln(x))/x^2 came out 1/x^2-ln(x)/x^2*/
-    done = ast_Copy(cur);
-    simplify(done, SIMP_LIGHT | SIMP_LIKE_TERMS);
-    if(done == NULL || pcas_cancelled) { /*oom*/
-        ast_Cleanup(done);
-        ast_Cleanup(cur);
-        steps_free(out);
-        return false;
-    }
-    if(dbg_count_nodes(done) < dbg_count_nodes(cur)) {
-        l = steps_expr(out, ast_Copy(done));
-        ast_Cleanup(cur);
-        cur = done;
-    } else {
-        ast_Cleanup(done);
     }
 
     /*at a value: the value in as written, then what that comes to. no x left in it is no plug in*/
