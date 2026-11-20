@@ -17,7 +17,10 @@ typedef enum {
     METHOD_COUNT
 } Method;
 
-/*left = right, or left = (right +- pm)/den when pm isn't NULL: x=+-3 (right NULL), x=_3+-2sqrt(2), the formula*/
+#define STEP_RULES_MAX 4
+
+/*left = right, or left = (right +- pm)/den when pm isn't NULL: x=+-3 (right NULL), x=_3+-2sqrt(2), the formula.
+just left with neither: an expression, = the line above (*dih*rivative steps)*/
 typedef struct {
     pcas_ast_t *left, *right, *pm, *den;
 } step_eq_t;
@@ -27,8 +30,9 @@ typedef struct {
     int eqs;
     bool list; /*eqs joined with commas*/
     bool as_is; /*kept away from the canonical form, the formula with the numbers just put in*/
-    char move;      /*done to both sides on the way to the next line: + _ * / r or 0*/
+    char move;      /*done to both sides on the way to the next line: + _ * / r, n for rules, or 0*/
     pcas_ast_t *by; /*the 5 of _5*/
+    const char *rules[STEP_RULES_MAX]; /*move n: the rules used, "product rule"*/
 } step_t;
 
 typedef struct {
@@ -40,6 +44,9 @@ typedef struct {
 bool steps_solve(pcas_ast_t *left, pcas_ast_t *right, Symbol var, Method m, steps_t *out);
 /*just the check, for greying out the method menu*/
 bool steps_fit(pcas_ast_t *left, pcas_ast_t *right, Symbol var, Method m);
+/*d/dx(f) one rule at a time, every d/dx still left gets one per line. d is the deriv node, false if it's
+evaluated at a value or a rule doesn't fit*/
+bool steps_derivative(pcas_ast_t *d, steps_t *out);
 void steps_free(steps_t *s);
 
 #endif

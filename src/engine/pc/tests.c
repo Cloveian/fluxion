@@ -301,6 +301,88 @@ static void append_tree(char *buf, unsigned size, pcas_ast_t *e) {
     free(out);
 }
 
+/*Fluxion: the steps as one line, the way the test file writes them*/
+static void steps_text(const steps_t *s, char *got, unsigned size) {
+    int i, j, k;
+
+    for(i = 0; i < s->n; i++) {
+        for(j = 0; j < s->line[i].eqs; j++) {
+            const step_eq_t *q = &s->line[i].eq[j];
+
+            if(j > 0)
+                strncat(got, s->line[i].list ? "," : "or", size - strlen(got) - 1);
+            else if(i > 0)
+                strncat(got, "|", size - strlen(got) - 1);
+            append_tree(got, size, q->left);
+            if(q->right == NULL && q->pm == NULL) /*just an expression, *dih*rivative steps*/
+                continue;
+            strncat(got, q->den != NULL ? "=(" : "=", size - strlen(got) - 1);
+            if(q->right != NULL)
+                append_tree(got, size, q->right);
+            if(q->pm != NULL) {
+                strncat(got, "+-", size - strlen(got) - 1);
+                append_tree(got, size, q->pm);
+            }
+            if(q->den != NULL) {
+                strncat(got, ")/", size - strlen(got) - 1);
+                append_tree(got, size, q->den);
+            }
+        }
+        if(s->line[i].move == 'n') {
+            for(k = 0; k < STEP_RULES_MAX && s->line[i].rules[k] != NULL; k++) {
+                const char *c;
+
+                strncat(got, k == 0 ? "|" : ",", size - strlen(got) - 1);
+                for(c = s->line[i].rules[k]; *c != '\0'; c++) /*no spaces, the test file's are trimmed off*/
+                    if(*c != ' ' && strlen(got) < size - 1)
+                        strncat(got, c, 1);
+            }
+        } else if(s->line[i].move != 0) {
+            char move[3] = "|?";
+
+            move[1] = s->line[i].move;
+            strncat(got, move, size - strlen(got) - 1);
+            append_tree(got, size, s->line[i].by);
+        }
+    }
+}
+
+/*Fluxion: steps; deriv(f,X,X); X; the lines | the rules | lines, or none. the last line has to be what simplify makes of it*/
+static bool test_deriv_steps(test_t *t) {
+    pcas_error_t err;
+    pcas_ast_t *e = parse((uint8_t*)t->arg1, strlen(t->arg1), str_table, &err), *d;
+    char got[MAX_PAR * 2] = "";
+    steps_t s;
+    bool passed;
+
+    if(err != E_SUCCESS || e == NULL) {
+        printf("Test failed on line %u. Unable to parse %s\n", t->line, t->arg1);
+        return false;
+    }
+    if(!steps_derivative(e, &s))
+        strcpy(got, "none");
+    else
+        steps_text(&s, got, sizeof(got));
+    passed = strcmp(got, t->arg3) == 0;
+    if(!passed)
+        printf("Test failed on line %u. Expected %s but got %s\n", t->line, t->arg3, got);
+
+    /*the derivative - the last line simplifies to 0*/
+    if(passed && s.n > 0) {
+        d = ast_MakeBinary(OP_ADD, ast_Copy(e), ast_MakeBinary(OP_MULT, ast_MakeNumber(num_FromInt(-1)), ast_Copy(s.line[s.n - 1].eq[0].left)));
+        simplify(d, SIMP_ALL);
+        if(!is_ast_int(d, 0)) {
+            printf("Test failed on line %u. The steps end somewhere else than the derivative\n", t->line);
+            passed = false;
+        }
+        ast_Cleanup(d);
+    }
+    if(s.n > 0)
+        steps_free(&s);
+    ast_Cleanup(e);
+    return passed;
+}
+
 /*Fluxion: steps; equation; var and a method (X, Xformula, ...); the lines joinned with |, the move between
 two lines as its sign and what it uses (_5, /3), or none. a last line of var = numbers has to be what solve says*/
 static bool test_steps(test_t *t) {
@@ -313,8 +395,10 @@ static bool test_steps(test_t *t) {
     int m, i, j, n;
     bool passed;
 
+    if(eq == NULL)
+        return test_deriv_steps(t);
     for(m = 0; m < METHOD_COUNT && strcmp(t->arg2 + 1, methods[m]) != 0; m++);
-    if(eq == NULL || m == METHOD_COUNT) {
+    if(m == METHOD_COUNT) {
         printf("Test failed on line %u. steps; equation; var and method; lines\n", t->line);
         return false;
     }
@@ -328,39 +412,10 @@ static bool test_steps(test_t *t) {
         return false;
     }
 
-    if(!steps_solve(left, right, (Symbol)t->arg2[0], (Method)m, &s)) {
+    if(!steps_solve(left, right, (Symbol)t->arg2[0], (Method)m, &s))
         strcpy(got, "none");
-    } else {
-        for(i = 0; i < s.n; i++) {
-            for(j = 0; j < s.line[i].eqs; j++) {
-                step_eq_t *q = &s.line[i].eq[j];
-
-                if(j > 0)
-                    strncat(got, s.line[i].list ? "," : "or", sizeof(got) - strlen(got) - 1);
-                else if(i > 0)
-                    strncat(got, "|", sizeof(got) - strlen(got) - 1);
-                append_tree(got, sizeof(got), q->left);
-                strncat(got, q->den != NULL ? "=(" : "=", sizeof(got) - strlen(got) - 1);
-                if(q->right != NULL)
-                    append_tree(got, sizeof(got), q->right);
-                if(q->pm != NULL) {
-                    strncat(got, "+-", sizeof(got) - strlen(got) - 1);
-                    append_tree(got, sizeof(got), q->pm);
-                }
-                if(q->den != NULL) {
-                    strncat(got, ")/", sizeof(got) - strlen(got) - 1);
-                    append_tree(got, sizeof(got), q->den);
-                }
-            }
-            if(s.line[i].move != 0) {
-                char move[3] = "|?";
-
-                move[1] = s.line[i].move;
-                strncat(got, move, sizeof(got) - strlen(got) - 1);
-                append_tree(got, sizeof(got), s.line[i].by);
-            }
-        }
-    }
+    else
+        steps_text(&s, got, sizeof(got));
     passed = strcmp(got, t->arg3) == 0;
     if(!passed)
         printf("Test failed on line %u. Expected %s but got %s\n", t->line, t->arg3, got);

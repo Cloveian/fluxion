@@ -3,6 +3,7 @@
 #include <string.h>
 
 #include "steps.h"
+#include "../dbg.h"
 
 #define SIMP_LIGHT (SIMP_NORMALIZE | SIMP_COMMUTATIVE | SIMP_RATIONAL | SIMP_EVAL)
 
@@ -613,6 +614,210 @@ static bool formula(pcas_ast_t *left, pcas_ast_t *right, Symbol var, side_t *sid
     num_Cleanup(nb);
     num_Cleanup(two_a);
     return !pcas_cancelled;
+}
+
+/*--- derivatives, one rule a line ---*/
+
+#define DERIVS_MAX 16
+
+static void shown(steps_t *s);
+
+/*a line that's just an expression, = the one above. takes e*/
+static step_t *add_expr(steps_t *s, pcas_ast_t *e) {
+    step_t *l = e != NULL ? new_line(s) : NULL;
+
+    if(l == NULL) {
+        ast_Cleanup(e);
+        return NULL;
+    }
+    l->eq[0].left = e;
+    return l;
+}
+
+/*the outtermost deriv nodes in e into d, n so far*/
+static int find_derivs(pcas_ast_t *e, pcas_ast_t **d, int n) {
+    pcas_ast_t *c;
+
+    if(e->type != NODE_OPERATOR || n >= DERIVS_MAX)
+        return n;
+    if(isoptype(e, OP_DERIV)) {
+        d[n] = e;
+        return n + 1;
+    }
+    for(c = ast_ChildGet(e, 0); c != NULL; c = c->next)
+        n = find_derivs(c, d, n);
+    return n;
+}
+
+/*d/dx(f), same x as e*/
+static pcas_ast_t *deriv_of(pcas_ast_t *f, pcas_ast_t *e) {
+    pcas_ast_t *d = ast_MakeOperator(OP_DERIV);
+
+    if(d == NULL) {
+        ast_Cleanup(f);
+        return NULL;
+    }
+    ast_ChildAppend(d, f);
+    ast_ChildAppend(d, ast_Copy(ast_ChildGet(e, 1)));
+    ast_ChildAppend(d, ast_Copy(ast_ChildGet(e, 2)));
+    return d;
+}
+
+/*which id_derivative rule f gets, and its argument for the chain rule*/
+static const char *table_rule(pcas_ast_t *f, pcas_ast_t **arg) {
+    *arg = ast_ChildGet(f, 0);
+    switch(optype(f)) {
+    case OP_DIV:
+        *arg = NULL;
+        return "quotient rule";
+    case OP_POW:
+        *arg = ast_ChildGet(f, 1);
+        return "exp rule";
+    case OP_LOG:
+        *arg = ast_ChildGet(f, 1);
+        return "log rule";
+    case OP_SIN: case OP_COS: case OP_TAN: case OP_COT: case OP_SEC: case OP_CSC:
+        return "trig rule";
+    case OP_SIN_INV: case OP_COS_INV: case OP_TAN_INV:
+        return "inverse trig rule";
+    default:
+        return "hyperbolic rule";
+    }
+}
+
+/*one rule on the deriv node e, the one eval_derivative_nodes would use first. its name, NULL if none fits.
+*chain when it left a d/dx of something that isn't just x*/
+static const char *one_rule(pcas_ast_t *e, Symbol var, bool *chain) {
+    pcas_ast_t *f = ast_ChildGet(e, 0), *k, *rest, *c, *arg;
+    const char *name;
+
+    *chain = false;
+    if(!has_symbol(f, var)) {
+        replace_node(e, ast_MakeNumber(num_FromInt(0)));
+        return "constant rule";
+    }
+    if(isoptype(f, OP_ADD)) {
+        rest = ast_MakeOperator(OP_ADD);
+        for(c = ast_ChildGet(f, 0); c != NULL; c = c->next)
+            ast_ChildAppend(rest, deriv_of(ast_Copy(c), e));
+        replace_node(e, rest);
+        return "sum rule";
+    }
+    if(isoptype(f, OP_MULT)) {
+        /*3x^2 is 3 d/dx(x^2) on paper, the product rule would make a d/dx(3) to throw away*/
+        k = ast_MakeOperator(OP_MULT);
+        rest = ast_MakeOperator(OP_MULT);
+        for(c = ast_ChildGet(f, 0); c != NULL; c = c->next)
+            ast_ChildAppend(has_symbol(c, var) ? rest : k, ast_Copy(c));
+        if(ast_ChildLength(k) > 0) {
+            if(ast_ChildLength(rest) == 1) {
+                pcas_ast_t *only = ast_ChildRemoveIndex(rest, 0);
+
+                ast_Cleanup(rest);
+                rest = only;
+            }
+            ast_ChildAppend(k, deriv_of(rest, e));
+            replace_node(e, k);
+            return "constant multiple";
+        }
+        ast_Cleanup(k);
+        ast_Cleanup(rest);
+        return id_Execute(e, &id_deriv_product_rule, false) ? "product rule" : NULL;
+    }
+    if(isoptype(f, OP_POW) && !has_symbol(ast_ChildGet(f, 1), var)) {
+        *chain = ast_ChildGet(f, 0)->type != NODE_SYMBOL;
+        return id_Execute(e, &id_deriv_power_rule, false) ? "power rule" : NULL;
+    }
+    if(f->type != NODE_OPERATOR)
+        return NULL;
+    name = table_rule(f, &arg);
+    *chain = arg != NULL && arg->type != NODE_SYMBOL;
+    return id_ExecuteTable(e, id_derivative, ID_NUM_DERIV, false) ? name : NULL;
+}
+
+/*d/dx(5) is 0 and d/dx(2x+1) is 2 without a line of their own, like on paper, then a light tidy: 1*2x^(2_1) is 2x*/
+static void quiet_rules(pcas_ast_t *e, Symbol var) {
+    pcas_ast_t *d[DERIVS_MAX], *c[3];
+    mp_rat slope;
+    int n = find_derivs(e, d, 0), i, k, deg;
+
+    for(i = 0; i < n; i++) {
+        slope = NULL;
+        deg = poly_coefs(ast_ChildGet(d[i], 0), var, c);
+        if(deg == 0)
+            slope = num_FromInt(0);
+        else if(deg == 1)
+            slope = pow_value(c[1]); /*NULL with a letter in it, that one gets its rules*/
+        if(slope != NULL)
+            replace_node(d[i], number(slope));
+        num_Cleanup(slope);
+        for(k = 0; k < 3; k++)
+            ast_Cleanup(c[k]);
+    }
+    simplify(e, SIMP_LIGHT);
+}
+
+/*once each, two power rules on a line read as one*/
+static void add_rule(step_t *l, const char *name) {
+    int i;
+
+    for(i = 0; i < STEP_RULES_MAX && l->rules[i] != NULL; i++)
+        if(strcmp(l->rules[i], name) == 0)
+            return;
+    if(i < STEP_RULES_MAX)
+        l->rules[i] = name;
+}
+
+bool steps_derivative(pcas_ast_t *d, steps_t *out) {
+    pcas_ast_t *cur, *found[DERIVS_MAX], *done;
+    Symbol var;
+    bool chain, any_chain;
+    const char *name;
+    step_t *l;
+    int n, i;
+
+    out->n = 0;
+    if(!isoptype(d, OP_DERIV) || ast_ChildGet(d, 1)->type != NODE_SYMBOL || !ast_Compare(ast_ChildGet(d, 1), ast_ChildGet(d, 2)))
+        return false;
+    var = ast_ChildGet(d, 1)->op.symbol;
+
+    cur = ast_Copy(d);
+    simplify(ast_ChildGet(cur, 0), SIMP_NORMALIZE | SIMP_COMMUTATIVE | SIMP_EVAL); /*sqrt(x) is x^(1/2) for the rules, a+b+c one sum*/
+    l = add_expr(out, ast_Copy(cur));
+
+    while(l != NULL && (n = find_derivs(cur, found, 0)) > 0 && !pcas_cancelled) {
+        l->move = 'n';
+        any_chain = false;
+        for(i = 0; i < n; i++) {
+            if((name = one_rule(found[i], var, &chain)) == NULL) {
+                ast_Cleanup(cur);
+                steps_free(out);
+                return false;
+            }
+            add_rule(l, name);
+            any_chain |= chain;
+        }
+        if(any_chain)
+            add_rule(l, "chain rule");
+        quiet_rules(cur, var);
+        l = add_expr(out, ast_Copy(cur));
+    }
+    if(l == NULL || pcas_cancelled) { /*ran out of lines*/
+        ast_Cleanup(cur);
+        steps_free(out);
+        return false;
+    }
+
+    /*and tidied like enter would, if that's shorter. (1-ln(x))/x^2 is better than enter's 1/x^2-ln(x)/x^2*/
+    done = ast_Copy(cur);
+    simplify(done, SIMP_ALL);
+    if(dbg_count_nodes(done) < dbg_count_nodes(cur))
+        add_expr(out, done);
+    else
+        ast_Cleanup(done);
+    ast_Cleanup(cur);
+    shown(out);
+    return true;
 }
 
 /*every tree in the canonical form, the lines are only ever drawn. 3X+5 and not 5+3X*/
