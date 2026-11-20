@@ -186,6 +186,11 @@ static bool parens_as_factor(pcas_ast_t *e) {
     return isoptype(e, OP_ADD);
 }
 
+/* -5, or -1*5 the way the parser makes it */
+static bool starts_negative(pcas_ast_t *e) {
+    return is_negative_number(e) || (isoptype(e, OP_MULT) && is_negative_number(ast_ChildGet(e, 0)));
+}
+
 /* as the base of a power or before !: anything that isn't a single symbol,
 number or function call. (X+1)^2, (2X)^2, (1/2)^2, (-3)^2 */
 static bool parens_as_base(pcas_ast_t *e) {
@@ -398,7 +403,8 @@ static box_t *build_mult(pcas_ast_t *e, unsigned char level) {
             continue;
         }
 
-        add(row, build_parens(child, level, parens_as_factor(child)));
+        /* a minus past the first factor, or 4*2*-5 looks like 4*2 - 5 */
+        add(row, build_parens(child, level, parens_as_factor(child) || (child != ast_ChildGet(e, 0) && starts_negative(child))));
 
         if(child->next != NULL && needs_dot(child, child->next))
             add(row, new_text(STR_CDOT, level));

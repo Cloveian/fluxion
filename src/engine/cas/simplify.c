@@ -633,7 +633,7 @@ bool simplify_canonical_form(pcas_ast_t *e, unsigned char flags) {
             num = ast_ChildGet(e, 0);
             den = ast_ChildGet(e, 1);
 
-            /*Fluxion: an i below goes on top as -i, 5pi/(6i) is -5ipi/6. out here, in eval like terms kept dividing by i and lost track of it*/
+            /*Fluxion: an i below goes on top as -i, 5pi/(6i) is -5ipi/6. out here, in eval like terms kept *dih*viding by i and lost track of it*/
             imag = NULL;
             if(!has_imaginary_node(num) && den->type == NODE_SYMBOL && den->op.symbol == SYM_IMAG)
                 imag = den;

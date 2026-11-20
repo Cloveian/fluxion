@@ -763,8 +763,24 @@ steps; X^2/4=1; X; X^2/4=1 | *4 | X^2=4 | r | X=+-2 | X=2 or X=-2
 steps; 5=X^2_4; X; 5=X^2_4 | +4 | 9=X^2 | X^2=9 | r | X=+-3 | X=3 or X=-3
 steps; X^2=0; X; X^2=0 | r | X=0
 steps; X^2=-4; X; X^2=-4 | r | X=+-sqrt(-4) | X=+-2i | X=2i or X=-2i
+#the rest of the quadratics: to = 0 first, then factoring (the ac method when a isnt 1), completing the square, the formula. optimal goes in that order, the square only for a 1 and an even b
+steps; X^2+5X+6=0; X; X^2+5X+6=0 | (X+2)(X+3)=0 | X+2=0 or X+3=0 | X=-2 or X=-3
+steps; 2X^2+7X+3=0; X; 2X^2+7X+3=0 | 2X^2+X+6X+3=0 | (2X+1)(X+3)=0 | 2X+1=0 or X+3=0 | X=-1/2 or X=-3
+steps; X^2+5X=0; X; X^2+5X=0 | X(X+5)=0 | X=0 or X+5=0 | X=0 or X=-5
+steps; X^2+6X+9=0; X; X^2+6X+9=0 | (X+3)^2=0 | X+3=0 | X=-3
+steps; 2X^2+4X=6; X; 2X^2+4X=6 | _6 | 2X^2+4X_6=0 | /2 | X^2+2X_3=0 | (X_1)(X+3)=0 | X_1=0 or X+3=0 | X=1 or X=-3
+steps; -X^2+X+6=0; X; -X^2+X+6=0 | *-1 | X^2_X_6=0 | (X_3)(X+2)=0 | X_3=0 or X+2=0 | X=3 or X=-2
+steps; X^2+X=2; X; X^2+X=2 | _2 | X^2+X_2=0 | (X_1)(X+2)=0 | X_1=0 or X+2=0 | X=1 or X=-2
+steps; X^2+6X+1=0; X; X^2+6X+1=0 | _1 | X^2+6X=-1 | +9 | X^2+6X+9=8 | (X+3)^2=8 | r | X+3=+-sqrt(8) | X+3=+-2sqrt(2) | _3 | X=-3+-2sqrt(2) | X=2sqrt(2)_3 or X=-2sqrt(2)_3
+steps; X^2+2X+5=0; X; X^2+2X+5=0 | _5 | X^2+2X=-5 | +1 | X^2+2X+1=-4 | (X+1)^2=-4 | r | X+1=+-sqrt(-4) | X+1=+-2i | _1 | X=-1+-2i | X=2i_1 or X=-2i_1
+steps; X^2+6X+1=0; Xformula; X^2+6X+1=0 | A=1, B=6, C=1 | X=(-6+-sqrt((6^2_4)))/2 | X=(-6+-sqrt(32))/2 | X=(-6+-4sqrt(2))/2 | X=2sqrt(2)_3 or X=-2sqrt(2)_3
+steps; 2X^2_3X_5=0; Xformula; 2X^2_3X_5=0 | A=2, B=-3, C=-5 | X=(3+-sqrt((-3^2_4*2*-5)))/2*2 | X=(3+-sqrt(49))/4 | X=(3+-7)/4 | X=5/2 or X=-1
+steps; X^2+X+1=0; X; X^2+X+1=0 | A=1, B=1, C=1 | X=(-1+-sqrt((1^2_4)))/2 | X=(-1+-sqrt(-3))/2 | X=(-1+-isqrt(3))/2 | X=(isqrt(3))/2_1/2 or X=-1/2_(isqrt(3))/2
+steps; X^2+6X+9=0; Xformula; X^2+6X+9=0 | A=1, B=6, C=9 | X=(-6+-sqrt((6^2_4*9)))/2 | X=(-6+-sqrt(0))/2 | X=(-6+-0)/2 | X=-3
+steps; 3X^2_2X=0; Xformula; 3X^2_2X=0 | A=3, B=-2, C=0 | X=(2+-sqrt((-2^2_4*3*0)))/2*3 | X=(2+-sqrt(4))/6 | X=(2+-2)/6 | X=2/3 or X=0
+steps; X^2+5X+6=0; Xsquare; X^2+5X+6=0 | _6 | X^2+5X=-6 | +25/4 | X^2+5X+25/4=1/4 | (X+5/2)^2=1/4 | r | X+5/2=+-1/2 | _5/2 | X=-5/2+-1/2 | X=-2 or X=-3
 #not a shape it does yet, or a method that doesn't fit
-steps; X^2+X=2; X; none
+steps; X^2+X+1=0; Xfactor; none
 steps; X^2+X=2; Xroot; none
 steps; sin(X)=1; X; none
 steps; 2^X=4; X; none

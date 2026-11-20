@@ -117,17 +117,18 @@ static step_t *add_line(steps_t *s, pcas_ast_t *left, pcas_ast_t *right) {
     return l;
 }
 
-/*x = (right +- pm)/den, right and den can be NULL: x=+-3*/
-static step_t *add_pm(steps_t *s, Symbol var, pcas_ast_t *right, pcas_ast_t *pm, pcas_ast_t *den) {
-    step_t *l = pm != NULL ? new_line(s) : NULL;
+/*left = (right +- pm)/den, right and den can be NULL: x=+-3, x+3=+-sqrt(8)*/
+static step_t *add_pm(steps_t *s, pcas_ast_t *left, pcas_ast_t *right, pcas_ast_t *pm, pcas_ast_t *den) {
+    step_t *l = left != NULL && pm != NULL ? new_line(s) : NULL;
 
     if(l == NULL) {
+        ast_Cleanup(left);
         ast_Cleanup(right);
         ast_Cleanup(pm);
         ast_Cleanup(den);
         return NULL;
     }
-    l->eq[0].left = ast_MakeSymbol(var);
+    l->eq[0].left = left;
     l->eq[0].right = right;
     l->eq[0].pm = pm;
     l->eq[0].den = den;
@@ -245,25 +246,63 @@ static bool linear(pcas_ast_t *left, pcas_ast_t *right, Symbol var, side_t *side
     return !pcas_cancelled;
 }
 
-/*x = r or x = -r, the last line of the root methods*/
-static void add_both(steps_t *s, Symbol var, pcas_ast_t *r) {
-    pcas_ast_t *neg = ast_MakeBinary(OP_MULT, ast_MakeNumber(num_FromInt(-1)), ast_Copy(r));
+/*x = (base + pm)/den or x = (base - pm)/den, each worked out. base and den can be NULL. takes all three*/
+static void add_split(steps_t *s, Symbol var, pcas_ast_t *base, pcas_ast_t *pm, pcas_ast_t *den) {
+    pcas_ast_t *x[2];
     step_t *l;
+    int i;
 
-    simplify(neg, SIMP_LIGHT);
-    l = add_line(s, ast_MakeSymbol(var), r);
+    for(i = 0; i < 2; i++) {
+        x[i] = ast_MakeBinary(OP_MULT, ast_MakeNumber(num_FromInt(i == 0 ? 1 : -1)), ast_Copy(pm));
+        if(base != NULL)
+            x[i] = ast_MakeBinary(OP_ADD, ast_Copy(base), x[i]);
+        if(den != NULL)
+            x[i] = ast_MakeBinary(OP_DIV, x[i], ast_Copy(den));
+        simplify(x[i], SIMP_ALL); /*_3+2sqrt(2) or (_6+4i)/2 at most*/
+    }
+    ast_Cleanup(base);
+    ast_Cleanup(pm);
+    ast_Cleanup(den);
+
+    l = add_line(s, ast_MakeSymbol(var), x[0]);
     if(l == NULL) {
-        ast_Cleanup(neg);
+        ast_Cleanup(x[1]);
         return;
     }
     l->eq[1].left = ast_MakeSymbol(var);
-    l->eq[1].right = neg;
+    l->eq[1].right = x[1];
     l->eqs = 2;
+}
+
+/*sqrt(8) as written*/
+static pcas_ast_t *sqrt_of(pcas_ast_t *v) {
+    return ast_MakeBinary(OP_POW, v, ast_MakeBinary(OP_DIV, ast_MakeNumber(num_FromInt(1)), ast_MakeNumber(num_FromInt(2))));
+}
+
+/*left = v, square root of both sides: left = +-sqrt(8), then left = +-2sqrt(2) when it isn't just a number
+(x^2=9 goes straight to x = +-3). gives the root as it ended up, or NULL for v = 0 (left = 0). takes left*/
+static pcas_ast_t *root_both(steps_t *s, pcas_ast_t *left, mp_rat v) {
+    pcas_ast_t *root, *done;
+
+    add_move(s, 'r', NULL);
+    if(mp_rat_compare_zero(v) == 0) {
+        add_line(s, left, ast_MakeNumber(num_FromInt(0)));
+        return NULL;
+    }
+    root = sqrt_of(number(v));
+    done = ast_Copy(root);
+    simplify(done, SIMP_ALL); /*the light one leaves sqrt(-4), it's only a number so it's cheap*/
+    if(done != NULL && !ast_Compare(root, done) && !is_number(done))
+        add_pm(s, ast_Copy(left), NULL, root, NULL);
+    else
+        ast_Cleanup(root);
+    add_pm(s, left, NULL, ast_Copy(done), NULL);
+    return done;
 }
 
 /*no x term: x^2 = v like a linear one, then the square root of both sides. x^2=-4 carries on with i like solve*/
 static bool square_root(pcas_ast_t *left, pcas_ast_t *right, Symbol var, side_t *side, steps_t *s) {
-    pcas_ast_t *root, *done;
+    pcas_ast_t *done;
     int k;
 
     prep(left, right, var, side, s);
@@ -271,23 +310,308 @@ static bool square_root(pcas_ast_t *left, pcas_ast_t *right, Symbol var, side_t 
     if(k < 0)
         return !pcas_cancelled;
 
-    add_move(s, 'r', NULL);
-    if(mp_rat_compare_zero(side[1 - k].c[0]) == 0) {
-        add_line(s, ast_MakeSymbol(var), ast_MakeNumber(num_FromInt(0)));
-        return !pcas_cancelled;
+    done = root_both(s, ast_MakeSymbol(var), side[1 - k].c[0]);
+    if(done != NULL)
+        add_split(s, var, NULL, done, NULL);
+    return !pcas_cancelled;
+}
+
+/*--- the rest of the quadratics, ax^2+bx+c = 0 ---*/
+
+/*left minus right, for x^p*/
+static void net(side_t *side, int p, mp_rat r) {
+    mp_rat_sub(side[0].c[p], side[1].c[p], r);
+}
+
+/*b^2-4ac of left - right = 0, new*/
+static mp_rat discriminant(side_t *side) {
+    mp_rat a = num_FromInt(0), b = num_FromInt(0), c = num_FromInt(0), d = num_FromInt(0), four = num_FromInt(4);
+
+    net(side, 2, a);
+    net(side, 1, b);
+    net(side, 0, c);
+    mp_rat_mul(b, b, d);
+    mp_rat_mul(a, c, a);
+    mp_rat_mul(a, four, a);
+    mp_rat_sub(d, a, d);
+    num_Cleanup(a);
+    num_Cleanup(b);
+    num_Cleanup(c);
+    num_Cleanup(four);
+    return d;
+}
+
+/*sqrt(r) into r when it's a fraction. r is junk when it isn't*/
+static bool rational_root(mp_rat r) {
+    return mp_rat_compare_zero(r) >= 0 && int_root(mp_rat_numer_ref(r), 2) && int_root(mp_rat_denom_ref(r), 2);
+}
+
+/*everything over to the left, a > 0 and nothing they all share: 2x^2+4x=6 is x^2+2x_3=0. after prep(), they're whole*/
+static void to_zero(steps_t *s, side_t *side, Symbol var) {
+    mp_rat size = num_FromInt(0), g = num_FromInt(0);
+    bool moved = true;
+    char op;
+    int p;
+
+    if(mp_rat_compare_zero(side[1].c[2]) != 0 || mp_rat_compare_zero(side[1].c[1]) != 0) {
+        add_move(s, '_', side_tree(side[1].c, var));
+    } else if(mp_rat_compare_zero(side[1].c[0]) != 0) {
+        op = take_away(side[1].c[0], size);
+        add_move(s, op, number(size));
+    } else {
+        moved = false;
+    }
+    if(moved) {
+        for(p = 0; p < 3; p++) {
+            mp_rat_sub(side[0].c[p], side[1].c[p], side[0].c[p]);
+            mp_rat_set_value(side[1].c[p], 0, 1);
+        }
+        add_sides(s, side, var);
     }
 
-    /*x = +-sqrt(8) then x = +-2sqrt(2), but x^2=9 goes straight to x = +-3*/
-    root = ast_MakeBinary(OP_POW, number(side[1 - k].c[0]),
-                          ast_MakeBinary(OP_DIV, ast_MakeNumber(num_FromInt(1)), ast_MakeNumber(num_FromInt(2))));
-    done = ast_Copy(root);
-    simplify(done, SIMP_ALL); /*the light one leaves sqrt(-4), it's only a number so it's cheap*/
-    if(!ast_Compare(root, done) && !is_number(done))
-        add_pm(s, var, NULL, root, NULL);
+    if(mp_rat_compare_zero(side[0].c[2]) < 0) {
+        add_move(s, '*', ast_MakeNumber(num_FromInt(-1)));
+        for(p = 0; p < 3; p++)
+            mp_rat_neg(side[0].c[p], side[0].c[p]);
+        add_sides(s, side, var);
+    }
+
+    for(p = 0; p < 3; p++)
+        mp_int_gcd(mp_rat_numer_ref(g), mp_rat_numer_ref(side[0].c[p]), mp_rat_numer_ref(g));
+    if(mp_rat_compare_value(g, 1, 1) > 0) {
+        add_move(s, '/', number(g));
+        for(p = 0; p < 3; p++)
+            mp_rat_div(side[0].c[p], g, side[0].c[p]);
+        add_sides(s, side, var);
+    }
+    num_Cleanup(size);
+    num_Cleanup(g);
+}
+
+/*a line of two, l1 = r1 or l2 = r2. one if l2 is NULL*/
+static void add_or(steps_t *s, pcas_ast_t *l1, pcas_ast_t *r1, pcas_ast_t *l2, pcas_ast_t *r2) {
+    step_t *l = add_line(s, l1, r1);
+
+    if(l == NULL || l2 == NULL || r2 == NULL) {
+        ast_Cleanup(l2);
+        ast_Cleanup(r2);
+        return;
+    }
+    l->eq[1].left = l2;
+    l->eq[1].right = r2;
+    l->eqs = 2;
+}
+
+/*qx - p, the factor for the root p/q*/
+static pcas_ast_t *root_factor(mp_rat root, Symbol var) {
+    mp_rat c[3];
+    pcas_ast_t *t;
+    int p;
+
+    for(p = 0; p < 3; p++)
+        c[p] = num_FromInt(0);
+    mp_int_neg(mp_rat_numer_ref(root), mp_rat_numer_ref(c[0]));
+    mp_int_copy(mp_rat_denom_ref(root), mp_rat_numer_ref(c[1]));
+    t = side_tree(c, var);
+    for(p = 0; p < 3; p++)
+        num_Cleanup(c[p]);
+    return t;
+}
+
+/*rational roots: (x+2)(x+3)=0. a isn't 1: the ac method, 2x^2+3x+4x+6=0 first, the middle split so it groups*/
+static bool factoring(pcas_ast_t *left, pcas_ast_t *right, Symbol var, side_t *side, steps_t *s) {
+    mp_rat d, r[2], m = num_FromInt(0), n = num_FromInt(0), two_a = num_FromInt(2);
+    pcas_ast_t *f[2], *split;
+    mp_rat *c = side[0].c;
+    bool twice;
+    int i;
+
+    prep(left, right, var, side, s);
+    to_zero(s, side, var);
+
+    d = discriminant(side);
+    rational_root(d); /*fits() checked it is one*/
+    mp_rat_mul(two_a, c[2], two_a);
+    for(i = 0; i < 2; i++) {
+        r[i] = num_FromInt(0);
+        mp_rat_neg(c[1], r[i]);
+        if(i == 0)
+            mp_rat_add(r[i], d, r[i]);
+        else
+            mp_rat_sub(r[i], d, r[i]);
+        mp_rat_div(r[i], two_a, r[i]);
+    }
+    twice = mp_rat_compare(r[0], r[1]) == 0;
+
+    /*-q1p2 and -q2p1, they add up to b and multiply to ac*/
+    if(mp_rat_compare_value(c[2], 1, 1) != 0) {
+        mp_int_mul(mp_rat_denom_ref(r[0]), mp_rat_numer_ref(r[1]), mp_rat_numer_ref(m));
+        mp_int_mul(mp_rat_denom_ref(r[1]), mp_rat_numer_ref(r[0]), mp_rat_numer_ref(n));
+        mp_rat_neg(m, m);
+        mp_rat_neg(n, n);
+        if(mp_rat_compare_zero(m) != 0 && mp_rat_compare_zero(n) != 0) {
+            split = ast_MakeOperator(OP_ADD);
+            ast_ChildAppend(split, term(c[2], var, 2));
+            ast_ChildAppend(split, term(m, var, 1));
+            ast_ChildAppend(split, term(n, var, 1));
+            ast_ChildAppend(split, number(c[0]));
+            add_line(s, split, ast_MakeNumber(num_FromInt(0)));
+        }
+    }
+
+    f[0] = root_factor(r[0], var);
+    f[1] = root_factor(r[1], var);
+    if(twice)
+        add_line(s, ast_MakeBinary(OP_POW, ast_Copy(f[0]), ast_MakeNumber(num_FromInt(2))), ast_MakeNumber(num_FromInt(0)));
     else
-        ast_Cleanup(root);
-    add_pm(s, var, NULL, ast_Copy(done), NULL);
-    add_both(s, var, done);
+        add_line(s, ast_MakeBinary(OP_MULT, ast_Copy(f[0]), ast_Copy(f[1])), ast_MakeNumber(num_FromInt(0)));
+    add_or(s, f[0], ast_MakeNumber(num_FromInt(0)), twice ? NULL : f[1], ast_MakeNumber(num_FromInt(0)));
+    if(twice)
+        ast_Cleanup(f[1]);
+    add_or(s, ast_MakeSymbol(var), number(r[0]), twice ? NULL : ast_MakeSymbol(var), number(r[1]));
+
+    for(i = 0; i < 2; i++)
+        num_Cleanup(r[i]);
+    num_Cleanup(d);
+    num_Cleanup(m);
+    num_Cleanup(n);
+    num_Cleanup(two_a);
+    return !pcas_cancelled;
+}
+
+/*a = 1, the number over, (b/2)^2 on both sides, (x+b/2)^2 = k, square root, b/2 back over*/
+static bool complete_square(pcas_ast_t *left, pcas_ast_t *right, Symbol var, side_t *side, steps_t *s) {
+    mp_rat h = num_FromInt(0), size = num_FromInt(0), two = num_FromInt(2), shift[3];
+    mp_rat *c = side[0].c;
+    pcas_ast_t *x, *done;
+    char op;
+    int p;
+
+    prep(left, right, var, side, s);
+    to_zero(s, side, var);
+
+    if(mp_rat_compare_value(c[2], 1, 1) != 0) {
+        add_move(s, '/', number(c[2]));
+        for(p = 0; p < 2; p++)
+            mp_rat_div(c[p], c[2], c[p]);
+        mp_rat_set_value(c[2], 1, 1);
+        add_sides(s, side, var);
+    }
+    if(mp_rat_compare_zero(c[0]) != 0) {
+        op = take_away(c[0], size);
+        add_move(s, op, number(size));
+        mp_rat_neg(c[0], side[1].c[0]);
+        mp_rat_set_value(c[0], 0, 1);
+        add_sides(s, side, var);
+    }
+
+    /*x + b/2, squared on the left*/
+    mp_rat_div(c[1], two, h);
+    for(p = 0; p < 3; p++)
+        shift[p] = num_FromInt(0);
+    mp_rat_copy(h, shift[0]);
+    mp_rat_set_value(shift[1], 1, 1);
+    x = side_tree(shift, var);
+    if(mp_rat_compare_zero(h) != 0) {
+        mp_rat_mul(h, h, size);
+        add_move(s, '+', number(size));
+        mp_rat_copy(size, c[0]);
+        mp_rat_add(side[1].c[0], size, side[1].c[0]);
+        add_sides(s, side, var);
+        add_line(s, ast_MakeBinary(OP_POW, ast_Copy(x), ast_MakeNumber(num_FromInt(2))), number(side[1].c[0]));
+    }
+
+    done = root_both(s, x, side[1].c[0]);
+    if(mp_rat_compare_zero(h) != 0) {
+        op = take_away(h, size);
+        add_move(s, op, number(size));
+        mp_rat_neg(h, h);
+        if(done == NULL)
+            add_line(s, ast_MakeSymbol(var), number(h));
+        else
+            add_pm(s, ast_MakeSymbol(var), number(h), ast_Copy(done), NULL);
+    }
+    if(done != NULL)
+        add_split(s, var, mp_rat_compare_zero(h) != 0 ? number(h) : NULL, done, NULL);
+
+    for(p = 0; p < 3; p++)
+        num_Cleanup(shift[p]);
+    num_Cleanup(h);
+    num_Cleanup(size);
+    num_Cleanup(two);
+    return !pcas_cancelled;
+}
+
+/*k*a*b as written, 1s left out. layout.c draws a 1 in a product as nothing, 4*1*1 came out 4* */
+static pcas_ast_t *times(int k, mp_rat a, mp_rat b) {
+    pcas_ast_t *t = ast_MakeOperator(OP_MULT), *only;
+
+    if(t == NULL)
+        return NULL;
+    ast_ChildAppend(t, ast_MakeNumber(num_FromInt(k)));
+    if(mp_rat_compare_value(a, 1, 1) != 0)
+        ast_ChildAppend(t, number(a));
+    if(b != NULL && mp_rat_compare_value(b, 1, 1) != 0)
+        ast_ChildAppend(t, number(b));
+    if(ast_ChildLength(t) > 1)
+        return t;
+    only = ast_ChildRemoveIndex(t, 0);
+    ast_Cleanup(t);
+    return only;
+}
+
+/*a=, b=, c=, then x = (-b +- sqrt(b^2-4ac))/(2a) with the numbers just in, then worked out a bit at a time*/
+static bool formula(pcas_ast_t *left, pcas_ast_t *right, Symbol var, side_t *side, steps_t *s) {
+    mp_rat *c = side[0].c, d, nb = num_FromInt(0), two_a = num_FromInt(2);
+    pcas_ast_t *in, *raw, *done;
+    step_t *l;
+
+    prep(left, right, var, side, s);
+    to_zero(s, side, var);
+
+    l = add_line(s, ast_MakeSymbol('A'), number(c[2]));
+    if(l != NULL) {
+        l->eq[1].left = ast_MakeSymbol('B');
+        l->eq[1].right = number(c[1]);
+        l->eq[2].left = ast_MakeSymbol('C');
+        l->eq[2].right = number(c[0]);
+        l->eqs = 3;
+        l->list = true;
+    }
+
+    /*root nodes by hand, these two lines skip the canonical form that'd make them*/
+    mp_rat_neg(c[1], nb);
+    mp_rat_mul(two_a, c[2], two_a);
+    in = times(-4, c[2], c[0]);
+    in = ast_MakeBinary(OP_ADD, ast_MakeBinary(OP_POW, number(c[1]), ast_MakeNumber(num_FromInt(2))), in);
+    l = add_pm(s, ast_MakeSymbol(var), number(nb), ast_MakeBinary(OP_ROOT, ast_MakeNumber(num_FromInt(2)), in),
+               times(2, c[2], NULL));
+    if(l != NULL)
+        l->as_is = true;
+
+    d = discriminant(side);
+    l = add_pm(s, ast_MakeSymbol(var), number(nb), ast_MakeBinary(OP_ROOT, ast_MakeNumber(num_FromInt(2)), number(d)), number(two_a));
+    if(l != NULL)
+        l->as_is = true;
+
+    /*sqrt(32) is 4sqrt(2), sqrt(-16) is 4i*/
+    raw = sqrt_of(number(d));
+    done = ast_Copy(raw);
+    simplify(done, SIMP_ALL);
+    if(!ast_Compare(raw, done))
+        add_pm(s, ast_MakeSymbol(var), number(nb), ast_Copy(done), number(two_a));
+    ast_Cleanup(raw);
+    if(mp_rat_compare_zero(d) == 0) { /*one root, just x=-3*/
+        mp_rat_div(nb, two_a, nb);
+        add_line(s, ast_MakeSymbol(var), number(nb));
+        ast_Cleanup(done);
+    } else {
+        add_split(s, var, number(nb), done, number(two_a));
+    }
+
+    num_Cleanup(d);
+    num_Cleanup(nb);
+    num_Cleanup(two_a);
     return !pcas_cancelled;
 }
 
@@ -334,22 +658,59 @@ static bool is_quadratic(side_t *side) {
     return mp_rat_compare(side[0].c[2], side[1].c[2]) != 0;
 }
 
+/*the order optimal goes down*/
+static const Method optimal[] = { METHOD_ROOT, METHOD_FACTOR, METHOD_SQUARE, METHOD_FORMULA };
+
+/*works at all, for the method menu*/
 static bool fits(side_t *side, Method m) {
+    mp_rat d;
+    bool ok;
+
+    if(m == METHOD_OPTIMAL)
+        return is_linear(side) || is_quadratic(side);
+    if(!is_quadratic(side))
+        return false;
     switch(m) {
     case METHOD_ROOT:
-        return is_quadratic(side) && mp_rat_compare_zero(side[0].c[1]) == 0 && mp_rat_compare_zero(side[1].c[1]) == 0;
-    case METHOD_OPTIMAL:
-        return is_linear(side) || fits(side, METHOD_ROOT);
+        return mp_rat_compare_zero(side[0].c[1]) == 0 && mp_rat_compare_zero(side[1].c[1]) == 0;
+    case METHOD_FACTOR:
+        d = discriminant(side);
+        ok = rational_root(d);
+        num_Cleanup(d);
+        return ok;
     default:
-        return false;
+        return true;
     }
 }
 
-/*what optimal means for this one, the first method that fits. OPTIMAL itself for a linear one*/
+/*what optimal takes: completing the square only with a 1 in front and an even b, x^2+6x+1*/
+static bool suits(side_t *side, Method m) {
+    mp_rat a, b;
+    bool ok;
+
+    if(m != METHOD_SQUARE)
+        return fits(side, m);
+    a = num_FromInt(0);
+    b = num_FromInt(0);
+    net(side, 2, a);
+    net(side, 1, b);
+    mp_rat_abs(a, a);
+    ok = mp_rat_compare_value(a, 1, 1) == 0 && mp_rat_is_integer(b) && mp_int_is_even(mp_rat_numer_ref(b));
+    num_Cleanup(a);
+    num_Cleanup(b);
+    return ok;
+}
+
+/*optimal as one of the others, OPTIMAL itself for a linear one*/
 static Method pick(side_t *side, Method m) {
-    if(m == METHOD_OPTIMAL && fits(side, METHOD_ROOT))
-        return METHOD_ROOT;
-    return m;
+    unsigned i;
+
+    if(m != METHOD_OPTIMAL || !is_quadratic(side))
+        return m;
+    for(i = 0; i < sizeof(optimal) / sizeof(optimal[0]); i++)
+        if(suits(side, optimal[i]))
+            return optimal[i];
+    return METHOD_FORMULA;
 }
 
 bool steps_fit(pcas_ast_t *left, pcas_ast_t *right, Symbol var, Method m) {
@@ -375,6 +736,15 @@ bool steps_solve(pcas_ast_t *left, pcas_ast_t *right, Symbol var, Method m, step
         switch(pick(side, m)) {
         case METHOD_ROOT:
             ok = square_root(left, right, var, side, out);
+            break;
+        case METHOD_FACTOR:
+            ok = factoring(left, right, var, side, out);
+            break;
+        case METHOD_SQUARE:
+            ok = complete_square(left, right, var, side, out);
+            break;
+        case METHOD_FORMULA:
+            ok = formula(left, right, var, side, out);
             break;
         default:
             ok = linear(left, right, var, side, out);
