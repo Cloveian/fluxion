@@ -625,7 +625,7 @@ bool simplify_canonical_form(pcas_ast_t *e, unsigned char flags) {
         }
 
         if((flags & CANONICAL_RATIONALIZE) && isoptype(e, OP_DIV)) {
-            pcas_ast_t *num, *den;
+            pcas_ast_t *num, *den, *imag;
             bool root0, root1;
 
             /*Rationalize denominator*/
@@ -633,7 +633,25 @@ bool simplify_canonical_form(pcas_ast_t *e, unsigned char flags) {
             num = ast_ChildGet(e, 0);
             den = ast_ChildGet(e, 1);
 
-            if(isoptype(den, OP_ROOT)) {
+            /*Fluxion: an i below goes on top as -i, 5pi/(6i) is -5ipi/6. out here, in eval like terms kept dividing by i and lost track of it*/
+            imag = NULL;
+            if(!has_imaginary_node(num) && den->type == NODE_SYMBOL && den->op.symbol == SYM_IMAG)
+                imag = den;
+            else if(!has_imaginary_node(num) && isoptype(den, OP_MULT))
+                for(imag = ast_ChildGet(den, 0); imag != NULL && !(imag->type == NODE_SYMBOL && imag->op.symbol == SYM_IMAG); imag = imag->next);
+
+            if(imag != NULL) {
+                replace_node(num, ast_MakeBinary(OP_MULT, ast_MakeNumber(num_FromInt(-1)),
+                                                 ast_MakeBinary(OP_MULT, ast_MakeSymbol(SYM_IMAG), ast_Copy(num))));
+                if(imag == den)
+                    replace_node(den, ast_MakeNumber(num_FromInt(1)));
+                else
+                    ast_Cleanup(ast_ChildRemove(den, imag));
+                simplify(num, SIMP_NORMALIZE | SIMP_COMMUTATIVE | SIMP_EVAL);
+                simplify(den, SIMP_NORMALIZE | SIMP_COMMUTATIVE | SIMP_EVAL);
+                cancel_numbers(e);
+                intermediate_change = changed = true;
+            } else if(isoptype(den, OP_ROOT)) {
 
                 replace_node(num, ast_MakeBinary(OP_MULT,
                                     ast_Copy(num),

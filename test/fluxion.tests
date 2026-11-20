@@ -164,9 +164,12 @@ simplify; (-2_2*3^(1/2)i)^(1/2); 1_i3^(1/2)
 simplify; (-3+4i)^(1/2); 1+2i
 simplify; ln(-1_i); ln(2)/2_(3ipi)/4
 simplify; ln(-1+i); ln(2)/2+(3ipi)/4
-#an i below goes on top as -i
-simplify; (5pi)/(6i); (-5ipi)/6
-simplify; 3/(4iX); (-3i)/(4X)
+#an i below goes on top as -i, when it's shown (in eval it broke like terms, iX/2_iX/2 stayed)
+simplifytext; (5pi)/(6i); (-5ipi)/6
+simplifytext; 3/(4iX); (-3i)/(4X)
+simplifytext; 1/(Xi); (-i)/X
+simplify; i*X/2_i*X/2; 0
+simplify; -2*pi*N*i_i*pi+(pi*i)/6; -2piNi_(5ipi)/6
 #sqrt(8) is 2^(3/2) by then, its 2 has to cancel with the -2
 simplify; ln(-2+2i); ln(8)/2+(3ipi)/4
 simplify; ln(-2_2i); ln(8)/2_(3ipi)/4
@@ -179,7 +182,7 @@ simplify; atan(-1_sqrt(2)); (-3pi)/8
 #a = 0 and b < 0 too
 simplify; ln(-3i); ln(9)/2_(ipi)/2
 simplify; (-i)^(1/2); 2^(1/2)/2_(i2^(1/2))/2
-csolve; sin(iX)=1/2; X; (-ipi)/6_2ipiN,-2piNi_(5pii)/6
+csolve; sin(iX)=1/2; X; (-ipi)/6_2ipiN,-2piNi+(5pi)/(6i)
 
 #abs of a product or fraction, numbers out as their size and i as 1, letters stay in
 simplify; abs(-3i); 3
