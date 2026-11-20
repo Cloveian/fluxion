@@ -790,7 +790,7 @@ static void add_rule(step_t *l, const char *name) {
 }
 
 bool steps_derivative(pcas_ast_t *d, steps_t *out) {
-    pcas_ast_t *cur, *found[DERIVS_MAX], *done;
+    pcas_ast_t *cur, *found[DERIVS_MAX], *done, *first;
     Symbol var;
     bool chain, any_chain;
     const char *name;
@@ -802,9 +802,11 @@ bool steps_derivative(pcas_ast_t *d, steps_t *out) {
         return false;
     var = ast_ChildGet(d, 1)->op.symbol;
 
+    first = ast_Copy(d);
+    simplify(ast_ChildGet(first, 0), SIMP_LIGHT); /*the shape degrees_out knows, like the answer's. the rational pass makes (x pi)/180*/
+    l = add_expr(out, first);
     cur = ast_Copy(d);
     simplify(ast_ChildGet(cur, 0), SIMP_NORMALIZE | SIMP_COMMUTATIVE | SIMP_EVAL); /*sqrt(x) is x^(1/2) for the rules, a+b+c one sum*/
-    l = add_expr(out, ast_Copy(cur));
 
     while(l != NULL && (n = find_derivs(cur, found, 0)) > 0 && !pcas_cancelled) {
         l->move = 'n';

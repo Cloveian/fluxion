@@ -3,6 +3,7 @@
 #include "work.h"
 #include "app.h"
 #include "areas.h"
+#include "settings.h"
 #include <string.h>
 #include "platform/screen.h"
 #include "render/draw.h"
@@ -142,6 +143,23 @@ static void free_rows(void) {
     nrows = top = 0;
 }
 
+/* in degrees, back the way the history shows them: sin(x), not sin(pi x/180) */
+static void lines_out(steps_t *s) {
+    int i, j;
+
+    for(i = 0; i < s->n; i++) {
+        for(j = 0; j < s->line[i].eqs; j++) {
+            step_eq_t *q = &s->line[i].eq[j];
+
+            degrees_out(q->left); /* NULL is fine */
+            degrees_out(q->right);
+            degrees_out(q->pm);
+            degrees_out(q->den);
+        }
+        degrees_out(s->line[i].by);
+    }
+}
+
 /* the steps into rows, false if it doesn't do this one */
 static bool build(void) {
     static steps_t s; /* 24 lines, ~1 KB on the CE */
@@ -149,6 +167,8 @@ static bool build(void) {
 
     if(deriv != NULL ? !steps_derivative(deriv, &s) : !steps_solve(lhs, rhs, var, method, &s))
         return false;
+    if(setting_angle == ANGLE_DEGREES)
+        lines_out(&s);
     free_rows();
     for(i = 0; i < s.n && nrows < ROWS_MAX; i++) {
         is_move[nrows] = false;
