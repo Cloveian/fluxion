@@ -42,6 +42,9 @@ typedef enum {
 #define CH_INF      '\x13'
 #define CH_DEG      '\x14'
 #define CH_STO      '\x15' /* the sto-> arrow, expr -> name stores */
+#define CH_PM       '\x16' /* +-, the steps page */
+#define CH_DIV      '\x17' /* the *dih*vide sign, /3 done to both sides */
+#define CH_TIMES    '\x18' /* the same for *2 */
 
 typedef struct ed_row ed_row_t;
 typedef struct ed_node ed_node_t;

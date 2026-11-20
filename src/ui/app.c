@@ -13,6 +13,7 @@
 #include "piece.h"
 #include "shapes.h"
 #include "range.h"
+#include "work.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -487,19 +488,20 @@ box_t *labelled(const char *label, box_t *values) {
 }
 
 /*
-    solve(equation, variable). the engine's parser has no =, so the line is split
-    here: at the = and the last comma outside brackets. no variable: x.
-    takes src apart (mutates src! careful), in is the input line's boxes for the history.
+    the line inside solve(equation, variable). the engine's parser has no =, so the line is split
+    here: at the = and the last comma outside brackets. no variable: x. *rhs is NULL
+    with no =, *rel the < > <= >= when it's one of those instead. takes src apart
+    (mutates src! careful). NULL when it read, or what to say
 */
-static void run_solve(char *src, box_t *in) {
-    pcas_ast_t *roots[SOLVE_MAX] = { NULL }, *e, *rhs = NULL;
-    char *eq = NULL, *comma = NULL, *s, shown = 'x', rel = 0;
-    Symbol var = SYM_X;
+const char *read_equation(char *src, pcas_ast_t **lhs, pcas_ast_t **rhs, Symbol *var, char *shown, char *rel) {
+    char *eq = NULL, *comma = NULL, *s;
     pcas_error_t err;
-    clock_t start;
-    unsigned long ms;
-    int depth = 0, n, i;
+    int depth = 0;
 
+    *lhs = *rhs = NULL;
+    *var = SYM_X;
+    *shown = 'x';
+    *rel = 0;
     for(s = src; *s != '\0'; s++) {
         if(*s == '(')
             depth++;
@@ -507,9 +509,9 @@ static void run_solve(char *src, box_t *in) {
             depth--;
         else if(depth == 0 && eq == NULL && (*s == '<' || *s == '>' || *s == CH_LE || *s == CH_GE)) {
             /* an inequality, ineq.c does those. < then = typed as two counts as <= */
-            rel = *s;
+            *rel = *s;
             if((*s == '<' || *s == '>') && s[1] == '=') {
-                rel = *s == '<' ? CH_LE : CH_GE;
+                *rel = *s == '<' ? CH_LE : CH_GE;
                 *s++ = ' '; /* the left side gets a space at the end, the = is where it splits */
             }
             eq = s;
@@ -521,24 +523,36 @@ static void run_solve(char *src, box_t *in) {
 
     if(comma != NULL) {
         *comma = '\0';
-        if(!args_var(comma + 1, &var, &shown)) {
-            push(in, NULL, "solve(equation, variable)", 0);
-            return;
-        }
+        if(!args_var(comma + 1, var, shown))
+            return "solve(equation, variable)";
     }
 
     if(eq != NULL)
         *eq = '\0';
-    e = parse((const uint8_t *)src, strlen(src), str_table, &err);
+    *lhs = parse((const uint8_t *)src, strlen(src), str_table, &err);
     if(err == E_SUCCESS && eq != NULL)
-        rhs = parse((const uint8_t *)eq + 1, strlen(eq + 1), str_table, &err);
+        *rhs = parse((const uint8_t *)eq + 1, strlen(eq + 1), str_table, &err);
 
-    if(err != E_SUCCESS || e == NULL || (eq != NULL && rhs == NULL)) {
-        if(e != NULL)
-            ast_Cleanup(e);
-        if(rhs != NULL)
-            ast_Cleanup(rhs);
-        push(in, NULL, err != E_SUCCESS ? error_text[err] : "solve(equation, variable)", 0);
+    if(err != E_SUCCESS || *lhs == NULL || (eq != NULL && *rhs == NULL)) {
+        ast_Cleanup(*lhs);
+        ast_Cleanup(*rhs);
+        *lhs = *rhs = NULL;
+        return err != E_SUCCESS ? error_text[err] : "solve(equation, variable)";
+    }
+    return NULL;
+}
+
+static void run_solve(char *src, box_t *in) {
+    pcas_ast_t *roots[SOLVE_MAX] = { NULL }, *e, *rhs;
+    char shown, rel;
+    Symbol var;
+    const char *why = read_equation(src, &e, &rhs, &var, &shown, &rel);
+    clock_t start;
+    unsigned long ms;
+    int n, i;
+
+    if(why != NULL) {
+        push(in, NULL, why, 0);
         return;
     }
 
@@ -1054,6 +1068,35 @@ static void pop_last(void) {
         cleared = history_len;
 }
 
+/* the Tools rows that do something, no [x] in front */
+static bool is_action(const item_t *it) {
+    return strcmp(it->label, "clear history") == 0 || strcmp(it->label, "show steps") == 0;
+}
+
+/* the steps page for the highlighted answer, or the last one. solve( only for now */
+static void show_steps(void) {
+    int at = hist >= 0 ? hist : history_len - 1;
+    const char *cmd;
+    char *src;
+
+    if(at < 0 || !ed_load(&view, history[at].row, true)) {
+        status = "nothing to show the work for";
+        return;
+    }
+    cmd = ed_command(&view);
+    if(cmd == NULL || (strcmp(cmd, "solve") != 0 && strcmp(cmd, "roots") != 0)) {
+        status = "steps are for solve( for now";
+        return;
+    }
+    src = ed_command_arg(&view);
+    if(src == NULL) {
+        status = "nothing to show the work for";
+        return;
+    }
+    status = work_open(src);
+    free(src);
+}
+
 /* switch form and redo the last answer in it. its input comes back out of the
    history and runs again from the scratch editor, so whatever's being typed is
    left alone */
@@ -1147,6 +1190,11 @@ static bool pick_into(editor_t *into, const item_t *it, bool dry) {
         if(strcmp(it->label, "clear history") == 0) {
             if(!dry)
                 clear_history();
+            return true;
+        }
+        if(strcmp(it->label, "show steps") == 0) {
+            if(!dry)
+                show_steps();
             return true;
         }
         if(bit == 0)
@@ -1324,8 +1372,8 @@ static void menu_choose(int i) {
         status = "not in Fluxion yet";
         return;
     }
-    /* settings stay open so several can be toggled */
-    if(it->kind != ITEM_SETTING)
+    /* settings stay open so several can be toggled. show steps opened its page, hidden under it the menu ate the keys */
+    if(it->kind != ITEM_SETTING || work_is_open() || status != NULL) /* the menu sits over the status message */
         menu_close();
 }
 
@@ -2021,6 +2069,13 @@ static bool handle(keypress_t p) {
             page_key(p, c);
         return true;
     }
+    if(work_is_open()) {
+        if(sec && p.key == K_MODE)
+            work_close();
+        else
+            work_key(p);
+        return true;
+    }
 
     /* [2nd] up/down is the brightness, like the TI's own. before the history so
        it works with an answer highlighted too. the 2nd's already used up above */
@@ -2148,7 +2203,7 @@ static void draw_menu(void) {
         bool can = it->kind == ITEM_FOLDER || pick(it, true);
         char label[48];
 
-        if(it->kind == ITEM_SETTING && strcmp(it->label, "clear history") != 0)
+        if(it->kind == ITEM_SETTING && !is_action(it))
             snprintf(label, sizeof label, "%s %s", setting_on(it) ? "[x]" : "[ ]", it->label);
         else
             snprintf(label, sizeof label, "%s%s", it->label, can ? "" : " *");
@@ -2343,9 +2398,12 @@ static void draw_screen(void) {
 
     screen_clear();
 
-    if(page_is_open()) {
+    if(page_is_open() || work_is_open()) {
         layout_free(in);
-        page_draw();
+        if(page_is_open())
+            page_draw();
+        else
+            work_draw();
         draw_top_bar();
         screen_show();
         return;

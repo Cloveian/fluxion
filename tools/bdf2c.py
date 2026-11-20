@@ -21,6 +21,9 @@ SPECIAL = {          # Fluxion code -> Unicode
     0x13: 0x221E,    # CH_INF    infinity
     0x14: 0x00B0,    # CH_DEG    degree sign
     0x15: 0x2192,    # CH_STO    store arrow
+    0x16: 0x00B1,    # CH_PM     plus-minus
+    0x17: 0x00F7,    # CH_DIV    *dih*vide, both sides of a step
+    0x18: 0x00D7,    # CH_TIMES  times, the same
 }
 
 # constants that share a letter with a variable: drawn bold, so the constant e and a
@@ -30,7 +33,8 @@ BOLD = {             # Fluxion code -> the letter to thicken
     6: ord('i'),     # CH_IMAG   i = sqrt(-1)
 }
 LABELS = {1: 'pi', 2: 'theta', 3: 'minus', 4: 'cdot', 5: 'euler e', 6: 'imaginary i',
-          0x10: 'le', 0x11: 'ge', 0x12: 'ne', 0x13: 'infinity', 0x14: 'degree', 0x15: 'sto arrow'}
+          0x10: 'le', 0x11: 'ge', 0x12: 'ne', 0x13: 'infinity', 0x14: 'degree', 0x15: 'sto arrow',
+          0x16: 'plus-minus', 0x17: 'divide', 0x18: 'times'}
 
 def parse_bdf(path):
     props, glyphs = {}, {}

@@ -27,4 +27,6 @@ box_t *point_box(pcas_ast_t *x, pcas_ast_t *y);
 box_t *labelled(const char *label, box_t *values);
 /* f and the variable out of "f, x" (asym, domain, range). NULL when it already pushed the error */
 pcas_ast_t *read_f(char *src, box_t *in, const char *usage, Symbol *var, char *shown);
+/* the solve( line as its two sides and the variable (ui/work.c too). NULL when it read, or what to say */
+const char *read_equation(char *src, pcas_ast_t **lhs, pcas_ast_t **rhs, Symbol *var, char *shown, char *rel);
 #endif

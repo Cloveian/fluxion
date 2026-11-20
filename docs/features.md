@@ -6,17 +6,17 @@ Everything Fluxion does right now, as tables. Yes / partly / no first, the other
 
 ### Solving
 
-| Feature                     |       |
-| --------------------------- | ----- |
-| Polynomial equations        | yes   |
-| Exact cubics                | yes   |
-| Complex roots               | yes\* |
-| Literal equations           | yes   |
-| Exp, log and root equations | yes   |
-| Rational equations          | yes   |
-| Trig equations              | yes   |
-| Inequalities                | yes\* |
-| Solve steps                 | no    |
+| Feature                     |        |
+| --------------------------- | ------ |
+| Polynomial equations        | yes    |
+| Exact cubics                | yes    |
+| Complex roots               | yes\*  |
+| Literal equations           | yes    |
+| Exp, log and root equations | yes    |
+| Rational equations          | yes    |
+| Trig equations              | yes    |
+| Inequalities                | yes\*  |
+| Solve steps                 | partly |
 
 ### Simplifying
 

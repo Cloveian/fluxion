@@ -265,6 +265,7 @@ ITEM(it_id_cplx,  "complex identities", NULL, ITEM_SETTING, NULL, NULL, HAVE_YES
 ITEM(it_id_tconst, "trig constants",  NULL, ITEM_SETTING, NULL, NULL, HAVE_YES, "SIMP_ID_TRIG_CONSTANTS", NULL)
 ITEM(it_id_iconst, "inverse trig constants", NULL, ITEM_SETTING, NULL, NULL, HAVE_YES, "SIMP_ID_TRIG_INV_CONSTANTS", NULL)
 ITEM(it_clear,    "clear history", NULL, ITEM_SETTING, NULL, NULL, HAVE_YES, NULL, NULL)
+ITEM(it_steps,    "show steps", NULL, ITEM_SETTING, NULL, NULL, HAVE_YES, NULL, NULL)
 
 /* the lists */
 
@@ -283,7 +284,7 @@ const item_t *const catalog[] = {
     &it_cube, &it_box, &it_polygon, &it_pand, &it_por,
     &it_ellipse, &it_hyperbola,
     &it_deriv, &it_deriv_at, &it_integral, &it_limit,
-    &it_id_basic, &it_id_trig, &it_id_hyp, &it_id_cplx, &it_id_tconst, &it_id_iconst, &it_clear
+    &it_id_basic, &it_id_trig, &it_id_hyp, &it_id_cplx, &it_id_tconst, &it_id_iconst, &it_clear, &it_steps
 };
 const unsigned catalog_count = sizeof catalog / sizeof catalog[0];
 
@@ -324,7 +325,7 @@ static const item_t *const templates[] = {
     &it_pi, &it_e, &it_i, &it_theta, &it_piecewise
 };
 static const item_t *const tools[] = {
-    &it_id_basic, &it_id_trig, &it_id_hyp, &it_id_cplx, &it_id_tconst, &it_id_iconst,
+    &it_steps, &it_id_basic, &it_id_trig, &it_id_hyp, &it_id_cplx, &it_id_tconst, &it_id_iconst,
     &it_clear
 };
 
