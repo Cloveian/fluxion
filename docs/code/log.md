@@ -1,5 +1,24 @@
 # Log
 
+## 2026-11-20 (morning) - derivatives show their work, and limits exist now
+
+- *dih*rivative steps came almost free, derivative.c already does it one rule at a time off a table. so a line is one rule on every d/dx left, the rule names in between: d/dx(x^2 sin x), product rule, x^2 d/dx(sin x) + sin x d/dx(x^2), power rule + trig rule, x^2 cos x + 2x sin x. d/dx of a constant or of ax+b goes quietly (nobody writes d/dx(2x+1) = 2 out), 3x^2 is constant multiple and not the product rule with a d/dx(3) to throw away. the page does them too
+- then timed the steps alone on the CE guess and ok *ouch*: x^2+x+1 was 22 s, every sqrt(-n) went through the identity passes as cos(pi/2)+isin(pi/2). by hand now (sqrt(-n) is i sqrt(n), sqrt(p/q) is sqrt(p)/sqrt(q), the split cancels each half on its own), no SIMP_ALL left in steps. 22 s -> 0.8, x^2+2x+5 10.5 -> 1.1, d/dx(x^2 sin x) 7.6 -> 0.7
+- degrees mode: the steps page reads sin(x) like the history does, and pi/180 counts as a slope so d/dx(x^2 sin x) in degrees is 2 lines and not 4
+- **limits**. limit(f, x, a), a real operator like deriv. one fraction, plug in if it's a value there, 0/0 cancel first and l'Hopital when nothing cancels. sin(x)/x is 1, (1-cos x)/x^2 is 1/2 (two l'Hopitals), (x^2-1)/(x-1) at 1 is 2 by cancelling. a number over 0 stays a limit. drawn lim with x->0 as a subscript. the menu item works and the docs stopped saying no
+- the checker caught it plugging in where it isn't defined, x e^(1/x) at 0 came out 0 cuz the simplify ate 0 * e^(1/0). "a value there" gets checked on the tree before anything simplifies now. 200 sympy fuzzed limits 0 wrong
+- limit steps come out of the same loop as the answer (plug in / one fraction / 0/0 cancel / 0/0 l'Hopital), so they cant *dih*sagree
+- side finds: cbrt( never parsed, its name had length 7 in the table since the import. the steps tests could fail a right answer, sqrt(15)/sqrt(2) and sqrt(30)/2 only match once rationalized (a 300 quadratic fuzz flagged 62 of 971, all right). an oom sweep over the limits found ~60 crashes in 6000, 0 in 14000 now
+- still open: limits at infinity and one-sided ones. integrals. the rule names and the lim look are proposals in design-choices/steps.md, not decided
+
+## 2026-11-19 (evening) - show the work, for real
+
+- the plan from the morning, started. the engine works the steps out again on its own (cas/steps.c), the moves a person makes and not simplify's millions of little rewrites. linear first: tidy the sides, clear fractions, x over to the side with more of it, number over, *dih*vide
+- quadratics with all the methods: square root (it's the linear moves on x^2 then a root), factoring as the ac method, completing the square, the formula with the numbers just put in. optimal goes root, factor, square (a 1 and an even b), formula. no real roots carries on with i, the app's solve does too
+- the steps page: tools > show steps, the moves centered between the lines like on paper (-5, ÷3), methods on the soft keys and the ones that don't fit go grey. works on the highlighted answer. the font got ± ÷ × for it
+- the x^2+x+1 steps test found that iX/2-iX/2 didn't simplify to 0, last night's "i off the bottom" rule in eval was dividing like terms apart. moved it to the canonical form, its shown the same
+- and 4\*2\*-5 drew as 4\*2-5 on screen (reads as 3...), a minus past the first factor gets brackets now
+
 ## 2026-11-19 (morning) - squares stay squares, roots move upstairs
 
 - factor((x^2-1)^2) said ((x-1)(x+1))^2. poly_factor hands back (x-1)^2(x+1)^2 just fine, its the canonical form that packs a^k b^k into (ab)^k for anything. not for sums now, x^2y^2 is still (xy)^2 like upstream has it

@@ -80,5 +80,29 @@ x^2 cos x + 2x sin x
 ### Proposal
 the rule names centered between the lines, every d/dx one rule a line. a default, not decided yet
 
+## Limits
+
+limits are new in the engine too (`limit(f, x, a)`), and the steps come out of the same loop that works the answer out, so they can't *dih*sagree:
+
+```
+lim x->0 (1-cos x)/x^2
+   0/0, l'Hopital
+= lim x->0 sin x / 2x
+   0/0, l'Hopital
+= lim x->0 cos x / 2
+   plug in
+= cos(0)/2
+= 1/2
+```
+
+- plug in first when f is a value at a. "a value" is checked on f as it is: no 0 below, ln(0), 0^0, tan(pi/2), and so on, because a simplify after can eat it (0 e^(1/0) came out 0)
+- not a value there: one fraction, then on 0/0 factor and cancel, and only when nothing cancels l'Hopital. 6 tries at most
+- a number over 0 has no limit, it stays lim(...) on the screen. one-sided limits and x -> infinity aren't in yet
+- it's drawn lim with x->a lowered next to it like a log's base, not under it. the layout has no box for under-and-centered
+- "l'Hopital" has no accent, the font hasn't got the o with the hat
+
+### Proposal
+plug in / one fraction / 0/0 factor and cancel / 0/0 l'Hopital as the rule names, x->a as a subscript. a default, not decided yet
+
 ---
 Back to [design choices](index.md)
