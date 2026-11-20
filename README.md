@@ -30,7 +30,7 @@
 - Nspire-style layout: history on top (arrow up into it to reuse an answer), input on the bottom, the five keys under the screen open folders of commands
 - variables you can store and look through, degrees / radians, a few colour themes, and the screen goes off by itself when you leave it
 
-It's still a work in progress: no integrals, limits or graphs yet ┐(￣ヘ￣)┌ Everything it does right now is in [docs/features.md](docs/features.md), and the [docs](https://cloveian.github.io/fluxion/docs/) have how I designed it and what's planned.
+It's still a work in progress: no integrals or graphs yet, and limits only at a number ┐(￣ヘ￣)┌ Everything it does right now is in [docs/features.md](docs/features.md), and the [docs](https://cloveian.github.io/fluxion/docs/) have how I designed it and what's planned.
 
 ## Install
 

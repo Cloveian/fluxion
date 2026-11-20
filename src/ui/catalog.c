@@ -254,8 +254,8 @@ ITEM(it_deriv_at, "d/dx at", NULL, ITEM_TEMPLATE, NULL, "deriv($,X,$)", HAVE_YES
      "derivative at one value of x, typed out for now: function, x, value. deriv(x^2,x,3) -> 6")
 ITEM(it_integral, "integral", NULL, ITEM_TEMPLATE, NULL, NULL, HAVE_NO, "table + linearity + u-substitution",
      "integral, the area under a curve. not in Fluxion yet")
-ITEM(it_limit,    "limit",  NULL, ITEM_TEMPLATE, NULL, NULL, HAVE_NO, NULL,
-     "the value a function gets close to as x gets close to a number. not in Fluxion yet")
+ITEM(it_limit,    "limit",  "limit", ITEM_TEMPLATE, NULL, "limit($,X,$)", HAVE_YES, "straight in, on 0/0 cancel then l'Hopital",
+     "the value a function gets close to as x gets close to a number, typed out for now: function, x, value. limit(sin(x)/x,x,0) -> 1")
 
 /* Tools */
 ITEM(it_id_basic, "basic identities", NULL, ITEM_SETTING, NULL, NULL, HAVE_YES, "SIMP_ID_GENERAL", NULL)

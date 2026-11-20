@@ -1276,13 +1276,13 @@ static bool pick_into(editor_t *into, const item_t *it, bool dry) {
             ed_insert(into, ED_FUNC, "deriv");
         return true;
     }
-    /* no template for the at one, it'd need a second slot in the editor. so it goes in
-       typed out, deriv(f,x,3) already works */
-    if(strcmp(s, "deriv($,X,$)") == 0) {
+    /* no template for the at one or a limit, they'd need a second slot in the editor. so
+       they go in typed out, deriv(f,x,3) and limit(f,x,a) already work */
+    if(strcmp(s, "deriv($,X,$)") == 0 || strcmp(s, "limit($,X,$)") == 0) {
         if(!dry) {
             const char *c;
 
-            for(c = "deriv("; *c != '\0'; c++)
+            for(c = s; *c != '$'; c++) /* deriv( or limit( */
                 ed_insert_char(into, *c);
         }
         return true;

@@ -43,7 +43,7 @@ Everything Fluxion does right now, as tables. Yes / partly / no first, the other
 | *Dih*rivatives        | yes\* |
 | Derivative at a value | yes\* |
 | Integrals             | no    |
-| Limits                | no    |
+| Limits                | yes\* |
 
 ### Systems
 
