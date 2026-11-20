@@ -772,7 +772,7 @@ static void quiet_rules(pcas_ast_t *e, Symbol var) {
         for(k = 0; k < 3; k++)
             ast_Cleanup(c[k]);
     }
-    simplify(e, SIMP_LIGHT);
+    simplify(e, SIMP_LIGHT | SIMP_LIKE_TERMS); /*like terms takes the 1 off cos(x)*1, it showed cos(x) twice*/
 }
 
 void steps_rule(step_t *l, const char *name) {
@@ -860,6 +860,10 @@ bool steps_derivative(pcas_ast_t *d, steps_t *out) {
             steps_expr(out, done);
     }
     ast_Cleanup(cur);
+    if(pcas_cancelled) { /*cancel in the plug in, half done*/
+        steps_free(out);
+        return false;
+    }
     steps_shown(out);
     return true;
 }
