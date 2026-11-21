@@ -50,9 +50,9 @@
 
 /* the nspire has no keys under its screen: no folder bar, [menu] drops a list of the five down from the top like its own */
 #ifdef _TINSPIRE
-#define NSPIRE_MENU 1
+#define NSPIRE 1
 #else
-#define NSPIRE_MENU 0
+#define NSPIRE 0
 #endif
 
 typedef struct {
@@ -1453,7 +1453,7 @@ static void menu_choose(int i) {
 
 /* left / right go round the five on the CE. the nspire has them in a list, and a page's keys aren't folders */
 static bool round_five(void) {
-    return !NSPIRE_MENU && menu_in == &folders[menu];
+    return !NSPIRE && menu_in == &folders[menu];
 }
 
 /* false if it means nothing in a menu. rows past 9 go A, B, C like the nspire */
@@ -1548,7 +1548,7 @@ static const char *cat_label(int i) {
         return folders[cat_order[i] - CAT_FOLDER].name;
     return cat_item(i)->label;
 }
-static const char *cat_keys(int i)  { return cat_header(i) || NSPIRE_MENU ? NULL : cat_item(i)->keys; } /* the CE's keys, wrong on the nspire */
+static const char *cat_keys(int i)  { return cat_header(i) || NSPIRE ? NULL : cat_item(i)->keys; } /* the CE's keys, wrong on the nspire */
 static const char *cat_help(int i)  { return cat_header(i) ? NULL : cat_item(i)->help; }
 
 static bool cat_pick(int i) {
@@ -2173,7 +2173,7 @@ static void draw_menu(void) {
     const font_t *font = draw_label_font();
     const folder_t *f = menu_in;
     int row_h = font->ascent + font->descent + 2;
-    int bottom = (NSPIRE_MENU ? areas.keys.y + areas.keys.h : areas.body.y + areas.body.h) - 1;
+    int bottom = (NSPIRE ? areas.keys.y + areas.keys.h : areas.body.y + areas.body.h) - 1;
     int rows = (int)f->count, max_rows;
     int width = 0, x, top, i;
 
@@ -2201,7 +2201,7 @@ static void draw_menu(void) {
     if(menu_sel >= menu_top + rows)
         menu_top = menu_sel - rows + 1;
 
-    if(NSPIRE_MENU) {   /* down from the top, a step right for each level like the nspire's own */
+    if(NSPIRE) {   /* down from the top, a step right for each level like the nspire's own */
         x = areas.body.x + 2 + menu_depth * 14;
         top = areas.body.y + 1;
         bottom = top + rows * row_h + 2;
@@ -2216,7 +2216,7 @@ static void draw_menu(void) {
     screen_fill(x, top, width, bottom - top + 1);
     screen_color(COL_DIM);
     screen_hline(x, top, width);
-    if(NSPIRE_MENU) /* nothing under it to close it off */
+    if(NSPIRE) /* nothing under it to close it off */
         screen_hline(x, bottom, width);
     screen_vline(x, top, bottom - top + 1);
     screen_vline(x + width - 1, top, bottom - top + 1);
@@ -2436,7 +2436,7 @@ static void draw_screen(void) {
     box_t *in = ed_layout(&ed, &draw_font, true);
     int left = areas.body.x + MARGIN, right = areas.body.x + areas.body.w - MARGIN;
     int line_y, y, i, avail = right - left, first;
-    int top = areas.body.y, bottom = NSPIRE_MENU ? areas.keys.y + areas.keys.h : areas.body.y + areas.body.h;
+    int top = areas.body.y, bottom = NSPIRE ? areas.keys.y + areas.keys.h : areas.body.y + areas.body.h;
 
     screen_clear();
 
@@ -2453,7 +2453,7 @@ static void draw_screen(void) {
         return;
     }
 
-    if(!NSPIRE_MENU)
+    if(!NSPIRE)
         draw_bar();
 
     /* input line, just above the soft keys. scrolls sideways to keep the cursor in view. */
