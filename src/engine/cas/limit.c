@@ -604,13 +604,17 @@ static int far(pcas_ast_t *e, pcas_ast_t *var, pcas_ast_t **v, int tries) {
         out = g != NULL ? sign_of(g) : 2;
         ast_Cleanup(g);
         return out == 1 || out == -1 ? out * f : FAR_NONE;
-    case OP_TAN_INV:
+    case OP_TAN_INV: case OP_COT_INV: case OP_SEC_INV: case OP_CSC_INV:
         f = far(ast_ChildGet(e, 0), var, &cv, tries);
         if(f == FAR_FIN)
-            return fin(v, ast_MakeUnary(OP_TAN_INV, cv));
+            return fin(v, ast_MakeUnary(optype(e), cv));
         if(f == FAR_NONE)
             return FAR_NONE;
-        return fin(v, ast_MakeBinary(OP_MULT, ast_MakeInt(f), ast_MakeBinary(OP_DIV, ast_MakeSymbol(SYM_PI), ast_MakeInt(2))));
+        if(optype(e) == OP_TAN_INV)
+            return fin(v, ast_MakeBinary(OP_MULT, ast_MakeInt(f), ast_MakeBinary(OP_DIV, ast_MakeSymbol(SYM_PI), ast_MakeInt(2))));
+        if(optype(e) == OP_SEC_INV)
+            return fin(v, ast_MakeBinary(OP_DIV, ast_MakeSymbol(SYM_PI), ast_MakeInt(2)));
+        return fin(v, optype(e) == OP_COT_INV && f == FAR_DOWN ? ast_MakeSymbol(SYM_PI) : ast_MakeInt(0)); /*cot^-1 is 0 to pi like the nspire*/
     case OP_ABS:
         f = far(ast_ChildGet(e, 0), var, &cv, tries);
         if(f == FAR_FIN)

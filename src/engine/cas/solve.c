@@ -1157,6 +1157,9 @@ static int isolate(pcas_ast_t *e, Symbol var, pcas_ast_t **out, bool complex) {
             case OP_SIN_INV: t = ast_MakeUnary(OP_SIN, o); break;
             case OP_COS_INV: t = ast_MakeUnary(OP_COS, o); break;
             case OP_TAN_INV: t = ast_MakeUnary(OP_TAN, o); break;
+            case OP_COT_INV: t = ast_MakeUnary(OP_COT, o); break; /*Fluxion*/
+            case OP_SEC_INV: t = ast_MakeUnary(OP_SEC, o); break; /*Fluxion*/
+            case OP_CSC_INV: t = ast_MakeUnary(OP_CSC, o); break; /*Fluxion*/
             default: break;
             }
             other[i] = t;
