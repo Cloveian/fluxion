@@ -12,7 +12,7 @@
 
 /* src is the line inside solve( ), it gets cut up. NULL when it opened, or what to say */
 const char *work_open(char *src);
-/* the steps for d/dx(...) or a limit, e is that node and the page keeps it */
+/* the steps for d/dx(...), a limit or an integral, e is that node and the page keeps it */
 const char *work_open_calc(pcas_ast_t *e);
 bool work_is_open(void);
 void work_close(void);

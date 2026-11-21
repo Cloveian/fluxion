@@ -24,6 +24,7 @@ SPECIAL = {          # Fluxion code -> Unicode
     0x16: 0x00B1,    # CH_PM     plus-minus
     0x17: 0x00F7,    # CH_DIV    *dih*vide, both sides of a step
     0x18: 0x00D7,    # CH_TIMES  times, the same
+    0x19: 0x222B,    # CH_INTEGRAL
 }
 
 # constants that share a letter with a variable: drawn bold, so the constant e and a

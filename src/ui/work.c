@@ -19,7 +19,7 @@ static const char *const method_keys[5] = { "optimal", "root", "factor", "square
 
 static bool open;
 static pcas_ast_t *lhs, *rhs;
-static pcas_ast_t *calc; /* the d/dx or limit node for those steps, else NULL */
+static pcas_ast_t *calc; /* the d/dx, limit or integral node for those steps, else NULL */
 static Symbol var;
 static Method method;
 static box_t *rows[ROWS_MAX];
@@ -168,10 +168,8 @@ static bool build(void) {
 
     if(calc == NULL)
         ok = steps_solve(lhs, rhs, var, method, &s);
-    else if(isoptype(calc, OP_LIMIT))
-        ok = steps_limit(calc, &s);
     else
-        ok = steps_derivative(calc, &s);
+        ok = steps_calc(calc, &s);
     if(!ok)
         return false;
     if(setting_angle == ANGLE_DEGREES)

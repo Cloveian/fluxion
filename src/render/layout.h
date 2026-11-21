@@ -29,6 +29,7 @@
 #define CH_EULER    '\x05'      /* the constant e, bold so it isn't the variable e */
 #define CH_IMAG     '\x06'      /* the constant i, bold so it isn't the variable i */
 #define CH_INF      '\x13'
+#define CH_INTEGRAL '\x19'
 #define CH_ARROW    '\x15'      /* x->a under a lim. the same glyph as the editor's sto-> */
 
 /*

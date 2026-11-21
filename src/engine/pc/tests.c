@@ -385,13 +385,7 @@ static bool test_calc_steps(test_t *t) {
         printf("Test failed on line %u. Unable to parse %s\n", t->line, t->arg1);
         return false;
     }
-    if(isoptype(e, OP_LIMIT))
-        passed = steps_limit(e, &s);
-    else if(isoptype(e, OP_INTEGRAL))
-        passed = steps_integral(e, &s);
-    else
-        passed = steps_derivative(e, &s);
-    if(!passed)
+    if(!steps_calc(e, &s))
         strcpy(got, "none");
     else
         steps_text(&s, got, sizeof(got));

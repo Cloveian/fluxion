@@ -50,6 +50,8 @@ bool steps_derivative(pcas_ast_t *d, steps_t *out);
 bool steps_limit(pcas_ast_t *l, steps_t *out);
 /*∫f dx a rule a line like the d/dx ones, ending on + C or F(b) - F(a). false if a piece has no rule*/
 bool steps_integral(pcas_ast_t *I, steps_t *out);
+/*whichever of the three e is, deriv, limit or integral*/
+bool steps_calc(pcas_ast_t *e, steps_t *out);
 void steps_free(steps_t *s);
 
 /*for limit.c and integrate.c, which work their steps out in their own loops*/

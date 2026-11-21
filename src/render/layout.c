@@ -197,7 +197,7 @@ number or function call. (X+1)^2, (2X)^2, (1/2)^2, (-3)^2 */
 static bool parens_as_base(pcas_ast_t *e) {
     if(e->type == NODE_OPERATOR) {
         switch(optype(e)) {
-        case OP_ADD: case OP_MULT: case OP_DIV: case OP_POW: case OP_ROOT: case OP_FACTORIAL:
+        case OP_ADD: case OP_MULT: case OP_DIV: case OP_POW: case OP_ROOT: case OP_FACTORIAL: case OP_INTEGRAL:
             return true;
         default:
             return false;
@@ -404,8 +404,9 @@ static box_t *build_mult(pcas_ast_t *e, unsigned char level) {
             continue;
         }
 
-        /* a minus past the first factor, or 4*2*-5 looks like 4*2 - 5 */
-        add(row, build_parens(child, level, parens_as_factor(child) || (child != ast_ChildGet(e, 0) && starts_negative(child))));
+        /* a minus past the first factor, or 4*2*-5 looks like 4*2 - 5. an integral with more after it, or 2∫x dx y */
+        add(row, build_parens(child, level, parens_as_factor(child) || (child != ast_ChildGet(e, 0) && starts_negative(child))
+                                            || (child->next != NULL && isoptype(child, OP_INTEGRAL))));
 
         if(child->next != NULL && needs_dot(child, child->next))
             add(row, new_text(STR_CDOT, level));
@@ -488,6 +489,30 @@ static box_t *build_limit(pcas_ast_t *e, unsigned char level) {
     return row;
 }
 
+/* ∫f dx, a definite one with b over a small next to the ∫. as sub and sup the 3 of 0 to 3 read like 3x^2 */
+static box_t *build_integral(pcas_ast_t *e, unsigned char level) {
+    box_t *row = new_box(BOX_ROW, level), *f, *d = new_box(BOX_ROW, level), *ab;
+    char s[2] = { CH_INTEGRAL, '\0' };
+
+    if(ast_ChildLength(e) == 4 && (ab = new_box(BOX_COL, level + 1)) != NULL) { /*lowered as one, the 0 on the baseline read like 0x^2*/
+        add(ab, build(ast_ChildGet(e, 3), level + 1));
+        add(ab, build(ast_ChildGet(e, 2), level + 1));
+        add(row, pair(BOX_SUB, new_text(s, level), ab, level));
+        add(row, new_space(3));
+    } else {
+        add(row, new_text(s, level));
+    }
+    f = build(ast_ChildGet(e, 0), level);
+    if(isoptype(ast_ChildGet(e, 0), OP_ADD))
+        f = wrap(BOX_PARENS, f, level);
+    add(d, new_text("d", level));
+    add(d, build(ast_ChildGet(e, 1), level));
+    add(row, f);
+    add(row, new_space(2));
+    add(row, d);
+    return row;
+}
+
 static box_t *build_operator(pcas_ast_t *e, unsigned char level) {
     pcas_ast_t *a = ast_ChildGet(e, 0), *b = a != NULL ? a->next : NULL;
 
@@ -530,6 +555,8 @@ static box_t *build_operator(pcas_ast_t *e, unsigned char level) {
         return build_deriv(e, level);
     case OP_LIMIT:
         return build_limit(e, level);
+    case OP_INTEGRAL:
+        return build_integral(e, level);
     case OP_FACTORIAL:
         return pair(BOX_ROW, build_parens(a, level, parens_as_base(a)), new_text("!", level), level);
     case OP_ABS:

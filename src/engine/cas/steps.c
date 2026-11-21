@@ -850,6 +850,14 @@ bool steps_derivative(pcas_ast_t *d, steps_t *out) {
     return true;
 }
 
+bool steps_calc(pcas_ast_t *e, steps_t *out) {
+    if(isoptype(e, OP_LIMIT))
+        return steps_limit(e, out);
+    if(isoptype(e, OP_INTEGRAL))
+        return steps_integral(e, out);
+    return steps_derivative(e, out);
+}
+
 void steps_shown(steps_t *s) {
     int i, j;
 
