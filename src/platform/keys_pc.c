@@ -73,18 +73,18 @@ static bool script_hold(void) {
 
 /* a key name, or a single char to type. "on+" "2nd+" "alpha+" hold that one down for it */
 static keypress_t parse_press(const char *s) {
-    keypress_t press = { K_NONE, false };
+    keypress_t press = { K_NONE, 0 };
 
     /* held ones, any order. alpha+ is how the web demo holds alpha over a whole word */
     for(;;) {
         if(strncmp(s, "on+", 3) == 0) {
-            press.on = true;
+            press.held |= M_ON;
             s += 3;
         } else if(strncmp(s, "2nd+", 4) == 0) {
-            press.second = true;
+            press.held |= M_2ND;
             s += 4;
         } else if(strncmp(s, "alpha+", 6) == 0) {
-            press.alpha = true;
+            press.held |= M_ALPHA;
             s += 6;
         } else {
             break;
@@ -96,7 +96,7 @@ static keypress_t parse_press(const char *s) {
 
 /* the next press for keys_wait, K_QUIT when the script's done */
 static keypress_t scripted(void) {
-    keypress_t quit = { K_QUIT, false };
+    keypress_t quit = { K_QUIT, 0 };
 
     for(;;) {
         while(script_hold())
@@ -109,7 +109,7 @@ static keypress_t scripted(void) {
     }
 }
 
-static key_t from_key(SDL_Keycode k) {
+static keycode_t from_key(SDL_Keycode k) {
     switch(k) {
     case SDLK_BACKSPACE: return K_CLEAR;
     case SDLK_DELETE:    return K_DEL;
@@ -130,7 +130,7 @@ static key_t from_key(SDL_Keycode k) {
 }
 
 /* numpad keys, by where they are (the scancode), so NumLock doesn't matter */
-static key_t from_keypad(SDL_Scancode sc, SDL_Keycode k) {
+static keycode_t from_keypad(SDL_Scancode sc, SDL_Keycode k) {
     switch(sc) {
     case SDL_SCANCODE_KP_0:        return K_0;
     case SDL_SCANCODE_KP_1:        return K_1;
@@ -176,11 +176,11 @@ static key_t from_keypad(SDL_Scancode sc, SDL_Keycode k) {
 static keypress_t pending[PENDING_MAX];
 static int pending_first, pending_count;
 
-static void push(key_t key, bool on) {
+static void push(keycode_t key, bool on) {
     if(key == K_NONE || pending_count >= PENDING_MAX)
         return;
     pending[(pending_first + pending_count) % PENDING_MAX].key = key;
-    pending[(pending_first + pending_count) % PENDING_MAX].on = on;
+    pending[(pending_first + pending_count) % PENDING_MAX].held = on ? M_ON : 0;
     pending_count++;
 }
 
@@ -214,7 +214,7 @@ static void key_down(const SDL_KeyboardEvent *ev) {
     bool on = (ev->mod & SDL_KMOD_CTRL) != 0;
     bool alt = (ev->mod & SDL_KMOD_ALT) != 0;
     bool shift = (ev->mod & SDL_KMOD_SHIFT) != 0;
-    key_t key;
+    keycode_t key;
 
     /* new keystroke, so whatever text comes next belongs to it */
     skip_text = false;
@@ -266,7 +266,7 @@ static void key_down(const SDL_KeyboardEvent *ev) {
 }
 
 keypress_t keys_peek(void) {
-    keypress_t press = { K_NONE, false };
+    keypress_t press = { K_NONE, 0 };
     const bool *down;
     int sc;
 
@@ -278,7 +278,7 @@ keypress_t keys_peek(void) {
 
     SDL_PumpEvents();
     down = SDL_GetKeyboardState(NULL);
-    press.on = (SDL_GetModState() & SDL_KMOD_CTRL) != 0;
+    press.held = (SDL_GetModState() & SDL_KMOD_CTRL) ? M_ON : 0;
 
     /* only the keys that aren't typed text (enter, arrows, F1-F5, ...) */
     for(sc = 0; sc < SDL_SCANCODE_COUNT && press.key == K_NONE; sc++) {
@@ -290,7 +290,7 @@ keypress_t keys_peek(void) {
         press.key = K_MODE;
 
     /* its key-down is queued too, don't let keys_wait() see it as a new press */
-    if(press.key != K_NONE || press.on) {
+    if(press.key != K_NONE || (press.held & M_ON)) {
         SDL_FlushEvents(SDL_EVENT_KEY_DOWN, SDL_EVENT_TEXT_INPUT);
         shift_alone = alt_alone = ctrl_alone = false;  /* their key-ups might be gone */
     }
@@ -316,7 +316,7 @@ void keys_sleep(void) {
 }
 
 keypress_t keys_wait(void) {
-    keypress_t press = { K_NONE, false };
+    keypress_t press = { K_NONE, 0 };
 
     if(script != NULL)
         return scripted();

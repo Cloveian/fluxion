@@ -64,11 +64,13 @@ Variables are lowercase, like on the Nspire.
 Needs the [CE C toolchain](https://github.com/CE-Programming/toolchain) (v15):
 
 ```sh
-make                          # bin-app/Fluxion.8ek, the app
+make                          # all of the ones below, one after the other
+make ce                       # bin-app/Fluxion.8ek, the app
 make installer                # bin-installer/, the app + its installer (see installer/README.md)
 make test                     # PC build + engine tests
 ./build-pc/fluxion-app        # run it in a window on the PC
 make web                      # web/build/, the same thing for a browser (needs emscripten)
+make nspire                   # bin-nspire/Fluxion.tns, for Ndless on the TI-Nspire CX / CX II (needs the Ndless SDK, runs on a CX II, keys like its own OS)
 ```
 
 The PC build needs SDL3. On PC, Shift is `[alpha]`, Alt is `[2nd]`, and Ctrl is `[on]` (when you tap them by themselves).

@@ -8,11 +8,11 @@
     text that shows under the list for the highlighted row.
 
     pages stack, so one can open another (mode -> a submenu) and [clear] goes
-    back one. the app hands its keys to page_key() while one is open.
+    back one. the app hands its keys to page_act() while one is open.
 */
 
 #include <stdbool.h>
-#include "platform/keys.h"
+#include "ui/bind.h"
 
 typedef struct {
     const char *title;
@@ -30,9 +30,9 @@ void page_open(const page_t *page);
 void page_close(void);
 bool page_is_open(void);
 
-/* letter is what [alpha] made of the key (0 if nothing), it jumps to the first
-   row starting with it */
-void page_key(keypress_t p, char letter);
+/* a letter jumps to the next row starting with it. false if it means nothing here */
+bool page_act(action_t a);
+const char *const *page_softkeys(void); /* the open one's, NULL if it has none */
 
 /* everything under the status bar, down to the bottom of the screen */
 void page_draw(void);

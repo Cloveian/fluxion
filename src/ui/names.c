@@ -73,6 +73,13 @@ static const item_t *builtin(const char *s, int n, int *len) {
     return best;
 }
 
+const item_t *names_builtin(const char *word, int n) {
+    int len;
+    const item_t *it = builtin(word, n, &len);
+
+    return len == n ? it : NULL;
+}
+
 /* same for the stored ones, -1 if none */
 static int stored(const char *s, int n, int *len) {
     int i, best = -1;
@@ -202,7 +209,7 @@ static const char *about(const char *name, const char *what) {
 
 const char *names_store_line(const ed_row_t *line, int arrow, bool *deleted) {
     char name[NAME_LEN + 1];
-    int n, i, bl;
+    int n, i;
     ed_row_t *value;
 
     *deleted = false;
@@ -212,7 +219,7 @@ const char *names_store_line(const ed_row_t *line, int arrow, bool *deleted) {
         return "a name is just letters, up to 8 of them";
     if(n == 0)
         return "nothing to store it as";
-    if(builtin(name, n, &bl) != NULL && bl == n)
+    if(names_builtin(name, n) != NULL)
         return about(name, " is built in, pick another");
 
     i = names_find(name, n);

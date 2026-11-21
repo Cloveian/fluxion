@@ -1,20 +1,34 @@
-# everything gets built from here, the CE app by default
+# everything gets built from here
 #
-#   make               bin-app/Fluxion.8ek, the CE app
+#   make               all of them: ce, pc, web and nspire, one after the other
+#   make ce            bin-app/Fluxion.8ek, the CE app
 #   make installer     bin-installer/, the app as appvars + its installer
 #   make pc            build-pc/fluxion (PineappleCAS's command line) + build-pc/fluxion-app
 #   make test          PC build + the engine's tests + the identity mask check
 #   make budget        what each test line costs, the CE guess too
 #   make web           web/build/, the app for a browser (needs emscripten)
-#   make clean         the CE build, make clean-pc for the PC / web one (build-pc/store goes too)
+#   make nspire        bin-nspire/Fluxion.tns, for Ndless on the CX and CX II (needs the Ndless SDK)
+#   make clean         the CE build, make clean-pc for the PC / web one (build-pc/store goes too), clean-nspire
 #   ./build-pc/fluxion simplify '2X+X'
 #
-# CE and PC goals don't mix in one call, the toolchain has its own test and clean
+# CE, PC and nspire goals don't mix in one call, the CE toolchain has its own test and clean
 
 PC_PHONY = pc test budget web clean-pc
 PC_GOALS = $(PC_PHONY) build-pc/% build-web/% web/%
+NSPIRE_GOALS = nspire clean-nspire build-nspire/% bin-nspire/%
 
-ifneq ($(filter $(PC_GOALS),$(MAKECMDGOALS)),)
+ifeq ($(MAKECMDGOALS),)
+
+# plain make, each build in its own make so the goals don't mix
+everything:
+	$(MAKE) ce
+	$(MAKE) pc
+	$(MAKE) web
+	$(MAKE) nspire
+
+.PHONY: everything
+
+else ifneq ($(filter $(PC_GOALS),$(MAKECMDGOALS)),)
 
 # ----------------------------
 # PC + web
@@ -124,6 +138,45 @@ clean-pc:
 
 .PHONY: $(PC_PHONY)
 
+else ifneq ($(filter $(NSPIRE_GOALS),$(MAKECMDGOALS)),)
+
+# ----------------------------
+# nspire (Ndless, CX and CX II)
+# ----------------------------
+# the same code with keys_nspire.c and window_nspire.c in for the SDL bits, like
+# the web build. screen_pc.c's framebuffer, store_pc.c's files and power_pc.c work as they are
+
+NSPIRE_FLAGS = -Os -Wall -Isrc/engine -Isrc -MMD -MP
+NSPIRE_SOURCES := $(filter-out src/engine/pc/%,$(wildcard src/engine/*.c src/engine/*/*.c)) src/main.c \
+                  $(filter-out src/platform/keys_pc.c src/platform/window_pc.c src/platform/web.c, \
+                    $(wildcard src/render/*.c src/platform/*.c src/editor/*.c src/ui/*.c))
+NSPIRE_OBJECTS := $(NSPIRE_SOURCES:src/%.c=build-nspire/%.o)
+
+build-nspire/engine/%.o: src/engine/%.c
+	@mkdir -p $(@D)
+	nspire-gcc -std=c89 $(NSPIRE_FLAGS) -c $< -o $@
+
+build-nspire/%.o: src/%.c
+	@mkdir -p $(@D)
+	nspire-gcc -std=c99 $(NSPIRE_FLAGS) -c $< -o $@
+
+-include $(NSPIRE_OBJECTS:.o=.d)
+
+build-nspire/fluxion.elf: $(NSPIRE_OBJECTS)
+	nspire-ld $^ -lm -o $@
+
+# straight out of genzehn, current Ndless loads that. make-prg's loader is for old ones
+bin-nspire/Fluxion.tns: build-nspire/fluxion.elf
+	@mkdir -p $(@D)
+	genzehn --input $< --output $@ --name Fluxion --compress --uses-lcd-blit true --240x320-support true
+
+nspire: bin-nspire/Fluxion.tns
+
+clean-nspire:
+	rm -rf build-nspire bin-nspire
+
+.PHONY: nspire clean-nspire
+
 else
 
 # ----------------------------
@@ -154,7 +207,8 @@ include $(shell cedev-config --makefile)
 
 # VS Code's Makefile Tools builds 'all' by default (kinda annoying, havent found how to stop it)
 all: target
-.PHONY: all
+ce: target
+.PHONY: all ce
 
 # ----------------------------
 # installer (see installer/README.md)

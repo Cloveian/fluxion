@@ -14,7 +14,7 @@
 
 typedef struct {
     unsigned char group, bit;
-    key_t key;
+    keycode_t key;
 } map_t;
 
 static const map_t map[] = {
@@ -39,7 +39,7 @@ static const map_t map[] = {
     { 7, kb_Up, K_UP },
 };
 
-static key_t held = K_NONE;
+static keycode_t held = K_NONE;
 static clock_t next_repeat;
 
 /* going dark, see keys.h */
@@ -64,7 +64,7 @@ void keys_sleep(void) {
 static unsigned char old_mode, old_int;
 
 /* the keypad scans continuously (keys_begin), so kb_Data is always current */
-static key_t scan(void) {
+static keycode_t scan(void) {
     unsigned i;
 
     for(i = 0; i < sizeof map / sizeof map[0]; i++)
@@ -73,7 +73,7 @@ static key_t scan(void) {
     return K_NONE;
 }
 
-static bool repeats(key_t k) {
+static bool repeats(keycode_t k) {
     /* return k == K_UP || k == K_DOWN;  // just arrows at first, but clear/del repeating feels better */
     return k == K_UP || k == K_DOWN || k == K_LEFT || k == K_RIGHT || k == K_CLEAR || k == K_DEL;
 }
@@ -115,7 +115,7 @@ typedef struct {
 } mod_t;
 
 static mod_t mods[3];
-static const key_t mod_keys[3] = { K_ON, K_2ND, K_ALPHA };
+static const keycode_t mod_keys[3] = { K_ON, K_2ND, K_ALPHA };
 
 keypress_t keys_wait(void) {
     keypress_t press;
@@ -125,7 +125,7 @@ keypress_t keys_wait(void) {
     for(;;) {
         bool changed = (kb_IntStatus & KB_DATA_CHANGED) != 0;
         bool now[3];
-        key_t k;
+        keycode_t k;
 
         if(!asleep && clock() - idle_since > KEYS_IDLE_OFF)
             keys_sleep();
@@ -151,7 +151,7 @@ keypress_t keys_wait(void) {
                     continue;
                 }
                 press.key = mod_keys[i];
-                press.on = press.second = press.alpha = false;
+                press.held = 0;
                 return press;
             }
         }
@@ -190,9 +190,7 @@ keypress_t keys_wait(void) {
     for(i = 0; i < 3; i++)
         mods[i].used |= mods[i].down;
     press.key = held;
-    press.on = mods[0].down;
-    press.second = mods[1].down;
-    press.alpha = mods[2].down;
+    press.held = (mods[0].down ? M_ON : 0) | (mods[1].down ? M_2ND : 0) | (mods[2].down ? M_ALPHA : 0);
     return press;
 }
 
@@ -201,8 +199,7 @@ keypress_t keys_peek(void) {
 
     /* held from here on, so keys_wait() doesn't take it as a new press after */
     press.key = held = scan();
-    press.on = kb_On;
-    press.second = press.alpha = false;
+    press.held = kb_On ? M_ON : 0;
     return press;
 }
 

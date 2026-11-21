@@ -238,9 +238,9 @@ void work_close(void) {
     open = false;
 }
 
-void work_key(keypress_t p) {
-    if(p.key >= K_YEQU && p.key <= K_GRAPH && calc == NULL) {
-        Method m = (Method)(p.key - K_YEQU);
+bool work_act(action_t a) {
+    if(a.op == A_SOFT && calc == NULL) {
+        Method m = (Method)a.n;
 
         /* one that doesn't fit leaves the steps as they are */
         if(m != method && !(off & (1u << m))) {
@@ -250,23 +250,24 @@ void work_key(keypress_t p) {
             if(!build())
                 method = was;
         }
-        return;
+        return true;
     }
-    switch(p.key) {
-    case K_UP:
+    switch(a.op) {
+    case A_UP:
         if(top > 0)
             top--;
         break;
-    case K_DOWN:
+    case A_DOWN:
         if(top < nrows - 1)
             top++;
         break;
-    case K_CLEAR:
+    case A_CLEAR: case A_ESC:
         work_close();
         break;
     default:
-        break;
+        return false;
     }
+    return true;
 }
 
 void work_draw(void) {
@@ -296,4 +297,8 @@ void work_draw(void) {
     }
     if(calc == NULL)
         draw_softkeys(&areas.keys, method_keys, (int)method, off);
+}
+
+const char *const *work_softkeys(void) {
+    return calc == NULL ? method_keys : NULL;
 }

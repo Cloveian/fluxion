@@ -5,7 +5,7 @@
 /*
     keys are a proposal (input.md left the mapping for later): each key keeps the
     meaning it has on the TI-84 itself, so nothing needs learning. select / copy /
-    paste are [on] chords, those are in app.c (key_ctl).
+    paste are [on] chords, those are in bind_ce.c.
 
     engine syntax reminders: capital single-letter variables, _ is subtract,
     - is negate, $ marks a slot the editor fills in.
@@ -94,6 +94,12 @@ ITEM(it_sec,      "sec",   "sec", ITEM_FUNCTION, "[on][cos]",   "sec($)",  HAVE_
      "secant, 1/cos. sec(0) -> 1")
 ITEM(it_csc,      "csc",   "csc", ITEM_FUNCTION, "[on][sin]",   "csc($)",  HAVE_YES, NULL,
      "cosecant, 1/sin. csc(pi/2) -> 1")
+ITEM(it_acot,     "cot^-1", "acot", ITEM_FUNCTION, "[on][2nd][tan]", "acot($)", HAVE_YES, NULL,
+     "inverse cotangent, between 0 and pi like the nspire. cot^-1(1) -> pi/4")
+ITEM(it_asec,     "sec^-1", "asec", ITEM_FUNCTION, "[on][2nd][cos]", "asec($)", HAVE_YES, NULL,
+     "inverse secant, cos^-1(1/x). sec^-1(2) -> pi/3")
+ITEM(it_acsc,     "csc^-1", "acsc", ITEM_FUNCTION, "[on][2nd][sin]", "acsc($)", HAVE_YES, NULL,
+     "inverse cosecant, sin^-1(1/x). csc^-1(2) -> pi/6")
 ITEM(it_ln,       "ln",    "ln", ITEM_FUNCTION, "[ln]",        "ln($)",   HAVE_YES, NULL,
      "natural logarithm, base e. ln(e^2) -> 2")
 ITEM(it_exp,      "e^x",   NULL, ITEM_TEMPLATE, "[2nd][ln]",   "e^($)",   HAVE_YES, NULL,
@@ -274,7 +280,7 @@ const item_t *const catalog[] = {
     &it_plus, &it_minus, &it_times, &it_divide, &it_open, &it_close, &it_comma, &it_equals,
     &it_x, &it_letters, &it_pi, &it_e, &it_i, &it_theta,
     &it_power, &it_square, &it_recip, &it_sqrt, &it_cbrt, &it_nroot,
-    &it_sin, &it_cos, &it_tan, &it_asin, &it_acos, &it_atan, &it_cot, &it_sec, &it_csc, &it_ln, &it_exp, &it_log, &it_pow10,
+    &it_sin, &it_cos, &it_tan, &it_asin, &it_acos, &it_atan, &it_cot, &it_sec, &it_csc, &it_acot, &it_asec, &it_acsc, &it_ln, &it_exp, &it_log, &it_pow10,
     &it_sinh, &it_cosh, &it_tanh, &it_asinh, &it_acosh, &it_atanh, &it_logb, &it_abs, &it_fact, &it_int,
     &it_gcd, &it_lcm, &it_ncr, &it_npr, &it_amplitude,
     &it_frac, &it_parens, &it_piecewise,
@@ -315,7 +321,7 @@ static const item_t *const calculus[] = {
     &it_deriv, &it_deriv_at, &it_integral, &it_limit
 };
 static const item_t *const functions[] = {
-    &it_sin, &it_cos, &it_tan, &it_asin, &it_acos, &it_atan, &it_cot, &it_sec, &it_csc,
+    &it_sin, &it_cos, &it_tan, &it_asin, &it_acos, &it_atan, &it_cot, &it_sec, &it_csc, &it_acot, &it_asec, &it_acsc,
     &it_sinh, &it_cosh, &it_tanh, &it_asinh, &it_acosh, &it_atanh,
     &it_ln, &it_log, &it_logb, &it_exp, &it_pow10, &it_abs, &it_fact, &it_int,
     &it_gcd, &it_lcm, &it_ncr, &it_npr, &it_amplitude
@@ -336,3 +342,9 @@ const folder_t folders[FOLDER_COUNT] = {
     FOLDER("trace",  "Templates", templates),
     FOLDER("graph",  "Tools",     tools)
 };
+
+/* the nspire's [menu]: the five as one numbered list, each opening like a subfolder */
+#define TOP(n) { folders[n].name, NULL, ITEM_FOLDER, NULL, NULL, HAVE_YES, NULL, NULL, &folders[n] }
+static const item_t top_items[FOLDER_COUNT] = { TOP(0), TOP(1), TOP(2), TOP(3), TOP(4) };
+static const item_t *const top_list[FOLDER_COUNT] = { &top_items[0], &top_items[1], &top_items[2], &top_items[3], &top_items[4] };
+const folder_t menu_top_folder = FOLDER(NULL, "Menu", top_list);

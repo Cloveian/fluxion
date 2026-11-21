@@ -66,15 +66,19 @@ bool page_is_open(void) {
     return depth > 0;
 }
 
+const char *const *page_softkeys(void) {
+    return stack[depth - 1].page->softkeys;
+}
+
 static char lower(char c) {
     return c >= 'A' && c <= 'Z' ? (char)(c - 'A' + 'a') : c;
 }
 
-void page_key(keypress_t p, char letter) {
+bool page_act(action_t a) {
     open_t *o = &stack[depth - 1];
     int n = o->page->count;
 
-    if(letter != 0) {
+    if(a.op == A_CHAR && ((lower((char)a.n) >= 'a' && lower((char)a.n) <= 'z') || a.n == CH_THETA)) {
         /* next row starting with it after the current one, so pressing the
            letter again walks through them (like the TI's catalog) */
         int i;
@@ -83,24 +87,24 @@ void page_key(keypress_t p, char letter) {
             int k = (o->sel + i) % n;
             const char *s = o->page->label(k);
 
-            if(!is_header(o->page, k) && lower(s[0]) == lower(letter)) {
+            if(!is_header(o->page, k) && lower(s[0]) == lower((char)a.n)) {
                 o->sel = k;
                 break;
             }
         }
-        return;
+        return true;
     }
 
-    switch(p.key) {
-    case K_UP:    o->sel = step(o->page, o->sel, -1); break;
-    case K_DOWN:  o->sel = step(o->page, o->sel, 1); break;
-    case K_LEFT:  /* a page at a time */
+    switch(a.op) {
+    case A_UP:    o->sel = step(o->page, o->sel, -1); break;
+    case A_DOWN:  o->sel = step(o->page, o->sel, 1); break;
+    case A_LEFT:  /* a page at a time */
         o->sel = settle(o->page, o->sel > shown_rows ? o->sel - shown_rows : 0, -1);
         break;
-    case K_RIGHT:
+    case A_RIGHT:
         o->sel = settle(o->page, o->sel + shown_rows < n - 1 ? o->sel + shown_rows : n - 1, 1);
         break;
-    case K_ENTER:
+    case A_ENTER:
         if(is_header(o->page, o->sel))
             break;
         if(o->page->pick != NULL && o->page->pick(o->sel))
@@ -108,12 +112,12 @@ void page_key(keypress_t p, char letter) {
         else if(o->sel >= o->page->count)  /* it deleted the bottom row */
             o->sel = o->page->count - 1;
         break;
-    case K_CLEAR:
+    case A_CLEAR: case A_ESC:
         page_close();
         break;
-    case K_YEQU: case K_WINDOW: case K_ZOOM: case K_TRACE: case K_GRAPH:
+    case A_SOFT:
         if(o->page->jump != NULL) {
-            int row = o->page->jump((int)(p.key - K_YEQU));
+            int row = o->page->jump(a.n);
 
             if(row >= 0 && row < n) {
                 o->sel = row;
@@ -123,8 +127,9 @@ void page_key(keypress_t p, char letter) {
         }
         break;
     default:
-        break;
+        return false;
     }
+    return true;
 }
 
 /* word wraps text into w pixels, at most lines lines. returns how many it used */

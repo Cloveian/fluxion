@@ -11,6 +11,7 @@
 */
 
 #include "editor/editor.h"
+#include "ui/catalog.h"
 
 #define NAMES_MAX 32 /* stored at once. its RAM, not forever */
 #define NAME_LEN  8 /* letters, same as a TI variable (and an appvar, later) */
@@ -29,6 +30,9 @@ const char *names_name(int i);
 const ed_row_t *names_row(int i);
 int names_find(const char *name, int n); /* -1 if there's no such name */
 bool names_delete(int i);
+
+/* the catalog item that's exactly this word, NULL if none */
+const item_t *names_builtin(const char *word, int n);
 
 /* a whole input line with a sto arrow in it: whats left of the arrow gets stored
    under the letters right of it, nothing left of it deletes the name. NULL if it

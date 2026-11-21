@@ -9,7 +9,7 @@
 
 #include "keys.h"
 
-static const struct { const char *name; key_t key; } names[] = {
+static const struct { const char *name; keycode_t key; } names[] = {
     { "y=", K_YEQU }, { "window", K_WINDOW }, { "zoom", K_ZOOM }, { "trace", K_TRACE }, { "graph", K_GRAPH },
     { "2nd", K_2ND }, { "mode", K_MODE }, { "del", K_DEL },
     { "alpha", K_ALPHA }, { "xt", K_XT }, { "stat", K_STAT },
@@ -18,15 +18,16 @@ static const struct { const char *name; key_t key; } names[] = {
     { "x^2", K_SQUARE }, { "log", K_LOG }, { "ln", K_LN }, { "sto", K_STO },
     { "neg", K_NEG }, { "enter", K_ENTER }, { "on", K_ON },
     { "up", K_UP }, { "down", K_DOWN }, { "left", K_LEFT }, { "right", K_RIGHT },
+    { "menu", K_MENU }, { "trig", K_TRIG }, /* the nspire's, so scripts can try them */
 };
 
-key_t keys_from_char(char c) {
+keycode_t keys_from_char(char c) {
     if(c >= '0' && c <= '9')
-        return (key_t)(K_0 + (c - '0'));
+        return (keycode_t)(K_0 + (c - '0'));
     if(c >= 'a' && c <= 'z')
-        return (key_t)(K_LETTER_A + (c - 'a'));
+        return (keycode_t)(K_LETTER_A + (c - 'a'));
     if(c >= 'A' && c <= 'Z')
-        return (key_t)(K_CAPITAL_A + (c - 'A'));
+        return (keycode_t)(K_CAPITAL_A + (c - 'A'));
 
     switch(c) {
     case '+': return K_ADD;
@@ -43,7 +44,7 @@ key_t keys_from_char(char c) {
     }
 }
 
-key_t keys_named(const char *name) {
+keycode_t keys_named(const char *name) {
     size_t i;
 
     for(i = 0; i < sizeof names / sizeof names[0]; i++)
@@ -70,10 +71,8 @@ void web_press(int key, int on, int second, int alpha) {
 
     if(count == QUEUE)
         return;     /* someone's mashing, they won't miss it */
-    p.key = (key_t)key;
-    p.on = on;
-    p.second = second;
-    p.alpha = alpha;
+    p.key = (keycode_t)key;
+    p.held = (on ? M_ON : 0) | (second ? M_2ND : 0) | (alpha ? M_ALPHA : 0);
     queue[(head + count++) % QUEUE] = p;
 }
 
@@ -104,7 +103,7 @@ keypress_t keys_wait(void) {
 /* the engine never gives the browser a turn while it works so nothing new can be
    down. means no [on] cancel in here, fine at PC speed */
 keypress_t keys_peek(void) {
-    keypress_t p = { K_NONE, false, false, false };
+    keypress_t p = { K_NONE, 0 };
     return p;
 }
 

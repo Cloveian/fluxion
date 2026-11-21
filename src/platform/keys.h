@@ -2,12 +2,12 @@
 #define FLUXION_KEYS_H
 
 /*
-    key presses, the same on both:
-      keys_ti.c  calculator: keypadc, with key repeat
-      keys_pc.c  PC: the SDL window's keyboard, mapped to TI keys
-    one key per TI key. 2nd and alpha are keys like any other: the app keeps
-    track of them, like the TI does. [on] is a modifier (Ctrl), reported with
-    each press. see docs/design-choices/input.md.
+    key presses, which key and nothing about what it does (that's ui/bind_*.c):
+      keys_ti.c      calculator: keypadc, with key repeat
+      keys_pc.c      PC: the SDL window's keyboard, standing in for the CE's keys
+      keys_nspire.c  nspire: its own keypad
+    one code per key, named off its label. a key both keypads have shares one.
+    tapped modifiers are keys like any other, the app keeps them sticky.
 */
 
 #include <stdbool.h>
@@ -31,22 +31,30 @@ typedef enum {
 
     K_UP, K_DOWN, K_LEFT, K_RIGHT,
 
-    /* [on] tapped on its own (held together with a key it's .on instead) */
+    /* [on] tapped on its own (held together with a key it's M_ON in .held instead) */
     K_ON,
 
-    /* PC only - letters come straight off the keyboard, no alpha needed */
+    /* nspire only. its del, var, ^ and x^2 are the CE's codes, same label */
+    K_MENU, K_TRIG, K_ESC, K_DOC, K_HOME, K_CAT, K_TEMPLATE,
+    K_EQUALS, K_PI, K_EE, K_TENX, K_EX,     /* 10^x and e^x */
+    K_MARKS,    /* ?!> */
+    K_RETURN, K_CLICK,  /* the little enter, and pushing the touchpad down */
+    K_CTRL, K_SHIFT,    /* tapped alone */
+
+    /* PC and nspire - letters come straight off the keyboard, no alpha needed */
     K_LETTER_A, K_LETTER_Z = K_LETTER_A + 25,
     K_CAPITAL_A, K_CAPITAL_Z = K_CAPITAL_A + 25,
 
     K_QUIT  /* the PC window got closed */
-} key_t;
+} keycode_t;
 
-/* [on], [2nd] and [alpha] held down while the key was pressed. tapped on their
-   own (down and up, nothing in between) they come as K_ON / K_2ND / K_ALPHA */
+/* modifier bits, the CE's three then the nspire's two. tapped on their own
+   (down and up, nothing in bewteen) they come as K_ON, K_2ND, K_CTRL ... */
+enum { M_2ND = 1, M_ALPHA = 2, M_ON = 4, M_CTRL = 8, M_SHIFT = 16 };
+
 typedef struct {
-    key_t key;
-    bool on;    /* ctrl, i.e. [on] being held */
-    bool second, alpha;
+    keycode_t key;
+    unsigned held;  /* M_ bits held down with it */
 } keypress_t;
 
 void keys_begin(void);
@@ -78,8 +86,8 @@ void keys_script(char *const *presses, int count);
 
 /* PC and browser: the key a script name stands for, or the one for a typed
    character. K_NONE if it's neither. in web.c, it has no SDL */
-key_t keys_named(const char *name);
-key_t keys_from_char(char c);
+keycode_t keys_named(const char *name);
+keycode_t keys_from_char(char c);
 #endif
 
 #endif

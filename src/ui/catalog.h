@@ -23,7 +23,8 @@ typedef enum {
     ITEM_FUNCTION, /* name then a slot, sin, ln, ... */
     ITEM_COMMAND, /* something you do to an expression, expand, solve, ... */
     ITEM_SETTING, /* Tools folder */
-    ITEM_FOLDER /* a subfolder row, only in menus */
+    ITEM_FOLDER, /* a subfilder row, only in menus */
+    ITEM_SOFTKEY /* a page's key under the screen, the nspire's [menu] lists them */
 } item_kind_t;
 
 typedef struct folder folder_t;
@@ -54,5 +55,7 @@ extern const unsigned catalog_count;
 /* the five soft-key folders, left to right */
 #define FOLDER_COUNT 5
 extern const folder_t folders[FOLDER_COUNT];
+/* the same five as one list, for the nspire's [menu] */
+extern const folder_t menu_top_folder;
 
 #endif

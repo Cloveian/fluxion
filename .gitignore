@@ -21,3 +21,5 @@ __pycache__/
 .playwright-mcp/
 /build-web/
 /web/build/
+/build-nspire/
+/bin-nspire/

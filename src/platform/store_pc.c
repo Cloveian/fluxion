@@ -1,8 +1,9 @@
 #ifndef __TICE__
 
-/* PC side of store.h. a file per slot in build-pc/store/ (made on first save), so
-   the window remembers across runs like the calculator does. relative to wherever
-   it's run from, which is the repo root for everything in the makefile */
+/* PC and nspire side of store.h. a file per slot in build-pc/store/ (made on first
+   save), so the window remembers across runs like the calculator does. relative to
+   wherever it's run from, which is the repo root for everything in the makefile.
+   on the nspire it's /documents/fluxion/ */
 
 #include "store.h"
 
@@ -10,7 +11,13 @@
 #include <string.h>
 #include <sys/stat.h>
 
+#ifdef _TINSPIRE
+#define PARENT "/documents"
+#define DIR "/documents/fluxion" /* no .tns on them, so the nspire's file browser leaves them out */
+#else
+#define PARENT "build-pc"
 #define DIR "build-pc/store"
+#endif
 
 static const char *path(const char *slot) {
     static char p[sizeof DIR + 16];
@@ -23,7 +30,7 @@ bool store_save(const char *slot, const void *data, size_t n) {
     FILE *f;
     bool ok;
 
-    mkdir("build-pc", 0755);
+    mkdir(PARENT, 0755);
     mkdir(DIR, 0755);
     f = fopen(path(slot), "wb");
     if(f == NULL)

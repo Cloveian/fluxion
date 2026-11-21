@@ -154,5 +154,51 @@ gotchas:
 ### Decision
 one name table. stored = bold = substituted everywhere, single letters can be stored too, `e` and `i` turn into names. done 10-15
 
+## Nspire keys
+
+the nspire build (`make nspire`, Ndless on the CX and CX II). no keys under the screen, and a whole keyboard of letters.
+
+keys don't stand in for other keys anymore, each keypad has a table of key + modifiers -> what it does (type π, the √ template, undo, quit, open the menu...), `ui/bind_ce.c` and `ui/bind_nspire.c`, and the app only ever sees the what. `platform/keys_*.c` just say which key. so the nspire's keys can do what they do in its own OS instead of whatever the CE key in the same spot does (ctrl + ^ was π, cuz that's `[2nd][^]` on a CE (￢ \_￢ ))
+
+### Decision
+
+- `[menu]` opens the folders, ~~left / right go through all five~~ a list of the five drops down from the top and 1-5 opens one, like the OS's own menus. a folder opens a step to the right of it, esc or ← goes back a level. no soft-key bar on the main screen, the history and input get its 15 px
+- keys do what they do in the OS (the CX II guidebook's shortcut list), table below
+- letters type straight in, no alpha mode. shift + a letter is a capital (same variable, like now)
+- `trig` gets a popup with all 12, sin cos tan csc sec cot and their inverses, picked like the `[math]` one (1-9, 0, then arrows). csc⁻¹, sec⁻¹ and cot⁻¹ are real functions for this, on every build (`[on][2nd]` + sin / cos / tan on the CE)
+
+| Key | Plain | ctrl | shift |
+| --- | ----- | ---- | ----- |
+| `^` | exponent | ⁿ√ | |
+| `x²` | squared | √ | |
+| `e^x` `10^x` | e^▯, 10^▯ | ln, log | |
+| `(-)` | negative | ans | |
+| `enter` | simplify | the decimal (≈) | |
+| `del` | backspace | clear the line (an empty one clears the screen) | |
+| `esc` | close what's open, a level at a time. stops a long one | undo | |
+| `=` | = | the = ≠ < > ≤ ≥ popup | |
+| `÷` | ÷ | fraction | |
+| `+` `-` | | brightness up / down | integral, d/dx |
+| `var` | stored names | sto-> | |
+| `trig` | popup with all 12 | | |
+| `π▸` | popup with π e i ∞ θ ° | | |
+| `?!▸` | the `[math]` popup | | |
+| `cat` | catalog | the `[math]` popup | |
+| template key | Templates folder | | |
+| `menu` | the folders, or a page's keys | same | |
+| `doc` | settings | | |
+| `home` | quit | screen off | |
+| `7` `1` | | line start / end (top / end of page in the OS) | |
+| letters | type | X C V cut copy paste, Z undo | capital |
+| arrows | move | | select |
+
+### Proposal
+
+- ctrl and shift tapped alone stick like `[2nd]` / `[alpha]` on the CE, double tap locks. the padlocks in the bar say C and S
+- `[menu]` on a page with keys under its screen (the catalog's sections, the steps page's methods) drops those five down instead, like the OS's ctrl + menu context menu. ctrl + 1-5 did that before but the OS uses ctrl + digits for moving around
+- esc and home both stop a long one, the hint says esc (the OS's own break is holding home)
+- the touchpad: theres no arrow switches under it, one click for the whole pad and the finger position, so the dirrection comes from where the finger is when it clicks. a push keeps the arrow it started as till it's let go, so sliding while it's down doesn't turn it
+- saves go in `/documents/fluxion/`, no `.tns` on them so the nspire's file browser leaves them out
+
 ---
 Back to [design choices](index.md) · [rendering](rendering.md) · [screens & operations](ui.md)
