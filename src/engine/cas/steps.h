@@ -60,6 +60,7 @@ void steps_free(steps_t *s);
 int steps_find(pcas_ast_t *e, OperatorType op, pcas_ast_t **d, int n); /*the outermost op nodes in e into d, n so far*/
 step_t *steps_expr(steps_t *s, pcas_ast_t *e); /*a line that's just e, = the one above. takes e*/
 step_t *steps_eq(steps_t *s, pcas_ast_t *left, pcas_ast_t *right); /*left = right, takes both. u = x^2*/
+pcas_ast_t *sqrt_of(pcas_ast_t *v); /*v^(1/2) as written, takes v*/
 void steps_rule(step_t *l, const char *name); /*name on l, move n. once each, two power rules on a line read as one*/
 void steps_shown(steps_t *s); /*every tree in the canonical form, at the end. 3X+5 and not 5+3X*/
 

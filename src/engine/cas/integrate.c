@@ -69,11 +69,11 @@ static pcas_ast_t *square_plus(pcas_ast_t *e, pcas_ast_t *x, int sign, pcas_ast_
     a = sq == a ? b : a; /*the constant*/
     if(has_symbol(a, x->op.symbol) || !value(a, &cv) || cv <= 0)
         return NULL;
-    *k = ast_MakeInt(1);
     if(isoptype(sq, OP_MULT) && ast_ChildLength(sq) == 2 && !has_symbol(ast_ChildGet(sq, 0), x->op.symbol)) { /*9x^2*/
-        ast_Cleanup(*k);
         *k = ast_Copy(ast_ChildGet(sq, 0));
         sq = ast_ChildGet(sq, 1);
+    } else {
+        *k = ast_MakeInt(1);
     }
     if(sign < 0)
         *k = ast_MakeBinary(OP_MULT, ast_MakeInt(-1), *k);
@@ -126,10 +126,11 @@ static const char *table_pow(pcas_ast_t *f, pcas_ast_t *x, pcas_ast_t **F) {
     sign = is_value(n, -1, 1) ? 1 : is_value(n, -1, 2) ? -1 : 0;
     if(sign != 0 && (u = square_plus(b, x, sign, &c, &k)) != NULL) {
         if((a = linear(u, x)) != NULL) {
-            G = ast_MakeUnary(sign > 0 ? OP_TAN_INV : OP_SIN_INV,
-                ast_MakeBinary(OP_MULT, ast_MakeBinary(OP_POW, ast_MakeBinary(OP_DIV, ast_Copy(k), ast_Copy(c)), ast_MakeBinary(OP_DIV, ast_MakeInt(1), ast_MakeInt(2))), ast_Copy(u)));
-            *F = over(ast_MakeBinary(OP_DIV, G, ast_MakeBinary(OP_POW, sign > 0 ? ast_MakeBinary(OP_MULT, ast_Copy(c), ast_Copy(k)) : ast_Copy(k),
-                ast_MakeBinary(OP_DIV, ast_MakeInt(1), ast_MakeInt(2)))), a);
+            pcas_ast_t *r = sqrt_of(ast_MakeBinary(OP_DIV, ast_Copy(k), ast_Copy(c)));
+            pcas_ast_t *bottom = sqrt_of(sign > 0 ? ast_MakeBinary(OP_MULT, ast_Copy(c), ast_Copy(k)) : ast_Copy(k));
+
+            G = ast_MakeUnary(sign > 0 ? OP_TAN_INV : OP_SIN_INV, ast_MakeBinary(OP_MULT, r, ast_Copy(u)));
+            *F = over(ast_MakeBinary(OP_DIV, G, bottom), a);
         }
         ast_Cleanup(c);
         ast_Cleanup(k);

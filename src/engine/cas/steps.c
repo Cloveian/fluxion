@@ -277,7 +277,7 @@ static void add_split(steps_t *s, Symbol var, pcas_ast_t *base, pcas_ast_t *pm, 
 }
 
 /*sqrt(8) as written*/
-static pcas_ast_t *sqrt_of(pcas_ast_t *v) {
+pcas_ast_t *sqrt_of(pcas_ast_t *v) {
     return ast_MakeBinary(OP_POW, v, ast_MakeBinary(OP_DIV, ast_MakeInt(1), ast_MakeInt(2)));
 }
 
