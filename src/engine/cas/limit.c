@@ -373,10 +373,10 @@ static int far_conjugate(pcas_ast_t *e, pcas_ast_t *var, pcas_ast_t **v, int tri
         ast_MakeBinary(OP_MULT, ast_MakeNumber(num_FromInt(-1)), ast_MakeBinary(OP_POW, ast_Copy(q), ast_MakeNumber(num_FromInt(2)))));
     bottom = ast_MakeBinary(OP_ADD, ast_Copy(p), ast_MakeBinary(OP_MULT, ast_MakeNumber(num_FromInt(-1)), ast_Copy(q)));
     if(top != NULL && bottom != NULL) {
-        simplify(top, SIMP_ALL);
+        simplify(top, SIMP_LIGHT); /*sqrt(..)^2 back to what's inside*/
         expand(top, EXP_ALL);
-        simplify(top, SIMP_ALL);
-        simplify(bottom, SIMP_ALL);
+        simplify(top, SIMP_LIGHT | SIMP_LIKE_TERMS); /*x^2+x-x^2 is x*/
+        simplify(bottom, SIMP_LIGHT);
         out = far_ratio(top, bottom, var, v, tries - 1);
     }
     ast_Cleanup(top);
