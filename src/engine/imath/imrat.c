@@ -162,7 +162,7 @@ void      mp_rat_free(mp_rat r)
 {
   NRCHECK(r != NULL);
 
-  if (r->num.digits != NULL)
+  if (r->num.digits != NULL || r == &oom_rat) /*Fluxion: a failed init_copy into the static one leaves digits NULL, it still needs its re-init*/
     mp_rat_clear(r);
 
   if (r == &oom_rat) /*Fluxion: the static one, see mp_rat_alloc*/

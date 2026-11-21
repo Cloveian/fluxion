@@ -347,8 +347,8 @@ void translate(pcas_ast_t *e) {
 
         optype(e) = OP_MULT;
 
-        op2 = ast_MakeBinary(OP_POW, ast_MakeNumber(num_FromInt(10)), ast_ChildGet(e, 1));
-        ast_ChildRemoveIndex(e, 1);
+        op2 = ast_ChildRemoveIndex(e, 1); /*Fluxion: off e first, an oom in the pow frees it*/
+        op2 = ast_MakeBinary(OP_POW, ast_MakeNumber(num_FromInt(10)), op2);
         ast_ChildAppend(e, op2);
 
         break;   

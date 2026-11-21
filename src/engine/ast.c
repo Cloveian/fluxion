@@ -31,7 +31,10 @@ mp_rat num_Copy(mp_rat other) {
     mp_rat n = mp_rat_alloc();
     if(n == NULL) /*Fluxion: oom*/
         return NULL;
-    mp_rat_init_copy(n, other);
+    if(mp_rat_init_copy(n, other) != MP_OK) { /*Fluxion: oom on a long number, init_copy leaves num.digits NULL*/
+        mp_rat_free(n);
+        return NULL;
+    }
     return n;
 }
 

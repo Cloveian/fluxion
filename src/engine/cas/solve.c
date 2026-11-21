@@ -291,11 +291,11 @@ static pcas_ast_t *quadratic_root(mp_rat mid, mp_rat q, int sign) {
     ast_ChildAppend(r, ast_MakeNumber(num_Copy(mid)));
     if(sign != 0) {
         qn = ast_MakeNumber(num_Copy(q));
-        s = ast_MakeBinary(OP_POW, qn, ast_MakeNumber(num_FromFraction(1, 2)));
-        if(mp_rat_compare_zero(q) < 0) {
+        if(qn != NULL && mp_rat_compare_zero(q) < 0) /*Fluxion: before the pow, an oom there frees qn*/
             mp_rat_neg(qn->op.num, qn->op.num);
+        s = ast_MakeBinary(OP_POW, qn, ast_MakeNumber(num_FromFraction(1, 2)));
+        if(mp_rat_compare_zero(q) < 0)
             s = ast_MakeBinary(OP_MULT, ast_MakeSymbol(SYM_IMAG), s);
-        }
         ast_ChildAppend(r, ast_MakeBinary(OP_MULT, number(sign), s));
     }
     simplify(r, SIMP_SOLVE);
@@ -366,6 +366,8 @@ static pcas_ast_t *root_of(pcas_ast_t *d, long *k) {
     unsigned i;
 
     *k = 1;
+    if(d == NULL) /*Fluxion: oom in the copy*/
+        return NULL;
     if(isoptype(d, OP_MULT))
         for(i = 0; i < ast_ChildLength(d) && num == NULL; i++)
             if(ast_ChildGet(d, i)->type == NODE_NUMBER)
@@ -419,6 +421,10 @@ static int solve_quadratic_sym(coefs_t *p, pcas_ast_t **out, int n) {
         ast_MakeBinary(OP_MULT, number(-4), ast_MakeBinary(OP_MULT, coef(p, 2), coef(p, 0))));
     simplify(disc, SIMP_SOLVE);
     factor(disc, FAC_ALL);
+    if(disc == NULL || pcas_cancelled) { /*Fluxion: oom*/
+        ast_Cleanup(disc);
+        return SOLVE_UNKNOWN;
+    }
     double_root = is_ast_int(disc, 0);  /*(x_sqrt2)^2, say it once*/
 
     for(sign = double_root ? 1 : -1; sign <= 1 && !pcas_cancelled; sign += 2) {
@@ -828,11 +834,13 @@ static bool halve_powers(pcas_ast_t *f, Symbol var) {
     pcas_ast_t *c, *p;
     mp_small k, den;
 
+    if(f == NULL)
+        return false;
     if(f->type == NODE_SYMBOL)
         return f->op.symbol != var;
     if(f->type != NODE_OPERATOR)
         return true;
-    if(isoptype(f, OP_POW) && ast_ChildGet(f, 0)->type == NODE_SYMBOL && ast_ChildGet(f, 0)->op.symbol == var) {
+    if(isoptype(f, OP_POW) && ast_ChildLength(f) == 2 && ast_ChildGet(f, 0)->type == NODE_SYMBOL && ast_ChildGet(f, 0)->op.symbol == var) { /*an oom can leave a pow one child short*/
         p = ast_ChildGet(f, 1);
         if(p->type != NODE_NUMBER || mp_rat_to_ints(p->op.num, &k, &den) != MP_OK || den != 1 || k % 2 != 0
            || (c = number(k / 2)) == NULL) /*oom, an x^4 left in would read as a quartic*/
@@ -1135,7 +1143,12 @@ static int isolate(pcas_ast_t *e, Symbol var, pcas_ast_t **out, bool complex) {
             case OP_SIN: case OP_COS: case OP_TAN: {
                 pcas_ast_t *inv = ast_MakeUnary(op == OP_SIN ? OP_SIN_INV : op == OP_COS ? OP_COS_INV : OP_TAN_INV, o);
 
-                simplify(inv, SIMP_ALL);
+                if(inv != NULL)
+                    simplify(inv, SIMP_ALL);
+                if(inv == NULL || pcas_cancelled) { /*Fluxion: oom, o went with inv*/
+                    ast_Cleanup(inv);
+                    break;
+                }
                 if(op == OP_SIN && is_zero(inv))
                     half = true;
                 if(op == OP_COS && isoptype(inv, OP_DIV) && is_ast_int(ast_ChildGet(inv, 1), 2)
@@ -1150,9 +1163,12 @@ static int isolate(pcas_ast_t *e, Symbol var, pcas_ast_t **out, bool complex) {
             case OP_TAN_INV: t = ast_MakeUnary(OP_TAN, o); break;
             default: break;
             }
-            if(t == NULL)
-                goto nope;
             other[i] = t;
+            if(t == NULL) {
+                if(!pcas_cancelled) /*Fluxion: no rule for it, o's still here. an oom freed it with t*/
+                    ast_Cleanup(o);
+                goto nope;
+            }
         }
         if(op == OP_POW && in == a && whole_number(b, &n)) {
             if(complex && n >= 2) {

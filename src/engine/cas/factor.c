@@ -301,6 +301,8 @@ pcas_ast_t *gm_div(pcas_ast_t *a, pcas_ast_t *g) {
     }
 
     q = num_FromInt(1);
+    if(q == NULL) /*oom*/
+        return NULL;
     if(ma.num != NULL)
         mp_rat_copy(ma.num->op.num, q);
     /*a negative g comes out of the slow one as -1*(-1*Y^3), not copying that, it can go the slow way*/
@@ -314,6 +316,10 @@ pcas_ast_t *gm_div(pcas_ast_t *a, pcas_ast_t *g) {
     }
 
     ret = ast_MakeOperator(OP_MULT);
+    if(ret == NULL) {
+        num_Cleanup(q);
+        return NULL;
+    }
     if(mp_rat_compare_value(q, 1, 1) != 0) {
         ast_ChildAppend(ret, ast_MakeNumber(q));
         left++;
@@ -332,6 +338,11 @@ pcas_ast_t *gm_div(pcas_ast_t *a, pcas_ast_t *g) {
         ast_ChildAppend(ret, p == 1 ? ast_MakeSymbol(ma.sym[i])
             : ast_MakeBinary(OP_POW, ast_MakeSymbol(ma.sym[i]), ast_MakeNumber(num_FromInt(p))));
         left++;
+    }
+
+    if(pcas_cancelled) { /*an append above was a NULL*/
+        ast_Cleanup(ret);
+        return NULL;
     }
 
     /*same shape as the divide and simplify gave, the sort order hangs on it. a MULT stays a
@@ -597,6 +608,10 @@ static bool take_common(pcas_ast_t *e) {
     }
 
     rest = ast_MakeOperator(OP_ADD);
+    if(rest == NULL) { /*oom*/
+        ast_Cleanup(g);
+        return false;
+    }
     for(t = ast_ChildGet(e, 0); t != NULL; t = t->next)
         ast_ChildAppend(rest, quotient(t, g));
     replace_node(e, ast_MakeBinary(OP_MULT, g, rest));
@@ -609,6 +624,8 @@ static pcas_ast_t *pair_rest(pcas_ast_t *a, pcas_ast_t *b, pcas_ast_t **g) {
     pcas_ast_t *s = ast_MakeOperator(OP_ADD);
 
     *g = gcd(a, b);
+    if(s == NULL || *g == NULL) /*oom, take_pairs gives up*/
+        return s;
     ast_ChildAppend(s, quotient(a, *g));
     ast_ChildAppend(s, quotient(b, *g));
     simplify(s, SIMP_NORMALIZE | SIMP_COMMUTATIVE | SIMP_RATIONAL | SIMP_EVAL);
@@ -629,7 +646,7 @@ static bool take_pairs(pcas_ast_t *e) {
         s1 = pair_rest(t[split[k][0]], t[split[k][1]], &g1);
         s2 = pair_rest(t[split[k][2]], t[split[k][3]], &g2);
 
-        if(isoptype(s1, OP_ADD) && (ast_Compare(s1, s2) || opposite(s1, s2))) {
+        if(!pcas_cancelled && isoptype(s1, OP_ADD) && (ast_Compare(s1, s2) || opposite(s1, s2))) { /*cancelled, any of the four can be NULL*/
             if(!ast_Compare(s1, s2))
                 g2 = ast_MakeBinary(OP_MULT, ast_MakeNumber(num_FromInt(-1)), g2);
             ast_Cleanup(s2);

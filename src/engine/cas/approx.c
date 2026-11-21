@@ -30,6 +30,8 @@ static bool value(pcas_ast_t *e, real *x) {
     pcas_ast_t *child;
     real a = 0, b = 0, c, d, t;
 
+    if(e == NULL) /*a child an oom left out*/
+        return false;
     if(e->type == NODE_NUMBER) {
         *x = approx_int(mp_rat_numer_ref(e->op.num)) / approx_int(mp_rat_denom_ref(e->op.num));
         return true;

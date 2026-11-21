@@ -340,7 +340,7 @@ int compare(pcas_ast_t *a, pcas_ast_t *b, bool add) {
     if(isoptype(a, OP_MULT) && compare_depth < COMPARE_DEPTH_MAX) { /*Fluxion*/
         pcas_ast_t *g = gcd(a, b);
 
-        if(!is_ast_int(g, 1)) {
+        if(g != NULL && !is_ast_int(g, 1)) { /*Fluxion: NULL is an oom*/
             pcas_ast_t *newa, *newb;
             int val;
 

@@ -690,13 +690,20 @@ static bool test_decimal(test_t *t) {
     simplify(e, SIMP_ALL);
     approx(e);
     simplify(e, SIMP_NORMALIZE | SIMP_COMMUTATIVE | SIMP_RATIONAL | SIMP_EVAL);
+    if(pcas_oom) { /*the PCAS_FAIL_ALLOC sweeps*/
+        printf("Test failed on line %u. Out of memory\n", t->line);
+        ast_Cleanup(e);
+        return false;
+    }
 
     /*simplify keeps a fraction as a/b over whole numbers*/
     if(isoptype(e, OP_DIV) && ast_ChildGet(e, 0)->type == NODE_NUMBER && ast_ChildGet(e, 1)->type == NODE_NUMBER) {
         mp_rat q = num_Copy(ast_ChildGet(e, 0)->op.num);
 
-        mp_rat_div(q, ast_ChildGet(e, 1)->op.num, q);
-        replace_node(e, ast_MakeNumber(q));
+        if(q != NULL) {
+            mp_rat_div(q, ast_ChildGet(e, 1)->op.num, q);
+            replace_node(e, ast_MakeNumber(q));
+        }
     }
 
     passed = e->type == NODE_NUMBER;
