@@ -24,17 +24,13 @@ static bool zero(pcas_ast_t *e) {
     return e != NULL && is_ast_int(e, 0);
 }
 
-static pcas_ast_t *number(mp_small n) {
-    return ast_MakeNumber(num_FromInt(n));
-}
-
 /*a (op) b, both copied, simplified. NULL when oom. number/number is done straight
   in imath, no tree to build and simplify for it (and the sign lands where we want)*/
 static pcas_ast_t *combine(OperatorType op, pcas_ast_t *a, pcas_ast_t *b) {
     pcas_ast_t *e;
 
     if(op == OP_DIV && a->type == NODE_NUMBER && b->type == NODE_NUMBER && !zero(b)) {
-        e = number(0);
+        e = ast_MakeInt(0);
         if(e == NULL)
             return NULL;
         if(mp_rat_div(a->op.num, b->op.num, e->op.num) == MP_OK) {
@@ -56,7 +52,7 @@ static pcas_ast_t *combine(OperatorType op, pcas_ast_t *a, pcas_ast_t *b) {
 
 /*a - b, as a + (-1)b since the engine has no minus node*/
 static pcas_ast_t *minus(pcas_ast_t *a, pcas_ast_t *b) {
-    pcas_ast_t *neg = ast_MakeBinary(OP_MULT, number(-1), ast_Copy(b)), *e;
+    pcas_ast_t *neg = ast_MakeBinary(OP_MULT, ast_MakeInt(-1), ast_Copy(b)), *e;
 
     e = combine(OP_ADD, a, neg);
     ast_Cleanup(neg);
@@ -67,7 +63,7 @@ static pcas_ast_t *minus(pcas_ast_t *a, pcas_ast_t *b) {
   isn't linear in the vars (or oom). the constant goes on the right, so the row
   reads coef . var = const*/
 static bool read_row(pcas_ast_t *eq, int n, const Symbol *vars, pcas_ast_t **row, pcas_ast_t **rhs) {
-    pcas_ast_t *e = ast_Copy(eq), *check, *v, *z = number(0);
+    pcas_ast_t *e = ast_Copy(eq), *check, *v, *z = ast_MakeInt(0);
     int i;
 
     if(e == NULL || z == NULL) {
@@ -132,7 +128,7 @@ static bool read_row(pcas_ast_t *eq, int n, const Symbol *vars, pcas_ast_t **row
 
     /*moved over to the right, ax + by + c = 0 is ax + by = -c*/
     {
-        pcas_ast_t *neg = number(-1), *r = combine(OP_MULT, neg, *rhs);
+        pcas_ast_t *neg = ast_MakeInt(-1), *r = combine(OP_MULT, neg, *rhs);
 
         ast_Cleanup(neg);
         ast_Cleanup(*rhs);

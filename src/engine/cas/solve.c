@@ -57,10 +57,6 @@ static bool algebraic(pcas_ast_t *e) {
     return true;
 }
 
-static pcas_ast_t *number(mp_small n) {
-    return ast_MakeNumber(num_FromInt(n));
-}
-
 static bool is_zero(pcas_ast_t *e) {
     return e == NULL || is_ast_int(e, 0);
 }
@@ -92,7 +88,7 @@ static bool split_term(pcas_ast_t *e, Symbol var, pcas_ast_t *coef, int *k) {
         pcas_ast_t *top = ast_MakeOperator(OP_MULT);
         bool ok;
 
-        ast_ChildAppend(top, number(1));
+        ast_ChildAppend(top, ast_MakeInt(1));
         ok = split_term(ast_ChildGet(e, 0), var, top, k);
         ast_ChildAppend(coef, ast_MakeBinary(OP_DIV, top, ast_Copy(ast_ChildGet(e, 1))));
         return ok;
@@ -123,7 +119,7 @@ static void fold_fraction(pcas_ast_t *e) {
     b = ast_ChildGet(e, 1);
     if(a == NULL || b == NULL || a->type != NODE_NUMBER || b->type != NODE_NUMBER || is_zero(b)) /*oom leaves a child out*/
         return;
-    r = number(0);
+    r = ast_MakeInt(0);
     if(r == NULL || mp_rat_div(a->op.num, b->op.num, r->op.num) != MP_OK) {
         ast_Cleanup(r);
         return;
@@ -152,7 +148,7 @@ static bool read_term(pcas_ast_t *term, Symbol var, coefs_t *p) {
         ast_Cleanup(coef);
         return false;
     }
-    ast_ChildAppend(coef, number(1));
+    ast_ChildAppend(coef, ast_MakeInt(1));
     if(!split_term(term, var, coef, &k)) {
         ast_Cleanup(coef);
         return false;
@@ -271,10 +267,10 @@ static pcas_ast_t *linear_root(coefs_t *p) {
     pcas_ast_t *r;
 
     if(is_zero(p->c[0]))
-        return number(0);
+        return ast_MakeInt(0);
 
     r = ast_MakeBinary(OP_DIV,
-            ast_MakeBinary(OP_MULT, number(-1), ast_Copy(p->c[0])),
+            ast_MakeBinary(OP_MULT, ast_MakeInt(-1), ast_Copy(p->c[0])),
             ast_Copy(p->c[1]));
     simplify(r, SIMP_SOLVE);
     return r;
@@ -296,7 +292,7 @@ static pcas_ast_t *quadratic_root(mp_rat mid, mp_rat q, int sign) {
         s = ast_MakeBinary(OP_POW, qn, ast_MakeNumber(num_FromFraction(1, 2)));
         if(mp_rat_compare_zero(q) < 0)
             s = ast_MakeBinary(OP_MULT, ast_MakeSymbol(SYM_IMAG), s);
-        ast_ChildAppend(r, ast_MakeBinary(OP_MULT, number(sign), s));
+        ast_ChildAppend(r, ast_MakeBinary(OP_MULT, ast_MakeInt(sign), s));
     }
     simplify(r, SIMP_SOLVE);
     return r;
@@ -353,7 +349,7 @@ static int solve_quadratic(coefs_t *p, pcas_ast_t **out, int n, bool complex) {
 
 /*the coef as a tree, 0 when its missing*/
 static pcas_ast_t *coef(coefs_t *p, int k) {
-    return p->c[k] != NULL ? ast_Copy(p->c[k]) : number(0);
+    return p->c[k] != NULL ? ast_Copy(p->c[k]) : ast_MakeInt(0);
 }
 
 /*sqrt(d) with any square number factor pulled out front, sqrt(4(y_3)) as
@@ -412,13 +408,13 @@ static int solve_quadratic_sym(coefs_t *p, pcas_ast_t **out, int n) {
     if(p->c[2] != NULL && is_negative_for_sure(p->c[2]))
         for(k = 0; k < 3; k++)
             if(p->c[k] != NULL) {
-                p->c[k] = ast_MakeBinary(OP_MULT, number(-1), p->c[k]);
+                p->c[k] = ast_MakeBinary(OP_MULT, ast_MakeInt(-1), p->c[k]);
                 simplify(p->c[k], SIMP_SOLVE);
             }
 
     disc = ast_MakeBinary(OP_ADD,
-        ast_MakeBinary(OP_POW, coef(p, 1), number(2)),
-        ast_MakeBinary(OP_MULT, number(-4), ast_MakeBinary(OP_MULT, coef(p, 2), coef(p, 0))));
+        ast_MakeBinary(OP_POW, coef(p, 1), ast_MakeInt(2)),
+        ast_MakeBinary(OP_MULT, ast_MakeInt(-4), ast_MakeBinary(OP_MULT, coef(p, 2), coef(p, 0))));
     simplify(disc, SIMP_SOLVE);
     factor(disc, FAC_ALL);
     if(disc == NULL || pcas_cancelled) { /*Fluxion: oom*/
@@ -441,9 +437,9 @@ static int solve_quadratic_sym(coefs_t *p, pcas_ast_t **out, int n) {
             g = 1;
         r = ast_MakeBinary(OP_DIV,
             ast_MakeBinary(OP_ADD,
-                ast_MakeBinary(OP_MULT, number(-1), g > 1 ? number((int)(b / g)) : coef(p, 1)),
-                ast_MakeBinary(OP_MULT, number(sign * (int)(rk / g)), root)),
-            g > 1 ? number((int)(2 * a / g)) : ast_MakeBinary(OP_MULT, number(2), coef(p, 2)));
+                ast_MakeBinary(OP_MULT, ast_MakeInt(-1), g > 1 ? ast_MakeInt((int)(b / g)) : coef(p, 1)),
+                ast_MakeBinary(OP_MULT, ast_MakeInt(sign * (int)(rk / g)), root)),
+            g > 1 ? ast_MakeInt((int)(2 * a / g)) : ast_MakeBinary(OP_MULT, ast_MakeInt(2), coef(p, 2)));
         simplify(r, SIMP_SOLVE);
         n = add_root(out, n, r);
     }
@@ -515,14 +511,14 @@ static pcas_ast_t *root_rat(mp_rat r, int k) {
     mp_small front, m, d;
 
     if(mp_rat_compare_zero(r) == 0)
-        return number(0);
+        return ast_MakeInt(0);
     if(!root_parts(r, k, &front, &m, &d)) /*too big to bother*/
         return ast_MakeBinary(OP_POW, ast_MakeNumber(num_Copy(r)), ast_MakeNumber(num_FromFraction(1, k)));
     if(m == 1)
         return ast_MakeNumber(num_FromFraction(front, d));
     return ast_MakeBinary(OP_DIV,
-        ast_MakeBinary(OP_MULT, number(front), ast_MakeBinary(OP_POW, number(m), ast_MakeNumber(num_FromFraction(1, k)))),
-        number(d));
+        ast_MakeBinary(OP_MULT, ast_MakeInt(front), ast_MakeBinary(OP_POW, ast_MakeInt(m), ast_MakeNumber(num_FromFraction(1, k)))),
+        ast_MakeInt(d));
 }
 
 /*cbrt((a + b sqrt(m)) / d) as c cbrt(a' + b' sqrt(m)) / d, whole numbers inside.
@@ -540,11 +536,11 @@ static pcas_ast_t *cbrt_surd(mp_small a, mp_small b, mp_small m, mp_small d) {
     a /= c * c * c;
     b /= c * c * c;
     return ast_MakeBinary(OP_DIV,
-        ast_MakeBinary(OP_MULT, number(c),
-            ast_MakeBinary(OP_ROOT, number(3),
-                ast_MakeBinary(OP_ADD, number(a),
-                    ast_MakeBinary(OP_MULT, number(b), ast_MakeBinary(OP_POW, number(m), ast_MakeNumber(num_FromFraction(1, 2))))))),
-        number(d));
+        ast_MakeBinary(OP_MULT, ast_MakeInt(c),
+            ast_MakeBinary(OP_ROOT, ast_MakeInt(3),
+                ast_MakeBinary(OP_ADD, ast_MakeInt(a),
+                    ast_MakeBinary(OP_MULT, ast_MakeInt(b), ast_MakeBinary(OP_POW, ast_MakeInt(m), ast_MakeNumber(num_FromFraction(1, 2))))))),
+        ast_MakeInt(d));
 }
 
 /*cbrt(mid + sg*sqrt(disc)) as sign*cbrt(|...|), NULL when it's 0. approx gives up
@@ -597,23 +593,23 @@ static pcas_ast_t *cardano_term(mp_rat mid, mp_rat disc, int sg) {
             mp_rat_copy(mid, t);
             if(sign < 0)
                 mp_rat_neg(t, t);
-            in = ast_MakeBinary(OP_ROOT, number(3),
-                ast_MakeBinary(OP_ADD, ast_MakeNumber(num_Copy(t)), ast_MakeBinary(OP_MULT, number(sign * sg), s)));
+            in = ast_MakeBinary(OP_ROOT, ast_MakeInt(3),
+                ast_MakeBinary(OP_ADD, ast_MakeNumber(num_Copy(t)), ast_MakeBinary(OP_MULT, ast_MakeInt(sign * sg), s)));
         }
     }
     num_Cleanup(t);
-    r = ast_MakeBinary(OP_MULT, number(sign), in);
+    r = ast_MakeBinary(OP_MULT, ast_MakeInt(sign), in);
     return r;
 }
 
 /*(-1 + sg*i*sqrt(3))/2, a cube root of 1*/
 static pcas_ast_t *unity(int sg) {
     return ast_MakeBinary(OP_DIV,
-        ast_MakeBinary(OP_ADD, number(-1),
-            ast_MakeBinary(OP_MULT, number(sg),
+        ast_MakeBinary(OP_ADD, ast_MakeInt(-1),
+            ast_MakeBinary(OP_MULT, ast_MakeInt(sg),
                 ast_MakeBinary(OP_MULT, ast_MakeSymbol(SYM_IMAG),
-                    ast_MakeBinary(OP_POW, number(3), ast_MakeNumber(num_FromFraction(1, 2)))))),
-        number(2));
+                    ast_MakeBinary(OP_POW, ast_MakeInt(3), ast_MakeNumber(num_FromFraction(1, 2)))))),
+        ast_MakeInt(2));
 }
 
 /*wu*U + wv*V + shift, either cbrt term can be missing (NULL)*/
@@ -728,7 +724,7 @@ static int solve_cubic(coefs_t *p, pcas_ast_t **out, int n, bool complex) {
 
         mp_rat_set_value(k, -1, 3);
         mp_rat_mul(pp, k, t);
-        amp = ast_MakeBinary(OP_MULT, number(2), root_rat(t, 2));
+        amp = ast_MakeBinary(OP_MULT, ast_MakeInt(2), root_rat(t, 2));
         mp_rat_set_value(k, 3, 2);
         mp_rat_div(q, pp, t);
         mp_rat_mul(t, k, t);
@@ -771,10 +767,10 @@ static int solve_cubic(coefs_t *p, pcas_ast_t **out, int n, bool complex) {
                     mp_rat_sub(k, t, t);
                 angle = ast_MakeBinary(OP_MULT, ast_MakeNumber(num_Copy(t)), ast_MakeSymbol(SYM_PI));
             } else {
-                angle = ast_MakeBinary(OP_DIV, ast_Copy(theta), number(3));
+                angle = ast_MakeBinary(OP_DIV, ast_Copy(theta), ast_MakeInt(3));
                 if(i > 0)
                     angle = ast_MakeBinary(OP_ADD, angle,
-                        ast_MakeBinary(OP_DIV, ast_MakeBinary(OP_MULT, number(-2 * i), ast_MakeSymbol(SYM_PI)), number(3)));
+                        ast_MakeBinary(OP_DIV, ast_MakeBinary(OP_MULT, ast_MakeInt(-2 * i), ast_MakeSymbol(SYM_PI)), ast_MakeInt(3)));
             }
             r = ast_MakeBinary(OP_ADD,
                 ast_MakeBinary(OP_MULT, ast_Copy(amp), ast_MakeUnary(OP_COS, angle)),
@@ -843,7 +839,7 @@ static bool halve_powers(pcas_ast_t *f, Symbol var) {
     if(isoptype(f, OP_POW) && ast_ChildLength(f) == 2 && ast_ChildGet(f, 0)->type == NODE_SYMBOL && ast_ChildGet(f, 0)->op.symbol == var) { /*an oom can leave a pow one child short*/
         p = ast_ChildGet(f, 1);
         if(p->type != NODE_NUMBER || mp_rat_to_ints(p->op.num, &k, &den) != MP_OK || den != 1 || k % 2 != 0
-           || (c = number(k / 2)) == NULL) /*oom, an x^4 left in would read as a quartic*/
+           || (c = ast_MakeInt(k / 2)) == NULL) /*oom, an x^4 left in would read as a quartic*/
             return false;
         replace_node(p, c);
         return true;
@@ -923,13 +919,13 @@ static int solve_even(pcas_ast_t *f, Symbol var, pcas_ast_t **out, int n, bool c
       decimal is noise so sort_roots can't place it (3x^4-200000x^2+3)*/
     for(i = 2; i >= 0; i--)
         if(keep[i] && !is_zero(u[i]) && n + 1 <= SOLVE_MAX) {
-            neg = ast_MakeBinary(OP_MULT, number(-1), ast_MakeBinary(OP_POW, ast_Copy(u[i]), ast_MakeNumber(num_FromFraction(1, 2))));
+            neg = ast_MakeBinary(OP_MULT, ast_MakeInt(-1), ast_MakeBinary(OP_POW, ast_Copy(u[i]), ast_MakeNumber(num_FromFraction(1, 2))));
             simplify(neg, SIMP_ALL);
             n = add_root(out, n, neg);
         }
     for(i = 0; i < 3; i++)
         if(keep[i] && n + 1 <= SOLVE_MAX) {
-            r = is_zero(u[i]) ? number(0) : ast_MakeBinary(OP_POW, ast_Copy(u[i]), ast_MakeNumber(num_FromFraction(1, 2)));
+            r = is_zero(u[i]) ? ast_MakeInt(0) : ast_MakeBinary(OP_POW, ast_Copy(u[i]), ast_MakeNumber(num_FromFraction(1, 2)));
             simplify(r, SIMP_ALL);
             n = add_root(out, n, r);
         }
@@ -947,7 +943,7 @@ static int solve_binomial(coefs_t *p, pcas_ast_t **out, int n) {
 
     if(n + p->deg > SOLVE_MAX)
         return SOLVE_UNKNOWN;
-    c = ast_MakeBinary(OP_DIV, ast_MakeBinary(OP_MULT, number(-1), ast_Copy(p->c[0])), ast_Copy(p->lead));
+    c = ast_MakeBinary(OP_DIV, ast_MakeBinary(OP_MULT, ast_MakeInt(-1), ast_Copy(p->c[0])), ast_Copy(p->lead));
     if(c == NULL)
         return SOLVE_UNKNOWN;
     root = ast_MakeBinary(OP_POW, c, ast_MakeNumber(num_FromFraction(1, p->deg)));
@@ -1059,7 +1055,7 @@ static bool nth_roots(pcas_ast_t *p, int n, pcas_ast_t **out) {
         angle = ast_MakeBinary(OP_MULT, ast_MakeNumber(num_FromFraction(t < 0 ? -t : t, n)), ast_MakeSymbol(SYM_PI));
         sine = ast_MakeUnary(OP_SIN, ast_Copy(angle)); /*before the cos, an oom there frees angle*/
         if(t < 0) /*cos t - isin t, folding cos(-t) and sin(-t) is ~2.4k work a root*/
-            sine = ast_MakeBinary(OP_MULT, number(-1), sine);
+            sine = ast_MakeBinary(OP_MULT, ast_MakeInt(-1), sine);
         out[k] = ast_MakeBinary(OP_MULT, ast_Copy(r), ast_MakeBinary(OP_ADD, ast_MakeUnary(OP_COS, angle),
             ast_MakeBinary(OP_MULT, ast_MakeSymbol(SYM_IMAG), sine)));
         if(out[k] == NULL)
@@ -1107,7 +1103,7 @@ static int isolate(pcas_ast_t *e, Symbol var, pcas_ast_t **out, bool complex) {
     mp_small n;
     bool family = false;
 
-    other[0] = number(0);
+    other[0] = ast_MakeInt(0);
     while(side->type != NODE_SYMBOL && !pcas_cancelled) {
         pcas_ast_t *a, *b, *in = NULL, *c;
         OperatorType op;
@@ -1128,11 +1124,11 @@ static int isolate(pcas_ast_t *e, Symbol var, pcas_ast_t **out, bool complex) {
             pcas_ast_t *o = other[i], *t = NULL;
 
             switch(op) {
-            case OP_ADD:  t = ast_MakeBinary(OP_ADD, o, ast_MakeBinary(OP_MULT, number(-1), rest_of(side, in, OP_ADD))); break;
+            case OP_ADD:  t = ast_MakeBinary(OP_ADD, o, ast_MakeBinary(OP_MULT, ast_MakeInt(-1), rest_of(side, in, OP_ADD))); break;
             case OP_MULT: t = ast_MakeBinary(OP_DIV, o, rest_of(side, in, OP_MULT)); break;
             case OP_DIV:  t = in == a ? ast_MakeBinary(OP_MULT, o, ast_Copy(b)) : ast_MakeBinary(OP_DIV, ast_Copy(a), o); break;
             case OP_POW:  /*the root of it, or a log of it*/
-                t = in == a ? ast_MakeBinary(OP_POW, o, ast_MakeBinary(OP_DIV, number(1), ast_Copy(b)))
+                t = in == a ? ast_MakeBinary(OP_POW, o, ast_MakeBinary(OP_DIV, ast_MakeInt(1), ast_Copy(b)))
                             : ast_MakeBinary(OP_LOG, ast_Copy(a), o);
                 break;
             case OP_ROOT: if(in == b) t = ast_MakeBinary(OP_POW, o, ast_Copy(a)); break;
@@ -1179,7 +1175,7 @@ static int isolate(pcas_ast_t *e, Symbol var, pcas_ast_t **out, bool complex) {
                 int k = m;
 
                 for(i = 0; i < k && m < SOLVE_MAX; i++)
-                    other[m++] = ast_MakeBinary(OP_MULT, number(-1), ast_Copy(other[i]));
+                    other[m++] = ast_MakeBinary(OP_MULT, ast_MakeInt(-1), ast_Copy(other[i]));
             }
         }
         if((op == OP_SIN || op == OP_COS) && !half) {
@@ -1188,7 +1184,7 @@ static int isolate(pcas_ast_t *e, Symbol var, pcas_ast_t **out, bool complex) {
             int k = m;
 
             for(i = 0; i < k && m < SOLVE_MAX; i++) {
-                pcas_ast_t *neg = ast_MakeBinary(OP_MULT, number(-1), ast_Copy(ast_ChildGet(other[i], 0)));
+                pcas_ast_t *neg = ast_MakeBinary(OP_MULT, ast_MakeInt(-1), ast_Copy(ast_ChildGet(other[i], 0)));
 
                 other[m++] = ast_MakeBinary(OP_ADD, op == OP_SIN ? ast_MakeBinary(OP_ADD, ast_MakeSymbol(SYM_PI), neg) : neg, turns(2));
             }
@@ -1221,7 +1217,7 @@ static pcas_ast_t *turns(int k) {
 
     if(t == NULL)
         return NULL;
-    ast_ChildAppend(t, number(k));
+    ast_ChildAppend(t, ast_MakeInt(k));
     ast_ChildAppend(t, ast_MakeSymbol(SYM_PI));
     ast_ChildAppend(t, ast_MakeSymbol(SYM_N));
     return t;
@@ -1246,7 +1242,7 @@ pcas_ast_t *approx_number(pcas_ast_t *e) {
   range check and keepers get SIMP_ALL. a SIMP_SOLVE first gets SIMP_ALL stuck on
   (-pi)/12+1/2+pi/2 instead of 1/2+(5pi)/12. NULL when oom*/
 static pcas_ast_t *at_n(pcas_ast_t *root, pcas_ast_t *sym, int k) {
-    pcas_ast_t *c = ast_Copy(root), *v = number(k);
+    pcas_ast_t *c = ast_Copy(root), *v = ast_MakeInt(k);
 
     if(c == NULL || v == NULL) {
         ast_Cleanup(c);

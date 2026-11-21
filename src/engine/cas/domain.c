@@ -25,10 +25,6 @@ typedef struct {
     bool dead; /*a bottom that's 0 for every x, there's no domain to give*/
 } walk_t;
 
-static pcas_ast_t *number(mp_small n) {
-    return ast_MakeNumber(num_FromInt(n));
-}
-
 static int sign(int c) {
     return c < 0 ? -1 : c > 0;
 }
@@ -64,7 +60,7 @@ static int sign_of(pcas_ast_t *e) {
 
 /*sign of a - b*/
 static int compare(pcas_ast_t *a, pcas_ast_t *b) {
-    pcas_ast_t *d = ast_MakeBinary(OP_ADD, ast_Copy(a), ast_MakeBinary(OP_MULT, number(-1), ast_Copy(b)));
+    pcas_ast_t *d = ast_MakeBinary(OP_ADD, ast_Copy(a), ast_MakeBinary(OP_MULT, ast_MakeInt(-1), ast_Copy(b)));
     int s = sign_of(d);
 
     ast_Cleanup(d);
@@ -211,10 +207,10 @@ static void trig_zeros(walk_t *w, OperatorType op, pcas_ast_t *u) {
 static void between(walk_t *w, pcas_ast_t *u, bool open) {
     pcas_ast_t *t;
 
-    t = ast_MakeBinary(OP_ADD, ast_Copy(u), number(1));
+    t = ast_MakeBinary(OP_ADD, ast_Copy(u), ast_MakeInt(1));
     bound(w, t, open);
     ast_Cleanup(t);
-    t = ast_MakeBinary(OP_ADD, number(1), ast_MakeBinary(OP_MULT, number(-1), ast_Copy(u)));
+    t = ast_MakeBinary(OP_ADD, ast_MakeInt(1), ast_MakeBinary(OP_MULT, ast_MakeInt(-1), ast_Copy(u)));
     bound(w, t, open);
     ast_Cleanup(t);
 }
@@ -274,7 +270,7 @@ static void walk(walk_t *w, pcas_ast_t *e) {
         between(w, a, true);
         break;
     case OP_COSH_INV: /*u >= 1*/
-        t = ast_MakeBinary(OP_ADD, ast_Copy(a), number(-1));
+        t = ast_MakeBinary(OP_ADD, ast_Copy(a), ast_MakeInt(-1));
         bound(w, t, false);
         ast_Cleanup(t);
         break;

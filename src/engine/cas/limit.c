@@ -234,7 +234,7 @@ static bool growth(pcas_ast_t *e, pcas_ast_t *var, deg_t *deg, pcas_ast_t **lead
         return (*lead = ast_Copy(e)) != NULL;
     if(e->type == NODE_SYMBOL) {
         deg->n = 1;
-        return (*lead = ast_MakeNumber(num_FromInt(1))) != NULL;
+        return (*lead = ast_MakeInt(1)) != NULL;
     }
 
     switch(optype(e)) {
@@ -245,7 +245,7 @@ static bool growth(pcas_ast_t *e, pcas_ast_t *var, deg_t *deg, pcas_ast_t **lead
                 break;
             if(isoptype(e, OP_DIV) && c != ast_ChildGet(e, 0)) {
                 cd.n = -cd.n;
-                l = ast_MakeBinary(OP_DIV, ast_MakeNumber(num_FromInt(1)), l);
+                l = ast_MakeBinary(OP_DIV, ast_MakeInt(1), l);
             }
             *deg = deg_make(deg->n * cd.d + cd.n * deg->d, deg->d * cd.d);
             if(!deg_ok(*deg)) {
@@ -334,7 +334,7 @@ static int far_ratio(pcas_ast_t *top, pcas_ast_t *bottom, pcas_ast_t *var, pcas_
             out = lhopital(top, bottom, var, v, tries);
         }
     } else if(ft == FAR_FIN) {
-        out = fin(v, ast_MakeNumber(num_FromInt(0)));
+        out = fin(v, ast_MakeInt(0));
     } else if(fb == FAR_FIN) {
         s = sign_of(b);
         if(s == 1 || s == -1)
@@ -344,7 +344,7 @@ static int far_ratio(pcas_ast_t *top, pcas_ast_t *bottom, pcas_ast_t *var, pcas_
         if(growth(top, var, &dt, &lt) && growth(bottom, var, &db, &lb)) {
             c = deg_cmp(dt, db);
             if(c < 0) {
-                out = fin(v, ast_MakeNumber(num_FromInt(0)));
+                out = fin(v, ast_MakeInt(0));
             } else if(c == 0) {
                 out = fin(v, ast_MakeBinary(OP_DIV, lt, lb));
                 lt = lb = NULL;
@@ -369,9 +369,9 @@ static int far_conjugate(pcas_ast_t *e, pcas_ast_t *var, pcas_ast_t **v, int tri
     pcas_ast_t *p = ast_ChildGet(e, 0), *q = ast_ChildGet(e, 1), *top, *bottom;
     int out = FAR_NONE;
 
-    top = ast_MakeBinary(OP_ADD, ast_MakeBinary(OP_POW, ast_Copy(p), ast_MakeNumber(num_FromInt(2))),
-        ast_MakeBinary(OP_MULT, ast_MakeNumber(num_FromInt(-1)), ast_MakeBinary(OP_POW, ast_Copy(q), ast_MakeNumber(num_FromInt(2)))));
-    bottom = ast_MakeBinary(OP_ADD, ast_Copy(p), ast_MakeBinary(OP_MULT, ast_MakeNumber(num_FromInt(-1)), ast_Copy(q)));
+    top = ast_MakeBinary(OP_ADD, ast_MakeBinary(OP_POW, ast_Copy(p), ast_MakeInt(2)),
+        ast_MakeBinary(OP_MULT, ast_MakeInt(-1), ast_MakeBinary(OP_POW, ast_Copy(q), ast_MakeInt(2))));
+    bottom = ast_MakeBinary(OP_ADD, ast_Copy(p), ast_MakeBinary(OP_MULT, ast_MakeInt(-1), ast_Copy(q)));
     if(top != NULL && bottom != NULL) {
         simplify(top, SIMP_LIGHT); /*sqrt(..)^2 back to what's inside*/
         expand(top, EXP_ALL);
@@ -417,9 +417,9 @@ static int far_gap(pcas_ast_t *e, pcas_ast_t *var, pcas_ast_t **v, int tries) {
         if(f == FAR_UP)
             ast_ChildAppend(up, ast_Copy(c));
         else if(f == FAR_DOWN)
-            ast_ChildAppend(down, ast_MakeBinary(OP_MULT, ast_MakeNumber(num_FromInt(-1)), ast_Copy(c)));
+            ast_ChildAppend(down, ast_MakeBinary(OP_MULT, ast_MakeInt(-1), ast_Copy(c)));
     }
-    g = ast_MakeBinary(OP_ADD, ast_MakeNumber(num_FromInt(1)), ast_MakeBinary(OP_MULT, ast_MakeNumber(num_FromInt(-1)), ast_MakeBinary(OP_DIV, down, up)));
+    g = ast_MakeBinary(OP_ADD, ast_MakeInt(1), ast_MakeBinary(OP_MULT, ast_MakeInt(-1), ast_MakeBinary(OP_DIV, down, up)));
     if(g != NULL) {
         simplify(g, SIMP_ALL);
         f = far(g, var, &r, tries - 1);
@@ -471,7 +471,7 @@ static int far_zero_inf(pcas_ast_t *e, pcas_ast_t *zero, pcas_ast_t *var, pcas_a
         ;
     ast_Cleanup(ast_ChildRemoveIndex(rest, i));
     for(k = 0; k < 2 && out == FAR_NONE && !pcas_cancelled; k++) {
-        inv = ast_MakeBinary(OP_DIV, ast_MakeNumber(num_FromInt(1)), ast_Copy(k == 0 ? zero : rest));
+        inv = ast_MakeBinary(OP_DIV, ast_MakeInt(1), ast_Copy(k == 0 ? zero : rest));
         if(inv == NULL)
             break;
         simplify(inv, SIMP_ALL);
@@ -530,7 +530,7 @@ static int far_pow(pcas_ast_t *base, pcas_ast_t *ex, pcas_ast_t *var, pcas_ast_t
         ast_Cleanup(g);
         if(fx == FAR_FIN)
             return fin(v, ast_MakeBinary(OP_POW, ast_MakeSymbol(SYM_EULER), x));
-        return fx == FAR_DOWN ? fin(v, ast_MakeNumber(num_FromInt(0))) : fx;
+        return fx == FAR_DOWN ? fin(v, ast_MakeInt(0)) : fx;
     }
 
     fb = far(base, var, &b, tries);
@@ -544,22 +544,22 @@ static int far_pow(pcas_ast_t *base, pcas_ast_t *ex, pcas_ast_t *var, pcas_ast_t
                 b = x = NULL;
             }
         } else if(s == 0) {
-            out = fin(v, ast_MakeNumber(num_FromInt(1)));
+            out = fin(v, ast_MakeInt(1));
         } else if(s == -1) {
-            out = fin(v, ast_MakeNumber(num_FromInt(0)));
+            out = fin(v, ast_MakeInt(0));
         } else if(s == 1 && fb == FAR_UP) {
             out = FAR_UP;
         } else if(s == 1 && x->type == NODE_NUMBER && mp_rat_to_ints(x->op.num, &n, &den) == MP_OK && den == 1) {
             out = n % 2 == 0 ? FAR_UP : FAR_DOWN; /*(-inf)^3*/
         }
     } else if(sign_of(b) == 1) { /*x only in the power, 2^x*/
-        g = ast_MakeBinary(OP_ADD, ast_Copy(b), ast_MakeNumber(num_FromInt(-1)));
+        g = ast_MakeBinary(OP_ADD, ast_Copy(b), ast_MakeInt(-1));
         s = g != NULL ? sign_of(g) : 2;
         ast_Cleanup(g);
         if(s == 0)
-            out = fin(v, ast_MakeNumber(num_FromInt(1)));
+            out = fin(v, ast_MakeInt(1));
         else if(s == 1 || s == -1)
-            out = s * fx == 1 ? FAR_UP : fin(v, ast_MakeNumber(num_FromInt(0)));
+            out = s * fx == 1 ? FAR_UP : fin(v, ast_MakeInt(0));
     }
     ast_Cleanup(b);
     ast_Cleanup(x);
@@ -585,7 +585,7 @@ static int far(pcas_ast_t *e, pcas_ast_t *var, pcas_ast_t **v, int tries) {
     case OP_DIV:  return far_ratio(ast_ChildGet(e, 0), ast_ChildGet(e, 1), var, v, tries);
     case OP_POW:  return far_pow(ast_ChildGet(e, 0), ast_ChildGet(e, 1), var, v, tries);
     case OP_ROOT: /*sqrt(x) as x^(1/2)*/
-        g = ast_MakeBinary(OP_DIV, ast_MakeNumber(num_FromInt(1)), ast_Copy(ast_ChildGet(e, 0)));
+        g = ast_MakeBinary(OP_DIV, ast_MakeInt(1), ast_Copy(ast_ChildGet(e, 0)));
         out = g != NULL ? far_pow(ast_ChildGet(e, 1), g, var, v, tries) : FAR_NONE;
         ast_Cleanup(g);
         return out;
@@ -599,7 +599,7 @@ static int far(pcas_ast_t *e, pcas_ast_t *var, pcas_ast_t **v, int tries) {
         ast_Cleanup(cv);
         if((f != FAR_UP && out != 0) || (out == 0 && sign_far(ast_ChildGet(e, 1), var) != 1)) /*to 0 from above, from below isn't real*/
             return FAR_NONE;
-        g = ast_MakeBinary(OP_ADD, ast_Copy(ast_ChildGet(e, 0)), ast_MakeNumber(num_FromInt(-1))); /*a base under 1 heads the other way*/
+        g = ast_MakeBinary(OP_ADD, ast_Copy(ast_ChildGet(e, 0)), ast_MakeInt(-1)); /*a base under 1 heads the other way*/
         f = f == FAR_UP ? 1 : -1;
         out = g != NULL ? sign_of(g) : 2;
         ast_Cleanup(g);
@@ -610,7 +610,7 @@ static int far(pcas_ast_t *e, pcas_ast_t *var, pcas_ast_t **v, int tries) {
             return fin(v, ast_MakeUnary(OP_TAN_INV, cv));
         if(f == FAR_NONE)
             return FAR_NONE;
-        return fin(v, ast_MakeBinary(OP_MULT, ast_MakeNumber(num_FromInt(f)), ast_MakeBinary(OP_DIV, ast_MakeSymbol(SYM_PI), ast_MakeNumber(num_FromInt(2)))));
+        return fin(v, ast_MakeBinary(OP_MULT, ast_MakeInt(f), ast_MakeBinary(OP_DIV, ast_MakeSymbol(SYM_PI), ast_MakeInt(2))));
     case OP_ABS:
         f = far(ast_ChildGet(e, 0), var, &cv, tries);
         if(f == FAR_FIN)
@@ -646,7 +646,7 @@ static pcas_ast_t *limit_far(pcas_ast_t *f, pcas_ast_t *var, int side, bool root
     if(g == NULL)
         return NULL;
     if(side < 0) { /*-inf is inf with x turned around*/
-        pcas_ast_t *neg = ast_MakeBinary(OP_MULT, ast_MakeNumber(num_FromInt(-1)), ast_Copy(var));
+        pcas_ast_t *neg = ast_MakeBinary(OP_MULT, ast_MakeInt(-1), ast_Copy(var));
 
         if(neg != NULL)
             substitute(g, var, neg);
@@ -666,7 +666,7 @@ static pcas_ast_t *limit_far(pcas_ast_t *f, pcas_ast_t *var, int side, bool root
     if(out == FAR_NONE || !root)
         return NULL;
     v = ast_MakeSymbol(SYM_INF);
-    return out == FAR_UP ? v : ast_MakeBinary(OP_MULT, ast_MakeNumber(num_FromInt(-1)), v);
+    return out == FAR_UP ? v : ast_MakeBinary(OP_MULT, ast_MakeInt(-1), v);
 }
 
 /*each term of p over x^n, tidied: 3x^2/x^2 is 3, x/x^2 is 1/x. new*/
