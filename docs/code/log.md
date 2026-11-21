@@ -1,5 +1,17 @@
 # Log
 
+## 2026-11-21 (night) - integrals, and limits from every side
+
+- **integrals**. integral(f, x) and integral(f, x, a, b), worked out the way the d/dx steps are: every integral still in the line gets one rule (constant, sum, constant multiple, a table, u-substitution), then the next line. anything ax+b inside gets the /a, so cos(3x) is sin(3x)/3 in one go. u-sub tries every piece of f as u and keeps the one where f/u' is all u. the steps put u = x^2 on its own line, then "back to x" and + C at the end
+- a definite one checks the domain first, or 1/x^2 from -1 to 1 comes out -2 (it stays an integral now). F(b) - F(a) with the numbers put in as written, then what it comes to
+- the tests check an integral by taking d/dx of the answer and compring at 3 points, cuz simplify can't see sec^2 is 1/cos^2 or that 144/12^2 is 1. first random fuzz (400 of them): 12 wrong, all sums with two u-subs. the u's going back freed one before putting it back, so a U just sat there in the answer lol. 0 wrong now, and the 43 that should give up (e^(x^2), x e^x, ...) all did
+- the checkers found log base 10 integrals wrong (it put a log_b inside), integral(x) with one argument segfaulting, a U outside the integrand getting swapped for x^2, and the menu item still saying "not in Fluxion yet" when you picked it ಠ_ಠ
+- there's a little ∫ now (U+222B out of the same misc-fixed fonts). a definite one has b over a next to it, sub and sup put the 3 of 0 to 3 right up against x^2 and it read like 3x^2
+- limits at ∞ got roots: they have a degree now (sqrt(x^2+x) grows like x), and when the top terms cancel it's the conjugate. sqrt(x^2+x) - x is 1/2. degrees are capped at 10^4 so n\*d fits the CE's 32 bit long
+- **one-sided limits**, limit(f, x, a, 1) and -1 like the nspire, drawn x -> 0⁺. it's f(a + 1/t) with t -> ∞, so everything the ∞ ones do works from one side for free. 1/x^2 at 0 is ∞ now (both sides agree). tan(pi/2) from both sides came out tan(pi/2) for a minute, the old tests caught it
+- ∞ limits of a polynomial over a polynomial show the paper way, over the top power of the bottom then 1/x -> 0
+- still open: integration by parts and partial fractions (calc 2 really), limits and u-subs are slow on the CE going by `make budget` (~9 s for the roots at ∞, ~20 s for the paper way steps, ~10 s for a u-sub), and 2x cos(x^2) takes a step more than paper does cuz the constant multiple goes before the u-sub
+
 ## 2026-11-20 (evening) - limits go to infinity
 
 - first the oom backlog. one sweep over the *whole* test file (17 chunks, n 1..5000, 85000 runs) found 81 crashes in 14 places, most of them the same thing: ast_MakeBinary frees its children when it can't get memory and the caller kept using one of them (isolate, quadratic_root, clear_denominators, the [E] in the parser). num_Copy handed back a rational with no *dih*gits when the copy itself ran out, and the static oom_rat never got its re-init after that. 0 crashes now
