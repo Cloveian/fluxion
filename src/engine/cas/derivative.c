@@ -22,6 +22,9 @@ pcas_id_t id_derivative[ID_NUM_DERIV] = {
     {"deriv(asin(A,X,T", "deriv(A,X,T)/sqrt(1_A^2"},
     {"deriv(acos(A,X,T", "-deriv(A,X,T)/sqrt(1_A^2"},
     {"deriv(atan(A,X,T", "deriv(A,X,T)/(1+A^2"},
+    {"deriv(acot(A,X,T", "-deriv(A,X,T)/(1+A^2"}, /*Fluxion*/
+    {"deriv(asec(A,X,T", "deriv(A,X,T)/(abs(A)sqrt(A^2_1"}, /*Fluxion*/
+    {"deriv(acsc(A,X,T", "-deriv(A,X,T)/(abs(A)sqrt(A^2_1"}, /*Fluxion*/
 
     {"deriv(sinh(A,X,T", "deriv(A,X,T)cosh(A"},
     {"deriv(cosh(A,X,T", "deriv(A,X,T)sinh(A"},

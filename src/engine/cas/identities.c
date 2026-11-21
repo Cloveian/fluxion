@@ -647,6 +647,7 @@ static const struct { const char *text; OperatorType op; } text_funcs[] = {
     {"deriv(", OP_DERIV},
     {"logb(", OP_LOG},
     {"asin(", OP_SIN_INV}, {"acos(", OP_COS_INV}, {"atan(", OP_TAN_INV},
+    {"acot(", OP_COT_INV}, {"asec(", OP_SEC_INV}, {"acsc(", OP_CSC_INV}, /*Fluxion*/
     {"sinh(", OP_SINH}, {"cosh(", OP_COSH}, {"tanh(", OP_TANH},
     {"sin(", OP_SIN}, {"cos(", OP_COS}, {"tan(", OP_TAN},
     {"cot(", OP_COT}, {"sec(", OP_SEC}, {"csc(", OP_CSC},

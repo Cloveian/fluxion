@@ -994,6 +994,49 @@ bool simplify_periodic(pcas_ast_t *e) {
     return changed;
 }
 
+/*Fluxion: asin, acos or atan anywhere in e*/
+static bool has_inverse_trig(pcas_ast_t *e) {
+    pcas_ast_t *c;
+
+    if(isoptype(e, OP_SIN_INV) || isoptype(e, OP_COS_INV) || isoptype(e, OP_TAN_INV))
+        return true;
+    if(e->type == NODE_OPERATOR)
+        for(c = ast_ChildGet(e, 0); c != NULL; c = c->next)
+            if(has_inverse_trig(c))
+                return true;
+    return false;
+}
+
+/*Fluxion: asec, acsc and acot of a plain number through acos(1/c), asin(1/c) and pi/2 - atan(c), which the
+  inverse table knows. kept only when that comes out exact: asec(2) is pi/3, asec(3) stays asec(3)*/
+static bool reciprocal_inverses(pcas_ast_t *e) {
+    pcas_ast_t *c, *n, *g;
+    bool changed = false;
+
+    if(e->type != NODE_OPERATOR)
+        return false;
+    for(c = ast_ChildGet(e, 0); c != NULL; c = c->next)
+        changed |= reciprocal_inverses(c);
+    if((!isoptype(e, OP_SEC_INV) && !isoptype(e, OP_CSC_INV) && !isoptype(e, OP_COT_INV))
+       || (n = approx_number(ast_ChildGet(e, 0))) == NULL) /*letters in it*/
+        return changed;
+    ast_Cleanup(n);
+
+    c = ast_Copy(ast_ChildGet(e, 0));
+    if(isoptype(e, OP_COT_INV))
+        g = ast_MakeBinary(OP_ADD, ast_MakeBinary(OP_DIV, ast_MakeSymbol(SYM_PI), ast_MakeInt(2)),
+            ast_MakeBinary(OP_MULT, ast_MakeInt(-1), ast_MakeUnary(OP_TAN_INV, c)));
+    else
+        g = ast_MakeUnary(isoptype(e, OP_SEC_INV) ? OP_COS_INV : OP_SIN_INV, ast_MakeBinary(OP_DIV, ast_MakeInt(1), c));
+    simplify(g, SIMP_ALL);
+    if(g == NULL || pcas_cancelled || has_inverse_trig(g)) {
+        ast_Cleanup(g);
+        return changed;
+    }
+    replace_node(e, g);
+    return true;
+}
+
 bool simplify_identities(pcas_ast_t *e, unsigned short flags) {
     bool changed = false;
 
@@ -1016,8 +1059,10 @@ bool simplify_identities(pcas_ast_t *e, unsigned short flags) {
     if(flags & SIMP_ID_TRIG_CONSTANTS)
         changed |= id_ExecuteTable(e, id_trig_constants, ID_NUM_TRIG_CONSTANTS, true);
 
-    if(flags & SIMP_ID_TRIG_INV_CONSTANTS)
+    if(flags & SIMP_ID_TRIG_INV_CONSTANTS) {
         changed |= id_ExecuteTable(e, id_trig_inv_constants, ID_NUM_TRIG_INV_CONSTANTS, true);
+        changed |= reciprocal_inverses(e); /*Fluxion*/
+    }
 
     if(flags & SIMP_ID_HYPERBOLIC)
         changed |= id_ExecuteTable(e, id_hyperbolic, ID_NUM_HYPERBOLIC, true);

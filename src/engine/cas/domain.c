@@ -274,6 +274,9 @@ static void walk(walk_t *w, pcas_ast_t *e) {
         bound(w, t, false);
         ast_Cleanup(t);
         break;
+    case OP_SEC_INV: case OP_CSC_INV: /*|u| >= 1, two rays and a domain_t holds one interval*/
+        w->d->partial = true;
+        break;
     default:
         break;
     }

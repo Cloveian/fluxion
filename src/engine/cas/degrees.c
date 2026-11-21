@@ -19,7 +19,8 @@ static bool trig(const pcas_ast_t *e) {
 
 static bool inverse(const pcas_ast_t *e) {
     return e->type == NODE_OPERATOR
-           && (optype(e) == OP_SIN_INV || optype(e) == OP_COS_INV || optype(e) == OP_TAN_INV);
+           && (optype(e) == OP_SIN_INV || optype(e) == OP_COS_INV || optype(e) == OP_TAN_INV
+               || optype(e) == OP_COT_INV || optype(e) == OP_SEC_INV || optype(e) == OP_CSC_INV);
 }
 
 /*pi/180, or 180/pi the other way*/

@@ -104,6 +104,9 @@ static bool value(pcas_ast_t *e, real *x) {
     case OP_COT:      *x = 1 / tanf(a); break;
     case OP_SEC:      *x = 1 / cosf(a); break;
     case OP_CSC:      *x = 1 / sinf(a); break;
+    case OP_COT_INV:  *x = 1.57079632679489662F - atanf(a); break; /*0 to pi like the nspire*/
+    case OP_SEC_INV:  if(a > -1 && a < 1) return false; *x = acosf(1 / a); break;
+    case OP_CSC_INV:  if(a > -1 && a < 1) return false; *x = asinf(1 / a); break;
     case OP_SINH:     *x = sinhf(a); break;
     case OP_COSH:     *x = coshf(a); break;
     case OP_TANH:     *x = tanhf(a); break;

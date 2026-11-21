@@ -1652,7 +1652,7 @@ static box_t *lay_char(char c, unsigned char level) {
 }
 
 static box_t *lay_func(lay_t *l, const ed_node_t *n, unsigned char level) {
-    static const char *const inverses[] = { "asin", "acos", "atan", "asinh", "acosh", "atanh" };
+    static const char *const inverses[] = { "asin", "acos", "atan", "acot", "asec", "acsc", "asinh", "acosh", "atanh" };
     box_t *row = layout_box(BOX_ROW, level), *head;
     unsigned i;
 

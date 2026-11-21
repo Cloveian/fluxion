@@ -362,7 +362,7 @@ static pcas_ast_t *integral_of(pcas_ast_t *I, steps_t *s) {
     const char *name;
     step_t *l = NULL;
     subs_t subs;
-    int n, i, had, rounds = 0;
+    int n = 0, i, had, rounds = 0;
 
     subs.n = 0;
     if((cur = integral(ast_Copy(ast_ChildGet(I, 0)), x)) == NULL)

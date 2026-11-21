@@ -579,6 +579,9 @@ static box_t *build_operator(pcas_ast_t *e, unsigned char level) {
     case OP_COT:      return build_call("cot",  false, build(a, level), level);
     case OP_SEC:      return build_call("sec",  false, build(a, level), level);
     case OP_CSC:      return build_call("csc",  false, build(a, level), level);
+    case OP_COT_INV:  return build_call("cot",  true,  build(a, level), level);
+    case OP_SEC_INV:  return build_call("sec",  true,  build(a, level), level);
+    case OP_CSC_INV:  return build_call("csc",  true,  build(a, level), level);
     case OP_SINH:     return build_call("sinh", false, build(a, level), level);
     case OP_SINH_INV: return build_call("sinh", true,  build(a, level), level);
     case OP_COSH:     return build_call("cosh", false, build(a, level), level);

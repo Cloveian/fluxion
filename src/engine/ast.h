@@ -42,6 +42,7 @@ typedef enum {
     OP_COS, OP_COS_INV,
     OP_TAN, OP_TAN_INV,
     OP_COT, OP_SEC, OP_CSC,
+    OP_COT_INV, OP_SEC_INV, OP_CSC_INV, /*Fluxion*/
 
     OP_SINH, OP_SINH_INV,
     OP_COSH, OP_COSH_INV,

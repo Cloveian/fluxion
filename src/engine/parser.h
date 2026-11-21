@@ -46,6 +46,7 @@ typedef enum _TokenType {
     TOK_COS, TOK_COS_INV,
     TOK_TAN, TOK_TAN_INV,
     TOK_COT, TOK_SEC, TOK_CSC,
+    TOK_COT_INV, TOK_SEC_INV, TOK_CSC_INV, /*Fluxion*/
     TOK_SINH, TOK_SINH_INV,
     TOK_COSH, TOK_COSH_INV,
     TOK_TANH, TOK_TANH_INV,

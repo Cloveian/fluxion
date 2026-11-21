@@ -359,6 +359,7 @@ domain; ln(2X+1)+sqrt(X); X; lower 0 | upper - | holes -
 domain; tan(X); X; lower - | upper - | holes pi/2+Npi
 domain; 1/ln(X); X; lower 0o | upper - | holes 1
 domain; sqrt(X^2_4); X; lower - | upper - | holes - | partial
+domain; asec(X); X; lower - | upper - | holes - | partial
 domain; 1/(X_X); X; unknown
 domain; sqrt(X_5)+sqrt(2_X); X; empty
 
@@ -738,6 +739,19 @@ simplify; 3/4+(1/2)/3; 11/12
 simplify; (X/2+1/3)/2; X/4+1/6
 simplify; sinh(0)+cosh(0)+tanh(0); 1
 simplify; asinh(0)+acosh(1)+atanh(0); 0
+#cot^-1, sec^-1, csc^-1: exact when the cos^-1 / sin^-1 / tan^-1 underneath is, else they stay. cot^-1 is 0 to pi like the nspire
+simplify; asec(2); pi/3
+simplify; asec(3); asec(3)
+simplify; asec(-2); (2pi)/3
+simplify; asec(sqrt(2)); pi/4
+simplify; acsc(2); pi/6
+simplify; acot(1); pi/4
+simplify; acot(-1); (3pi)/4
+simplify; acot(0); pi/2
+simplify; acot(X)+1; 1+acot(X)
+decimal; acot(1); 0.785398
+decimal; asec(2); 1.0472
+deriv; acot(X); X; -1/(1+X^2)
 #were in todo.tests, pass now (2026-10-17)
 cancel; (X^2_1)/(1_X); -X_1
 simplify; sqrt(18)+sqrt(8); 5sqrt(2)

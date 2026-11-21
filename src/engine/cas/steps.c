@@ -689,6 +689,7 @@ static const char *table_rule(pcas_ast_t *f, pcas_ast_t **arg) {
     case OP_SIN: case OP_COS: case OP_TAN: case OP_COT: case OP_SEC: case OP_CSC:
         return "trig rule";
     case OP_SIN_INV: case OP_COS_INV: case OP_TAN_INV:
+    case OP_COT_INV: case OP_SEC_INV: case OP_CSC_INV:
         return "inverse trig rule";
     default:
         return "hyperbolic rule";

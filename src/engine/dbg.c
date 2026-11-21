@@ -19,6 +19,7 @@ const char *operators[AMOUNT_OPS] = {
     "+", "*", "/", "^", "root", "log", "deriv", "!", "int",
     "abs", "sin", "asin", "cos", "acos", "tan", "atan",
     "cot", "sec", "csc",
+    "acot", "asec", "acsc",
     "sinh", "asinh", "cosh", "acosh", "tanh", "atanh",
     "gcd", "lcm", "nCr", "nPr",
     "limit", "integral"

@@ -3,7 +3,7 @@
 
 #include "identities.h"
 
-#define ID_NUM_DERIV 22 /*Fluxion: 21 upstream, +abs*/
+#define ID_NUM_DERIV 25 /*Fluxion: 21 upstream, +abs, acot, asec, acsc*/
 extern pcas_id_t id_derivative[ID_NUM_DERIV];
 
 extern pcas_id_t id_deriv_power_rule;
