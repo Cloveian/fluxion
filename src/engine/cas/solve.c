@@ -1072,7 +1072,7 @@ static pcas_ast_t *turns(int k);
   can't read a fraction node as a coefficient). lcm of the number denominators
   of the terms, then expand the lot. the roots don't change, it's = 0*/
 static void clear_denominators(pcas_ast_t **e) {
-    pcas_ast_t *x = *e, *term, *scaled;
+    pcas_ast_t *x = *e, *term;
     mp_rat l = num_FromInt(1);
 
     if(l == NULL)
@@ -1084,9 +1084,8 @@ static void clear_denominators(pcas_ast_t **e) {
             mp_int_lcm(&l->num, &den->op.num->num, &l->num);
     }
     if(mp_rat_compare_value(l, 1, 1) > 0) {
-        scaled = ast_MakeBinary(OP_MULT, ast_MakeNumber(num_Copy(l)), *e);
-        if(scaled != NULL) {
-            *e = scaled;
+        *e = ast_MakeBinary(OP_MULT, ast_MakeNumber(num_Copy(l)), *e); /*Fluxion: an oom here freed the old one, NULL and cancelled*/
+        if(*e != NULL) {
             expand(*e, EXP_ALL);
             simplify(*e, SIMP_SOLVE);
         }
