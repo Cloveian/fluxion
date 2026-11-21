@@ -652,7 +652,7 @@ static pcas_ast_t *limit_far(pcas_ast_t *f, pcas_ast_t *var, int side, bool root
             substitute(g, var, neg);
         ast_Cleanup(neg);
     }
-    simplify(g, SIMP_ALL);
+    simplify(g, SIMP_LIGHT | SIMP_LIKE_TERMS); /*the full one spreads (3x^2+x)/(2x^2-5) into two fractions first, for nothing*/
     out = far(g, var, &v, TRIES_MAX);
     ast_Cleanup(g);
     if(pcas_cancelled) {
@@ -677,10 +677,10 @@ static pcas_ast_t *spread(pcas_ast_t *p, pcas_ast_t *var, int n) {
         return NULL;
     out = ast_MakeOperator(OP_ADD);
     expand(e, EXP_ALL);
-    simplify(e, SIMP_ALL);
+    simplify(e, SIMP_LIGHT | SIMP_LIKE_TERMS);
     for(c = isoptype(e, OP_ADD) ? ast_ChildGet(e, 0) : e; c != NULL && out != NULL; c = c == e ? NULL : c->next) {
         t = ast_MakeBinary(OP_DIV, ast_Copy(c), ast_MakeBinary(OP_POW, ast_Copy(var), ast_MakeInt(n)));
-        simplify(t, SIMP_ALL);
+        simplify(t, SIMP_LIGHT);
         ast_ChildAppend(out, t);
     }
     ast_Cleanup(e);
@@ -706,8 +706,10 @@ static pcas_ast_t *one_side(pcas_ast_t *f, pcas_ast_t *var, pcas_ast_t *a, int d
     pcas_ast_t *g = ast_Copy(f), *to, *out = NULL;
 
     to = ast_MakeBinary(OP_ADD, ast_Copy(a), ast_MakeBinary(OP_DIV, ast_MakeInt(dir), ast_Copy(var)));
-    if(g != NULL && to != NULL && substitute(g, var, to))
+    if(g != NULL && to != NULL && substitute(g, var, to)) {
+        simplify(g, SIMP_ALL); /*1/(1/x) is x, limit_far only does the light one*/
         out = limit_far(g, var, 1, root);
+    }
     ast_Cleanup(g);
     ast_Cleanup(to);
     return out;
