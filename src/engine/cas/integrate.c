@@ -4,11 +4,13 @@
 #include "steps.h"
 
 #define SUBS_MAX 4 /*u-substitutions in one integral*/
+#define CANDS_MAX 8 /*pieces tried as u, each one a d/dx and a full simplify*/
 #define ROUNDS_MAX 12 /*lines of rules before it gives up*/
 
 /*each u and the x thing it stands for, put back at the end*/
 typedef struct {
     pcas_ast_t *u[SUBS_MAX], *g[SUBS_MAX];
+    pcas_ast_t *all; /*the whole integral, U+2x cos(x^2) has a U outside f*/
     int n;
 } subs_t;
 
@@ -238,6 +240,63 @@ static pcas_ast_t *constant_part(pcas_ast_t *f, pcas_ast_t *x, pcas_ast_t **rest
     return c;
 }
 
+/*the pieces of f with x in them that u could be, outermsot first. not f itself or a bare x*/
+static int candidates(pcas_ast_t *f, pcas_ast_t *e, pcas_ast_t *x, pcas_ast_t **out, int n) {
+    pcas_ast_t *c;
+
+    if(e->type != NODE_OPERATOR || n >= CANDS_MAX || !has_symbol(e, x->op.symbol))
+        return n;
+    if(e != f && !isoptype(e, OP_MULT))
+        out[n++] = e;
+    for(c = ast_ChildGet(e, 0); c != NULL; c = c->next)
+        n = candidates(f, c, x, out, n);
+    return n;
+}
+
+/*a letter for u that isn't in the integral or used already. U first like on paper*/
+static pcas_ast_t *fresh(subs_t *subs) {
+    static const char pick[] = "UWVTSR";
+    int i, k;
+
+    for(i = 0; pick[i] != '\0'; i++) {
+        for(k = 0; k < subs->n && subs->u[k]->op.symbol != (Symbol)pick[i]; k++)
+            ;
+        if(k == subs->n && !has_symbol(subs->all, (Symbol)pick[i]))
+            return ast_MakeSymbol(pick[i]);
+    }
+    return NULL;
+}
+
+/*u = some piece g where f/g' is all g, 2x cos(x^2) is cos(u) with u = x^2. ∫f dx becomes ∫(f/g') du*/
+static const char *usub(pcas_ast_t *e, subs_t *subs) {
+    pcas_ast_t *f = ast_ChildGet(e, 0), *x = ast_ChildGet(e, 1), *cand[CANDS_MAX], *g, *q, *u;
+    int n, i;
+
+    if(subs->n >= SUBS_MAX || (u = fresh(subs)) == NULL)
+        return NULL;
+    n = candidates(f, f, x, cand, 0);
+    for(i = 0; i < n && !pcas_cancelled; i++) {
+        q = ast_MakeBinary(OP_DIV, ast_Copy(f), slope_of(cand[i], x));
+        g = ast_Copy(cand[i]);
+        simplify(q, SIMP_ALL);
+        simplify(g, SIMP_ALL); /*how it looks in q now, x^2+1 or 1+x^2*/
+        if(q != NULL && g != NULL) {
+            substitute(q, cand[i], u);
+            substitute(q, g, u);
+        }
+        ast_Cleanup(g);
+        if(q != NULL && !pcas_cancelled && !has_symbol(q, x->op.symbol)) {
+            subs->u[subs->n] = u; /*not a copy, an oom one is NULL and fresh() reads it*/
+            subs->g[subs->n++] = ast_Copy(cand[i]);
+            replace_node(e, integral(q, u));
+            return "u-substitution";
+        }
+        ast_Cleanup(q);
+    }
+    ast_Cleanup(u);
+    return NULL;
+}
+
 /*one rule on the integral node e, in place. its name, NULL when nothing fits*/
 static const char *one_rule(pcas_ast_t *e, subs_t *subs) {
     pcas_ast_t *f = ast_ChildGet(e, 0), *x = ast_ChildGet(e, 1), *n, *c, *rest;
@@ -271,8 +330,7 @@ static const char *one_rule(pcas_ast_t *e, subs_t *subs) {
         replace_node(e, n);
         return name;
     }
-    (void)subs;
-    return NULL;
+    return usub(e, subs);
 }
 
 /*F for the integral node I, new. NULL when some piece has no rule. the lines go in s when it isn't NULL*/
@@ -281,11 +339,12 @@ static pcas_ast_t *integral_of(pcas_ast_t *I, steps_t *s) {
     const char *name;
     step_t *l = NULL;
     subs_t subs;
-    int n, i, rounds = 0;
+    int n, i, had, rounds = 0;
 
     subs.n = 0;
     if((cur = integral(ast_Copy(ast_ChildGet(I, 0)), x)) == NULL)
         return NULL;
+    subs.all = cur;
     simplify(ast_ChildGet(cur, 0), SIMP_NORMALIZE | SIMP_COMMUTATIVE | SIMP_EVAL); /*sqrt(x) is x^(1/2) for the rules*/
     if(s != NULL && (t = ast_Copy(I)) != NULL) {
         simplify(ast_ChildGet(t, 0), SIMP_LIGHT);
@@ -295,19 +354,22 @@ static pcas_ast_t *integral_of(pcas_ast_t *I, steps_t *s) {
     while(!pcas_cancelled && (n = steps_find(cur, OP_INTEGRAL, found, 0)) > 0) {
         if(++rounds > ROUNDS_MAX)
             break;
+        had = subs.n;
         for(i = 0; i < n && (name = one_rule(found[i], &subs)) != NULL; i++)
             steps_rule(l, name);
         if(i < n)
             break;
         simplify(cur, SIMP_LIGHT | SIMP_LIKE_TERMS);
+        for(i = had; i < subs.n && s != NULL; i++) /*u = x^2 on its own line*/
+            steps_eq(s, ast_Copy(subs.u[i]), ast_Copy(subs.g[i]));
         if(s != NULL)
             l = steps_expr(s, ast_Copy(cur));
     }
     if(pcas_cancelled || steps_find(cur, OP_INTEGRAL, found, 0) > 0) /*a piece with no rule*/
         n = -1;
-    for(i = 0; i < subs.n; i++) { /*the u's go back the other way round, a later u can have earlier one in it*/
-        if(n >= 0)
-            substitute(cur, subs.u[subs.n - 1 - i], subs.g[subs.n - 1 - i]);
+    for(i = subs.n - 1; i >= 0 && n >= 0; i--) /*the u's go back the other way round, a later u can have earlier one in it*/
+        substitute(cur, subs.u[i], subs.g[i]);
+    for(i = 0; i < subs.n; i++) {
         ast_Cleanup(subs.u[i]);
         ast_Cleanup(subs.g[i]);
     }
@@ -364,6 +426,7 @@ static bool defined_between(pcas_ast_t *I) {
 /*F(b) - F(a), F taken. the pluged in line, then what it comes to*/
 static pcas_ast_t *between(pcas_ast_t *I, pcas_ast_t *F, steps_t *s) {
     pcas_ast_t *x = ast_ChildGet(I, 1), *top = ast_Copy(F), *d;
+    step_t *l;
 
     if(top != NULL)
         substitute(top, x, ast_ChildGet(I, 3));
@@ -373,7 +436,8 @@ static pcas_ast_t *between(pcas_ast_t *I, pcas_ast_t *F, steps_t *s) {
         return NULL;
     if(s != NULL && s->n > 0) {
         steps_rule(&s->line[s->n - 1], "F(b) - F(a)");
-        steps_expr(s, ast_Copy(d));
+        if((l = steps_expr(s, ast_Copy(d))) != NULL)
+            l->as_is = true; /*F(b) first like on paper, sorted it puts the minus first*/
     }
     simplify(d, SIMP_ALL);
     if(s != NULL)
@@ -397,5 +461,38 @@ bool eval_integral_nodes(pcas_ast_t *e) {
         return changed;
     simplify(F, SIMP_ALL);
     replace_node(e, F);
+    return true;
+}
+
+bool steps_integral(pcas_ast_t *I, steps_t *out) {
+    pcas_ast_t *F, *done;
+    int k = ast_ChildLength(I);
+    step_t *l;
+
+    out->n = 0;
+    if(!isoptype(I, OP_INTEGRAL) || ast_ChildGet(I, 1)->type != NODE_SYMBOL || (k != 2 && k != 4)
+       || (k == 4 && !defined_between(I)) || (F = integral_of(I, out)) == NULL) {
+        steps_free(out);
+        return false;
+    }
+    if(k == 4) {
+        F = between(I, F, out);
+    } else if((done = ast_Copy(F)) != NULL) { /*tidied if that changes it, then + C*/
+        simplify(done, SIMP_ALL);
+        if(!ast_Compare(done, F))
+            steps_expr(out, ast_Copy(done));
+        if(out->n > 0)
+            steps_rule(&out->line[out->n - 1], "+ C");
+        simplify_canonical_form(done, CANONICAL_ALL); /*what the rest of the lines get from steps_shown*/
+        if((l = steps_expr(out, ast_MakeBinary(OP_ADD, done, ast_MakeSymbol(SYM_C)))) != NULL)
+            l->as_is = true; /*the canonical form puts C first*/
+    }
+    if(F == NULL || pcas_cancelled) {
+        ast_Cleanup(F);
+        steps_free(out);
+        return false;
+    }
+    ast_Cleanup(F);
+    steps_shown(out);
     return true;
 }

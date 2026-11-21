@@ -372,19 +372,26 @@ static void steps_text(const steps_t *s, char *got, unsigned size) {
     }
 }
 
-/*Fluxion: steps; deriv(f,X,X) or limit(f,X,a); X; the lines | the rules | lines, or none. the last line has to be what simplify makes of it*/
+/*Fluxion: steps; deriv(f,X,X), limit(f,X,a) or integral(f,X); X; the lines | the rules | lines, or none. the last line has to be what simplify makes of it*/
 static bool test_calc_steps(test_t *t) {
     pcas_error_t err;
     pcas_ast_t *e = parse((uint8_t*)t->arg1, strlen(t->arg1), str_table, &err);
     char got[MAX_PAR * 2] = "";
     steps_t s;
     bool passed;
+    int k;
 
     if(err != E_SUCCESS || e == NULL) {
         printf("Test failed on line %u. Unable to parse %s\n", t->line, t->arg1);
         return false;
     }
-    if(!(isoptype(e, OP_LIMIT) ? steps_limit(e, &s) : steps_derivative(e, &s)))
+    if(isoptype(e, OP_LIMIT))
+        passed = steps_limit(e, &s);
+    else if(isoptype(e, OP_INTEGRAL))
+        passed = steps_integral(e, &s);
+    else
+        passed = steps_derivative(e, &s);
+    if(!passed)
         strcpy(got, "none");
     else
         steps_text(&s, got, sizeof(got));
@@ -392,7 +399,8 @@ static bool test_calc_steps(test_t *t) {
     if(!passed)
         printf("Test failed on line %u. Expected %s but got %s\n", t->line, t->arg3, got);
 
-    if(passed && s.n > 0 && !same_value(e, s.line[s.n - 1].eq[0].left)) {
+    k = isoptype(e, OP_INTEGRAL) && ast_ChildLength(e) == 2 ? s.n - 2 : s.n - 1; /*the one before + C*/
+    if(passed && k >= 0 && !same_value(e, s.line[k].eq[0].left)) {
         printf("Test failed on line %u. The steps end somewhere else than simplify\n", t->line);
         passed = false;
     }

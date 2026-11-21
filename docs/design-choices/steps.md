@@ -113,5 +113,23 @@ plug in / one fraction / 0/0 factor and cancel / 0/0 l'Hopital as the rule names
 - the steps are just one line for now, "plug in inf" and then the answer. the paper way (*dih*vide top and bottom by x^n, then 1/x -> 0) is what it should show, todo
 - roots get a degree too, sqrt(x^2+x) grows like x and sqrt(x) like x^(1/2), so ∞/∞ with roots goes by the top terms like polynomials do (l'Hopital just flips those back and forth forever). sqrt(x^2+x) - x, where the top terms cancel, goes through the conjugate
 
+## Integrals
+
+`integral(f, x)` and `integral(f, x, a, b)`. worked out the way the d/dx steps are: every integral still in the line gets one rule, then the next line. the rules, first one that fits:
+
+- constant rule (∫3 dx = 3x), sum rule, constant multiple (a number in front or a number on the bottom)
+- a table: power rule (1/x is ln|x|), exp rule (e^x and 2^x), trig rule (sin, cos, tan, sec^2, sec tan, ...), inverse trig rule (1/(1+x^2), 1/sqrt(1-x^2)), log rule (ln x is x ln x - x). anything ax+b inside gets the /a, so cos(3x) is sin(3x)/3 in one go
+- u-substitution: some piece g where f/g' is all g. 2x cos(x^2) has u = x^2. u is U, or W, V ... if the problem already uses U
+- no integration by parts or partial fractions yet, x e^x and 1/(x^2-1) stay as integrals
+
+a definite one only gets worked out when f is defined all the way from a to b, so 1/x^2 from -1 to 1 stays an integral instead of coming out -2 (an improper one like 1/sqrt(x) from 0 to 1 stays too, for now).
+
+### Proposal
+
+- the answer has no + C, like the nspire. the steps end on "+ C" and then F + C
+- u = x^2 gets its own line between the integral and the one in u, then "back to x" at the end
+- a definite one ends on F(b) - F(a) with the numbers put in as written, then what that comes to
+- the constant multiple happens before the u-sub, so 2x cos(x^2) goes 2∫x cos(x^2) dx, then 2∫cos(u)/2 du. on paper you'd see du = 2x dx straight away. its right but its a step longer than it needs to be
+
 ---
 Back to [design choices](index.md)

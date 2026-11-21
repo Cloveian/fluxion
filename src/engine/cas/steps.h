@@ -48,6 +48,8 @@ bool steps_fit(pcas_ast_t *left, pcas_ast_t *right, Symbol var, Method m);
 bool steps_derivative(pcas_ast_t *d, steps_t *out);
 /*lim(f) like on paper: plug in, or on 0/0 cancel / l'hopital first. l is the limit node, false if there isn't one*/
 bool steps_limit(pcas_ast_t *l, steps_t *out);
+/*∫f dx a rule a line like the d/dx ones, ending on + C or F(b) - F(a). false if a piece has no rule*/
+bool steps_integral(pcas_ast_t *I, steps_t *out);
 void steps_free(steps_t *s);
 
 /*for limit.c and integrate.c, which work their steps out in their own loops*/
@@ -55,6 +57,7 @@ void steps_free(steps_t *s);
 #define SIMP_LIGHT (SIMP_NORMALIZE | SIMP_COMMUTATIVE | SIMP_RATIONAL | SIMP_EVAL)
 int steps_find(pcas_ast_t *e, OperatorType op, pcas_ast_t **d, int n); /*the outermost op nodes in e into d, n so far*/
 step_t *steps_expr(steps_t *s, pcas_ast_t *e); /*a line that's just e, = the one above. takes e*/
+step_t *steps_eq(steps_t *s, pcas_ast_t *left, pcas_ast_t *right); /*left = right, takes both. u = x^2*/
 void steps_rule(step_t *l, const char *name); /*name on l, move n. once each, two power rules on a line read as one*/
 void steps_shown(steps_t *s); /*every tree in the canonical form, at the end. 3X+5 and not 5+3X*/
 

@@ -840,6 +840,22 @@ antideriv; cosh(2X); X
 antideriv; 4; X
 antideriv; e^(-X); X
 antideriv; sin(2X+1); X
+#u-substitution: some piece of it is u and the rest is u' (up to a number)
+antideriv; 2Xcos(X^2); X
+antideriv; Xe^(X^2); X
+antideriv; X^2(X^3+1)^5; X
+antideriv; ln(X)/X; X
+antideriv; sin(X)cos(X); X
+antideriv; sin(X)^2cos(X); X
+antideriv; X/(X^2+1); X
+antideriv; X sqrt(X^2+1); X
+antideriv; e^X/(1+e^X); X
+antideriv; cos(X)/sin(X)^2; X
+antideriv; tan(X)sec(X)^2; X
+antideriv; 1/(X ln(X)); X
+antideriv; X^3 e^(X^4); X
+antideriv; sin(sqrt(X))/sqrt(X); X
+simplify; integral(U+2Xcos(X^2),X); UX+sin(X^2)
 decimal; 3root(-8); -2
 
 #show the work (steps; equation; var and method; lines | the move | lines). the last line has to be solve's roots
@@ -910,6 +926,12 @@ steps; limit(sin(X)/X,X,0); X; limit(sin(X)/X,X,0) | 0/0, l'Hopital | limit(cos(
 steps; limit((1_cos(X))/X^2,X,0); X; limit((1_cos(X))/X^2,X,0) | 0/0, l'Hopital | limit(sin(X)/(2X),X,0) | 0/0, l'Hopital | limit(cos(X)/2,X,0) | plug in | cos(0)/2 | 1/2
 steps; limit(1/X_1/(X(X+1)),X,0); X; limit(1/X_1/(X(X+1)),X,0) | one fraction | limit((1_1/(X+1))/X,X,0) | 0/0, l'Hopital | limit((1/(X+1)^2)/1,X,0) | plug in | (1/(0+1)^2)/1 | 1
 steps; limit(1/X,X,0); X; none
+#integrals: a rule on every integral a line, u = on its own line, + C at the end. a definite one ends on F(b) - F(a)
+steps; integral(3X^2+2X,X); X; integral(3X^2+2X, X) | sum rule | integral(3X^2, X) + integral(2X, X) | constant multiple | 3integral(X^2, X) + 2integral(X, X) | power rule | X^3+X^2 | + C | X^3+X^2+C
+steps; integral(2Xcos(X^2),X); X; integral(2Xcos(X^2), X) | constant multiple | 2integral(Xcos(X^2), X) | u-substitution | U=X^2 | 2integral(cos(U)/2, U) | constant multiple | integral(cos(U), U) | trig rule | sin(U) | back to x | sin(X^2) | + C | sin(X^2)+C
+steps; integral(X^2,X,0,3); X; integral(X^2, X, 0, 3) | power rule | X^3/3 | F(b) - F(a) | 3^3/3_0^3/3 | 9
+steps; integral(cos(3X),X); X; integral(cos(3X), X) | trig rule | sin(3X)/3 | + C | sin(3X)/3+C
+steps; integral(e^(X^2),X); X; none
 #not a shape it does yet, or a method that doesn't fit
 steps; X^2+X+1=0; Xfactor; none
 steps; X^2+X=2; Xroot; none
