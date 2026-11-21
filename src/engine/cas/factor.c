@@ -734,6 +734,11 @@ bool factor_addition(pcas_ast_t *e, unsigned char flags) {
                                         second
                                     )
                                 );
+                    if(append == NULL || pcas_cancelled) { /*Fluxion: oom, a failed add freed first and second with it*/
+                        ast_Cleanup(append);
+                        ast_Cleanup(g);
+                        break;
+                    }
 
                     simplify(first, SIMP_NORMALIZE | SIMP_COMMUTATIVE | SIMP_RATIONAL | SIMP_EVAL);
                     simplify(second, SIMP_NORMALIZE | SIMP_COMMUTATIVE | SIMP_RATIONAL | SIMP_EVAL);

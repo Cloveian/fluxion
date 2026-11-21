@@ -50,7 +50,7 @@ static int sign_of(pcas_ast_t *e) {
     simplify(c, SIMP_DOMAIN);
     if(c->type == NODE_NUMBER) {
         s = sign(mp_rat_compare_zero(c->op.num));
-    } else if(isoptype(c, OP_DIV)) { /*normalize puts the fraction back as a/b*/
+    } else if(isoptype(c, OP_DIV) && ast_ChildLength(c) == 2) { /*normalize puts the fraction back as a/b*/
         a = ast_ChildGet(c, 0);
         b = ast_ChildGet(c, 1);
         if(a->type == NODE_NUMBER && b->type == NODE_NUMBER)
@@ -82,7 +82,7 @@ static bool read_ratio(pcas_ast_t *e, mp_small *p, mp_small *q) {
     simplify(c, SIMP_DOMAIN);
     if(c->type == NODE_NUMBER) {
         ok = mp_rat_to_ints(c->op.num, p, q) == MP_OK;
-    } else if(isoptype(c, OP_DIV)) {
+    } else if(isoptype(c, OP_DIV) && ast_ChildLength(c) == 2) { /*an oom in the simplify can leave one out*/
         a = ast_ChildGet(c, 0);
         b = ast_ChildGet(c, 1);
         if(a->type == NODE_NUMBER && b->type == NODE_NUMBER && mp_rat_compare_zero(b->op.num) != 0
