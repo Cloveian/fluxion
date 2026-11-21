@@ -745,10 +745,18 @@ static bool check_text(test_t *t, pcas_ast_t *e) {
     return passed;
 }
 
+/*Fluxion: bits in the bigger of a number's top and bottom*/
+static long big(pcas_ast_t *n) {
+    long t = (long)mp_int_count_bits(mp_rat_numer_ref(n->op.num)), b = (long)mp_int_count_bits(mp_rat_denom_ref(n->op.num));
+
+    return t > b ? t : b;
+}
+
 /*Fluxion: a and b the same at var = 0.2, 0.5 and 0.7, to float precision. simplify can't always show it, 144/12^2 or sec^2 agianst 1/cos^2. in (0, 1) so asin and ln are real there*/
 static bool same_at(pcas_ast_t *a, pcas_ast_t *b, pcas_ast_t *var) {
     static const int at[3] = { 2, 5, 7 };
     pcas_ast_t *x, *y, *p, *q, *n;
+    char buf[24]; /*approx_format wants digits + 10*/
     double u, w;
     int i;
     bool same = true;
@@ -770,6 +778,12 @@ static bool same_at(pcas_ast_t *a, pcas_ast_t *b, pcas_ast_t *var) {
         if(same) {
             u = approx_int(mp_rat_numer_ref(p->op.num)) / approx_int(mp_rat_denom_ref(p->op.num));
             w = approx_int(mp_rat_numer_ref(q->op.num)) / approx_int(mp_rat_denom_ref(q->op.num));
+            if((u - u != 0 || w - w != 0) && big(p) < 4000 && big(q) < 4000) { /*inf/inf as floats, read through the decimal text instead. approx_format crawls past a few thousand bits*/
+                approx_format(p->op.num, 8, buf);
+                u = atof(buf);
+                approx_format(q->op.num, 8, buf);
+                w = atof(buf);
+            }
             same = fabs(u - w) <= 1e-4 * (1 + fabs(w));
         }
         ast_Cleanup(x);
