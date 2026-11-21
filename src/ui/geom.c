@@ -34,15 +34,15 @@ static const struct {
 
 /* a - b. there's no subtract node, it's a plus the negative */
 static pcas_ast_t *minus(pcas_ast_t *a, pcas_ast_t *b) {
-    return ast_MakeBinary(OP_ADD, a, ast_MakeBinary(OP_MULT, ast_MakeNumber(num_FromInt(-1)), b));
+    return ast_MakeBinary(OP_ADD, a, ast_MakeBinary(OP_MULT, ast_MakeInt(-1), b));
 }
 
 static pcas_ast_t *over_two(pcas_ast_t *e) {
-    return ast_MakeBinary(OP_DIV, e, ast_MakeNumber(num_FromInt(2)));
+    return ast_MakeBinary(OP_DIV, e, ast_MakeInt(2));
 }
 
 static pcas_ast_t *squared(pcas_ast_t *e) {
-    return ast_MakeBinary(OP_POW, e, ast_MakeNumber(num_FromInt(2)));
+    return ast_MakeBinary(OP_POW, e, ast_MakeInt(2));
 }
 
 bool geom_run(const char *cmd, char *src, box_t *in) {
@@ -86,7 +86,7 @@ bool geom_run(const char *cmd, char *src, box_t *in) {
         simplify(e, SIMP_ALL);
         break;
     case G_DIST:
-        e = ast_MakeBinary(OP_ROOT, ast_MakeNumber(num_FromInt(2)),
+        e = ast_MakeBinary(OP_ROOT, ast_MakeInt(2),
                            ast_MakeBinary(OP_ADD, squared(minus(ast_Copy(a[2]), ast_Copy(a[0]))),
                                           squared(minus(ast_Copy(a[3]), ast_Copy(a[1])))));
         simplify(e, SIMP_ALL);
@@ -108,7 +108,7 @@ bool geom_run(const char *cmd, char *src, box_t *in) {
                 simplify(f, SIMP_ALL);
                 break;
             }
-            m = ast_MakeBinary(OP_DIV, ast_MakeNumber(num_FromInt(-1)), m);
+            m = ast_MakeBinary(OP_DIV, ast_MakeInt(-1), m);
             simplify(m, SIMP_ALL);
         }
         /* y = m x + b with b = y1 - m x1 */

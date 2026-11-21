@@ -31,10 +31,6 @@
 #define SIMP_QUICK (SIMP_NORMALIZE | SIMP_COMMUTATIVE | SIMP_RATIONAL | SIMP_EVAL | SIMP_LIKE_TERMS)
 
 /* these all take what they're given, so ast_Copy anything that's needed again */
-static pcas_ast_t *num(int n) {
-    return ast_MakeNumber(num_FromInt(n));
-}
-
 static pcas_ast_t *add(pcas_ast_t *a, pcas_ast_t *b) {
     return ast_MakeBinary(OP_ADD, a, b);
 }
@@ -49,11 +45,11 @@ static pcas_ast_t *over(pcas_ast_t *a, pcas_ast_t *b) {
 
 /* no subtract node, a plus the negative */
 static pcas_ast_t *sub(pcas_ast_t *a, pcas_ast_t *b) {
-    return add(a, mul(num(-1), b));
+    return add(a, mul(ast_MakeInt(-1), b));
 }
 
 static pcas_ast_t *root(pcas_ast_t *e) {
-    return ast_MakeBinary(OP_ROOT, num(2), e);
+    return ast_MakeBinary(OP_ROOT, ast_MakeInt(2), e);
 }
 
 static pcas_ast_t *simp(pcas_ast_t *e) {
@@ -116,7 +112,7 @@ static box_t *pair_box(pcas_ast_t *h, pcas_ast_t *k, pcas_ast_t *d, bool across)
     int i;
 
     for(i = 0; i < 2; i++) {
-        pcas_ast_t *off = i == 0 ? mul(num(-1), ast_Copy(d)) : ast_Copy(d);
+        pcas_ast_t *off = i == 0 ? mul(ast_MakeInt(-1), ast_Copy(d)) : ast_Copy(d);
 
         if(i > 0) {
             layout_add(row, layout_text(",", 0));
@@ -364,7 +360,7 @@ static const char *from_equation(bool hyper, pcas_ast_t *lhs, pcas_ast_t *rhs, b
     a2 = across ? xx : yy;
     b2 = across ? yy : xx;
     if(hyper)
-        b2 = simp(mul(num(-1), b2));
+        b2 = simp(mul(ast_MakeInt(-1), b2));
     a = simp(root(ast_Copy(a2)));
     b = simp(root(ast_Copy(b2)));
     /* c^2 = a^2 - b^2 for the ellipse, a^2 + b^2 for the hyperbola */
@@ -413,7 +409,7 @@ static box_t *term_box(Symbol s, pcas_ast_t *h, pcas_ast_t *under) {
         if(e != NULL && !pcas_cancelled)
             simplify(e, SIMP_QUICK);
     }
-    e = ast_MakeBinary(OP_POW, e, num(2));
+    e = ast_MakeBinary(OP_POW, e, ast_MakeInt(2));
     /* under 25/4 reads better as 4(x-h)^2/25 than a fraction under a fraction */
     if(isoptype(under, OP_DIV) && ast_ChildGet(under, 0)->type == NODE_NUMBER
        && ast_ChildGet(under, 1)->type == NODE_NUMBER)
@@ -459,8 +455,8 @@ static const char *from_points(bool hyper, pcas_ast_t **p, box_t **out) {
         return message;
     }
 
-    a2 = simp(ast_MakeBinary(OP_POW, ast_Copy(across ? dvx : dvy), num(2)));
-    c2 = simp(ast_MakeBinary(OP_POW, ast_Copy(across ? dfx : dfy), num(2)));
+    a2 = simp(ast_MakeBinary(OP_POW, ast_Copy(across ? dvx : dvy), ast_MakeInt(2)));
+    c2 = simp(ast_MakeBinary(OP_POW, ast_Copy(across ? dfx : dfy), ast_MakeInt(2)));
     b2 = simp(hyper ? sub(ast_Copy(c2), ast_Copy(a2)) : sub(ast_Copy(a2), ast_Copy(c2)));
     ast_Cleanup(dvx);
     ast_Cleanup(dvy);

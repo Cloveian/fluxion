@@ -67,7 +67,7 @@ static pcas_ast_t *term(mp_rat a, Symbol var, int p) {
         return number(a);
     x = ast_MakeSymbol(var);
     if(p > 1)
-        x = ast_MakeBinary(OP_POW, x, ast_MakeNumber(num_FromInt(p)));
+        x = ast_MakeBinary(OP_POW, x, ast_MakeInt(p));
     if(mp_rat_compare_value(a, 1, 1) != 0)
         x = ast_MakeBinary(OP_MULT, number(a), x);
     return x;
@@ -85,7 +85,7 @@ static pcas_ast_t *side_tree(mp_rat *c, Symbol var) {
             ast_ChildAppend(sum, term(c[p], var, p));
     if(ast_ChildLength(sum) > 1)
         return sum;
-    t = ast_ChildLength(sum) == 1 ? ast_ChildRemoveIndex(sum, 0) : ast_MakeNumber(num_FromInt(0));
+    t = ast_ChildLength(sum) == 1 ? ast_ChildRemoveIndex(sum, 0) : ast_MakeInt(0);
     ast_Cleanup(sum);
     return t;
 }
@@ -252,8 +252,8 @@ static void add_split(steps_t *s, Symbol var, pcas_ast_t *base, pcas_ast_t *pm, 
 
     /*base/den +- pm/den, each half cancels on its own: (_6+4sqrt(2))/2 is _3+2sqrt(2) with no identity pass*/
     for(i = 0; i < 2; i++) {
-        pcas_ast_t *b = base != NULL ? ast_Copy(base) : ast_MakeNumber(num_FromInt(0));
-        pcas_ast_t *p = ast_MakeBinary(OP_MULT, ast_MakeNumber(num_FromInt(i == 0 ? 1 : -1)), ast_Copy(pm));
+        pcas_ast_t *b = base != NULL ? ast_Copy(base) : ast_MakeInt(0);
+        pcas_ast_t *p = ast_MakeBinary(OP_MULT, ast_MakeInt(i == 0 ? 1 : -1), ast_Copy(pm));
 
         if(den != NULL) {
             b = ast_MakeBinary(OP_DIV, b, ast_Copy(den));
@@ -278,7 +278,7 @@ static void add_split(steps_t *s, Symbol var, pcas_ast_t *base, pcas_ast_t *pm, 
 
 /*sqrt(8) as written*/
 static pcas_ast_t *sqrt_of(pcas_ast_t *v) {
-    return ast_MakeBinary(OP_POW, v, ast_MakeBinary(OP_DIV, ast_MakeNumber(num_FromInt(1)), ast_MakeNumber(num_FromInt(2))));
+    return ast_MakeBinary(OP_POW, v, ast_MakeBinary(OP_DIV, ast_MakeInt(1), ast_MakeInt(2)));
 }
 
 /*sqrt(v) worked out: 2sqrt(2), 3/2, and 2i for -4. sqrt(-n) is i sqrt(n) by hand, the identity passes took ~10 s on the CE for it*/
@@ -305,7 +305,7 @@ static pcas_ast_t *root_both(steps_t *s, pcas_ast_t *left, mp_rat v) {
 
     add_move(s, 'r', NULL);
     if(mp_rat_compare_zero(v) == 0) {
-        steps_eq(s, left, ast_MakeNumber(num_FromInt(0)));
+        steps_eq(s, left, ast_MakeInt(0));
         return NULL;
     }
     root = sqrt_of(number(v));
@@ -388,7 +388,7 @@ static void to_zero(steps_t *s, side_t *side, Symbol var) {
     }
 
     if(mp_rat_compare_zero(side[0].c[2]) < 0) {
-        add_move(s, '*', ast_MakeNumber(num_FromInt(-1)));
+        add_move(s, '*', ast_MakeInt(-1));
         for(p = 0; p < 3; p++)
             mp_rat_neg(side[0].c[p], side[0].c[p]);
         add_sides(s, side, var);
@@ -473,17 +473,17 @@ static bool factoring(pcas_ast_t *left, pcas_ast_t *right, Symbol var, side_t *s
             ast_ChildAppend(split, term(m, var, 1));
             ast_ChildAppend(split, term(n, var, 1));
             ast_ChildAppend(split, number(c[0]));
-            steps_eq(s, split, ast_MakeNumber(num_FromInt(0)));
+            steps_eq(s, split, ast_MakeInt(0));
         }
     }
 
     f[0] = root_factor(r[0], var);
     f[1] = root_factor(r[1], var);
     if(twice)
-        steps_eq(s, ast_MakeBinary(OP_POW, ast_Copy(f[0]), ast_MakeNumber(num_FromInt(2))), ast_MakeNumber(num_FromInt(0)));
+        steps_eq(s, ast_MakeBinary(OP_POW, ast_Copy(f[0]), ast_MakeInt(2)), ast_MakeInt(0));
     else
-        steps_eq(s, ast_MakeBinary(OP_MULT, ast_Copy(f[0]), ast_Copy(f[1])), ast_MakeNumber(num_FromInt(0)));
-    add_or(s, f[0], ast_MakeNumber(num_FromInt(0)), twice ? NULL : f[1], ast_MakeNumber(num_FromInt(0)));
+        steps_eq(s, ast_MakeBinary(OP_MULT, ast_Copy(f[0]), ast_Copy(f[1])), ast_MakeInt(0));
+    add_or(s, f[0], ast_MakeInt(0), twice ? NULL : f[1], ast_MakeInt(0));
     if(twice)
         ast_Cleanup(f[1]);
     add_or(s, ast_MakeSymbol(var), number(r[0]), twice ? NULL : ast_MakeSymbol(var), number(r[1]));
@@ -536,7 +536,7 @@ static bool complete_square(pcas_ast_t *left, pcas_ast_t *right, Symbol var, sid
         mp_rat_copy(size, c[0]);
         mp_rat_add(side[1].c[0], size, side[1].c[0]);
         add_sides(s, side, var);
-        steps_eq(s, ast_MakeBinary(OP_POW, ast_Copy(x), ast_MakeNumber(num_FromInt(2))), number(side[1].c[0]));
+        steps_eq(s, ast_MakeBinary(OP_POW, ast_Copy(x), ast_MakeInt(2)), number(side[1].c[0]));
     }
 
     done = root_both(s, x, side[1].c[0]);
@@ -566,7 +566,7 @@ static pcas_ast_t *times(int k, mp_rat a, mp_rat b) {
 
     if(t == NULL)
         return NULL;
-    ast_ChildAppend(t, ast_MakeNumber(num_FromInt(k)));
+    ast_ChildAppend(t, ast_MakeInt(k));
     if(mp_rat_compare_value(a, 1, 1) != 0)
         ast_ChildAppend(t, number(a));
     if(b != NULL && mp_rat_compare_value(b, 1, 1) != 0)
@@ -601,14 +601,14 @@ static bool formula(pcas_ast_t *left, pcas_ast_t *right, Symbol var, side_t *sid
     mp_rat_neg(c[1], nb);
     mp_rat_mul(two_a, c[2], two_a);
     in = times(-4, c[2], c[0]);
-    in = ast_MakeBinary(OP_ADD, ast_MakeBinary(OP_POW, number(c[1]), ast_MakeNumber(num_FromInt(2))), in);
-    l = add_pm(s, ast_MakeSymbol(var), number(nb), ast_MakeBinary(OP_ROOT, ast_MakeNumber(num_FromInt(2)), in),
+    in = ast_MakeBinary(OP_ADD, ast_MakeBinary(OP_POW, number(c[1]), ast_MakeInt(2)), in);
+    l = add_pm(s, ast_MakeSymbol(var), number(nb), ast_MakeBinary(OP_ROOT, ast_MakeInt(2), in),
                times(2, c[2], NULL));
     if(l != NULL)
         l->as_is = true;
 
     d = discriminant(side);
-    l = add_pm(s, ast_MakeSymbol(var), number(nb), ast_MakeBinary(OP_ROOT, ast_MakeNumber(num_FromInt(2)), number(d)), number(two_a));
+    l = add_pm(s, ast_MakeSymbol(var), number(nb), ast_MakeBinary(OP_ROOT, ast_MakeInt(2), number(d)), number(two_a));
     if(l != NULL)
         l->as_is = true;
 
@@ -703,7 +703,7 @@ static const char *one_rule(pcas_ast_t *e, Symbol var, bool *chain) {
 
     *chain = false;
     if(!has_symbol(f, var)) {
-        replace_node(e, ast_MakeNumber(num_FromInt(0)));
+        replace_node(e, ast_MakeInt(0));
         return "constant rule";
     }
     if(isoptype(f, OP_ADD)) {
@@ -744,7 +744,7 @@ static const char *one_rule(pcas_ast_t *e, Symbol var, bool *chain) {
         return id_Execute(e, &id_deriv_power_rule, false) ? "power rule" : NULL;
     }
     if(f->type == NODE_SYMBOL) { /*just x, it's x^1*/
-        replace_node(e, ast_MakeNumber(num_FromInt(1)));
+        replace_node(e, ast_MakeInt(1));
         return "power rule";
     }
     if(f->type != NODE_OPERATOR)
@@ -762,7 +762,7 @@ static void quiet_rules(pcas_ast_t *e, Symbol var) {
     for(i = 0; i < n; i++) {
         deg = poly_coefs(ast_ChildGet(d[i], 0), var, c);
         if(deg == 0) {
-            replace_node(d[i], ast_MakeNumber(num_FromInt(0)));
+            replace_node(d[i], ast_MakeInt(0));
         } else if(deg == 1) {
             /*any slope, pi/180 from degrees too*/
             replace_node(d[i], c[1]);

@@ -31,7 +31,7 @@ static bool is_var(const pcas_ast_t *e) {
 /* var - r. no subtract node, it's a plus the negative */
 static pcas_ast_t *factor_of(Symbol var, pcas_ast_t *r) {
     return ast_MakeBinary(OP_ADD, ast_MakeSymbol((char)var),
-                          ast_MakeBinary(OP_MULT, ast_MakeNumber(num_FromInt(-1)), r));
+                          ast_MakeBinary(OP_MULT, ast_MakeInt(-1), r));
 }
 
 /* (x - r1)(x - r2)... multiplied out the way expand( does it */
@@ -80,7 +80,7 @@ static box_t *inverse_of(pcas_ast_t *f, Symbol var, const char **message) {
     e = ast_Copy(f);
     if(setting_angle == ANGLE_DEGREES)
         e = degrees_in(e);
-    e = ast_MakeBinary(OP_ADD, e, ast_MakeBinary(OP_MULT, ast_MakeNumber(num_FromInt(-1)),
+    e = ast_MakeBinary(OP_ADD, e, ast_MakeBinary(OP_MULT, ast_MakeInt(-1),
                                                  ast_MakeSymbol((char)tmp)));
     n = solve_ex(e, var, roots, false);
     ast_Cleanup(e);

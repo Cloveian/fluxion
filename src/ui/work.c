@@ -201,7 +201,7 @@ const char *work_open(char *src) {
         return "no steps for inequalities yet";
     }
     lhs = l;
-    rhs = r != NULL ? r : ast_MakeNumber(num_FromInt(0)); /* solve(x^2-4) is = 0 */
+    rhs = r != NULL ? r : ast_MakeInt(0); /* solve(x^2-4) is = 0 */
     method = METHOD_OPTIMAL;
     if(!build()) {
         work_close();

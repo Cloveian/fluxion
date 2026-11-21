@@ -36,7 +36,7 @@ float num_at(pcas_ast_t *f, Symbol var, float x) {
     if(fabsf(x) < 30000)
         v = ast_MakeNumber(num_FromFraction((mp_small)lroundf(x * 65536), 65536));
     else
-        v = ast_MakeNumber(num_FromInt((mp_small)lroundf(x)));
+        v = ast_MakeInt((mp_small)lroundf(x));
     substitute(e, sym, v);
     approx(e);
     simplify(e, SIMP_NORMALIZE | SIMP_COMMUTATIVE | SIMP_RATIONAL | SIMP_EVAL);

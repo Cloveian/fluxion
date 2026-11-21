@@ -193,7 +193,7 @@ static bool solve_roots(test_t *t, bool one_turn, bool complex) {
         return false;
     }
     if(rhs != NULL)
-        e = ast_MakeBinary(OP_ADD, e, ast_MakeBinary(OP_MULT, ast_MakeNumber(num_FromInt(-1)), rhs));
+        e = ast_MakeBinary(OP_ADD, e, ast_MakeBinary(OP_MULT, ast_MakeInt(-1), rhs));
 
     if(e == NULL) { /*Fluxion: oom*/
         printf("Test failed on line %u. Out of memory building the equation\n", t->line);
@@ -289,7 +289,7 @@ static bool test_turn(test_t *t) {
 
 /*Fluxion: a - b simplifies to 0 (2sqrt(2) is 2^(3/2)), or both match once rationalized. sqrt(15)/sqrt(2) and sqrt(30)/2 never cancel as a difference*/
 static bool same_value(pcas_ast_t *a, pcas_ast_t *b) {
-    pcas_ast_t *d = ast_MakeBinary(OP_ADD, ast_Copy(a), ast_MakeBinary(OP_MULT, ast_MakeNumber(num_FromInt(-1)), ast_Copy(b)));
+    pcas_ast_t *d = ast_MakeBinary(OP_ADD, ast_Copy(a), ast_MakeBinary(OP_MULT, ast_MakeInt(-1), ast_Copy(b)));
     pcas_ast_t *x, *y;
     bool same;
 
@@ -444,7 +444,7 @@ static bool test_steps(test_t *t) {
     /*the last line against solve, var = a number each. complex like the app's solve*/
     last = s.n > 0 ? &s.line[s.n - 1] : NULL;
     if(passed && last != NULL && last->eq[0].left->type == NODE_SYMBOL && last->eq[0].pm == NULL) {
-        e = ast_MakeBinary(OP_ADD, ast_Copy(left), ast_MakeBinary(OP_MULT, ast_MakeNumber(num_FromInt(-1)), ast_Copy(right)));
+        e = ast_MakeBinary(OP_ADD, ast_Copy(left), ast_MakeBinary(OP_MULT, ast_MakeInt(-1), ast_Copy(right)));
         n = solve_ex(e, (Symbol)t->arg2[0], roots, true);
         for(j = 0; j < last->eqs; j++) {
             for(i = 0; i < n && !same_value(roots[i], last->eq[j].right); i++);
@@ -625,7 +625,7 @@ static bool test_system(test_t *t) {
             break;
         }
         if(rhs != NULL)
-            e = ast_MakeBinary(OP_ADD, e, ast_MakeBinary(OP_MULT, ast_MakeNumber(num_FromInt(-1)), rhs));
+            e = ast_MakeBinary(OP_ADD, e, ast_MakeBinary(OP_MULT, ast_MakeInt(-1), rhs));
         if(e == NULL) {
             printf("Test failed on line %u. Out of memory building equation %d\n", t->line, n + 1);
             passed = false;

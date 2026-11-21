@@ -281,7 +281,7 @@ static pcas_ast_t *build(poly_t *p, const vars_t *v) {
             if(t->x[j] == 0)
                 continue;
             ast_ChildAppend(m, t->x[j] == 1 ? ast_MakeSymbol(v->sym[j])
-                                            : ast_MakeBinary(OP_POW, ast_MakeSymbol(v->sym[j]), ast_MakeNumber(num_FromInt(t->x[j]))));
+                                            : ast_MakeBinary(OP_POW, ast_MakeSymbol(v->sym[j]), ast_MakeInt(t->x[j])));
         }
         if(ast_ChildLength(m) == 1) {
             pcas_ast_t *only = ast_ChildRemoveIndex(m, 0);
@@ -293,7 +293,7 @@ static pcas_ast_t *build(poly_t *p, const vars_t *v) {
     }
     if(ast_ChildLength(sum) == 0) {
         ast_Cleanup(sum);
-        return ast_MakeNumber(num_FromInt(0));
+        return ast_MakeInt(0);
     }
     if(ast_ChildLength(sum) == 1) {
         pcas_ast_t *only = ast_ChildRemoveIndex(sum, 0);

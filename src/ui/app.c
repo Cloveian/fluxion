@@ -559,7 +559,7 @@ static void run_solve(char *src, box_t *in) {
 
     /* a = b  ->  a - b = 0 */
     if(rhs != NULL)
-        e = ast_MakeBinary(OP_ADD, e, ast_MakeBinary(OP_MULT, ast_MakeNumber(num_FromInt(-1)), rhs));
+        e = ast_MakeBinary(OP_ADD, e, ast_MakeBinary(OP_MULT, ast_MakeInt(-1), rhs));
 
     if(setting_angle == ANGLE_DEGREES)
         e = degrees_in(e);
@@ -572,8 +572,8 @@ static void run_solve(char *src, box_t *in) {
     n = solve_ex(e, var, roots, true);
     if(n > 0 && setting_trig == TRIG_ONE_TURN) {
         pcas_ast_t *hi = setting_angle == ANGLE_DEGREES
-                         ? ast_MakeNumber(num_FromInt(360))
-                         : ast_MakeBinary(OP_MULT, ast_MakeNumber(num_FromInt(2)), ast_MakeSymbol(SYM_PI));
+                         ? ast_MakeInt(360)
+                         : ast_MakeBinary(OP_MULT, ast_MakeInt(2), ast_MakeSymbol(SYM_PI));
 
         n = solve_in_range(roots, n, hi);
         ast_Cleanup(hi);
@@ -824,7 +824,7 @@ static void run_system(char *src, box_t *in) {
             ast_Cleanup(rhs);
             break;
         }
-        eqs[n] = ast_MakeBinary(OP_ADD, eqs[n], ast_MakeBinary(OP_MULT, ast_MakeNumber(num_FromInt(-1)), rhs));
+        eqs[n] = ast_MakeBinary(OP_ADD, eqs[n], ast_MakeBinary(OP_MULT, ast_MakeInt(-1), rhs));
         n++;
     }
 

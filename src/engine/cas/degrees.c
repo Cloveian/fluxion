@@ -24,7 +24,7 @@ static bool inverse(const pcas_ast_t *e) {
 
 /*pi/180, or 180/pi the other way*/
 static pcas_ast_t *ratio(bool to_radians) {
-    pcas_ast_t *pi = ast_MakeSymbol(SYM_PI), *n = ast_MakeNumber(num_FromInt(180));
+    pcas_ast_t *pi = ast_MakeSymbol(SYM_PI), *n = ast_MakeInt(180);
 
     return to_radians ? ast_MakeBinary(OP_DIV, pi, n) : ast_MakeBinary(OP_DIV, n, pi);
 }
@@ -96,7 +96,7 @@ static pcas_ast_t *strip_pi(pcas_ast_t *n) {
 
     if(is_pi(n)) {
         ast_Cleanup(n);
-        return ast_MakeNumber(num_FromInt(1));
+        return ast_MakeInt(1);
     }
     for(i = 0; i < ast_ChildLength(n); i++)
         if(is_pi(ast_ChildGet(n, i)))
@@ -114,7 +114,7 @@ static pcas_ast_t *strip_pi(pcas_ast_t *n) {
 static pcas_ast_t *undo(pcas_ast_t *t) {
     pcas_ast_t *d = degree_den(t), *num, *den, *k;
 
-    k = ast_MakeNumber(num_FromInt(180));
+    k = ast_MakeInt(180);
     mp_rat_div(k->op.num, d->op.num, k->op.num);
     num = strip_pi(ast_ChildRemoveIndex(t, 0));
     den = ast_ChildRemoveIndex(t, 0);

@@ -100,7 +100,7 @@ bool asym(pcas_ast_t *f, Symbol var, asym_t *out) {
             ast_Cleanup(e);
         } else { /*a polynomial or so, nothing under it*/
             top = e;
-            bot = ast_MakeNumber(num_FromInt(1));
+            bot = ast_MakeInt(1);
         }
     }
     if(top == NULL || bot == NULL || pcas_cancelled) {
@@ -127,7 +127,7 @@ bool asym(pcas_ast_t *f, Symbol var, asym_t *out) {
     dt = poly_degree(top, var, &lead_t);
     db = poly_degree(bot, var, &lead_b);
     if(dt >= 0 && db >= 0 && dt < db) {
-        out->horiz = ast_MakeNumber(num_FromInt(0));
+        out->horiz = ast_MakeInt(0);
     } else if(dt >= 0 && dt == db) {
         out->horiz = ast_MakeBinary(OP_DIV, lead_t, lead_b);
         lead_t = lead_b = NULL;

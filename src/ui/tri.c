@@ -307,7 +307,7 @@ static bool wave_term(pcas_ast_t *t, Symbol var, pcas_ast_t **coef, pcas_ast_t *
     if(isoptype(t, OP_SIN) || isoptype(t, OP_COS)) {
         if(!has_symbol(t, var))
             return false;
-        *coef = ast_MakeNumber(num_FromInt(1));
+        *coef = ast_MakeInt(1);
         *wave = t;
         return true;
     }
@@ -381,7 +381,7 @@ static pcas_ast_t *amplitude(pcas_ast_t *f, Symbol var) {
         v = ast_Copy(coef[i]);
         approx(v);
         if(num_float(v, &x))
-            e = x < 0 ? ast_MakeBinary(OP_MULT, ast_MakeNumber(num_FromInt(-1)), coef[i]) : coef[i];
+            e = x < 0 ? ast_MakeBinary(OP_MULT, ast_MakeInt(-1), coef[i]) : coef[i];
         else {
             absolute_val(coef[i]);
             e = ast_MakeUnary(OP_ABS, coef[i]);
@@ -389,9 +389,9 @@ static pcas_ast_t *amplitude(pcas_ast_t *f, Symbol var) {
         ast_Cleanup(v);
         coef[i] = NULL;
     } else {
-        e = ast_MakeBinary(OP_ROOT, ast_MakeNumber(num_FromInt(2)),
-                           ast_MakeBinary(OP_ADD, ast_MakeBinary(OP_POW, coef[0], ast_MakeNumber(num_FromInt(2))),
-                                          ast_MakeBinary(OP_POW, coef[1], ast_MakeNumber(num_FromInt(2)))));
+        e = ast_MakeBinary(OP_ROOT, ast_MakeInt(2),
+                           ast_MakeBinary(OP_ADD, ast_MakeBinary(OP_POW, coef[0], ast_MakeInt(2)),
+                                          ast_MakeBinary(OP_POW, coef[1], ast_MakeInt(2))));
         coef[0] = coef[1] = NULL;
     }
     simplify(e, SIMP_ALL);
@@ -464,7 +464,7 @@ bool tri_run(const char *cmd, char *src, box_t *in) {
             e = ast_MakeBinary(OP_MULT, ast_Copy(a[0]), ast_Copy(a[1]));
             if(c == T_POR)
                 e = ast_MakeBinary(OP_ADD, ast_MakeBinary(OP_ADD, ast_Copy(a[0]), ast_Copy(a[1])),
-                                   ast_MakeBinary(OP_MULT, ast_MakeNumber(num_FromInt(-1)), e));
+                                   ast_MakeBinary(OP_MULT, ast_MakeInt(-1), e));
             simplify(e, SIMP_ALL);
         }
     }
