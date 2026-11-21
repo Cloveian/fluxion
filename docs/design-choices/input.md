@@ -122,7 +122,8 @@ with something selected: typing replaces it, `(` `÷` `√` `sin` etc go *around
 
 ### Not done yet
 
-- the full key map (every key x plain / 2nd / alpha / 2nd+alpha / on)
+- ~~the full key map (every key x plain / 2nd / alpha / 2nd+alpha / on)~~ it's a table now, `ui/bind_ce.c`, every key and modifier that does something is a row in it
+- the catalog's key column is the CE's keys written out by hand, so on the nspire it says `[2nd][x^2]` for √. it could come out of the tables instead
 
 ### Menus
 
