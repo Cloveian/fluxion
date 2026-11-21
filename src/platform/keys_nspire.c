@@ -70,7 +70,12 @@ static bool pad_pushed(void) {
 }
 
 static bool on_pad(keycode_t k) {
-    return k == K_UP || k == K_DOWN || k == K_LEFT || k == K_RIGHT || k == K_CLICK;
+    unsigned i;
+
+    for(i = 0; i < sizeof pad / sizeof pad[0]; i++)
+        if(pad[i].key == k)
+            return true;
+    return false;
 }
 
 /* the key down right now, first one found. a push on the touchpad stays the
