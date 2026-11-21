@@ -132,10 +132,12 @@ static pcas_ast_t *plug_in(steps_t *s, step_t *l, pcas_ast_t *e, pcas_ast_t *var
 
 /*sign of a value with no x in it, 2 when it can't tell (letters, i)*/
 static int sign_of(pcas_ast_t *v) {
-    pcas_ast_t *c = ast_Copy(v), *n;
+    pcas_ast_t *c, *n;
     int s = 2;
 
-    if(c == NULL)
+    if(v->type == NODE_NUMBER) /*most of them, no simplify for that*/
+        return mp_rat_compare_zero(v->op.num) < 0 ? -1 : mp_rat_compare_zero(v->op.num) > 0;
+    if((c = ast_Copy(v)) == NULL)
         return 2;
     simplify(c, SIMP_ALL);
     if(is_ast_int(c, 0))
@@ -171,9 +173,155 @@ static int lhopital(pcas_ast_t *top, pcas_ast_t *bottom, pcas_ast_t *var, pcas_a
     return out;
 }
 
+#define DEG_MAX 10000L /*n and d stay under it, so n*d < 10^8 fits the CE's 32 bit long*/
+
+/*a degree n/d. sqrt(x^2+x) grows like x^1, sqrt(x) like x^(1/2)*/
+typedef struct {
+    long n, d;
+} deg_t;
+
+static deg_t deg_make(long n, long d) {
+    deg_t r;
+    long g = gcd_small(n, d);
+
+    if(g < 1)
+        g = 1;
+    r.n = n / g;
+    r.d = d / g;
+    return r;
+}
+
+/*<0, 0, >0 like strcmp. d is always > 0*/
+static long deg_cmp(deg_t a, deg_t b) {
+    return a.n * b.d - b.n * a.d;
+}
+
+static bool deg_ok(deg_t a) {
+    return a.n <= DEG_MAX && a.n >= -DEG_MAX && a.d <= DEG_MAX;
+}
+
+/*a plain number or n/m, as a fraction*/
+static bool exponent(pcas_ast_t *e, long *n, long *d) {
+    mp_small a, b;
+    long p, q, r, s;
+
+    if(e->type == NODE_NUMBER) {
+        if(mp_rat_to_ints(e->op.num, &a, &b) != MP_OK || a > DEG_MAX || a < -DEG_MAX || b > DEG_MAX)
+            return false;
+        *n = a;
+        *d = b;
+        return true;
+    }
+    if(!isoptype(e, OP_DIV) || ast_ChildLength(e) != 2 || !exponent(ast_ChildGet(e, 0), &p, &q)
+       || !exponent(ast_ChildGet(e, 1), &r, &s) || r == 0)
+        return false;
+    *n = r < 0 ? -p * s : p * s;
+    *d = r < 0 ? -q * r : q * r;
+    return *n <= DEG_MAX && *n >= -DEG_MAX && *d <= DEG_MAX;
+}
+
+/*e as x -> inf grows like lead * x^deg, lead new. false when it can't say: sin(x), e^x, ln(x), a sum whose top terms cancel*/
+static bool growth(pcas_ast_t *e, pcas_ast_t *var, deg_t *deg, pcas_ast_t **lead) {
+    pcas_ast_t *c, *l;
+    deg_t cd;
+    long n, d;
+
+    *lead = NULL;
+    deg->n = 0;
+    deg->d = 1;
+    if(pcas_cancelled)
+        return false;
+    if(!has_symbol(e, var->op.symbol))
+        return (*lead = ast_Copy(e)) != NULL;
+    if(e->type == NODE_SYMBOL) {
+        deg->n = 1;
+        return (*lead = ast_MakeNumber(num_FromInt(1))) != NULL;
+    }
+
+    switch(optype(e)) {
+    case OP_MULT: case OP_DIV:
+        *lead = ast_MakeOperator(OP_MULT);
+        for(c = ast_ChildGet(e, 0); c != NULL && *lead != NULL; c = c->next) {
+            if(!growth(c, var, &cd, &l))
+                break;
+            if(isoptype(e, OP_DIV) && c != ast_ChildGet(e, 0)) {
+                cd.n = -cd.n;
+                l = ast_MakeBinary(OP_DIV, ast_MakeNumber(num_FromInt(1)), l);
+            }
+            *deg = deg_make(deg->n * cd.d + cd.n * deg->d, deg->d * cd.d);
+            if(!deg_ok(*deg)) {
+                ast_Cleanup(l);
+                break;
+            }
+            ast_ChildAppend(*lead, l);
+        }
+        if(c == NULL && !pcas_cancelled)
+            return true;
+        break;
+    case OP_POW: /*only a number up there, x^(1/2). e^x has no degree*/
+        if(!exponent(ast_ChildGet(e, 1), &n, &d) || !growth(ast_ChildGet(e, 0), var, &cd, &l))
+            return false;
+        *deg = deg_make(cd.n * n, cd.d * d);
+        if((d != 1 && sign_of(l) != 1) || !deg_ok(*deg)) { /*sqrt of a top term that goes negative*/
+            ast_Cleanup(l);
+            return false;
+        }
+        return (*lead = ast_MakeBinary(OP_POW, l, ast_Copy(ast_ChildGet(e, 1)))) != NULL;
+    case OP_ROOT: /*root(n, b)*/
+        if(!exponent(ast_ChildGet(e, 0), &n, &d) || d != 1 || n < 1 || !growth(ast_ChildGet(e, 1), var, &cd, &l))
+            return false;
+        *deg = deg_make(cd.n, cd.d * n);
+        if(sign_of(l) != 1 || !deg_ok(*deg)) {
+            ast_Cleanup(l);
+            return false;
+        }
+        return (*lead = ast_MakeBinary(OP_ROOT, ast_Copy(ast_ChildGet(e, 0)), l)) != NULL;
+    case OP_ABS:
+        if(!growth(ast_ChildGet(e, 0), var, deg, &l))
+            return false;
+        return (*lead = ast_MakeUnary(OP_ABS, l)) != NULL;
+    case OP_ADD: /*the leads with the top degree, a higher one starts them over*/
+        for(c = ast_ChildGet(e, 0); c != NULL; c = c->next) {
+            if(!growth(c, var, &cd, &l))
+                break;
+            if(c == ast_ChildGet(e, 0) || deg_cmp(cd, *deg) > 0) {
+                ast_Cleanup(*lead);
+                *lead = ast_MakeOperator(OP_ADD);
+                *deg = cd;
+            }
+            if(deg_cmp(cd, *deg) < 0 || ast_ChildAppend(*lead, l) != E_SUCCESS)
+                ast_Cleanup(l);
+        }
+        if(c == NULL && !pcas_cancelled && sign_of(*lead) != 0) /*0 is the top terms cancelling, sqrt(x^2+x) - x*/
+            return true;
+        break;
+    default:
+        return false;
+    }
+    ast_Cleanup(*lead);
+    *lead = NULL;
+    return false;
+}
+
+/*a root somewhere in e, the conjugate is for those*/
+static bool has_root(pcas_ast_t *e) {
+    pcas_ast_t *c;
+    long n, d;
+
+    if(isoptype(e, OP_ROOT) || (isoptype(e, OP_POW) && exponent(ast_ChildGet(e, 1), &n, &d) && d != 1))
+        return true;
+    if(e->type == NODE_OPERATOR)
+        for(c = ast_ChildGet(e, 0); c != NULL; c = c->next)
+            if(has_root(c))
+                return true;
+    return false;
+}
+
 static int far_ratio(pcas_ast_t *top, pcas_ast_t *bottom, pcas_ast_t *var, pcas_ast_t **v, int tries) {
     pcas_ast_t *t = NULL, *b = NULL, *lt = NULL, *lb = NULL;
-    int ft = far(top, var, &t, tries), fb = far(bottom, var, &b, tries), out = FAR_NONE, s, dt, db;
+    deg_t dt, db;
+    int ft = far(top, var, &t, tries), fb = far(bottom, var, &b, tries), out = FAR_NONE, s;
+    long c;
 
     *v = NULL;
     if(ft == FAR_NONE || fb == FAR_NONE) {
@@ -193,18 +341,19 @@ static int far_ratio(pcas_ast_t *top, pcas_ast_t *bottom, pcas_ast_t *var, pcas_
         if(s == 1 || s == -1)
             out = ft * s;
     } else {
-        /*polynomials by their top terms, anything else l'hopital*/
-        dt = poly_degree(top, var->op.symbol, &lt);
-        db = poly_degree(bottom, var->op.symbol, &lb);
-        if(dt > 0 && db > 0 && dt < db) {
-            out = fin(v, ast_MakeNumber(num_FromInt(0)));
-        } else if(dt > 0 && dt == db) {
-            out = fin(v, ast_MakeBinary(OP_DIV, lt, lb));
-            lt = lb = NULL;
-        } else if(dt > 0 && db > 0) {
-            s = sign_of(lt) * sign_of(lb);
-            if(s == 1 || s == -1)
-                out = s;
+        /*by top terms when both have a degree (polynomials, roots of them), anything else l'hopital*/
+        if(growth(top, var, &dt, &lt) && growth(bottom, var, &db, &lb)) {
+            c = deg_cmp(dt, db);
+            if(c < 0) {
+                out = fin(v, ast_MakeNumber(num_FromInt(0)));
+            } else if(c == 0) {
+                out = fin(v, ast_MakeBinary(OP_DIV, lt, lb));
+                lt = lb = NULL;
+            } else {
+                s = sign_of(lt) * sign_of(lb);
+                if(s == 1 || s == -1)
+                    out = s;
+            }
         } else {
             out = lhopital(top, bottom, var, v, tries);
         }
@@ -216,18 +365,42 @@ static int far_ratio(pcas_ast_t *top, pcas_ast_t *bottom, pcas_ast_t *var, pcas_
     return out;
 }
 
-/*inf - inf. a polynomial goes by its top term, else as one fraction, else up over down*/
+/*p + q as (p^2 - q^2)/(p - q), sqrt(x^2+x) - x is x/(sqrt(x^2+x) + x)*/
+static int far_conjugate(pcas_ast_t *e, pcas_ast_t *var, pcas_ast_t **v, int tries) {
+    pcas_ast_t *p = ast_ChildGet(e, 0), *q = ast_ChildGet(e, 1), *top, *bottom;
+    int out = FAR_NONE;
+
+    top = ast_MakeBinary(OP_ADD, ast_MakeBinary(OP_POW, ast_Copy(p), ast_MakeNumber(num_FromInt(2))),
+        ast_MakeBinary(OP_MULT, ast_MakeNumber(num_FromInt(-1)), ast_MakeBinary(OP_POW, ast_Copy(q), ast_MakeNumber(num_FromInt(2)))));
+    bottom = ast_MakeBinary(OP_ADD, ast_Copy(p), ast_MakeBinary(OP_MULT, ast_MakeNumber(num_FromInt(-1)), ast_Copy(q)));
+    if(top != NULL && bottom != NULL) {
+        simplify(top, SIMP_ALL);
+        expand(top, EXP_ALL);
+        simplify(top, SIMP_ALL);
+        simplify(bottom, SIMP_ALL);
+        out = far_ratio(top, bottom, var, v, tries - 1);
+    }
+    ast_Cleanup(top);
+    ast_Cleanup(bottom);
+    return out;
+}
+
+/*inf - inf. by the top terms if they don't cancel, else the conjugate, else as one fraction, else up over down*/
 static int far_gap(pcas_ast_t *e, pcas_ast_t *var, pcas_ast_t **v, int tries) {
     pcas_ast_t *lead = NULL, *g, *up, *down, *c, *r = NULL;
-    int deg = poly_degree(e, var->op.symbol, &lead), out = FAR_NONE, s, f;
+    deg_t deg;
+    int out = FAR_NONE, s, f;
 
-    if(deg > 0) {
+    if(growth(e, var, &deg, &lead)) {
         s = sign_of(lead);
         ast_Cleanup(lead);
         return s == 1 || s == -1 ? s : FAR_NONE;
     }
-    ast_Cleanup(lead);
-    if(tries <= 0 || (g = ast_Copy(e)) == NULL)
+    if(tries <= 0)
+        return FAR_NONE;
+    if(ast_ChildLength(e) == 2 && has_root(e) && (out = far_conjugate(e, var, v, tries)) != FAR_NONE)
+        return out;
+    if((g = ast_Copy(e)) == NULL)
         return FAR_NONE;
     comdenom(g, true);
     if(isoptype(g, OP_DIV))

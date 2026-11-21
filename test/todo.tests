@@ -14,8 +14,5 @@ simplify; sqrt(12X^2); 2sqrt(3)abs(X)
 #Decimal: float isn't good for 6 digits after a power: pi^2 = 9.869604..., but float(pi)^2 = 9.869605
 #gives: 9.86961
 decimal; pi^2; 9.8696
-#limits at inf: sqrt(x^2+x)-x wants the conjugate and a growth degree for roots (l'hopital just flips it), abs at -inf wants unwrapping
-simplify; limit(sqrt(X^2+X)_X,X,inf); 1/2
-simplify; limit(abs(X)/X,X,-inf); -1
 #gives 0: like terms take lim-lim before the limits run. inf - inf has no answer, it should stay
 simplify; limit(X,X,inf)_limit(X,X,inf); limit(X,X,inf)-limit(X,X,inf)

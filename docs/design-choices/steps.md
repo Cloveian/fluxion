@@ -111,7 +111,7 @@ plug in / one fraction / 0/0 factor and cancel / 0/0 l'Hopital as the rule names
 - worked out piece by piece: each part heads to a number, ∞, -∞, or 'no idea'. ∞/∞ goes by the top terms for polynomials and l'Hopital otherwise, ∞ - ∞ by the top term or as one fraction, 0 \* ∞ turned into a fraction, and x in both the base and the power (like (1+1/x)^x) as e^(power \* ln(base))
 - -∞ is ∞ with x turned around (x -> -x)
 - the steps are just one line for now, "plug in inf" and then the answer. the paper way (*dih*vide top and bottom by x^n, then 1/x -> 0) is what it should show, todo
-- sqrt(x^2+x) - x doesn't work yet, it needs the conjugate and a degree for roots (l'Hopital just flips that one back and forth forever)
+- roots get a degree too, sqrt(x^2+x) grows like x and sqrt(x) like x^(1/2), so ∞/∞ with roots goes by the top terms like polynomials do (l'Hopital just flips those back and forth forever). sqrt(x^2+x) - x, where the top terms cancel, goes through the conjugate
 
 ---
 Back to [design choices](index.md)
