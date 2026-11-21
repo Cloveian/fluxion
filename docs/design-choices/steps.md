@@ -111,7 +111,7 @@ plug in / one fraction / 0/0 factor and cancel / 0/0 l'Hopital as the rule names
 - the answer can be ∞ or -∞, but only when the limit is the whole input. lim(x^2) + 1 stays as it is, same reason
 - worked out piece by piece: each part heads to a number, ∞, -∞, or 'no idea'. ∞/∞ goes by the top terms for polynomials and l'Hopital otherwise, ∞ - ∞ by the top term or as one fraction, 0 \* ∞ turned into a fraction, and x in both the base and the power (like (1+1/x)^x) as e^(power \* ln(base))
 - -∞ is ∞ with x turned around (x -> -x)
-- the steps are just one line for now, "plug in inf" and then the answer. the paper way (*dih*vide top and bottom by x^n, then 1/x -> 0) is what it should show, todo
+- a polynomial over a polynomial gets the paper way: "divide by the top power" (the bottom's), a line with every term over x^n, then "1/x -> 0" and the answer. anything else is one line, "plug in inf" and the answer
 - roots get a degree too, sqrt(x^2+x) grows like x and sqrt(x) like x^(1/2), so ∞/∞ with roots goes by the top terms like polynomials do (l'Hopital just flips those back and forth forever). sqrt(x^2+x) - x, where the top terms cancel, goes through the conjugate
 
 ## Integrals

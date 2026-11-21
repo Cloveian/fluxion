@@ -669,6 +669,38 @@ static pcas_ast_t *limit_far(pcas_ast_t *f, pcas_ast_t *var, int side, bool root
     return out == FAR_UP ? v : ast_MakeBinary(OP_MULT, ast_MakeNumber(num_FromInt(-1)), v);
 }
 
+/*each term of p over x^n, tidied: 3x^2/x^2 is 3, x/x^2 is 1/x. new*/
+static pcas_ast_t *spread(pcas_ast_t *p, pcas_ast_t *var, int n) {
+    pcas_ast_t *e = ast_Copy(p), *out, *c, *t;
+
+    if(e == NULL)
+        return NULL;
+    out = ast_MakeOperator(OP_ADD);
+    expand(e, EXP_ALL);
+    simplify(e, SIMP_ALL);
+    for(c = isoptype(e, OP_ADD) ? ast_ChildGet(e, 0) : e; c != NULL && out != NULL; c = c == e ? NULL : c->next) {
+        t = ast_MakeBinary(OP_DIV, ast_Copy(c), ast_MakeBinary(OP_POW, ast_Copy(var), ast_MakeInt(n)));
+        simplify(t, SIMP_ALL);
+        ast_ChildAppend(out, t);
+    }
+    ast_Cleanup(e);
+    return out;
+}
+
+/*the paper way for a polynomial over a polynomial at inf: top and bottom over the bottom's top power. the new line, or l when it isn't one of those*/
+static step_t *over_power(steps_t *s, step_t *l, pcas_ast_t *f, pcas_ast_t *var, pcas_ast_t *a) {
+    pcas_ast_t *g;
+    int n;
+
+    if(s == NULL || !isoptype(f, OP_DIV) || (n = poly_degree(ast_ChildGet(f, 1), var->op.symbol, NULL)) < 1
+       || poly_degree(ast_ChildGet(f, 0), var->op.symbol, NULL) < 0)
+        return l;
+    g = ast_MakeBinary(OP_DIV, spread(ast_ChildGet(f, 0), var, n), spread(ast_ChildGet(f, 1), var, n));
+    l = step(s, l, "divide by the top power", lim(g, var, a, 0));
+    ast_Cleanup(g);
+    return l;
+}
+
 /*from one side, dir 1 the right and -1 the left: f(a + dir/x) as x -> inf. e^(1/x) at 0 is inf from the right, 0 from the left*/
 static pcas_ast_t *one_side(pcas_ast_t *f, pcas_ast_t *var, pcas_ast_t *a, int dir, bool root) {
     pcas_ast_t *g = ast_Copy(f), *to, *out = NULL;
@@ -710,8 +742,12 @@ static pcas_ast_t *limit_of(pcas_ast_t *f, pcas_ast_t *var, pcas_ast_t *a, steps
     }
     if(inf_sign(a) != 0) {
         out = limit_far(f, var, inf_sign(a), root);
-        if(out != NULL)
-            step(s, l, "plug in inf", ast_Copy(out));
+        if(out != NULL) {
+            step_t *before = l;
+
+            l = over_power(s, l, f, var, a);
+            step(s, l, l != before ? "1/x -> 0" : "plug in inf", ast_Copy(out));
+        }
         return out;
     }
     if(has_symbol(a, SYM_INF)) /*inf+1, 2inf*/

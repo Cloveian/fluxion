@@ -944,6 +944,11 @@ steps; limit(1/X_1/(X(X+1)),X,0); X; limit(1/X_1/(X(X+1)),X,0) | one fraction | 
 steps; limit(1/X,X,0); X; none
 steps; limit(1/X,X,0,-1); X; limit(1/X,X,0,-1) | from the left | -inf
 steps; limit(1/X^2,X,0); X; limit(1/X^2,X,0) | both sides | inf
+#at inf a polynomial over a polynomial gets the paper way, over the bottom's top power then 1/x -> 0
+steps; limit((3X^2+X)/(2X^2_5),X,inf); X; limit((3X^2+X)/(2X^2_5),X,inf) | divide by the top power | limit((1/X+3)/(2_5/X^2),X,inf) | 1/x -> 0 | 3/2
+steps; limit((X+1)/(X^2+1),X,inf); X; limit((X+1)/(X^2+1),X,inf) | divide by the top power | limit((1/X^2+1/X)/(1/X^2+1),X,inf) | 1/x -> 0 | 0
+steps; limit(X^3/(X+1),X,inf); X; limit(X^3/(X+1),X,inf) | divide by the top power | limit((X^2)/(1/X+1),X,inf) | 1/x -> 0 | inf
+steps; limit(e^(-X),X,inf); X; limit(1/e^X,X,inf) | plug in inf | 0
 #integrals: a rule on every integral a line, u = on its own line, + C at the end. a definite one ends on F(b) - F(a)
 steps; integral(3X^2+2X,X); X; integral(3X^2+2X, X) | sum rule | integral(3X^2, X) + integral(2X, X) | constant multiple | 3integral(X^2, X) + 2integral(X, X) | power rule | X^3+X^2 | + C | X^3+X^2+C
 steps; integral(2Xcos(X^2),X); X; integral(2Xcos(X^2), X) | constant multiple | 2integral(Xcos(X^2), X) | u-substitution | U=X^2 | 2integral(cos(U)/2, U) | constant multiple | integral(cos(U), U) | trig rule | sin(U) | back to x | sin(X^2) | + C | sin(X^2)+C
