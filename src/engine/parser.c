@@ -323,7 +323,7 @@ uint8_t operand_count(TokenType type) {
     if(type >= TOK_GCD && type <= TOK_NPR)
         return 2;
 
-    if(type == TOK_DERIV || type == TOK_LIMIT) /*Fluxion: limit(f, x, a)*/
+    if(type == TOK_DERIV)
         return 3;
 
     return 0;
@@ -458,8 +458,8 @@ bool collapse_precedence(pcas_stack_t *operators, pcas_stack_t *expressions, Tok
         if(op->type == TOK_OPEN_PAR)
             continue;
 
-        n = op->type == TOK_INTEGRAL ? (unsigned)op->op.symbol + 1 : operand_count(op->type); /*Fluxion: integral( by its commas*/
-        if(op->type == TOK_INTEGRAL && n != 2 && n != 4) /*Fluxion*/
+        n = op->type == TOK_INTEGRAL || op->type == TOK_LIMIT ? (unsigned)op->op.symbol + 1 : operand_count(op->type); /*Fluxion: these two by their commas*/
+        if((op->type == TOK_INTEGRAL && n != 2 && n != 4) || (op->type == TOK_LIMIT && n != 3 && n != 4)) /*Fluxion: limit(f,x,a,1) is from the right*/
             return false;
 
         /*Store the token type into the operand type. This will

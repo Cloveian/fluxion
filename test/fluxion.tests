@@ -802,6 +802,22 @@ simplify; limit(sqrt(X^2+X)+X,X,-inf); -1/2
 simplify; limit(sqrt(4X^2+1)/(X_3),X,-inf); -2
 simplify; limit(sqrt(X^2+1)_sqrt(X^2_1),X,inf); 0
 simplify; limit(X^2,X,inf)+1; limit(X^2,X,inf)+1
+#one side, limit(f,x,a,1) from the right and -1 from the left like the nspire. both sides the same is the two-sided one
+simplify; limit(1/X,X,0,1); inf
+simplify; limit(1/X,X,0,-1); -inf
+simplify; limit(abs(X)/X,X,0,1); 1
+simplify; limit(abs(X)/X,X,0,-1); -1
+simplify; limit(e^(1/X),X,0,-1); 0
+simplify; limit(e^(1/X),X,0,1); inf
+simplify; limit(sqrt(X),X,0,1); 0
+simplify; limit(1/X^2,X,0); inf
+simplify; limit(1/X,X,0); limit(1/X,X,0)
+simplify; limit(X^2,X,3,1); 9
+simplify; limit((X^2_1)/(X_1),X,1,-1); 2
+simplify; limit(ln(X),X,0,1); -inf
+simplify; limit(1/(X_2),X,2,-1); -inf
+simplify; limit(abs(X)/X,X,0); limit(abs(X)/X,X,0)
+simplify; limit(X,X,0,2); limit(X,X,0,2)
 
 #integral(f, x) and integral(f, x, a, b): sum and constant multiple, then a table for f(ax+b). no +C on the answer, like the nspire
 simplify; integral(X^2,X); X^3/3
@@ -926,6 +942,8 @@ steps; limit(sin(X)/X,X,0); X; limit(sin(X)/X,X,0) | 0/0, l'Hopital | limit(cos(
 steps; limit((1_cos(X))/X^2,X,0); X; limit((1_cos(X))/X^2,X,0) | 0/0, l'Hopital | limit(sin(X)/(2X),X,0) | 0/0, l'Hopital | limit(cos(X)/2,X,0) | plug in | cos(0)/2 | 1/2
 steps; limit(1/X_1/(X(X+1)),X,0); X; limit(1/X_1/(X(X+1)),X,0) | one fraction | limit((1_1/(X+1))/X,X,0) | 0/0, l'Hopital | limit((1/(X+1)^2)/1,X,0) | plug in | (1/(0+1)^2)/1 | 1
 steps; limit(1/X,X,0); X; none
+steps; limit(1/X,X,0,-1); X; limit(1/X,X,0,-1) | from the left | -inf
+steps; limit(1/X^2,X,0); X; limit(1/X^2,X,0) | both sides | inf
 #integrals: a rule on every integral a line, u = on its own line, + C at the end. a definite one ends on F(b) - F(a)
 steps; integral(3X^2+2X,X); X; integral(3X^2+2X, X) | sum rule | integral(3X^2, X) + integral(2X, X) | constant multiple | 3integral(X^2, X) + 2integral(X, X) | power rule | X^3+X^2 | + C | X^3+X^2+C
 steps; integral(2Xcos(X^2),X); X; integral(2Xcos(X^2), X) | constant multiple | 2integral(Xcos(X^2), X) | u-substitution | U=X^2 | 2integral(cos(U)/2, U) | constant multiple | integral(cos(U), U) | trig rule | sin(U) | back to x | sin(X^2) | + C | sin(X^2)+C

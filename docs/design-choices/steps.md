@@ -97,7 +97,8 @@ lim x->0 (1-cos x)/x^2
 
 - plug in first when f is a value at a. "a value" is checked on f as it is: no 0 below, ln(0), 0^0, tan(pi/2), and so on, because a simplify after can eat it (0 e^(1/0) came out 0)
 - not a value there: one fraction, then on 0/0 factor and cancel, and only when nothing cancels l'Hopital. 6 tries at most
-- a number over 0 has no limit, it stays lim(...) on the screen. one-sided limits aren't in yet
+- a number over 0 has no limit, it stays lim(...) on the screen, unless both sides head the same way (1/x^2 at 0 is ∞, the rule says "both sides")
+- one side is a 4th argument like on the nspire, `limit(f,x,a,1)` from the right and `-1` from the left, drawn x -> 0⁺. worked out as f(a + 1/t) with t -> ∞ (a - 1/t from the left), so everything the ∞ ones do works from one side too (e^(1/x) at 0 is ∞ from the right and 0 from the left). the rule is "from the right" / "from the left" and then the answer, one line (proposal)
 - it's drawn lim with x->a lowered next to it like a log's base, not under it. the layout has no box for under-and-centered
 - "l'Hopital" has no accent, the font hasn't got the o with the hat
 

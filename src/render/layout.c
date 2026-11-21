@@ -480,10 +480,18 @@ static box_t *build_deriv(pcas_ast_t *e, unsigned char level) {
 static box_t *build_limit(pcas_ast_t *e, unsigned char level) {
     box_t *row = new_box(BOX_ROW, level), *to = new_box(BOX_ROW, level + 1);
     char arrow[2] = { CH_ARROW, '\0' };
+    int dir = limit_side(e);
 
     add(to, build(ast_ChildGet(e, 1), level + 1));
     add(to, new_text(arrow, level + 1));
-    add(to, build(ast_ChildGet(e, 2), level + 1));
+    if(dir == 1 || dir == -1) /* one side, 0+ or 0- */
+        add(to, pair(BOX_SUP, build(ast_ChildGet(e, 2), level + 1), new_text(dir > 0 ? "+" : "-", level + 2), level + 1));
+    else
+        add(to, build(ast_ChildGet(e, 2), level + 1));
+    if(dir == 2) { /* limit(x,x,0,2) stays a limit, shown as typed */
+        add(to, new_text(",", level + 1));
+        add(to, build(ast_ChildGet(e, 3), level + 1));
+    }
     add(row, pair(BOX_SUB, new_text("lim", level), to, level));
     add(row, wrap(BOX_PARENS, build(ast_ChildGet(e, 0), level), level));
     return row;

@@ -284,10 +284,10 @@ static unsigned _to_binary(pcas_ast_t *e, uint8_t *data, unsigned index, struct 
             add_token(TOK_CLOSE_PAR);
 
             break;
-        }  case OP_INTEGRAL: { /*Fluxion: integral(f,x) or integral(f,x,a,b)*/
+        }  case OP_INTEGRAL: case OP_LIMIT: { /*Fluxion: integral(f,x), integral(f,x,a,b), limit(f,x,a), limit(f,x,a,1)*/
             pcas_ast_t *c;
 
-            add_token(TOK_INTEGRAL);
+            add_token(optype(e) == OP_LIMIT ? TOK_LIMIT : TOK_INTEGRAL);
             for(c = ast_ChildGet(e, 0); c != NULL; c = c->next) {
                 if(c != ast_ChildGet(e, 0))
                     add_token(TOK_COMMA);
@@ -295,14 +295,14 @@ static unsigned _to_binary(pcas_ast_t *e, uint8_t *data, unsigned index, struct 
             }
             add_token(TOK_CLOSE_PAR);
             break;
-        }  case OP_DERIV: case OP_LIMIT: { /*Fluxion: limit(f,x,a) the same shape*/
+        }  case OP_DERIV: {
             pcas_ast_t *a, *b, *c;
 
             a = ast_ChildGet(e, 0);
             b = ast_ChildGet(e, 1);
             c = ast_ChildGet(e, 2);
 
-            add_token(optype(e) == OP_LIMIT ? TOK_LIMIT : TOK_DERIV);
+            add_token(TOK_DERIV);
             index = _to_binary(a, data, index, lookup, err);
             add_token(TOK_COMMA);
             index = _to_binary(b, data, index, lookup, err);

@@ -71,7 +71,7 @@ static bool defined_at(pcas_ast_t *e, pcas_ast_t *var, pcas_ast_t *a) {
 }
 
 /*lim of f as var -> a, a line for the steps. new*/
-static pcas_ast_t *lim(pcas_ast_t *f, pcas_ast_t *var, pcas_ast_t *a) {
+static pcas_ast_t *lim(pcas_ast_t *f, pcas_ast_t *var, pcas_ast_t *a, int dir) {
     pcas_ast_t *l = ast_MakeOperator(OP_LIMIT);
 
     if(l == NULL)
@@ -79,6 +79,8 @@ static pcas_ast_t *lim(pcas_ast_t *f, pcas_ast_t *var, pcas_ast_t *a) {
     ast_ChildAppend(l, ast_Copy(f));
     ast_ChildAppend(l, ast_Copy(var));
     ast_ChildAppend(l, ast_Copy(a));
+    if(dir != 0)
+        ast_ChildAppend(l, ast_MakeInt(dir));
     return l;
 }
 
@@ -132,6 +134,18 @@ static int sign_of(pcas_ast_t *v) {
         ast_Cleanup(n);
     }
     ast_Cleanup(c);
+    return s;
+}
+
+/*the side e is on once x is big, x = 10^4. which way a piece comes in to 0, -1/x from below*/
+static int sign_far(pcas_ast_t *e, pcas_ast_t *var) {
+    pcas_ast_t *c = ast_Copy(e), *big = ast_MakeInt(10000);
+    int s = 2;
+
+    if(c != NULL && big != NULL && substitute(c, var, big))
+        s = sign_of(c);
+    ast_Cleanup(c);
+    ast_Cleanup(big);
     return s;
 }
 
@@ -579,15 +593,17 @@ static int far(pcas_ast_t *e, pcas_ast_t *var, pcas_ast_t **v, int tries) {
         if(has_symbol(ast_ChildGet(e, 0), var->op.symbol))
             return FAR_NONE;
         f = far(ast_ChildGet(e, 1), var, &cv, tries);
-        if(f == FAR_FIN && sign_of(cv) == 1)
+        out = f == FAR_FIN ? sign_of(cv) : 2;
+        if(out == 1)
             return fin(v, ast_MakeBinary(OP_LOG, ast_Copy(ast_ChildGet(e, 0)), cv));
         ast_Cleanup(cv);
-        if(f != FAR_UP)
+        if((f != FAR_UP && out != 0) || (out == 0 && sign_far(ast_ChildGet(e, 1), var) != 1)) /*to 0 from above, from below isn't real*/
             return FAR_NONE;
-        g = ast_MakeBinary(OP_ADD, ast_Copy(ast_ChildGet(e, 0)), ast_MakeNumber(num_FromInt(-1))); /*a base under 1 heads down*/
+        g = ast_MakeBinary(OP_ADD, ast_Copy(ast_ChildGet(e, 0)), ast_MakeNumber(num_FromInt(-1))); /*a base under 1 heads the other way*/
+        f = f == FAR_UP ? 1 : -1;
         out = g != NULL ? sign_of(g) : 2;
         ast_Cleanup(g);
-        return out == 1 || out == -1 ? out : FAR_NONE;
+        return out == 1 || out == -1 ? out * f : FAR_NONE;
     case OP_TAN_INV:
         f = far(ast_ChildGet(e, 0), var, &cv, tries);
         if(f == FAR_FIN)
@@ -608,6 +624,15 @@ static int far(pcas_ast_t *e, pcas_ast_t *var, pcas_ast_t **v, int tries) {
                 return FAR_NONE;
             }
             ast_ChildAppend(g, cv);
+        }
+        if(g != NULL && (optype(e) == OP_TAN || optype(e) == OP_SEC || optype(e) == OP_COT || optype(e) == OP_CSC)) { /*tan(pi/2) isn't one*/
+            c = ast_MakeUnary(optype(e) == OP_TAN || optype(e) == OP_SEC ? OP_COS : OP_SIN, ast_Copy(ast_ChildGet(g, 0)));
+            f = c != NULL ? sign_of(c) : 0;
+            ast_Cleanup(c);
+            if(f == 0) {
+                ast_Cleanup(g);
+                return FAR_NONE;
+            }
         }
         return fin(v, g);
     }
@@ -644,14 +669,42 @@ static pcas_ast_t *limit_far(pcas_ast_t *f, pcas_ast_t *var, int side, bool root
     return out == FAR_UP ? v : ast_MakeBinary(OP_MULT, ast_MakeNumber(num_FromInt(-1)), v);
 }
 
-/*new, NULL when there isn't one or it gives up. s NULL for no steps, root when the limit is the whole input*/
-static pcas_ast_t *limit_of(pcas_ast_t *f, pcas_ast_t *var, pcas_ast_t *a, steps_t *s, bool root) {
+/*from one side, dir 1 the right and -1 the left: f(a + dir/x) as x -> inf. e^(1/x) at 0 is inf from the right, 0 from the left*/
+static pcas_ast_t *one_side(pcas_ast_t *f, pcas_ast_t *var, pcas_ast_t *a, int dir, bool root) {
+    pcas_ast_t *g = ast_Copy(f), *to, *out = NULL;
+
+    to = ast_MakeBinary(OP_ADD, ast_Copy(a), ast_MakeBinary(OP_DIV, ast_MakeInt(dir), ast_Copy(var)));
+    if(g != NULL && to != NULL && substitute(g, var, to))
+        out = limit_far(g, var, 1, root);
+    ast_Cleanup(g);
+    ast_Cleanup(to);
+    return out;
+}
+
+/*when the usual way finds nothing: the side asked for, or both sides when they agree (1/x^2 at 0). l the line to put the rule on*/
+static pcas_ast_t *sides(pcas_ast_t *f, pcas_ast_t *var, pcas_ast_t *a, int dir, bool root, steps_t *s, step_t *l) {
+    pcas_ast_t *r, *left = NULL;
+
+    if(pcas_cancelled || (r = one_side(f, var, a, dir != 0 ? dir : 1, root)) == NULL)
+        return NULL;
+    if(dir == 0 && ((left = one_side(f, var, a, -1, root)) == NULL || !ast_Compare(r, left))) {
+        ast_Cleanup(r);
+        ast_Cleanup(left);
+        return NULL;
+    }
+    ast_Cleanup(left);
+    step(s, l, dir > 0 ? "from the right" : dir < 0 ? "from the left" : "both sides", ast_Copy(r));
+    return r;
+}
+
+/*new, NULL when there isn't one or it gives up. s NULL for no steps, root when the limit is the whole input, dir 1 / -1 from one side*/
+static pcas_ast_t *limit_of(pcas_ast_t *f, pcas_ast_t *var, pcas_ast_t *a, steps_t *s, bool root, int dir) {
     pcas_ast_t *g, *top, *bottom, *t, *b, *out = NULL;
     step_t *l = NULL;
     bool cancelled;
     int tries;
 
-    if(s != NULL && (t = lim(f, var, a)) != NULL) {
+    if(s != NULL && (t = lim(f, var, a, dir)) != NULL) {
         simplify(ast_ChildGet(t, 0), SIMP_NORMALIZE | SIMP_COMMUTATIVE | SIMP_RATIONAL | SIMP_EVAL); /*x^2_1 parses as x^2+-1*1, it showed a lone minus*/
         l = steps_expr(s, t);
     }
@@ -675,10 +728,10 @@ static pcas_ast_t *limit_of(pcas_ast_t *f, pcas_ast_t *var, pcas_ast_t *a, steps
     comdenom(g, true); /*one fraction, top and bottom factored*/
     if(!isoptype(g, OP_DIV)) { /*not a fraction and not defined there, e^(1/x) at 0*/
         ast_Cleanup(g);
-        return NULL;
+        return sides(f, var, a, dir, root, s, l);
     }
     if(!ast_Compare(g, f))
-        l = step(s, l, "one fraction", lim(g, var, a));
+        l = step(s, l, "one fraction", lim(g, var, a, dir));
     top = ast_Copy(ast_ChildGet(g, 0));
     bottom = ast_Copy(ast_ChildGet(g, 1));
     ast_Cleanup(g);
@@ -716,7 +769,7 @@ static pcas_ast_t *limit_of(pcas_ast_t *f, pcas_ast_t *var, pcas_ast_t *a, steps
             break;
         cancelled = cancel_fractions(g);
         if(!isoptype(g, OP_DIV)) { /*cancelled all the way down*/
-            l = step(s, l, "0/0, factor and cancel", lim(g, var, a));
+            l = step(s, l, "0/0, factor and cancel", lim(g, var, a, dir));
             out = defined_at(g, var, a) ? plug_in(s, l, g, var, a, value_at(g, var, a)) : NULL;
             ast_Cleanup(g);
             break;
@@ -726,7 +779,7 @@ static pcas_ast_t *limit_of(pcas_ast_t *f, pcas_ast_t *var, pcas_ast_t *a, steps
             ast_Cleanup(bottom);
             top = ast_Copy(ast_ChildGet(g, 0));
             bottom = ast_Copy(ast_ChildGet(g, 1));
-            l = step(s, l, "0/0, factor and cancel", lim(g, var, a));
+            l = step(s, l, "0/0, factor and cancel", lim(g, var, a, dir));
         } else {
             t = slope_of(top, var);
             b = slope_of(bottom, var);
@@ -736,13 +789,23 @@ static pcas_ast_t *limit_of(pcas_ast_t *f, pcas_ast_t *var, pcas_ast_t *a, steps
             bottom = b;
             ast_Cleanup(g);
             g = ast_MakeBinary(OP_DIV, ast_Copy(top), ast_Copy(bottom));
-            l = step(s, l, "0/0, l'Hopital", lim(g, var, a));
+            l = step(s, l, "0/0, l'Hopital", lim(g, var, a, dir));
         }
         ast_Cleanup(g);
     }
     ast_Cleanup(top);
     ast_Cleanup(bottom);
-    return out;
+    return out != NULL ? out : sides(f, var, a, dir, root, s, l);
+}
+
+int limit_side(pcas_ast_t *e) {
+    pcas_ast_t *d = ast_ChildGet(e, 3);
+
+    if(d == NULL)
+        return 0;
+    if(isoptype(d, OP_MULT) && ast_ChildLength(d) == 2 && is_ast_int(ast_ChildGet(d, 0), -1) && is_ast_int(ast_ChildGet(d, 1), 1)) /*-1 as typed, the steps get it unsimplifyed*/
+        return -1;
+    return is_ast_int(d, 1) ? 1 : is_ast_int(d, -1) ? -1 : 2;
 }
 
 /*root: e is the whole thing simplify got. an inf anywhere else turns into inf - inf = 0*/
@@ -754,10 +817,10 @@ static bool limits(pcas_ast_t *e, bool root) {
         return false;
     for(child = ast_ChildGet(e, 0); child != NULL; child = child->next)
         changed |= limits(child, false);
-    if(!isoptype(e, OP_LIMIT) || ast_ChildGet(e, 1)->type != NODE_SYMBOL)
+    if(!isoptype(e, OP_LIMIT) || ast_ChildGet(e, 1)->type != NODE_SYMBOL || limit_side(e) == 2)
         return changed;
 
-    out = limit_of(ast_ChildGet(e, 0), ast_ChildGet(e, 1), ast_ChildGet(e, 2), NULL, root);
+    out = limit_of(ast_ChildGet(e, 0), ast_ChildGet(e, 1), ast_ChildGet(e, 2), NULL, root, limit_side(e));
     if(out == NULL)
         return changed;
     replace_node(e, out);
@@ -772,9 +835,9 @@ bool steps_limit(pcas_ast_t *l, steps_t *out) {
     pcas_ast_t *v;
 
     out->n = 0;
-    if(!isoptype(l, OP_LIMIT) || ast_ChildGet(l, 1)->type != NODE_SYMBOL)
+    if(!isoptype(l, OP_LIMIT) || ast_ChildGet(l, 1)->type != NODE_SYMBOL || limit_side(l) == 2)
         return false;
-    v = limit_of(ast_ChildGet(l, 0), ast_ChildGet(l, 1), ast_ChildGet(l, 2), out, true);
+    v = limit_of(ast_ChildGet(l, 0), ast_ChildGet(l, 1), ast_ChildGet(l, 2), out, true, limit_side(l));
     if(v == NULL || pcas_cancelled) {
         ast_Cleanup(v);
         steps_free(out);
