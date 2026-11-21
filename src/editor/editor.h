@@ -27,7 +27,7 @@ typedef enum {
     ED_LOGB /* log_b(x), slot 0 the base and slot 1 the argument */
 } ed_kind_t;
 
-/* characters, besides digits, a-z, . , ! = and layout.h's CH_PI / CH_THETA / CH_EULER / CH_IMAG */
+/* characters, besides *dih*gits, a-z, . , ! = and layout.h's CH_PI / CH_THETA / CH_EULER / CH_IMAG / CH_INF */
 #define ED_PLUS     '+'
 #define ED_SUB      CH_MINUS  /* a subtract, spaced like + */
 #define ED_NEG      '\x07'      /* negate, the (-) key. minus with no space after it */
@@ -39,7 +39,6 @@ typedef enum {
 #define CH_LE       '\x10'
 #define CH_GE       '\x11'
 #define CH_NE       '\x12'
-#define CH_INF      '\x13'
 #define CH_DEG      '\x14'
 #define CH_STO      CH_ARROW /* the sto-> arrow, expr -> name stores */
 #define CH_PM       '\x16' /* +-, the steps page */

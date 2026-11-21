@@ -51,6 +51,7 @@ typedef enum _TokenType {
 
     TOK_OPEN_PAR, TOK_CLOSE_PAR, TOK_COMMA, TOK_PERIOD,
 
+    TOK_INF, /*Fluxion. read_type takes the first match, so before the i*/
     TOK_IMAG,
 
     TOK_EULER, TOK_PI, TOK_THETA,
@@ -70,5 +71,6 @@ extern struct Identifier str_table[AMOUNT_TOKENS];
 
 pcas_ast_t *parse(const uint8_t *equation, unsigned length, struct Identifier *lookup, pcas_error_t *e);
 uint8_t *export_to_binary(pcas_ast_t *e, unsigned *len, struct Identifier *lookup, pcas_error_t *err);
+int inf_sign(pcas_ast_t *e); /*Fluxion*/
 
 #endif

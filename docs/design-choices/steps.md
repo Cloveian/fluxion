@@ -97,12 +97,21 @@ lim x->0 (1-cos x)/x^2
 
 - plug in first when f is a value at a. "a value" is checked on f as it is: no 0 below, ln(0), 0^0, tan(pi/2), and so on, because a simplify after can eat it (0 e^(1/0) came out 0)
 - not a value there: one fraction, then on 0/0 factor and cancel, and only when nothing cancels l'Hopital. 6 tries at most
-- a number over 0 has no limit, it stays lim(...) on the screen. one-sided limits and x -> infinity aren't in yet
+- a number over 0 has no limit, it stays lim(...) on the screen. one-sided limits aren't in yet
 - it's drawn lim with x->a lowered next to it like a log's base, not under it. the layout has no box for under-and-centered
 - "l'Hopital" has no accent, the font hasn't got the o with the hat
 
 ### Proposal
 plug in / one fraction / 0/0 factor and cancel / 0/0 l'Hopital as the rule names, x->a as a subscript. a default, not decided yet
+
+### Proposal: x -> ∞
+
+- ∞ is the one from the [math] popup, and it's only allowed as where a limit heads (`limit(f,x,∞)` or `-∞`). anywhere else it's an error, cuz simplify would take it for a letter and ∞ - ∞ would come out 0
+- the answer can be ∞ or -∞, but only when the limit is the whole input. lim(x^2) + 1 stays as it is, same reason
+- worked out piece by piece: each part heads to a number, ∞, -∞, or 'no idea'. ∞/∞ goes by the top terms for polynomials and l'Hopital otherwise, ∞ - ∞ by the top term or as one fraction, 0 \* ∞ turned into a fraction, and x in both the base and the power (like (1+1/x)^x) as e^(power \* ln(base))
+- -∞ is ∞ with x turned around (x -> -x)
+- the steps are just one line for now, "plug in inf" and then the answer. the paper way (*dih*vide top and bottom by x^n, then 1/x -> 0) is what it should show, todo
+- sqrt(x^2+x) - x doesn't work yet, it needs the conjugate and a degree for roots (l'Hopital just flips that one back and forth forever)
 
 ---
 Back to [design choices](index.md)

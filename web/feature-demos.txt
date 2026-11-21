@@ -16,7 +16,7 @@ Multivariable factoring | By pattern only | y= 2 xt ^ 4 right - alpha 1 ^ 4 ente
 Prime factoring |  | y= 2 3 6 0 enter
 *Dih*rivatives | With respect to x | window 1 2nd ln xt x^2 right enter
 Derivative at a value | Typed out, no template | window 2 xt ^ 3 right , xt , 2 enter
-Limits | At a number, typed out | window 4 sin xt right / xt , xt , 0 enter
+Limits | At a number or ∞, typed out | window 4 sin xt right / xt , xt , 0 enter
 Linear systems | Up to 4 equations | y= 4 2 xt - alpha 1 2nd math 7 , xt + alpha 1 2nd math 2 enter
 Systems with letters |  | y= 4 alpha math xt + alpha 1 2nd math 1 , xt - alpha 1 2nd math 2 , xt , alpha 1 enter
 Nonlinear systems | Two equations only | y= 4 xt x^2 + alpha 1 x^2 2nd math 2 5 , alpha 1 2nd math xt + 1 enter

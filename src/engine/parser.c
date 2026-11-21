@@ -39,6 +39,7 @@ struct Identifier ti_table[AMOUNT_TOKENS] = {
     {1, {0x10}}, {1, {0x11}},   /*TOK_OPEN_PAR, TOK_CLOSE_PAR*/
     {1, {0x2B}}, {1, {0x3A}},   /*TOK_COMMA, TOK_PERIOD*/
 
+    {2, {0xBB, 0xF6}},          /*TOK_INF. Fluxion: made up, like limit*/
     {1, {0x2C}},                /*TOK_IMAG*/
 
     {2, {0xBB, 0x31}},          /*TOK_E*/
@@ -82,6 +83,7 @@ struct Identifier str_table[AMOUNT_TOKENS] = {
     {1, "("}, {1, ")"},             /*TOK_OPEN_PAR, TOK_CLOSE_PAR*/
     {1, ","}, {1, "."},             /*TOK_COMMA, TOK_PERIOD*/
 
+    {3, "inf"},                     /*TOK_INF*/
     {1, "i"},                       /*TOK_IMAG */
 
     {1, "e"},                       /*TOK_E*/
@@ -188,6 +190,7 @@ Symbol read_symbol(const uint8_t *equation, unsigned index, unsigned length, str
     case TOK_EULER: return SYM_EULER;
     case TOK_PI:    return SYM_PI;
     case TOK_THETA: return SYM_THETA;
+    case TOK_INF:   return SYM_INF; /*Fluxion*/
     default:        return SYM_INVALID;
     }
 
@@ -502,6 +505,39 @@ bool collapse_all(pcas_stack_t *operators, pcas_stack_t *expressions) {
     return NULL;                                            \
 }
 
+/*Fluxion: 1 for inf, -1 for -inf, else 0*/
+int inf_sign(pcas_ast_t *e) {
+    pcas_ast_t *c;
+    bool neg = false, inf = false;
+
+    if(e->type == NODE_SYMBOL)
+        return e->op.symbol == SYM_INF;
+    if(!isoptype(e, OP_MULT) || ast_ChildLength(e) != 2)
+        return 0;
+    for(c = ast_ChildGet(e, 0); c != NULL; c = c->next) {
+        neg |= is_ast_int(c, -1);
+        inf |= c->type == NODE_SYMBOL && c->op.symbol == SYM_INF;
+    }
+    return neg && inf ? -1 : 0;
+}
+
+/*Fluxion: inf anywhere but where a limit heads. simplify would take it for a letter, inf - inf = 0*/
+static bool inf_misplaced(pcas_ast_t *e) {
+    pcas_ast_t *c;
+
+    if(e->type == NODE_SYMBOL)
+        return e->op.symbol == SYM_INF;
+    if(e->type != NODE_OPERATOR)
+        return false;
+    for(c = ast_ChildGet(e, 0); c != NULL; c = c->next) {
+        if(isoptype(e, OP_LIMIT) && c == ast_ChildGet(e, 2) && inf_sign(c) != 0)
+            continue;
+        if(inf_misplaced(c))
+            return true;
+    }
+    return false;
+}
+
 pcas_ast_t *parse(const uint8_t *equation, unsigned length, struct Identifier *lookup, pcas_error_t *e) {
     tokenizer_t tokenizer = {0};
     pcas_stack_t operators, expressions;
@@ -595,5 +631,10 @@ pcas_ast_t *parse(const uint8_t *equation, unsigned length, struct Identifier *l
 
     free(tokenizer.tokens);
 
+    if(root != NULL && inf_sign(root) == 0 && inf_misplaced(root)) { /*Fluxion: here so every way in gets it. a lone inf is an answer*/
+        ast_Cleanup(root);
+        *e = E_PARSE_INF;
+        return NULL;
+    }
     return root;
 }

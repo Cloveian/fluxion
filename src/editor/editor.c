@@ -1053,6 +1053,7 @@ static void put_char(out_t *o, char c) {
     case CH_THETA:  put(o, "theta"); return;
     case CH_EULER:  put(o, "e");     return;
     case CH_IMAG:   put(o, "i");     return;
+    case CH_INF:    put(o, "inf");   return;
     case ED_SCI:    put(o, "[E]");   return;
     case CH_STO:    /* the app catches store lines before this, so it's in the wrong place */
         ed_error = "the arrow goes at the end: value -> name";

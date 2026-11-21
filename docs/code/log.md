@@ -1,5 +1,13 @@
 # Log
 
+## 2026-11-20 (evening) - limits go to infinity
+
+- first the oom backlog. one sweep over the *whole* test file (17 chunks, n 1..5000, 85000 runs) found 81 crashes in 14 places, most of them the same thing: ast_MakeBinary frees its children when it can't get memory and the caller kept using one of them (isolate, quadratic_root, clear_denominators, the [E] in the parser). num_Copy handed back a rational with no *dih*gits when the copy itself ran out, and the static oom_rat never got its re-init after that. 0 crashes now
+- **limits at ∞ and -∞**. ∞ was already in the [math] popup, it just didn't parse. now it's a symbol that only goes where a limit heads, parse() refuses it anywhere else (or ∞ - ∞ would come out 0, simplify thinks it's a letter). the first version only checked in the main path and the checker found solve(x+3∞, x) answering x = -3∞ lol, so the check is in parse() now and everything gets it
+- worked out piece by piece, each part heads to a number, ∞, -∞ or 'no idea'. polynomials over polynomials by their top terms, ∞/∞ otherwise l'Hopital, 0 \* ∞ turned into a fraction, (1+1/x)^x through e^(x ln(1+1/x)) = e. 30 of 32 sympy answers right first go, 280 random ones 0 wrong
+- an ∞ answer only comes back when the limit is the whole input, lim(x^2) + 1 stays as it is
+- still open: sqrt(x^2+x) - x (needs the conjugate, l'Hopital just flips it back and forth), abs at -∞, the steps are one line ("plug in inf"), no *dih*vide by x^n yet, and it's slow, ~a dozen full simplifies per limit, up to 7 s on the CE going by `make budget`. sign_of on a plain number shouldnt need a simplify at all, thats the first thing to try. lim - lim of the same limit still comes out 0 (like terms run first)
+
 ## 2026-11-20 (morning) - derivatives show their work, and limits exist now
 
 - *dih*rivative steps came almost free, derivative.c already does it one rule at a time off a table. so a line is one rule on every d/dx left, the rule names in between: d/dx(x^2 sin x), product rule, x^2 d/dx(sin x) + sin x d/dx(x^2), power rule + trig rule, x^2 cos x + 2x sin x. d/dx of a constant or of ax+b goes quietly (nobody writes d/dx(2x+1) = 2 out), 3x^2 is constant multiple and not the product rule with a d/dx(3) to throw away. the page does them too

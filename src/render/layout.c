@@ -169,6 +169,7 @@ static box_t *build_symbol(pcas_ast_t *e, unsigned char level) {
     case SYM_THETA: s[0] = CH_THETA; break;
     case SYM_EULER: s[0] = CH_EULER; break;
     case SYM_IMAG:  s[0] = CH_IMAG;  break;
+    case SYM_INF:   s[0] = CH_INF;   break;
     default:
         /* the engine's variables are A-Z, shown lowercase like the nspire.
            there's only one x and it's lowercase, sorry X */

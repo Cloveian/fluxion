@@ -765,6 +765,38 @@ simplify; limit(logb(2,X),X,1); limit(logb(2,X),X,1)
 simplify; limit(tan(X),X,pi/2); limit(tan(X),X,pi/2)
 simplify; limit(sin(1/X),X,0); limit(sin(1/X),X,0)
 simplify; limit(ln(X),X,1); 0
+#x -> inf and -inf, answers from sympy. an infinite one is inf only as the whole answer
+simplify; limit((3X^2+X)/(2X^2_5),X,inf); 3/2
+simplify; limit((X+1)/(X^2+1),X,inf); 0
+simplify; limit(X^3/(X+1),X,inf); inf
+simplify; limit((1_X^3)/X^2,X,inf); -inf
+simplify; limit((2X+1)/(3X_4),X,-inf); 2/3
+simplify; limit(X^2,X,-inf); inf
+simplify; limit(X^3,X,-inf); -inf
+simplify; limit(X^2_X,X,inf); inf
+simplify; limit(X_X^2,X,inf); -inf
+simplify; limit(1/X,X,inf); 0
+simplify; limit(5,X,inf); 5
+simplify; limit(e^(-X),X,inf); 0
+simplify; limit(e^X,X,-inf); 0
+simplify; limit(X*e^(-X),X,inf); 0
+simplify; limit(ln(X)/X,X,inf); 0
+simplify; limit(X^2/e^X,X,inf); 0
+simplify; limit(e^X/X^3,X,inf); inf
+simplify; limit(atan(X),X,inf); pi/2
+simplify; limit(atan(X),X,-inf); -pi/2
+simplify; limit((1+1/X)^X,X,inf); e
+simplify; limit((1+2/X)^X,X,inf); e^2
+simplify; limit(X*sin(1/X),X,inf); 1
+simplify; limit(2^X,X,inf); inf
+simplify; limit((1/2)^X,X,inf); 0
+simplify; limit(sin(X),X,inf); limit(sin(X),X,inf)
+simplify; limit(ln(X)_X,X,inf); -inf
+simplify; limit(ln(X),X,inf); inf
+simplify; limit(sqrt(X)/(X+1),X,inf); 0
+simplify; limit((2X^2+3)/(5_X^2),X,inf); -2
+simplify; limit(X^(1/X),X,inf); 1
+simplify; limit(X^2,X,inf)+1; limit(X^2,X,inf)+1
 decimal; 3root(-8); -2
 
 #show the work (steps; equation; var and method; lines | the move | lines). the last line has to be solve's roots

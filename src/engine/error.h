@@ -24,6 +24,7 @@ typedef enum {
     E_EVAL_NO_MAPPING,
 
     E_OUT_OF_MEMORY, /*Fluxion: parse() ran out, see pcas_oom below*/
+    E_PARSE_INF, /*Fluxion: inf anywhere but where a limit heads*/
 
     AMOUNT_ERRORS
 } pcas_error_t;

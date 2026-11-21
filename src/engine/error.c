@@ -19,6 +19,7 @@ const char *error_text[AMOUNT_ERRORS] = {
     "No mapping for symbol",
 
     "Out of memory",
+    "Infinity only goes where a limit heads",
 };
 
 /*Fluxion: see error.h*/
