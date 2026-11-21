@@ -856,6 +856,17 @@ antideriv; cosh(2X); X
 antideriv; 4; X
 antideriv; e^(-X); X
 antideriv; sin(2X+1); X
+#1/(c + k u^2) is an atan and (c - k u^2)^(-1/2) an asin for any c, k over 0. 1/(x^2-4) is partial fractions, it stays
+antideriv; 1/(X^2+4); X
+antideriv; 1/(9+X^2); X
+antideriv; 3/(2+5X^2); X
+antideriv; 1/(1+(2X+1)^2); X
+antideriv; 1/sqrt(4_X^2); X
+antideriv; 1/sqrt(9_4X^2); X
+antideriv; 1/(1+X^2); X
+antideriv; 1/sqrt(1_X^2); X
+simplify; integral(1/(X^2+4),X); atan(X/2)/2
+simplify; integral(1/(X^2_4),X); integral(1/(X^2_4),X)
 #u-substitution: some piece of it is u and the rest is u' (up to a number)
 antideriv; 2Xcos(X^2); X
 antideriv; Xe^(X^2); X

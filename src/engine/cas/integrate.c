@@ -54,27 +54,43 @@ static pcas_ast_t *ln_abs(pcas_ast_t *u) {
     return ast_MakeBinary(OP_LOG, ast_MakeSymbol(SYM_EULER), ast_MakeUnary(OP_ABS, u));
 }
 
-/*1 + u^2 or 1 - u^2 (sign 1, -1): u, else NULL*/
-static pcas_ast_t *one_plus_square(pcas_ast_t *e, int sign) {
+static bool value(pcas_ast_t *e, double *v);
+
+/*c + k u^2 (sign 1) or c - k u^2 (sign -1), c and k plain numbers over 0: u, with c and k new. else NULL*/
+static pcas_ast_t *square_plus(pcas_ast_t *e, pcas_ast_t *x, int sign, pcas_ast_t **c, pcas_ast_t **k) {
     pcas_ast_t *a, *b, *sq;
+    double cv, kv;
 
     if(!isoptype(e, OP_ADD) || ast_ChildLength(e) != 2)
         return NULL;
     a = ast_ChildGet(e, 0);
     b = ast_ChildGet(e, 1);
-    sq = is_ast_int(a, 1) ? b : is_ast_int(b, 1) ? a : NULL;
-    if(sq != NULL && sign < 0) /*-1*u^2*/
-        sq = isoptype(sq, OP_MULT) && ast_ChildLength(sq) == 2 && is_ast_int(ast_ChildGet(sq, 0), -1) ? ast_ChildGet(sq, 1) : NULL;
-    if(sq == NULL || !isoptype(sq, OP_POW) || !is_value(ast_ChildGet(sq, 1), 2, 1))
+    sq = has_symbol(a, x->op.symbol) ? a : b;
+    a = sq == a ? b : a; /*the constant*/
+    if(has_symbol(a, x->op.symbol) || !value(a, &cv) || cv <= 0)
         return NULL;
+    *k = ast_MakeInt(1);
+    if(isoptype(sq, OP_MULT) && ast_ChildLength(sq) == 2 && !has_symbol(ast_ChildGet(sq, 0), x->op.symbol)) { /*9x^2*/
+        ast_Cleanup(*k);
+        *k = ast_Copy(ast_ChildGet(sq, 0));
+        sq = ast_ChildGet(sq, 1);
+    }
+    if(sign < 0)
+        *k = ast_MakeBinary(OP_MULT, ast_MakeInt(-1), *k);
+    if(*k == NULL || !value(*k, &kv) || kv <= 0 || !isoptype(sq, OP_POW) || !is_value(ast_ChildGet(sq, 1), 2, 1)) {
+        ast_Cleanup(*k);
+        return NULL;
+    }
+    *c = ast_Copy(a);
     return ast_ChildGet(sq, 0);
 }
 
 /*b^n off the table, F new*/
 static const char *table_pow(pcas_ast_t *f, pcas_ast_t *x, pcas_ast_t **F) {
-    pcas_ast_t *b = ast_ChildGet(f, 0), *n = ast_ChildGet(f, 1), *u, *a;
+    pcas_ast_t *b = ast_ChildGet(f, 0), *n = ast_ChildGet(f, 1), *u, *a, *c, *k, *G;
     Symbol s = x->op.symbol;
     OperatorType op;
+    int sign;
 
     if(!has_symbol(n, s) && (a = linear(b, x)) != NULL) {
         if(is_value(n, -1, 1)) {
@@ -106,13 +122,19 @@ static const char *table_pow(pcas_ast_t *f, pcas_ast_t *x, pcas_ast_t **F) {
         }
         ast_Cleanup(a);
     }
-    if(is_value(n, -1, 1) && (u = one_plus_square(b, 1)) != NULL && (a = linear(u, x)) != NULL) {
-        *F = over(ast_MakeUnary(OP_TAN_INV, ast_Copy(u)), a);
-        return "inverse trig rule";
-    }
-    if(is_value(n, -1, 2) && (u = one_plus_square(b, -1)) != NULL && (a = linear(u, x)) != NULL) {
-        *F = over(ast_MakeUnary(OP_SIN_INV, ast_Copy(u)), a);
-        return "inverse trig rule";
+    /*1/(c + k u^2) is atan(sqrt(k/c) u)/sqrt(ck), (c - k u^2)^(-1/2) is asin(sqrt(k/c) u)/sqrt(k). each over a*/
+    sign = is_value(n, -1, 1) ? 1 : is_value(n, -1, 2) ? -1 : 0;
+    if(sign != 0 && (u = square_plus(b, x, sign, &c, &k)) != NULL) {
+        if((a = linear(u, x)) != NULL) {
+            G = ast_MakeUnary(sign > 0 ? OP_TAN_INV : OP_SIN_INV,
+                ast_MakeBinary(OP_MULT, ast_MakeBinary(OP_POW, ast_MakeBinary(OP_DIV, ast_Copy(k), ast_Copy(c)), ast_MakeBinary(OP_DIV, ast_MakeInt(1), ast_MakeInt(2))), ast_Copy(u)));
+            *F = over(ast_MakeBinary(OP_DIV, G, ast_MakeBinary(OP_POW, sign > 0 ? ast_MakeBinary(OP_MULT, ast_Copy(c), ast_Copy(k)) : ast_Copy(k),
+                ast_MakeBinary(OP_DIV, ast_MakeInt(1), ast_MakeInt(2)))), a);
+        }
+        ast_Cleanup(c);
+        ast_Cleanup(k);
+        if(a != NULL)
+            return "inverse trig rule";
     }
     return NULL;
 }

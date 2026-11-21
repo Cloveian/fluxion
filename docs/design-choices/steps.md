@@ -119,7 +119,7 @@ plug in / one fraction / 0/0 factor and cancel / 0/0 l'Hopital as the rule names
 `integral(f, x)` and `integral(f, x, a, b)`. worked out the way the d/dx steps are: every integral still in the line gets one rule, then the next line. the rules, first one that fits:
 
 - constant rule (∫3 dx = 3x), sum rule, constant multiple (a number in front or a number on the bottom)
-- a table: power rule (1/x is ln|x|), exp rule (e^x and 2^x), trig rule (sin, cos, tan, sec^2, sec tan, ...), inverse trig rule (1/(1+x^2), 1/sqrt(1-x^2)), log rule (ln x is x ln x - x). anything ax+b inside gets the /a, so cos(3x) is sin(3x)/3 in one go
+- a table: power rule (1/x is ln|x|), exp rule (e^x and 2^x), trig rule (sin, cos, tan, sec^2, sec tan, ...), inverse trig rule (1/(c + kx^2) and 1/sqrt(c - kx^2) for numbers over 0, so 1/(x^2+4) is atan(x/2)/2), log rule (ln x is x ln x - x). anything ax+b inside gets the /a, so cos(3x) is sin(3x)/3 in one go
 - u-substitution: some piece g where f/g' is all g. 2x cos(x^2) has u = x^2. u is U, or W, V ... if the problem already uses U
 - no integration by parts or partial fractions yet, x e^x and 1/(x^2-1) stay as integrals
 

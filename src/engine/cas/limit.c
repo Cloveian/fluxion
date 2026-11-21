@@ -739,7 +739,7 @@ static pcas_ast_t *limit_of(pcas_ast_t *f, pcas_ast_t *var, pcas_ast_t *a, steps
     int tries;
 
     if(s != NULL && (t = lim(f, var, a, dir)) != NULL) {
-        simplify(ast_ChildGet(t, 0), SIMP_NORMALIZE | SIMP_COMMUTATIVE | SIMP_RATIONAL | SIMP_EVAL); /*x^2_1 parses as x^2+-1*1, it showed a lone minus*/
+        simplify(ast_ChildGet(t, 0), SIMP_LIGHT); /*x^2_1 parses as x^2+-1*1, it showed a lone minus*/
         l = steps_expr(s, t);
     }
     if(inf_sign(a) != 0) {
