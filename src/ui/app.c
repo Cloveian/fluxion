@@ -1548,7 +1548,7 @@ static const char *cat_label(int i) {
         return folders[cat_order[i] - CAT_FOLDER].name;
     return cat_item(i)->label;
 }
-static const char *cat_keys(int i)  { return cat_header(i) ? NULL : cat_item(i)->keys; }
+static const char *cat_keys(int i)  { return cat_header(i) || NSPIRE_MENU ? NULL : cat_item(i)->keys; } /* the CE's keys, wrong on the nspire */
 static const char *cat_help(int i)  { return cat_header(i) ? NULL : cat_item(i)->help; }
 
 static bool cat_pick(int i) {
