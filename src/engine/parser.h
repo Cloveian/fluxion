@@ -9,7 +9,7 @@
 #define is_tok_operator(tok) (is_tok_unary_operator(tok) || is_tok_binary_operator(tok))
 
 #define is_tok_unary_function(tok)    ((tok) >= TOK_INT && (tok) <= TOK_TANH_INV)
-#define is_tok_nary_function(tok)     ((tok) == TOK_LOG_BASE || (tok) == TOK_DERIV || ((tok) >= TOK_GCD && (tok) <= TOK_LIMIT))
+#define is_tok_nary_function(tok)     ((tok) == TOK_LOG_BASE || (tok) == TOK_DERIV || ((tok) >= TOK_GCD && (tok) <= TOK_INTEGRAL))
 #define is_tok_function(tok)          (is_tok_unary_function(tok) || is_tok_nary_function(tok))
 
 /*Ti Tokens, used for reading from yvars*/
@@ -33,6 +33,7 @@ typedef enum _TokenType {
     TOK_DERIV,
     TOK_GCD, TOK_LCM, TOK_NCR, TOK_NPR,
     TOK_LIMIT, /*Fluxion*/
+    TOK_INTEGRAL, /*Fluxion*/
 
     TOK_INT, TOK_ABS,
 
@@ -59,7 +60,7 @@ typedef enum _TokenType {
     AMOUNT_TOKENS, TOK_INVALID
 } TokenType;
 
-#define MAX_IDENTIFIER_LEN 7
+#define MAX_IDENTIFIER_LEN 9 /*Fluxion: 7 upstream, integral( is 9*/
 
 struct Identifier {
     uint8_t length;

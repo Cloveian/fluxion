@@ -4,6 +4,7 @@
 
 #include <string.h>
 #include <stdlib.h>
+#include <math.h>
 
 #include "../parser.h"
 #include "../ast.h"
@@ -52,6 +53,7 @@ TestType resolve_type(char *type) {
     if(!strcmp(type, "system"))     return TEST_SYSTEM;
     if(!strcmp(type, "turn"))       return TEST_TURN;
     if(!strcmp(type, "csolve"))     return TEST_CSOLVE;
+    if(!strcmp(type, "antideriv"))  return TEST_ANTIDERIV;
 
     return TEST_INVALID;
 }
@@ -741,6 +743,76 @@ static bool check_text(test_t *t, pcas_ast_t *e) {
     return passed;
 }
 
+/*Fluxion: a and b the same at var = 0.2, 0.5 and 0.7, to float precision. simplify can't always show it, 144/12^2 or sec^2 agianst 1/cos^2. in (0, 1) so asin and ln are real there*/
+static bool same_at(pcas_ast_t *a, pcas_ast_t *b, pcas_ast_t *var) {
+    static const int at[3] = { 2, 5, 7 };
+    pcas_ast_t *x, *y, *p, *q, *n;
+    double u, w;
+    int i;
+    bool same = true;
+
+    for(i = 0; i < 3 && same; i++) {
+        x = ast_Copy(a);
+        y = ast_Copy(b);
+        n = ast_MakeNumber(num_FromFraction(at[i], 10));
+        if(x != NULL && y != NULL && n != NULL) { /*oom*/
+            substitute(x, var, n);
+            substitute(y, var, n);
+        }
+        ast_Cleanup(n);
+        simplify(x, SIMP_ALL);
+        simplify(y, SIMP_ALL);
+        p = approx_number(x);
+        q = approx_number(y);
+        same = p != NULL && q != NULL;
+        if(same) {
+            u = approx_int(mp_rat_numer_ref(p->op.num)) / approx_int(mp_rat_denom_ref(p->op.num));
+            w = approx_int(mp_rat_numer_ref(q->op.num)) / approx_int(mp_rat_denom_ref(q->op.num));
+            same = fabs(u - w) <= 1e-4 * (1 + fabs(w));
+        }
+        ast_Cleanup(x);
+        ast_Cleanup(y);
+        ast_Cleanup(p);
+        ast_Cleanup(q);
+    }
+    return same;
+}
+
+/*Fluxion: antideriv; f; var. integral(f, var) has to come out with no integral left, and d/dvar of it back to f*/
+static bool test_antideriv(test_t *t) {
+    char src[256];
+    pcas_error_t err;
+    pcas_ast_t *f, *F, *d, *v, *left[STEPS_FOUND_MAX];
+    bool passed;
+
+    sprintf(src, "integral(%.200s,%.8s)", t->arg1, t->arg2);
+    F = parse((uint8_t*)src, strlen(src), str_table, &err);
+    f = parse((uint8_t*)t->arg1, strlen(t->arg1), str_table, &err);
+    v = parse((uint8_t*)t->arg2, strlen(t->arg2), str_table, &err);
+    if(F == NULL || f == NULL || v == NULL) {
+        printf("Test failed on line %u. Unable to parse %s\n", t->line, t->arg1);
+        ast_Cleanup(F);
+        ast_Cleanup(f);
+        ast_Cleanup(v);
+        return false;
+    }
+    simplify(F, SIMP_ALL);
+    d = ast_Copy(F);
+    derivative(d, v, v);
+    passed = steps_find(F, OP_INTEGRAL, left, 0) == 0 && same_at(d, f, v) && !pcas_cancelled;
+    if(!passed) {
+        char got[256] = "";
+
+        append_tree(got, sizeof got, F);
+        printf("Test failed on line %u. integral of %s came out %s\n", t->line, t->arg1, got);
+    }
+    ast_Cleanup(F);
+    ast_Cleanup(f);
+    ast_Cleanup(v);
+    ast_Cleanup(d);
+    return passed;
+}
+
 bool test_Run(test_t *t) {
     pcas_ast_t *a = NULL, *b = NULL, *c = NULL, *expected, *actual;
     pcas_error_t err;
@@ -763,6 +835,8 @@ bool test_Run(test_t *t) {
         return test_system(t);
     if(t->type == TEST_STEPS)
         return test_steps(t);
+    if(t->type == TEST_ANTIDERIV)
+        return test_antideriv(t);
 
     a = parse((uint8_t*)t->arg1, strlen(t->arg1), str_table, &err);
     if(err != E_SUCCESS) {

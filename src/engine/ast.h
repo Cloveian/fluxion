@@ -51,6 +51,8 @@ typedef enum {
     OP_GCD, OP_LCM, OP_NCR, OP_NPR,
     /*Fluxion: lim of the 1st child as the 2nd (the var) goes to the 3rd, same children as OP_DERIV*/
     OP_LIMIT,
+    /*Fluxion: integral of the 1st child in the 2nd, from the 3rd to the 4th when those are there*/
+    OP_INTEGRAL,
 
     AMOUNT_OPS
 } OperatorType;
@@ -115,6 +117,7 @@ char *num_ToString(mp_rat num, mp_size precision);
 void num_Cleanup(mp_rat num);
 
 pcas_ast_t *ast_MakeNumber(mp_rat num);
+pcas_ast_t *ast_MakeInt(mp_small n); /*Fluxion*/
 pcas_ast_t *ast_MakeSymbol(char symbol);
 
 pcas_ast_t *ast_MakeOperator(OperatorType type);

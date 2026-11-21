@@ -264,6 +264,8 @@ float approx_int(mp_int z);
 bool substitute(pcas_ast_t *e, pcas_ast_t *from, pcas_ast_t *to);
 /*Fluxion: every limit(f,x,a) node in e worked out, SIMP_DERIV runs it. one with no limit stays a limit*/
 bool eval_limit_nodes(pcas_ast_t *e);
+/*Fluxion: every integral(f,x) and integral(f,x,a,b) node in e worked out (cas/integrate.c). one with no rule stays an integral*/
+bool eval_integral_nodes(pcas_ast_t *e);
 
 /*Returns the greatest common divisor of two expressions.
 gcd(X(X+1)^2, AX) = X 

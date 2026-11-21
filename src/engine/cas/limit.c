@@ -21,21 +21,6 @@ static pcas_ast_t *value_at(pcas_ast_t *e, pcas_ast_t *var, pcas_ast_t *a) {
     return v;
 }
 
-/*d/dx of e, new and simplified. NULL the same way*/
-static pcas_ast_t *slope(pcas_ast_t *e, pcas_ast_t *var) {
-    pcas_ast_t *d = ast_Copy(e);
-
-    if(d == NULL)
-        return NULL;
-    derivative(d, var, var);
-    simplify(d, SIMP_ALL);
-    if(pcas_cancelled) {
-        ast_Cleanup(d);
-        return NULL;
-    }
-    return d;
-}
-
 static bool is_int_at(pcas_ast_t *e, pcas_ast_t *var, pcas_ast_t *a, int n) {
     pcas_ast_t *v = value_at(e, var, a);
     bool is = v != NULL && is_ast_int(v, n);
@@ -164,7 +149,7 @@ static int lhopital(pcas_ast_t *top, pcas_ast_t *bottom, pcas_ast_t *var, pcas_a
 
     if(tries <= 0)
         return FAR_NONE;
-    g = ast_MakeBinary(OP_DIV, slope(top, var), slope(bottom, var));
+    g = ast_MakeBinary(OP_DIV, slope_of(top, var), slope_of(bottom, var));
     if(g == NULL)
         return FAR_NONE;
     simplify(g, SIMP_ALL);
@@ -743,8 +728,8 @@ static pcas_ast_t *limit_of(pcas_ast_t *f, pcas_ast_t *var, pcas_ast_t *a, steps
             bottom = ast_Copy(ast_ChildGet(g, 1));
             l = step(s, l, "0/0, factor and cancel", lim(g, var, a));
         } else {
-            t = slope(top, var);
-            b = slope(bottom, var);
+            t = slope_of(top, var);
+            b = slope_of(bottom, var);
             ast_Cleanup(top);
             ast_Cleanup(bottom);
             top = t;

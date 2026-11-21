@@ -92,6 +92,11 @@ pcas_ast_t *ast_MakeNumber(mp_rat num) {
     return ret;
 }
 
+/*Fluxion*/
+pcas_ast_t *ast_MakeInt(mp_small n) {
+    return ast_MakeNumber(num_FromInt(n));
+}
+
 pcas_ast_t *ast_MakeSymbol(char symbol) {
     pcas_ast_t *ret = pcas_malloc(sizeof(pcas_ast_t));
     if(ret == NULL) /*Fluxion: oom*/

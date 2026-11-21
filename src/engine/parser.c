@@ -23,6 +23,7 @@ struct Identifier ti_table[AMOUNT_TOKENS] = {
     {2, {0xBB, 0x09}}, {2, {0xBB, 0x08}},   /*TOK_GCD, TOK_LCM*/
     {2, {0xBB, 0xF3}}, {2, {0xBB, 0xF4}},   /*TOK_NCR, TOK_NPR. Fluxion: made up, the TI's nCr and nPr go between the numbers*/
     {2, {0xBB, 0xF5}},          /*TOK_LIMIT. Fluxion: made up, the TI has no limit*/
+    {2, {0xBB, 0xF7}},          /*TOK_INTEGRAL. Fluxion: made up too, fnInt( is numeric*/
 
     {1, {0xB1}}, {1, {0xB2}},   /*TOK_INT, TOK_ABS*/
     {1, {0xBC}}, {1, {0xBD}},   /*TOK_SQRT, TOK_CUBED_ROOT*/
@@ -67,6 +68,7 @@ struct Identifier str_table[AMOUNT_TOKENS] = {
     {4, "gcd("}, {4, "lcm("},       /*TOK_GCD, TOK_LCM*/
     {4, "nCr("}, {4, "nPr("},       /*TOK_NCR, TOK_NPR*/
     {6, "limit("},                  /*TOK_LIMIT*/
+    {9, "integral("},               /*TOK_INTEGRAL*/
 
     {4, "int("}, {4, "abs("},       /*TOK_INT, TOK_ABS*/
     {5, "sqrt("}, {5, "cbrt("},     /*TOK_SQRT, TOK_CUBED_ROOT. Fluxion: 7 upstream, cbrt( never matched*/
@@ -385,6 +387,7 @@ void translate(pcas_ast_t *e) {
     case TOK_NCR:        optype(e) = OP_NCR; break;
     case TOK_NPR:        optype(e) = OP_NPR; break;
     case TOK_LIMIT:      optype(e) = OP_LIMIT; break; /*Fluxion*/
+    case TOK_INTEGRAL:   optype(e) = OP_INTEGRAL; break; /*Fluxion*/
     case TOK_INT:        optype(e) = OP_INT; break;
     case TOK_ABS:        optype(e) = OP_ABS; break;
     case TOK_SQRT:
@@ -436,7 +439,7 @@ bool collapse_precedence(pcas_stack_t *operators, pcas_stack_t *expressions, Tok
     while(operators->top > 0) {
         pcas_ast_t *collapsed;
         token_t *op;
-        unsigned i;
+        unsigned i, n;
 
         /*Break when we meet the corresponding (*/
         if(type == TOK_CLOSE_PAR && ((token_t*)stack_Peek(operators))->type == TOK_OPEN_PAR)
@@ -455,12 +458,16 @@ bool collapse_precedence(pcas_stack_t *operators, pcas_stack_t *expressions, Tok
         if(op->type == TOK_OPEN_PAR)
             continue;
 
+        n = op->type == TOK_INTEGRAL ? (unsigned)op->op.symbol + 1 : operand_count(op->type); /*Fluxion: integral( by its commas*/
+        if(op->type == TOK_INTEGRAL && n != 2 && n != 4) /*Fluxion*/
+            return false;
+
         /*Store the token type into the operand type. This will
         Be fixed in make_operator*/
         collapsed = ast_MakeOperator((OperatorType) op->type);
         if(collapsed == NULL) /*Fluxion: oom. operands stay on the stack so parse_assert frees them*/
             return false;
-        for(i = 0; i < operand_count(op->type); i++) {
+        for(i = 0; i < n; i++) {
             pcas_ast_t *operand = stack_Pop(expressions);
 
             if(operand == NULL) {
@@ -597,6 +604,7 @@ pcas_ast_t *parse(const uint8_t *equation, unsigned length, struct Identifier *l
         } else if(is_tok_function(tok->type)) {
             /*Insert a ( to correspond with the other closing ) following the parameters*/
             stack_Push(&operators, &open_par);
+            tok->op.symbol = 0; /*Fluxion: a function has no symbol, so it counts its commas there. integral( takes 2 or 4*/
             stack_Push(&operators, tok);
         } else if(tok->type == TOK_CLOSE_PAR) {
             parse_assert(collapse_precedence(&operators, &expressions, TOK_CLOSE_PAR), E_PARSE_BAD_OPERATOR);
@@ -611,6 +619,7 @@ pcas_ast_t *parse(const uint8_t *equation, unsigned length, struct Identifier *l
         } else if(tok->type == TOK_COMMA) {
             parse_assert(collapse_precedence(&operators, &expressions, TOK_COMMA), E_PARSE_BAD_OPERATOR);
             parse_assert(operators.top > 0 && is_tok_function(((token_t*)stack_Peek(&operators))->type), E_PARSE_BAD_COMMA);
+            ((token_t*)stack_Peek(&operators))->op.symbol++; /*Fluxion*/
         }
     }
 

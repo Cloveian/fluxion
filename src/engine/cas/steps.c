@@ -4,8 +4,6 @@
 
 #include "steps.h"
 
-#define SIMP_LIGHT (SIMP_NORMALIZE | SIMP_COMMUTATIVE | SIMP_RATIONAL | SIMP_EVAL)
-
 /*a side read as c[0] + c[1]x + c[2]x^2 in numbers*/
 typedef struct {
     mp_rat c[3];
@@ -636,8 +634,6 @@ static bool formula(pcas_ast_t *left, pcas_ast_t *right, Symbol var, side_t *sid
 
 /*--- derivatives, one rule a line ---*/
 
-#define DERIVS_MAX 16
-
 step_t *steps_expr(steps_t *s, pcas_ast_t *e) {
     step_t *l = e != NULL ? new_line(s) : NULL;
 
@@ -649,18 +645,17 @@ step_t *steps_expr(steps_t *s, pcas_ast_t *e) {
     return l;
 }
 
-/*the outtermost deriv nodes in e into d, n so far*/
-static int find_derivs(pcas_ast_t *e, pcas_ast_t **d, int n) {
+int steps_find(pcas_ast_t *e, OperatorType op, pcas_ast_t **d, int n) {
     pcas_ast_t *c;
 
-    if(e->type != NODE_OPERATOR || n >= DERIVS_MAX)
+    if(e->type != NODE_OPERATOR || n >= STEPS_FOUND_MAX)
         return n;
-    if(isoptype(e, OP_DERIV)) {
+    if(isoptype(e, op)) {
         d[n] = e;
         return n + 1;
     }
     for(c = ast_ChildGet(e, 0); c != NULL; c = c->next)
-        n = find_derivs(c, d, n);
+        n = steps_find(c, op, d, n);
     return n;
 }
 
@@ -761,8 +756,8 @@ static const char *one_rule(pcas_ast_t *e, Symbol var, bool *chain) {
 
 /*d/dx(5) is 0 and d/dx(2x+1) is 2 without a line of their own, like on paper, then a light tidy: 1*2x^(2_1) is 2x*/
 static void quiet_rules(pcas_ast_t *e, Symbol var) {
-    pcas_ast_t *d[DERIVS_MAX], *c[3];
-    int n = find_derivs(e, d, 0), i, k, deg;
+    pcas_ast_t *d[STEPS_FOUND_MAX], *c[3];
+    int n = steps_find(e, OP_DERIV, d, 0), i, k, deg;
 
     for(i = 0; i < n; i++) {
         deg = poly_coefs(ast_ChildGet(d[i], 0), var, c);
@@ -793,7 +788,7 @@ void steps_rule(step_t *l, const char *name) {
 }
 
 bool steps_derivative(pcas_ast_t *d, steps_t *out) {
-    pcas_ast_t *cur, *found[DERIVS_MAX], *done, *first;
+    pcas_ast_t *cur, *found[STEPS_FOUND_MAX], *done, *first;
     Symbol var;
     bool chain, any_chain;
     const char *name;
@@ -813,7 +808,7 @@ bool steps_derivative(pcas_ast_t *d, steps_t *out) {
     if(cur != NULL) /*d/dx at 3: the rules on d/dx at x, the 3 goes in at the end*/
         replace_node(ast_ChildGet(cur, 2), ast_Copy(ast_ChildGet(d, 1)));
 
-    while(l != NULL && !pcas_cancelled && (n = find_derivs(cur, found, 0)) > 0) { /*cur can be NULL after an oom*/
+    while(l != NULL && !pcas_cancelled && (n = steps_find(cur, OP_DERIV, found, 0)) > 0) { /*cur can be NULL after an oom*/
         any_chain = false;
         for(i = 0; i < n; i++) {
             if((name = one_rule(found[i], var, &chain)) == NULL) {

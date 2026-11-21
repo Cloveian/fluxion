@@ -30,6 +30,8 @@ pcas_id_t id_derivative[ID_NUM_DERIV] = {
     {"deriv(asinh(A,X,T", "deriv(A,X,T)/sqrt(A^2+1"},
     {"deriv(acosh(A,X,T", "deriv(A,X,T)/sqrt(A^2_1"},
     {"deriv(atanh(A,X,T", "deriv(A,X,T)/(1_A^2"},
+
+    {"deriv(abs(A,X,T", "Aderiv(A,X,T)/abs(A"}, /*Fluxion: ln|x| from the integrals*/
 };
 
 /*Identities we have to check manually because we have to check for constants*/
@@ -157,6 +159,21 @@ void derivative(pcas_ast_t *e, pcas_ast_t *respect_to, pcas_ast_t *eval_at) {
     ast_ChildAppend(deriv_node, ast_Copy(eval_at));     /*evaluate at*/
 
     while(!pcas_check() && eval_derivative_nodes(deriv_node));
-    
+
     replace_node(e, deriv_node);
+}
+
+/*Fluxion*/
+pcas_ast_t *slope_of(pcas_ast_t *e, pcas_ast_t *var) {
+    pcas_ast_t *d = ast_Copy(e);
+
+    if(d == NULL)
+        return NULL;
+    derivative(d, var, var);
+    simplify(d, SIMP_ALL);
+    if(pcas_cancelled) {
+        ast_Cleanup(d);
+        return NULL;
+    }
+    return d;
 }

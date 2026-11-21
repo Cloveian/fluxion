@@ -284,6 +284,17 @@ static unsigned _to_binary(pcas_ast_t *e, uint8_t *data, unsigned index, struct 
             add_token(TOK_CLOSE_PAR);
 
             break;
+        }  case OP_INTEGRAL: { /*Fluxion: integral(f,x) or integral(f,x,a,b)*/
+            pcas_ast_t *c;
+
+            add_token(TOK_INTEGRAL);
+            for(c = ast_ChildGet(e, 0); c != NULL; c = c->next) {
+                if(c != ast_ChildGet(e, 0))
+                    add_token(TOK_COMMA);
+                index = _to_binary(c, data, index, lookup, err);
+            }
+            add_token(TOK_CLOSE_PAR);
+            break;
         }  case OP_DERIV: case OP_LIMIT: { /*Fluxion: limit(f,x,a) the same shape*/
             pcas_ast_t *a, *b, *c;
 

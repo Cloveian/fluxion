@@ -802,6 +802,44 @@ simplify; limit(sqrt(X^2+X)+X,X,-inf); -1/2
 simplify; limit(sqrt(4X^2+1)/(X_3),X,-inf); -2
 simplify; limit(sqrt(X^2+1)_sqrt(X^2_1),X,inf); 0
 simplify; limit(X^2,X,inf)+1; limit(X^2,X,inf)+1
+
+#integral(f, x) and integral(f, x, a, b): sum and constant multiple, then a table for f(ax+b). no +C on the answer, like the nspire
+simplify; integral(X^2,X); X^3/3
+simplify; integral(3X^2+2X+1,X); X^3+X^2+X
+simplify; integral(sin(X),X); -cos(X)
+simplify; integral(cos(3X),X); sin(3X)/3
+simplify; integral(e^(2X),X); e^(2X)/2
+simplify; integral(1/X,X); ln(abs(X))
+simplify; integral(1/(1+X^2),X); atan(X)
+simplify; integral(X^2,X,0,3); 9
+#a hole or a bound between a and b stays an integral, 1/x^2 from -1 to 1 isn't -2
+simplify; integral(1/X^2,X,-1,1); integral(1/X^2,X,-1,1)
+simplify; integral(1/X^2,X,1,2); 1/2
+simplify; integral(sqrt(X),X,0,4); 16/3
+simplify; integral(1/X,X,-2,-1); -ln(2)
+simplify; integral(tan(X),X,0,1); integral(tan(X),X,0,1)
+simplify; integral(ln(X),X,0,1); integral(ln(X),X,0,1)
+#antideriv: no integral left and d/dx of it is f again, checked at x = 0.2, 0.5, 0.7
+antideriv; X^2; X
+antideriv; sqrt(X); X
+antideriv; 1/X^2; X
+antideriv; sec(X)^2; X
+antideriv; 1/cos(X)^2; X
+antideriv; sec(X)tan(X); X
+antideriv; 1/sqrt(1_X^2); X
+antideriv; 2^X; X
+antideriv; ln(X); X
+antideriv; log(X); X
+antideriv; logb(X,2); X
+antideriv; tan(X); X
+antideriv; (2X+1)^5; X
+antideriv; 1/(3X+2); X
+antideriv; 5/X; X
+antideriv; X^3/4_2X; X
+antideriv; cosh(2X); X
+antideriv; 4; X
+antideriv; e^(-X); X
+antideriv; sin(2X+1); X
 decimal; 3root(-8); -2
 
 #show the work (steps; equation; var and method; lines | the move | lines). the last line has to be solve's roots

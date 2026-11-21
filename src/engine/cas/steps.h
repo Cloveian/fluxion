@@ -50,7 +50,10 @@ bool steps_derivative(pcas_ast_t *d, steps_t *out);
 bool steps_limit(pcas_ast_t *l, steps_t *out);
 void steps_free(steps_t *s);
 
-/*for limit.c, which works its steps out in its own loop*/
+/*for limit.c and integrate.c, which work their steps out in their own loops*/
+#define STEPS_FOUND_MAX 16
+#define SIMP_LIGHT (SIMP_NORMALIZE | SIMP_COMMUTATIVE | SIMP_RATIONAL | SIMP_EVAL)
+int steps_find(pcas_ast_t *e, OperatorType op, pcas_ast_t **d, int n); /*the outermost op nodes in e into d, n so far*/
 step_t *steps_expr(steps_t *s, pcas_ast_t *e); /*a line that's just e, = the one above. takes e*/
 void steps_rule(step_t *l, const char *name); /*name on l, move n. once each, two power rules on a line read as one*/
 void steps_shown(steps_t *s); /*every tree in the canonical form, at the end. 3X+5 and not 5+3X*/
