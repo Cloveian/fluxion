@@ -2160,6 +2160,11 @@ static int cursor_x(const box_t *b, int x) {
     return -1;
 }
 
+/* the nspire's main screen gets the bar's rows too */
+static int body_bottom(void) {
+    return NSPIRE ? areas.keys.y + areas.keys.h : areas.body.y + areas.body.h;
+}
+
 static void draw_bar(void) {
     const char *names[FOLDER_COUNT];
     int i;
@@ -2173,7 +2178,7 @@ static void draw_menu(void) {
     const font_t *font = draw_label_font();
     const folder_t *f = menu_in;
     int row_h = font->ascent + font->descent + 2;
-    int bottom = (NSPIRE ? areas.keys.y + areas.keys.h : areas.body.y + areas.body.h) - 1;
+    int bottom = body_bottom() - 1;
     int rows = (int)f->count, max_rows;
     int width = 0, x, top, i;
 
@@ -2436,7 +2441,7 @@ static void draw_screen(void) {
     box_t *in = ed_layout(&ed, &draw_font, true);
     int left = areas.body.x + MARGIN, right = areas.body.x + areas.body.w - MARGIN;
     int line_y, y, i, avail = right - left, first;
-    int top = areas.body.y, bottom = NSPIRE ? areas.keys.y + areas.keys.h : areas.body.y + areas.body.h;
+    int top = areas.body.y, bottom = body_bottom();
 
     screen_clear();
 
