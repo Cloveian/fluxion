@@ -54,8 +54,6 @@ static pcas_ast_t *ln_abs(pcas_ast_t *u) {
     return ast_MakeBinary(OP_LOG, ast_MakeSymbol(SYM_EULER), ast_MakeUnary(OP_ABS, u));
 }
 
-static bool value(pcas_ast_t *e, double *v);
-
 /*c + k u^2 (sign 1) or c - k u^2 (sign -1), c and k plain numbers over 0: u, with c and k new. else NULL*/
 static pcas_ast_t *square_plus(pcas_ast_t *e, pcas_ast_t *x, int sign, pcas_ast_t **c, pcas_ast_t **k) {
     pcas_ast_t *a, *b, *sq;
@@ -67,7 +65,7 @@ static pcas_ast_t *square_plus(pcas_ast_t *e, pcas_ast_t *x, int sign, pcas_ast_
     b = ast_ChildGet(e, 1);
     sq = has_symbol(a, x->op.symbol) ? a : b;
     a = sq == a ? b : a; /*the constant*/
-    if(has_symbol(a, x->op.symbol) || !value(a, &cv) || cv <= 0)
+    if(has_symbol(a, x->op.symbol) || !approx_double(a, &cv) || cv <= 0)
         return NULL;
     if(isoptype(sq, OP_MULT) && ast_ChildLength(sq) == 2 && !has_symbol(ast_ChildGet(sq, 0), x->op.symbol)) { /*9x^2*/
         *k = ast_Copy(ast_ChildGet(sq, 0));
@@ -77,7 +75,7 @@ static pcas_ast_t *square_plus(pcas_ast_t *e, pcas_ast_t *x, int sign, pcas_ast_
     }
     if(sign < 0)
         *k = ast_MakeBinary(OP_MULT, ast_MakeInt(-1), *k);
-    if(*k == NULL || !value(*k, &kv) || kv <= 0 || !isoptype(sq, OP_POW) || !is_value(ast_ChildGet(sq, 1), 2, 1)) {
+    if(*k == NULL || !approx_double(*k, &kv) || kv <= 0 || !isoptype(sq, OP_POW) || !is_value(ast_ChildGet(sq, 1), 2, 1)) {
         ast_Cleanup(*k);
         return NULL;
     }
@@ -408,17 +406,6 @@ static pcas_ast_t *integral_of(pcas_ast_t *I, steps_t *s) {
     return cur;
 }
 
-/*e as a double, false when it isn't a plain real number (pi/2 + pi n, i)*/
-static bool value(pcas_ast_t *e, double *v) {
-    pcas_ast_t *n = approx_number(e);
-
-    if(n == NULL)
-        return false;
-    *v = (double)approx_int(mp_rat_numer_ref(n->op.num)) / approx_int(mp_rat_denom_ref(n->op.num));
-    ast_Cleanup(n);
-    return true;
-}
-
 /*f defined the whole way from a to b, so F(b) - F(a) is the area. 1/x^2 from -1 to 1 would come out -2.
 false for a hole or a bound in between, or anything domain can't pin down (tan's pi/2 + pi n)*/
 static bool defined_between(pcas_ast_t *I) {
@@ -427,7 +414,7 @@ static bool defined_between(pcas_ast_t *I) {
     bool ok;
     int i;
 
-    if(!value(ast_ChildGet(I, 2), &a) || !value(ast_ChildGet(I, 3), &b)
+    if(!approx_double(ast_ChildGet(I, 2), &a) || !approx_double(ast_ChildGet(I, 3), &b)
        || !domain(ast_ChildGet(I, 0), ast_ChildGet(I, 1)->op.symbol, &d))
         return false;
     if(a > b) {
@@ -437,11 +424,11 @@ static bool defined_between(pcas_ast_t *I) {
     }
     ok = !d.partial && !d.empty;
     if(ok && d.lower != NULL)
-        ok = value(d.lower, &h) && (d.lower_open ? a > h : a >= h);
+        ok = approx_double(d.lower, &h) && (d.lower_open ? a > h : a >= h);
     if(ok && d.upper != NULL)
-        ok = value(d.upper, &h) && (d.upper_open ? b < h : b <= h);
+        ok = approx_double(d.upper, &h) && (d.upper_open ? b < h : b <= h);
     for(i = 0; i < d.nholes && ok; i++)
-        ok = value(d.holes[i], &h) && (h < a || h > b);
+        ok = approx_double(d.holes[i], &h) && (h < a || h > b);
     domain_free(&d);
     return ok;
 }

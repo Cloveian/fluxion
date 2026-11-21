@@ -727,6 +727,16 @@ solve; cos(2X)=1/2; X; pi/6+Npi,(-pi)/6+Npi
 solve; acot(X)=pi/4; X; 1
 solve; asec(X)=pi/3; X; 2
 solve; acsc(2X)=pi/6; X; 1
+#past what the inverse ever gives, nothing. the ends that are in still work
+solve; asin(X)=4; X; false
+solve; asin(X)=pi/2; X; 1
+solve; acos(X)=-1; X; false
+solve; acos(X)=pi; X; -1
+solve; atan(X)=pi/2; X; false
+solve; acot(X)=-pi/4; X; false
+solve; asec(X)=pi/2; X; false
+solve; acsc(X)=0; X; false
+solve; asin(X)=Y; X; sin(Y)
 
 #integer logs come out exact
 simplify; log(1000)+logb(8,2); 6

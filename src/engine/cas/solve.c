@@ -1097,6 +1097,27 @@ static void clear_denominators(pcas_ast_t **e) {
     num_Cleanup(l);
 }
 
+/*Fluxion: v is a number op never gives, so asin(x) = 4 has no x. asin atan acsc
+  give -pi/2 to pi/2, acos asec acot 0 to pi. atan and acot never reach the ends,
+  acsc skips 0 and asec pi/2. 1e-5 of slack, the decimal is a float's worth*/
+static bool past_range(OperatorType op, pcas_ast_t *v) {
+    double x, lo, hi, pi = 3.14159265358979;
+
+    switch(op) {
+    case OP_SIN_INV: case OP_TAN_INV: case OP_CSC_INV: lo = -pi / 2; break;
+    case OP_COS_INV: case OP_COT_INV: case OP_SEC_INV: lo = 0; break;
+    default: return false;
+    }
+    if(!approx_double(v, &x))
+        return false; /*a letter in it, can't tell*/
+    hi = lo + pi;
+    if(op == OP_TAN_INV || op == OP_COT_INV)
+        return x < lo + 1e-5 || x > hi - 1e-5;
+    if((op == OP_SEC_INV || op == OP_CSC_INV) && x > (lo + hi) / 2 - 1e-5 && x < (lo + hi) / 2 + 1e-5)
+        return true;
+    return x < lo - 1e-5 || x > hi + 1e-5;
+}
+
 static int isolate(pcas_ast_t *e, Symbol var, pcas_ast_t **out, bool complex) {
     pcas_ast_t *side = e, *other[SOLVE_MAX];
     int m = 1, i;
@@ -1119,6 +1140,18 @@ static int isolate(pcas_ast_t *e, Symbol var, pcas_ast_t **out, bool complex) {
                 in = c;
         if(in == NULL)
             goto nope;
+
+        if(!complex) { /*Fluxion: out of the inverse's reach, no root there*/
+            int k = 0;
+
+            for(i = 0; i < m; i++) {
+                if(past_range(op, other[i]))
+                    ast_Cleanup(other[i]);
+                else
+                    other[k++] = other[i];
+            }
+            m = k;
+        }
 
         for(i = 0; i < m; i++) {
             pcas_ast_t *o = other[i], *t = NULL;
@@ -1239,6 +1272,16 @@ pcas_ast_t *approx_number(pcas_ast_t *e) {
         return a;
     ast_Cleanup(a);
     return NULL;
+}
+
+bool approx_double(pcas_ast_t *e, double *v) {
+    pcas_ast_t *n = approx_number(e);
+
+    if(n == NULL)
+        return false;
+    *v = (double)approx_int(mp_rat_numer_ref(n->op.num)) / approx_int(mp_rat_denom_ref(n->op.num));
+    ast_Cleanup(n);
+    return true;
 }
 
 /*the family with one integer in for n, not simplified. approx_number folds it for the

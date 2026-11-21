@@ -243,6 +243,8 @@ int solve_in_range(pcas_ast_t **roots, int n, pcas_ast_t *hi);
 /*Fluxion: e as a decimal, one NUMBER node (a new tree), NULL with a letter left.
 what solve and system sort their roots by*/
 pcas_ast_t *approx_number(pcas_ast_t *e);
+/*Fluxion: the same as a double, false when it isn't a plain real number (pi/2 + pi n, i)*/
+bool approx_double(pcas_ast_t *e, double *v);
 /*Fluxion: is the symbol s anywhere in e*/
 bool has_symbol(const pcas_ast_t *e, Symbol s);
 
