@@ -618,6 +618,9 @@ void id_Unload(pcas_id_t *id) {
     id->to = NULL;
 }
 
+/*Fluxion: a long is 32 bits on the CE and OP_NPR is bit 31. one more op before it and this won't build, anywhere*/
+typedef char func_mask_fits[OP_NPR < 32 ? 1 : -1];
+
 /*Fluxion: bit per function operator (log, deriv and the unary functions) in e.
 matching is exact for these (see matches()), so an identity whose from has a
 function that e doesn't can never match. Add/mult/div/pow/root are left out:
