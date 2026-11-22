@@ -777,7 +777,8 @@ solve; 2sqrt(X+1)=X+1; X; -1,3
 solve; sqrt(X)=-X_2; X; false
 solve; sqrt(3X+2)=2X+3; X; false
 csolve; sqrt(X+7)=X+1; X; 2
-csolve; sqrt(3X+2)=2X+3; X; unknown
+csolve; sqrt(3X+2)=2X+3; X; -9/8_(i31^(1/2))/8,-9/8+(i31^(1/2))/8
+csolve; sqrt(X)=-4X_4; X; false
 #checked against the equation as typed, simplify makes sqrt(-3x) i sqrt(3)sqrt(x) and that checked out at -3/16
 solve; sqrt(-3X)=4X; X; 0
 solve; sqrt(-X)=-2; X; false

@@ -259,6 +259,8 @@ bool has_symbol(const pcas_ast_t *e, Symbol s);
 bool approx(pcas_ast_t *e);
 /*Fluxion: e as a float straight off the tree, no simplify. false with a letter left or where it isn't real, sqrt(-1)*/
 bool approx_float(pcas_ast_t *e, double *x);
+/*Fluxion: the same over the complex numbers, principal powers and roots. for checking a complex root*/
+bool approx_complex(pcas_ast_t *e, double *re, double *im);
 
 /*Fluxion: r as a decimal with digits significant digits: 1.25, 0.333333, 2.28892E7.
 plain from 0.001 up to 10^digits. buf needs digits + 10 chars*/

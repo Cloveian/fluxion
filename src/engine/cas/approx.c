@@ -140,6 +140,112 @@ static bool value(pcas_ast_t *e, real *x) {
     return isfinite(*x);
 }
 
+typedef struct {
+    real re, im;
+} cplx;
+
+/*a^b on the principal branch, e^(b ln a). 0^b only for b over 0*/
+static bool cpow(cplx a, cplx b, cplx *z) {
+    real lr, la, wr, wi;
+
+    if(a.re == 0 && a.im == 0) {
+        z->re = z->im = 0;
+        return b.re > 0;
+    }
+    lr = logf(sqrtf(a.re * a.re + a.im * a.im));
+    la = atan2f(a.im, a.re);
+    wr = b.re * lr - b.im * la;
+    wi = b.re * la + b.im * lr;
+    z->re = expf(wr) * cosf(wi);
+    z->im = expf(wr) * sinf(wi);
+    return true;
+}
+
+/*value() over the complex numbers, for checking a complex root. powers and roots on the principal
+  branch (sqrt(-4) is 2i) except where value() already has a real one, an odd root of a negative.
+  past + * / ^ and roots the insides have to be real*/
+static bool cvalue(pcas_ast_t *e, cplx *z) {
+    pcas_ast_t *child;
+    cplx a, b;
+    real r;
+
+    if(e == NULL)
+        return false;
+    if(e->type == NODE_SYMBOL && e->op.symbol == SYM_IMAG) {
+        z->re = 0;
+        z->im = 1;
+        return true;
+    }
+    if(e->type != NODE_OPERATOR) {
+        z->im = 0;
+        return value(e, &z->re);
+    }
+
+    switch(optype(e)) {
+    case OP_ADD:
+    case OP_MULT:
+        z->re = optype(e) == OP_ADD ? 0 : 1;
+        z->im = 0;
+        for(child = ast_ChildGet(e, 0); child != NULL; child = child->next) {
+            if(!cvalue(child, &b))
+                return false;
+            if(optype(e) == OP_ADD) {
+                z->re += b.re;
+                z->im += b.im;
+            } else {
+                r = z->re * b.re - z->im * b.im;
+                z->im = z->re * b.im + z->im * b.re;
+                z->re = r;
+            }
+        }
+        break;
+    case OP_DIV:
+        if(!cvalue(ast_ChildGet(e, 0), &a) || !cvalue(ast_ChildGet(e, 1), &b) || (b.re == 0 && b.im == 0))
+            return false;
+        r = b.re * b.re + b.im * b.im;
+        z->re = (a.re * b.re + a.im * b.im) / r;
+        z->im = (a.im * b.re - a.re * b.im) / r;
+        break;
+    case OP_POW:
+    case OP_ROOT:
+        if(!has_imaginary_node(e) && value(e, &r)) { /*real already, and an odd root stays real*/
+            z->re = r;
+            z->im = 0;
+            break;
+        }
+        if(optype(e) == OP_POW) {
+            if(!cvalue(ast_ChildGet(e, 0), &a) || !cvalue(ast_ChildGet(e, 1), &b))
+                return false;
+        } else { /*index first, radicand^(1/index)*/
+            if(!cvalue(ast_ChildGet(e, 1), &a) || !cvalue(ast_ChildGet(e, 0), &b) || (b.re == 0 && b.im == 0))
+                return false;
+            r = b.re * b.re + b.im * b.im;
+            b.re = b.re / r;
+            b.im = -b.im / r;
+        }
+        if(!cpow(a, b, z))
+            return false;
+        break;
+    default:
+        if(has_imaginary_node(e) || !value(e, &r))
+            return false;
+        z->re = r;
+        z->im = 0;
+        break;
+    }
+    return isfinite(z->re) && isfinite(z->im);
+}
+
+bool approx_complex(pcas_ast_t *e, double *re, double *im) {
+    cplx z;
+
+    if(!cvalue(e, &z))
+        return false;
+    *re = z.re;
+    *im = z.im;
+    return true;
+}
+
 /*x exactly, as a fraction over a power of 2*/
 static mp_rat rat_from(real x) {
     mp_rat r = num_FromInt(0);

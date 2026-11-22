@@ -1543,17 +1543,17 @@ static bool near_zero(pcas_ast_t *v);
 static int checks_out(pcas_ast_t *expr, Symbol var, pcas_ast_t *root, bool exact) {
     pcas_ast_t *v = ast_Copy(expr), *sym = ast_MakeSymbol(var), *w = NULL;
     int out = -1;
-    double d;
+    double re, im;
 
-    /*a float can't check a complex one, and the full simplify of one plugged in was ~390 s on the calc*/
-    if(v != NULL && sym != NULL && !has_imaginary_node(root)) {
+    if(v != NULL && sym != NULL) {
         substitute(v, sym, root);
-        /*the float straight off the tree, a simplify pulls an i out of sqrt(-3(-27+sqrt(153))/8) too*/
+        /*a complex float straight off the tree, principal roots. a simplify pulls an i out of
+          sqrt(-3(-27+sqrt(153))/8), and the full one on a complex root was ~390 s on the calc*/
         if(near_zero(v))
             out = 1;
-        else if(approx_float(v, &d))
+        else if(approx_complex(v, &re, &im))
             out = 0;
-        else if(exact && (w = ast_Copy(v)) != NULL && (simplify(w, SIMP_ALL), is_zero(w))) /*only when the float cant, and a yes is wanted*/
+        else if(exact && !has_imaginary_node(root) && (w = ast_Copy(v)) != NULL && (simplify(w, SIMP_ALL), is_zero(w))) /*only when the float cant, and a yes is wanted*/
             out = 1;
     }
     ast_Cleanup(v);
@@ -1585,15 +1585,15 @@ static bool has_root_of(pcas_ast_t *e, Symbol var) {
   100000100 left a 1 behind*/
 static bool near_zero(pcas_ast_t *v) {
     pcas_ast_t *c;
-    double d, t, size = 1;
+    double re, im, tr, ti, size = 1;
 
-    if(!approx_float(v, &d))
+    if(!approx_complex(v, &re, &im))
         return false;
-    if(isoptype(v, OP_ADD))
+    if(isoptype(v, OP_ADD)) /*|re| + |im| for a size, close enough for a tolerance*/
         for(c = ast_ChildGet(v, 0); c != NULL; c = c->next)
-            if(approx_float(c, &t))
-                size += t < 0 ? -t : t;
-    return (d < 0 ? -d : d) <= 1e-5 * size;
+            if(approx_complex(c, &tr, &ti))
+                size += (tr < 0 ? -tr : tr) + (ti < 0 ? -ti : ti);
+    return (re < 0 ? -re : re) + (im < 0 ? -im : im) <= 1e-5 * size;
 }
 
 /*Fluxion: sqrt(3x+2) = 2x+3, var under a sqrt and outside it. c sqrt(u) + rest = 0 squared is c^2 u = rest^2.
