@@ -29,6 +29,71 @@ static bool is_int_at(pcas_ast_t *e, pcas_ast_t *var, pcas_ast_t *a, int n) {
     return is;
 }
 
+/*a letter left in e, pi e i and inf aren't*/
+static bool has_letter(pcas_ast_t *e) {
+    pcas_ast_t *c;
+
+    if(e->type == NODE_SYMBOL)
+        return (e->op.symbol >= SYM_A && e->op.symbol <= SYM_Z) || e->op.symbol == SYM_THETA;
+    if(e->type == NODE_OPERATOR)
+        for(c = ast_ChildGet(e, 0); c != NULL; c = c->next)
+            if(has_letter(c))
+                return true;
+    return false;
+}
+
+/*the ones only real on part of the line. sqrt(-1), ln(-3) and asin(2) aren't numbers*/
+static bool narrow(OperatorType op) {
+    switch(op) {
+    case OP_POW: case OP_ROOT: case OP_LOG: case OP_SIN_INV: case OP_COS_INV:
+    case OP_SEC_INV: case OP_CSC_INV: case OP_COSH_INV: case OP_TANH_INV:
+        return true;
+    default:
+        return false;
+    }
+}
+
+/*v came out a real number. with a letter still in it there's no telling, so yes*/
+static bool real(pcas_ast_t *v) {
+    pcas_ast_t *b = NULL, *p = NULL;
+    double d;
+
+    if(v == NULL || has_imaginary_node(v))
+        return false;
+    if(has_letter(v))
+        return true;
+    if(isoptype(v, OP_POW)) {
+        b = ast_ChildGet(v, 0);
+        p = ast_ChildGet(v, 1);
+    } else if(isoptype(v, OP_ROOT)) {
+        b = ast_ChildGet(v, 1);
+        p = ast_ChildGet(v, 0);
+    }
+    /*a number to a number's power goes by the base's sign and the power's bottom. as a decimal (-1)^(1/2) took 7 s on the calc*/
+    if(b != NULL && b->type == NODE_NUMBER && p->type == NODE_NUMBER) {
+        if(mp_rat_compare_zero(b->op.num) >= 0)
+            return true;
+        /*x^(a/b) for a power, the n of an nth root*/
+        return mp_int_is_odd(isoptype(v, OP_POW) ? mp_rat_denom_ref(p->op.num) : mp_rat_numer_ref(p->op.num));
+    }
+    return approx_double(v, &d);
+}
+
+/*just the numbers folded, a full simplify of sqrt(-1) takes the long way to i*/
+static bool real_at(pcas_ast_t *e, pcas_ast_t *var, pcas_ast_t *a) {
+    pcas_ast_t *v = ast_Copy(e);
+    bool is;
+
+    if(v != NULL) {
+        substitute(v, var, a);
+        simplify(v, SIMP_EVAL);
+    }
+    is = !pcas_cancelled && real(v);
+
+    ast_Cleanup(v);
+    return is;
+}
+
 /*a value at var = a on paper: no 0 below, no ln(0) or log base 0 / 1, no 0^0 or 0^-1, no tan(pi/2). on the tree as it is, a
 simplify after eats it, 0*e^(1/0) came out 0*/
 static bool defined_at(pcas_ast_t *e, pcas_ast_t *var, pcas_ast_t *a) {
@@ -52,10 +117,12 @@ static bool defined_at(pcas_ast_t *e, pcas_ast_t *var, pcas_ast_t *a) {
         base = ast_ChildGet(e, 0);
         if(has_symbol(base, var->op.symbol) && (is_int_at(base, var, a, 0) || is_int_at(base, var, a, 1)))
             return false;
-        return !is_int_at(ast_ChildGet(e, 1), var, a, 0);
+        return !is_int_at(ast_ChildGet(e, 1), var, a, 0) && real_at(e, var, a);
     case OP_POW:
-        if(!is_int_at(ast_ChildGet(e, 0), var, a, 0))
-            return true;
+        if(!is_int_at(ast_ChildGet(e, 0), var, a, 0)) { /*a whole power is real anywhere, x^(1/2) isn't*/
+            c = ast_ChildGet(e, 1);
+            return (c->type == NODE_NUMBER && mp_rat_is_integer(c->op.num)) || real_at(e, var, a);
+        }
         v = value_at(ast_ChildGet(e, 1), var, a);
         ok = v != NULL && v->type == NODE_NUMBER && mp_rat_compare_zero(v->op.num) > 0;
         ast_Cleanup(v);
@@ -66,7 +133,7 @@ static bool defined_at(pcas_ast_t *e, pcas_ast_t *var, pcas_ast_t *a) {
         ast_Cleanup(trig);
         return ok;
     default:
-        return true;
+        return !narrow(optype(e)) || real_at(e, var, a);
     }
 }
 
@@ -152,6 +219,16 @@ static int sign_far(pcas_ast_t *e, pcas_ast_t *var) {
 static int fin(pcas_ast_t **v, pcas_ast_t *e) {
     *v = e;
     return e != NULL ? FAR_FIN : FAR_NONE;
+}
+
+/*fin, but asin(2) and (-1)^(1/2) aren't somewhere to head to. takes e*/
+static int fin_real(pcas_ast_t **v, pcas_ast_t *e) {
+    if(e != NULL && e->type == NODE_OPERATOR && narrow(optype(e)) && !real(e)) {
+        ast_Cleanup(e);
+        *v = NULL;
+        return FAR_NONE;
+    }
+    return fin(v, e);
 }
 
 static int far(pcas_ast_t *e, pcas_ast_t *var, pcas_ast_t **v, int tries);
@@ -540,7 +617,7 @@ static int far_pow(pcas_ast_t *base, pcas_ast_t *ex, pcas_ast_t *var, pcas_ast_t
         s = sign_of(x);
         if(fb == FAR_FIN) {
             if(sign_of(b) != 0 || s == 1) { /*no 0^-1*/
-                out = fin(v, ast_MakeBinary(OP_POW, b, x));
+                out = fin_real(v, ast_MakeBinary(OP_POW, b, x));
                 b = x = NULL;
             }
         } else if(s == 0) {
@@ -607,7 +684,7 @@ static int far(pcas_ast_t *e, pcas_ast_t *var, pcas_ast_t **v, int tries) {
     case OP_TAN_INV: case OP_COT_INV: case OP_SEC_INV: case OP_CSC_INV:
         f = far(ast_ChildGet(e, 0), var, &cv, tries);
         if(f == FAR_FIN)
-            return fin(v, ast_MakeUnary(optype(e), cv));
+            return fin_real(v, ast_MakeUnary(optype(e), cv));
         if(f == FAR_NONE)
             return FAR_NONE;
         if(optype(e) == OP_TAN_INV)
@@ -638,7 +715,7 @@ static int far(pcas_ast_t *e, pcas_ast_t *var, pcas_ast_t **v, int tries) {
                 return FAR_NONE;
             }
         }
-        return fin(v, g);
+        return fin_real(v, g);
     }
 }
 

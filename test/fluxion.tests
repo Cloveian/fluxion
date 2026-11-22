@@ -789,6 +789,15 @@ simplify; limit(X,X,3)+2; 5
 simplify; limit(X*e^(1/X),X,0); limit(X*e^(1/X),X,0)
 simplify; limit(ln(X),X,0); limit(ln(X),X,0)
 simplify; limit(logb(2,X),X,1); limit(logb(2,X),X,1)
+#not real there, so not something to head to
+simplify; limit(sqrt(X_2),X,1); limit(sqrt(X_2),X,1)
+simplify; limit(asin(2+X),X,0); limit(asin(2+X),X,0)
+simplify; limit(ln(X),X,-2); limit(ln(X),X,-2)
+simplify; limit(asec(1/X),X,inf); limit(asec(1/X),X,inf)
+simplify; limit(sqrt(X),X,4); 2
+simplify; limit(asin(X/2),X,1); pi/6
+simplify; limit(X^(1/3),X,-8); -2
+simplify; limit((X+1)^(1/3),X,-9); -2
 simplify; limit(tan(X),X,pi/2); limit(tan(X),X,pi/2)
 simplify; limit(sin(1/X),X,0); limit(sin(1/X),X,0)
 simplify; limit(ln(X),X,1); 0
