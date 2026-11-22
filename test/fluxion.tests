@@ -770,6 +770,14 @@ csolve; asin(X)=4; X; false
 csolve; sqrt(X)=-1; X; false
 csolve; acos(X)=-1; X; false
 csolve; abs(X_2)=3; X; -1,5
+#x under a sqrt and outside it, squared and the made up ones plugged back in. sqrt(x) = x-2 squared has 1 too
+solve; sqrt(X)=X_2; X; 4
+solve; sqrt(X+7)=X+1; X; 2
+solve; 2sqrt(X+1)=X+1; X; -1,3
+solve; sqrt(X)=-X_2; X; false
+solve; sqrt(3X+2)=2X+3; X; false
+csolve; sqrt(X+7)=X+1; X; 2
+csolve; sqrt(3X+2)=2X+3; X; unknown
 
 #integer logs come out exact
 simplify; log(1000)+logb(8,2); 6

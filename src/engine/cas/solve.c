@@ -1522,6 +1522,112 @@ static int drop_undefined(pcas_ast_t **out, int n) {
     return n > 0 ? k : n;
 }
 
+/*Fluxion: e^(1/2), the 1/2 folded or not*/
+static bool half_power(pcas_ast_t *e) {
+    pcas_ast_t *p;
+    bool half;
+
+    if(!isoptype(e, OP_POW) || (p = ast_Copy(ast_ChildGet(e, 1))) == NULL)
+        return false;
+    fold_fraction(p);
+    half = p->type == NODE_NUMBER && mp_rat_compare_value(p->op.num, 1, 2) == 0;
+    ast_Cleanup(p);
+    return half;
+}
+
+/*Fluxion: v is 0 as far as a decimal can tell, next to the size of its terms. a float's 7 digits against
+  100000100 left a 1 behind*/
+static bool near_zero(pcas_ast_t *v) {
+    pcas_ast_t *c;
+    double d, t, size = 1;
+
+    if(!approx_double(v, &d))
+        return false;
+    if(isoptype(v, OP_ADD))
+        for(c = ast_ChildGet(v, 0); c != NULL; c = c->next)
+            if(approx_double(c, &t))
+                size += t < 0 ? -t : t;
+    return (d < 0 ? -d : d) <= 1e-5 * size;
+}
+
+/*Fluxion: sqrt(3x+2) = 2x+3, var under a sqrt and outside it. c sqrt(u) + rest = 0 squared is c^2 u = rest^2.
+  that also has the roots of c sqrt(u) = -rest, so each root gets plugged back into e and the ones that dont come out 0 go. u linear only, system.c does its own sqrt(x^2+9999)*/
+static int solve_root_away(pcas_ast_t *e, Symbol var, pcas_ast_t **out, bool complex) {
+    pcas_ast_t *t, *f, *term = NULL, *root = NULL, *sq, *sym;
+    coefs_t p;
+    bool linear, unsure = false;
+    int n, i, k;
+
+    if(!isoptype(e, OP_ADD))
+        return SOLVE_UNKNOWN;
+    for(t = ast_ChildGet(e, 0); t != NULL; t = t->next) {
+        pcas_ast_t *r = half_power(t) ? t : NULL;
+
+        if(isoptype(t, OP_MULT))
+            for(f = ast_ChildGet(t, 0); f != NULL; f = f->next)
+                if(half_power(f))
+                    r = f;
+        if(r != NULL && has_symbol(ast_ChildGet(r, 0), var)) {
+            if(term != NULL) /*two of them, squaring once leaves one*/
+                return SOLVE_UNKNOWN;
+            term = t;
+            root = r;
+        }
+    }
+    if(term == NULL)
+        return SOLVE_UNKNOWN;
+    linear = read_poly(ast_ChildGet(root, 0), var, &p);
+    if(linear) {
+        linear = p.deg == 1;
+        coefs_free(&p);
+    }
+    if(!linear)
+        return SOLVE_UNKNOWN;
+
+    sq = ast_MakeBinary(OP_ADD,
+            ast_MakeBinary(OP_MULT, ast_MakeBinary(OP_POW, term == root ? ast_MakeInt(1) : rest_of(term, root, OP_MULT), ast_MakeInt(2)),
+                           ast_Copy(ast_ChildGet(root, 0))),
+            ast_MakeBinary(OP_MULT, ast_MakeInt(-1), ast_MakeBinary(OP_POW, rest_of(e, term, OP_ADD), ast_MakeInt(2))));
+    if(sq == NULL)
+        return SOLVE_UNKNOWN;
+    n = solve_ex(sq, var, out, complex);
+    ast_Cleanup(sq);
+
+    sym = ast_MakeSymbol(var);
+    for(i = k = 0; n > 0 && i < n; i++) {
+        pcas_ast_t *v = ast_Copy(e);
+        bool keep = false;
+
+        if(v != NULL) {
+            substitute(v, sym, out[i]);
+            simplify(v, SIMP_ALL);
+            keep = is_zero(v) || near_zero(v);
+        }
+        ast_Cleanup(v);
+        /*a complex root the decimal cant check could still be one (sqrt(3x+2) = 2x+3 has two), unknown beats a wrong false*/
+        if(!keep && complex && has_imaginary_node(out[i]))
+            unsure = true;
+        if(keep)
+            out[k++] = out[i];
+        else
+            ast_Cleanup(out[i]);
+    }
+    if(n > 0) {
+        for(i = k; i < n; i++)
+            out[i] = NULL;
+        n = k;
+    }
+    ast_Cleanup(sym);
+    if(unsure) {
+        for(i = 0; i < k; i++) {
+            ast_Cleanup(out[i]);
+            out[i] = NULL;
+        }
+        return SOLVE_UNKNOWN;
+    }
+    return n;
+}
+
 /*Fluxion: var under a fraction bar, (3x-y)/(x+y) = 5/8. clear_denominators only takes numbers off,
 so it goes over one denominator here and the top gets solved. a root that makes the bottom 0
 was never a root (x/x = 0 has none)*/
@@ -1632,6 +1738,10 @@ int solve_ex(pcas_ast_t *expr, Symbol var, pcas_ast_t **out, bool complex) {
 
     if(n == SOLVE_UNKNOWN && !pcas_cancelled)
         n = solve_over(expr, var, out, complex);
+    if(n == SOLVE_UNKNOWN && !pcas_cancelled) { /*Fluxion*/
+        clear_roots(out);
+        n = solve_root_away(e, var, out, complex);
+    }
 
     if(pcas_cancelled) /*half a root list isn't an answer either*/
         n = SOLVE_UNKNOWN;
