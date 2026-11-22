@@ -927,6 +927,17 @@ int limit_side(pcas_ast_t *e) {
     return is_ast_int(d, 1) ? 1 : is_ast_int(d, -1) ? -1 : 2;
 }
 
+/*an i out of f and a with none in them is a root of a negative. simplify pulls those out front as i sqrt(..) before far or real() see them*/
+static pcas_ast_t *real_limit(pcas_ast_t *f, pcas_ast_t *var, pcas_ast_t *a, steps_t *s, bool root, int dir) {
+    pcas_ast_t *out = limit_of(f, var, a, s, root, dir);
+
+    if(out != NULL && has_imaginary_node(out) && !has_imaginary_node(f) && !has_imaginary_node(a)) {
+        ast_Cleanup(out);
+        return NULL;
+    }
+    return out;
+}
+
 /*root: e is the whole thing simplify got. an inf anywhere else turns into inf - inf = 0*/
 static bool limits(pcas_ast_t *e, bool root) {
     pcas_ast_t *child, *out;
@@ -939,7 +950,7 @@ static bool limits(pcas_ast_t *e, bool root) {
     if(!isoptype(e, OP_LIMIT) || ast_ChildGet(e, 1)->type != NODE_SYMBOL || limit_side(e) == 2)
         return changed;
 
-    out = limit_of(ast_ChildGet(e, 0), ast_ChildGet(e, 1), ast_ChildGet(e, 2), NULL, root, limit_side(e));
+    out = real_limit(ast_ChildGet(e, 0), ast_ChildGet(e, 1), ast_ChildGet(e, 2), NULL, root, limit_side(e));
     if(out == NULL)
         return changed;
     replace_node(e, out);
@@ -956,7 +967,7 @@ bool steps_limit(pcas_ast_t *l, steps_t *out) {
     out->n = 0;
     if(!isoptype(l, OP_LIMIT) || ast_ChildGet(l, 1)->type != NODE_SYMBOL || limit_side(l) == 2)
         return false;
-    v = limit_of(ast_ChildGet(l, 0), ast_ChildGet(l, 1), ast_ChildGet(l, 2), out, true, limit_side(l));
+    v = real_limit(ast_ChildGet(l, 0), ast_ChildGet(l, 1), ast_ChildGet(l, 2), out, true, limit_side(l));
     if(v == NULL || pcas_cancelled) {
         ast_Cleanup(v);
         steps_free(out);
