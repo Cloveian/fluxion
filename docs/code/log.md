@@ -1,5 +1,16 @@
 # Log
 
+## 2026-11-21 - the nspire, and keys that do things
+
+- **`make nspire`**, Ndless on the CX and CX II. ran on my CX II first try except every answer said it took 20083.1 s, Ndless's `_times()` returns without filling anything in so `clock()` added up stack junk. it reads the first timer at 32768 Hz now (like nSDL) and puts it back how the OS had it on the way out
+- keys don't stand in for other keys anymore. each keypad has a table of key + modifiers -> what it does (`ui/bind_ce.c`, `ui/bind_nspire.c`) and the app only sees the what, so the nspire's keys do what its own OS does: ctrl x^2 is √, ctrl enter ≈, esc backs out a level, shift + arrows select. the first version had ctrl ^ giving π cuz that's [2nd][^] on a CE. 147 scripted key runs screenshotted before and after, 143 the same pixel for pixel and the 4 that moved were the [menu] ones that were meant to
+- [menu] drops the folders down from the top like the OS, and on a page with its own keys it lists those. the catalog's key column comes out of the tables now (it types both on a scratch line and sees which match), θ even found an [alpha][3] the hand written ones never had
+- cot^-1, sec^-1 and csc^-1 are real functions for the nspire's trig key. and percent, 25% is 1/4
+- the touchpad has no arrow switches at all, one click for the whole pad plus where the finger is. a push keeps its direction till it's let go, that's as close to buttons as it gets
+- a sympy fuzz of 800 limits found them landing on asin(2), ln(-2) and i, and one that ran l'hopital forever (x acos((x-3)/(x-1)) at -inf, acos of something just over 1 has a root of a negative for a slope and it grew every round). limits only settle on real values now, an edge has to be come at from the real side, and the rerun had 0 regressions
+- asin(x)=4 used to answer sin(4) (*so* wrong). a value the inverse never gives has no x now
+- still open: simplify treats letters as positive, sqrt(x^2) is x and sqrt(-x) is i sqrt(x). written up as a proposal in simplify-cases.md, it'd change answers all over
+
 ## 2026-11-21 (night) - integrals, and limits from every side
 
 - **integrals**. integral(f, x) and integral(f, x, a, b), worked out the way the d/dx steps are: every integral still in the line gets one rule (constant, sum, constant multiple, a table, u-substitution), then the next line. anything ax+b inside gets the /a, so cos(3x) is sin(3x)/3 in one go. u-sub tries every piece of f as u and keeps the one where f/u' is all u. the steps put u = x^2 on its own line, then "back to x" and + C at the end
