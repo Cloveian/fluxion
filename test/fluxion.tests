@@ -454,6 +454,8 @@ simplifytext; X/(2+sqrt(5)); X(sqrt(5)_2)
 simplifytext; -1/(2+2^(3/2)); (1_sqrt(2))/2
 simplifytext; 1/(sqrt(X)+1); 1/(sqrt(X)+1)
 simplifytext; 1/(2+3^(1/3)); 1/(3root3+2)
+#a negative number as a base keeps its brackets, it was -2^X
+simplifytext; (-2)^X; (-2)^X
 
 #the cardano shape, cube roots of a fraction with a sqrt in it. hung in compare(), the gcd kept handing 2^(1/3) back and forth
 simplify; (93^(1/2)/18_1/2)^(1/3)_(93^(1/2)/18+1/2)^(1/3); 3root(sqrt(93)/18_1/2)_(3root(1/2+sqrt(93)/18))
@@ -1040,10 +1042,10 @@ steps; X^2+X=2; X; X^2+X=2 | _2 | X^2+X_2=0 | (X_1)(X+2)=0 | X_1=0 or X+2=0 | X=
 steps; X^2+6X+1=0; X; X^2+6X+1=0 | _1 | X^2+6X=-1 | +9 | X^2+6X+9=8 | (X+3)^2=8 | r | X+3=+-sqrt(8) | X+3=+-2sqrt(2) | _3 | X=-3+-2sqrt(2) | X=2sqrt(2)_3 or X=-2sqrt(2)_3
 steps; X^2+2X+5=0; X; X^2+2X+5=0 | _5 | X^2+2X=-5 | +1 | X^2+2X+1=-4 | (X+1)^2=-4 | r | X+1=+-sqrt(-4) | X+1=+-2i | _1 | X=-1+-2i | X=2i_1 or X=-2i_1
 steps; X^2+6X+1=0; Xformula; X^2+6X+1=0 | A=1, B=6, C=1 | X=(-6+-sqrt((6^2_4)))/2 | X=(-6+-sqrt(32))/2 | X=(-6+-4sqrt(2))/2 | X=2sqrt(2)_3 or X=-2sqrt(2)_3
-steps; 2X^2_3X_5=0; Xformula; 2X^2_3X_5=0 | A=2, B=-3, C=-5 | X=(3+-sqrt((-3^2_4*2*-5)))/2*2 | X=(3+-sqrt(49))/4 | X=(3+-7)/4 | X=5/2 or X=-1
+steps; 2X^2_3X_5=0; Xformula; 2X^2_3X_5=0 | A=2, B=-3, C=-5 | X=(3+-sqrt(((-3)^2_4*2*-5)))/2*2 | X=(3+-sqrt(49))/4 | X=(3+-7)/4 | X=5/2 or X=-1
 steps; X^2+X+1=0; X; X^2+X+1=0 | A=1, B=1, C=1 | X=(-1+-sqrt((1^2_4)))/2 | X=(-1+-sqrt(-3))/2 | X=(-1+-isqrt(3))/2 | X=(isqrt(3))/2_1/2 or X=-1/2_(isqrt(3))/2
 steps; X^2+6X+9=0; Xformula; X^2+6X+9=0 | A=1, B=6, C=9 | X=(-6+-sqrt((6^2_4*9)))/2 | X=(-6+-sqrt(0))/2 | X=(-6+-0)/2 | X=-3
-steps; 3X^2_2X=0; Xformula; 3X^2_2X=0 | A=3, B=-2, C=0 | X=(2+-sqrt((-2^2_4*3*0)))/2*3 | X=(2+-sqrt(4))/6 | X=(2+-2)/6 | X=2/3 or X=0
+steps; 3X^2_2X=0; Xformula; 3X^2_2X=0 | A=3, B=-2, C=0 | X=(2+-sqrt(((-2)^2_4*3*0)))/2*3 | X=(2+-sqrt(4))/6 | X=(2+-2)/6 | X=2/3 or X=0
 steps; X^2+5X+6=0; Xsquare; X^2+5X+6=0 | _6 | X^2+5X=-6 | +25/4 | X^2+5X+25/4=1/4 | (X+5/2)^2=1/4 | r | X+5/2=+-1/2 | _5/2 | X=-5/2+-1/2 | X=-2 or X=-3
 #solve has sqrt(15)/sqrt(2) where the steps have sqrt(30)/2, the same once rationalized
 steps; -2X^2+1=4; X; -2X^2+1=4 | _1 | -2X^2=3 | /-2 | X^2=-3/2 | r | X=+-sqrt((-3/2)) | X=+-(isqrt(6))/2 | X=(isqrt(6))/2 or X=(-isqrt(6))/2

@@ -36,7 +36,8 @@ static uint8_t precedence(pcas_ast_t *e) {
 
 #define need_paren(parent, child) ( (((parent)->type == NODE_OPERATOR && is_op_operator(optype(parent)) && !is_op_commutative(optype(parent)) && precedence(child) <= precedence(parent)) \
                                     || precedence(child) < precedence(parent)) \
-                                    || (is_right_operator_type(optype(parent)) && (child)->type == NODE_NUMBER && mp_rat_compare_zero((child)->op.num) < 0) )
+                                    || (is_right_operator_type(optype(parent)) && (child)->type == NODE_NUMBER && mp_rat_compare_zero((child)->op.num) < 0) \
+                                    || (optype(parent) == OP_POW && (child) == ast_ChildGet(parent, 0) && (child)->type == NODE_NUMBER && mp_rat_compare_zero((child)->op.num) < 0) ) /*Fluxion: (-2)^x came out -2^x*/
 
 pcas_ast_t *rightmost(pcas_ast_t *e) {
     if(e->type == NODE_OPERATOR) {
