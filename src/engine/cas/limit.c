@@ -53,14 +53,18 @@ static bool narrow(OperatorType op) {
     }
 }
 
-/*v came out a real number. with a letter still in it there's no telling, so yes*/
-static bool real(pcas_ast_t *v) {
-    pcas_ast_t *b = NULL, *p = NULL;
+/*v has no letters and no i. sums, products and sin of real things are real, so only the narrow ones get
+  looked at, each on its own. a decimal of all of v overlfows on a 1/e^10000 next to them*/
+static bool real_node(pcas_ast_t *v) {
+    pcas_ast_t *c, *b = NULL, *p = NULL;
     double d;
 
-    if(v == NULL || has_imaginary_node(v))
-        return false;
-    if(has_letter(v))
+    if(v->type != NODE_OPERATOR)
+        return true;
+    for(c = ast_ChildGet(v, 0); c != NULL; c = c->next)
+        if(!real_node(c))
+            return false;
+    if(!narrow(optype(v)))
         return true;
     if(isoptype(v, OP_POW)) {
         b = ast_ChildGet(v, 0);
@@ -69,6 +73,9 @@ static bool real(pcas_ast_t *v) {
         b = ast_ChildGet(v, 1);
         p = ast_ChildGet(v, 0);
     }
+    /*e^10000 is real, its decimal just overflows*/
+    if(b != NULL && b->type == NODE_SYMBOL && (b->op.symbol == SYM_EULER || b->op.symbol == SYM_PI))
+        return true;
     /*a number to a number's power goes by the base's sign and the power's bottom. as a decimal (-1)^(1/2) took 7 s on the calc*/
     if(b != NULL && b->type == NODE_NUMBER && p->type == NODE_NUMBER) {
         if(mp_rat_compare_zero(b->op.num) >= 0)
@@ -77,6 +84,11 @@ static bool real(pcas_ast_t *v) {
         return mp_int_is_odd(isoptype(v, OP_POW) ? mp_rat_denom_ref(p->op.num) : mp_rat_numer_ref(p->op.num));
     }
     return approx_double(v, &d);
+}
+
+/*v came out a real number. with a letter still in it there's no telling, so yes*/
+static bool real(pcas_ast_t *v) {
+    return v != NULL && !has_imaginary_node(v) && (has_letter(v) || real_node(v));
 }
 
 /*just the numbers folded, a full simplify of sqrt(-1) takes the long way to i*/
@@ -89,8 +101,30 @@ static bool real_at(pcas_ast_t *e, pcas_ast_t *var, pcas_ast_t *a) {
         simplify(v, SIMP_EVAL);
     }
     is = !pcas_cancelled && real(v);
-
     ast_Cleanup(v);
+    return is;
+}
+
+/*every piece of e that's only real on part of the line is real at a. the pieces, not all of e, a big e^(1/x)
+  next to them overflows as a decimal*/
+static bool parts_real_at(pcas_ast_t *e, pcas_ast_t *var, pcas_ast_t *a) {
+    pcas_ast_t *c;
+
+    if(e->type != NODE_OPERATOR || !has_symbol(e, var->op.symbol))
+        return true;
+    for(c = ast_ChildGet(e, 0); c != NULL; c = c->next)
+        if(!parts_real_at(c, var, a))
+            return false;
+    return !narrow(optype(e)) || real_at(e, var, a);
+}
+
+/*f is real just to one side of a, dir 1 / -1, a 10^-4 over. for a one-sided limit at a, where it
+  being real at a itself doesn't say anything about the side it comes from*/
+static bool real_beside(pcas_ast_t *f, pcas_ast_t *var, pcas_ast_t *a, int dir) {
+    pcas_ast_t *at = ast_MakeBinary(OP_ADD, ast_Copy(a), ast_MakeBinary(OP_DIV, ast_MakeInt(dir), ast_MakeInt(10000)));
+    bool is = at == NULL || parts_real_at(f, var, at);   /*oom says nothing*/
+
+    ast_Cleanup(at);
     return is;
 }
 
@@ -229,6 +263,34 @@ static int fin_real(pcas_ast_t **v, pcas_ast_t *e) {
         return FAR_NONE;
     }
     return fin(v, e);
+}
+
+/*u heads to cv. when that's an edge of where op is real (asin at 1, asec at -1, acosh at 1) it has to come
+  from the real side, or there was never anything to take a limit of. l'hopital on x acos((x-3)/(x-1)) at -inf
+  never stopped growing*/
+static bool from_inside(OperatorType op, pcas_ast_t *u, pcas_ast_t *cv, pcas_ast_t *var) {
+    int edge = 0, side, want, s;
+    pcas_ast_t *d;
+
+    switch(op) {
+    case OP_SIN_INV: case OP_COS_INV: side = -1; break;     /*from inside [-1, 1]*/
+    case OP_SEC_INV: case OP_CSC_INV: side = 1; break;      /*from outside*/
+    case OP_COSH_INV: side = 0; break;                      /*from above 1*/
+    default: return true;
+    }
+    for(s = -1; s <= 1 && cv != NULL; s += 2) { /*cv can come back as 1/1, sign_of folds it*/
+        d = ast_MakeBinary(OP_ADD, ast_Copy(cv), ast_MakeInt(-s));
+        if(d != NULL && sign_of(d) == 0)
+            edge = s;
+        ast_Cleanup(d);
+    }
+    if(edge == 0)
+        return true;
+    want = side == 0 ? 1 : side * edge;
+    d = ast_MakeBinary(OP_ADD, ast_Copy(u), ast_MakeInt(-edge));
+    s = d != NULL ? sign_far(d, var) : 2;
+    ast_Cleanup(d);
+    return s == want || s == 0 || s == 2;   /*on the edge the whole way, or no telling*/
 }
 
 static int far(pcas_ast_t *e, pcas_ast_t *var, pcas_ast_t **v, int tries);
@@ -616,7 +678,10 @@ static int far_pow(pcas_ast_t *base, pcas_ast_t *ex, pcas_ast_t *var, pcas_ast_t
     } else if(fx == FAR_FIN) { /*x only in the base*/
         s = sign_of(x);
         if(fb == FAR_FIN) {
-            if(sign_of(b) != 0 || s == 1) { /*no 0^-1*/
+            if(sign_of(b) == 0 && s == 1 && x->type == NODE_NUMBER && mp_int_is_even(mp_rat_denom_ref(x->op.num))
+               && sign_far(base, var) == -1) {
+                /*sqrt(u) with u -> 0 from below, from_inside's edge for roots*/
+            } else if(sign_of(b) != 0 || s == 1) { /*no 0^-1*/
                 out = fin_real(v, ast_MakeBinary(OP_POW, b, x));
                 b = x = NULL;
             }
@@ -683,6 +748,10 @@ static int far(pcas_ast_t *e, pcas_ast_t *var, pcas_ast_t **v, int tries) {
         return out == 1 || out == -1 ? out * f : FAR_NONE;
     case OP_TAN_INV: case OP_COT_INV: case OP_SEC_INV: case OP_CSC_INV:
         f = far(ast_ChildGet(e, 0), var, &cv, tries);
+        if(f == FAR_FIN && !from_inside(optype(e), ast_ChildGet(e, 0), cv, var)) {
+            ast_Cleanup(cv);
+            return FAR_NONE;
+        }
         if(f == FAR_FIN)
             return fin_real(v, ast_MakeUnary(optype(e), cv));
         if(f == FAR_NONE)
@@ -714,6 +783,10 @@ static int far(pcas_ast_t *e, pcas_ast_t *var, pcas_ast_t **v, int tries) {
                 ast_Cleanup(g);
                 return FAR_NONE;
             }
+        }
+        if(g != NULL && !from_inside(optype(e), ast_ChildGet(e, 0), ast_ChildGet(g, 0), var)) {
+            ast_Cleanup(g);
+            return FAR_NONE;
         }
         return fin_real(v, g);
     }
@@ -836,6 +909,10 @@ static pcas_ast_t *limit_of(pcas_ast_t *f, pcas_ast_t *var, pcas_ast_t *a, steps
     if(has_symbol(a, SYM_INF)) /*inf+1, 2inf*/
         return NULL;
     g = ast_Copy(f);
+    if(dir != 0 && !real_beside(f, var, a, dir)) {  /*sqrt(x) at 0 from the left*/
+        ast_Cleanup(g);
+        return NULL;
+    }
     if(defined_at(f, var, a)) {
         ast_Cleanup(g);
         return plug_in(s, l, f, var, a, value_at(f, var, a));
