@@ -455,13 +455,25 @@ static bool has_root(pcas_ast_t *e) {
     return false;
 }
 
+static int far_pow(pcas_ast_t *base, pcas_ast_t *ex, pcas_ast_t *var, pcas_ast_t **v, int tries);
+
 static int far_ratio(pcas_ast_t *top, pcas_ast_t *bottom, pcas_ast_t *var, pcas_ast_t **v, int tries) {
     pcas_ast_t *t = NULL, *b = NULL, *lt = NULL, *lb = NULL;
     deg_t dt, db;
-    int ft = far(top, var, &t, tries), fb = far(bottom, var, &b, tries), out = FAR_NONE, s;
+    int ft, fb, out = FAR_NONE, s;
     long c;
 
     *v = NULL;
+    /*x^(1/3)/(x+1)^(1/3) is (x/(x+1))^(1/3), l'hopital on two roots only makes more roots*/
+    if(isoptype(top, OP_POW) && isoptype(bottom, OP_POW) && ast_Compare(ast_ChildGet(top, 1), ast_ChildGet(bottom, 1))) {
+        pcas_ast_t *q = ast_MakeBinary(OP_DIV, ast_Copy(ast_ChildGet(top, 0)), ast_Copy(ast_ChildGet(bottom, 0)));
+
+        out = q != NULL ? far_pow(q, ast_ChildGet(top, 1), var, v, tries) : FAR_NONE;
+        ast_Cleanup(q);
+        return out;
+    }
+    ft = far(top, var, &t, tries);
+    fb = far(bottom, var, &b, tries);
     if(ft == FAR_NONE || fb == FAR_NONE) {
         out = FAR_NONE;
     } else if(ft == FAR_FIN && fb == FAR_FIN) {
