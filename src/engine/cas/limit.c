@@ -77,13 +77,15 @@ static bool real_node(pcas_ast_t *v) {
     if(b != NULL && b->type == NODE_SYMBOL && (b->op.symbol == SYM_EULER || b->op.symbol == SYM_PI))
         return true;
     /*a number to a number's power goes by the base's sign and the power's bottom. as a decimal (-1)^(1/2) took 7 s on the calc*/
+    if(p != NULL)
+        fold_fraction(p);   /*the 1/2 out of the simplify is a /*/
     if(b != NULL && b->type == NODE_NUMBER && p->type == NODE_NUMBER) {
         if(mp_rat_compare_zero(b->op.num) >= 0)
             return true;
         /*x^(a/b) for a power, the n of an nth root*/
         return mp_int_is_odd(isoptype(v, OP_POW) ? mp_rat_denom_ref(p->op.num) : mp_rat_numer_ref(p->op.num));
     }
-    return approx_double(v, &d);
+    return approx_float(v, &d);
 }
 
 /*v came out a real number. with a letter still in it there's no telling, so yes*/
