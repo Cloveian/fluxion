@@ -234,8 +234,11 @@ static void walk(walk_t *w, pcas_ast_t *e) {
             zeros(w, b);
         break;
     case OP_POW:
-        if(b == NULL || !has_symbol(a, w->var)) /*2^x and e^x are fine everywhere*/
+        if(b == NULL || !has_symbol(a, w->var)) { /*2^x and e^x are fine everywhere, (-2)^x only at whole x*/
+            if(b != NULL && has_symbol(b, w->var) && sign_of(a) != 1)
+                w->d->partial = true;
             break;
+        }
         if(has_symbol(b, w->var) || !read_ratio(b, &p, &q)) /*x^x, x^pi*/
             w->d->partial = true;
         else if(q % 2 == 0) /*x^(1/2) is sqrt(x), x^(-1/2) is 1/sqrt(x)*/

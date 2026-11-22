@@ -417,10 +417,7 @@ static bool float_at(pcas_ast_t *e, pcas_ast_t *x, pcas_ast_t *pt, double *v) {
     return ok;
 }
 
-/*for what domain can't pin down. tan sec cot csc of ax+b have their poles at pi/2 + pi n (or pi n), so
-  whether one's in [a, b] is just where ax+b goes. a root of something at most quadratic in x has its lowest
-  point at an end or the vertex, under 0 there isn't real and 0 inside could be on the bottom. anything
-  else, no telling*/
+/*for what domain can't pin down: tan sec cot csc of ax+b by where ax+b goes, a root of a quadratic or less by its lowest point (an end or the vertex)*/
 static bool fine_between(pcas_ast_t *e, pcas_ast_t *x, pcas_ast_t *pa, pcas_ast_t *pb) {
     pcas_ast_t *c, *u, *k;
     double ua, ub, lo, hi, off, n, q[3], A, B, C, m, v;
@@ -450,8 +447,8 @@ static bool fine_between(pcas_ast_t *e, pcas_ast_t *x, pcas_ast_t *pa, pcas_ast_
         c = isoptype(e, OP_POW) ? ast_ChildGet(e, 1) : NULL;
         if(c != NULL && c->type == NODE_NUMBER && mp_rat_is_integer(c->op.num))
             return true;    /*a whole power, real anywhere*/
-        if(!has_symbol(u, x->op.symbol))
-            return true;
+        if(!has_symbol(u, x->op.symbol)) /*a^x, real only for a over 0*/
+            return float_at(u, x, pa, &v) && v > 0;
         /*A x^2 + B x + C off its values at -1 0 1, and 2 to make sure that's all it is*/
         for(i = 0; i < 3; i++) {
             k = ast_MakeInt(i - 1);

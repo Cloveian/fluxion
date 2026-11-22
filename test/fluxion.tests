@@ -360,6 +360,8 @@ domain; tan(X); X; lower - | upper - | holes pi/2+Npi
 domain; 1/ln(X); X; lower 0o | upper - | holes 1
 domain; sqrt(X^2_4); X; lower - | upper - | holes - | partial
 domain; asec(X); X; lower - | upper - | holes - | partial
+domain; (-2)^X; X; lower - | upper - | holes - | partial
+domain; 2^X; X; lower - | upper - | holes -
 domain; 1/(X_X); X; unknown
 domain; sqrt(X_5)+sqrt(2_X); X; empty
 
@@ -958,6 +960,7 @@ simplify; integral(sec(2X)^2,X,1,2); tan(4)/2_(tan(2))/2
 simplify; integral(X/sqrt(9_X^2),X,0,1); 3_2*2^(1/2)
 simplify; integral(1/sqrt(9_X^2),X,0,3); integral(1/(9_X^2)^(1/2),X,0,3)
 simplify; integral(sqrt(1_X^2),X,0,2); integral((1_X^2)^(1/2),X,0,2)
+simplify; integral(2^X,X,1,2); 2/ln(2)
 simplify; integral(ln(X),X,0,1); integral(ln(X),X,0,1)
 #antideriv: no integral left and d/dx of it is f again, checked at x = 0.2, 0.5, 0.7
 antideriv; X^2; X
