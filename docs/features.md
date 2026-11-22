@@ -13,6 +13,7 @@ Everything Fluxion does right now, as tables. Yes / partly / no first, the other
 | Complex roots               | yes\*  |
 | Literal equations           | yes    |
 | Exp, log and root equations | yes    |
+| Absolute value equations    | yes    |
 | Rational equations          | yes    |
 | Trig equations              | yes    |
 | Inequalities                | yes\*  |
