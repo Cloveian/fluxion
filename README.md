@@ -42,6 +42,12 @@ You need a TI-84 Plus CE.
    - **the app** (what I use): send `Fluxion-app.b84` (or `FLUXINST.8xp` and the six `FLUXAPP` files), run `FLUXINST` once, and Fluxion shows up under apps
    - **the program**: send `Fluxion-program.b84` (or `FLUXION.8xp` and its three appvars) and run it from Cesium
 
+### TI-Nspire CX / CX II
+
+1. Install [Ndless](https://ndless.me): r2022 on a CX II with OS 6.4.0.74, or r2021 on a CX with OS 4.5.5 (a CX II on 6.3 has to update to 6.4 first)
+2. Build `Fluxion.tns` with `make nspire` (see Building), send it over with the TI software or TiLP, and open it from My Documents
+3. `home` quits it
+
 ## Keys
 
 | Key | Does |
@@ -58,6 +64,24 @@ You need a TI-84 Plus CE.
 | `[clear]` | backspace, `[on]`+`[clear]` clears the line (the screen too if the line's empty) |
 
 Variables are lowercase, like on the Nspire.
+
+### On the Nspire
+
+The keys do what they do in its own OS, so most of it you already know:
+
+| Key | Does |
+|---|---|
+| `enter` | simplify, `ctrl` `enter` a decimal just once |
+| `menu` | the folders drop down from the top, a number opens one, `esc` goes back. On the catalog or the steps page it lists that page's keys |
+| `ctrl` `x²` `^` `e^x` `10^x` | √, ⁿ√, ln, log |
+| `trig` `π▸` | all 12 trig functions, and π e i ∞ θ ° |
+| `ctrl` `÷`, `ctrl` `=` | fraction, and `=` `≠` `<` `>` `≤` `≥` |
+| `shift` + arrows | select, `ctrl` `X` `C` `V` cut, copy, paste, `ctrl` `Z` or `ctrl` `esc` undo |
+| `del`, `ctrl` `del` | backspace, clear the line |
+| `esc` | close whatever's open, and stop it if it's taking forever |
+| `ctrl` `+` `-` | brightness |
+
+The catalog (`cat`) shows the key for anything that has one.
 
 ## Building
 

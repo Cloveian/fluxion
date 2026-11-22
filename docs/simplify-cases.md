@@ -55,5 +55,16 @@ when i first went through it:
 - 4 needed actual engine work, 3 of those were polynomial factoring
 - solve came up 5 times and the engine didn't have it at all, so that's going up the list. most of them are linear in one variable which isnt that bad
 
+## Letters with no sign
+
+okie so simplify treats every letter like it's positive, and that's PineappleCAS's, not something i picked. `sqrt(x^2)` comes out `x`, `sqrt(-x)` comes out `i sqrt(x)` (`(ab)^n = a^n b^n` with a = -1), and both are wrong for half the line: at x = -4 the first says -4 and the second says -2, the real answers are 4 and 2. the nspire says `|x|` and leaves `sqrt(-x)` alone. on its own it mostly hides, but limits and solve plug numbers into the simplified tree, so a sympy fuzz of 800 limits found `limit(sqrt(x^2),x,-2)` = -2 and `limit(sqrt(-x),x,1)` = i.
+
+### Proposal
+
+- `(ab)^(p/q)` only splits off factors that are known positive numbers, so `sqrt(4x)` is still `2 sqrt(x)` but `sqrt(-4x)` is `2 sqrt(-x)`
+- `(x^n)^(1/n)` for an even n is `|x|`
+- an i only comes out of a root of a negative *number*, never a letter
+- what i don't know yet is how much changes: the quadratic formula's `sqrt(b^2-4ac)`, factoring, the identity tables all lean on the old way. turn it on, run the test file and look before deciding
+
 ---
 Back to [goals](goals.md) · [screens & operations](design-choices/ui.md)

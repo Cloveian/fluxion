@@ -41,13 +41,13 @@ ITEM(it_close,    ")",     NULL, ITEM_CHAR, ")",     HAVE_YES, NULL,
 ITEM(it_comma,    ",",     NULL, ITEM_CHAR, ",",     HAVE_YES, "between arguments: logb(x,2)",
      "separates the inputs of a function, like solve(2x=6,x)")
 ITEM(it_equals,   "=",     NULL, ITEM_CHAR, "=", HAVE_PARTLY, "solve( system( and ellipse( hyperbola( piecewise(: the engine has no equations, the app splits the line",
-     "equals sign, [2nd][math]. for solve, system, piecewise and the conics. solve(2x=6,x) -> x = 3")
+     "equals sign, for solve, system, piecewise and the conics. solve(2x=6,x) -> x = 3")
 
 /* variables and constants */
 ITEM(it_x,        "x",     NULL, ITEM_CHAR, "X", HAVE_YES, "shown lowercase",
-     "the variable x, on its own key: [x,t,theta,n]")
+     "the variable x, it has a key of its own")
 ITEM(it_letters,  "a-z",   NULL, ITEM_CHAR, "A-Z", HAVE_YES, "shown lowercase, one letter each",
-     "variables, one letter each. [alpha] + a key types the letter above it")
+     "variables, one letter each")
 ITEM(it_pi,       "pi",    "pi", ITEM_CHAR, "pi",   HAVE_YES, NULL,
      "the number pi = 3.14159..., kept exact. sin(pi/2) -> 1")
 ITEM(it_e,        "e",     "e", ITEM_CHAR, "e",    HAVE_YES, "the constant, drawn bold",
@@ -55,7 +55,7 @@ ITEM(it_e,        "e",     "e", ITEM_CHAR, "e",    HAVE_YES, "the constant, draw
 ITEM(it_i,        "i",     "i", ITEM_CHAR, "i",    HAVE_YES, "the constant, drawn bold",
      "the imaginary unit, i^2 = -1. drawn bold so it isn't the variable i")
 ITEM(it_theta,    "theta", "theta", ITEM_CHAR, "theta", HAVE_YES, NULL,
-     "the variable theta, often used for angles. type theta, or [alpha][3]")
+     "the variable theta, often used for angles. type theta")
 
 /* powers and roots */
 ITEM(it_power,    "x^n",   NULL, ITEM_TEMPLATE, "($)^($)",   HAVE_YES, "cursor jumps into the exponent",
@@ -142,17 +142,17 @@ ITEM(it_amplitude, "amplitude", "amplitude", ITEM_COMMAND, "amplitude($)", HAVE_
 
 /* Templates */
 ITEM(it_frac,     "n/d",   NULL, ITEM_TEMPLATE, "($)/($)", HAVE_YES, "empty fraction, cursor in the top",
-     "an empty fraction. type the top, then move down to type the bottom. [alpha][x,t,theta,n] does it too")
+     "an empty fraction. type the top, then move down to type the bottom")
 ITEM(it_parens,   "( )",   NULL, ITEM_TEMPLATE, "($)",       HAVE_YES, NULL,
      "a pair of parentheses with the cursor inside, to group things")
 ITEM(it_piecewise, "piecewise", "piecewise", ITEM_COMMAND, "piecewise($)", HAVE_PARTLY,
-     "piecewise(f1,c1,f2,c2,...,x=v): done in the app, the engine has no conditions. conditions are < > <= >= != chains in one letter, from [math]. no brace yet",
+     "piecewise(f1,c1,f2,c2,...,x=v): done in the app, the engine has no conditions. conditions are < > <= >= != chains in one letter. no brace yet",
      "a different rule for different x. piecewise(x^2,x<0,2x+1,x>=0) shows the pieces, add x=3 at the end -> 7, the first piece whose condition holds. 1<x<=3 chains work")
 
 /* Algebra (commands) */
 ITEM(it_simplify, "simplify", NULL, ITEM_COMMAND, NULL, HAVE_YES,
      "always runs on enter: simplify(SIMP_ALL) + canonical form",
-     "runs on [enter]: simplifies whatever is on the line")
+     "runs on enter: simplifies whatever is on the line")
 ITEM(it_expand,   "expand", "expand", ITEM_COMMAND, "expand($)", HAVE_YES, "expand() with EXP_ALL",
      "multiplies everything out. expand((x+1)^2) -> x^2+2x+1")
 ITEM(it_subst,    "substitute", "subst", ITEM_COMMAND, "subst($,$,$)", HAVE_PARTLY,
