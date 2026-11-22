@@ -23,7 +23,7 @@ typedef struct {
 #define ID_NUM_TRIG_INV_CONSTANTS 31
 #define ID_NUM_TRIG_CONSTANTS 47
 #define ID_NUM_HYPERBOLIC 9
-#define ID_NUM_COMPLEX 13
+#define ID_NUM_COMPLEX 14
 
 extern pcas_id_t id_general[ID_NUM_GENERAL];
 extern pcas_id_t id_trig_identities[ID_NUM_TRIG_IDENTITIES];

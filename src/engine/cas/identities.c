@@ -196,6 +196,7 @@ pcas_id_t id_hyperbolic[ID_NUM_HYPERBOLIC] = {
 pcas_id_t id_complex[ID_NUM_COMPLEX] = {
     {"(-I)^(X/Y)", "e^(ipiX/Y)I^(X/Y"}, /*Fluxion: was any A, sqrt(-(2+2isqrt(3))) came out the other root*/
     {"1/i", "-i"},
+    {"ln(-1", "ipi"}, /*Fluxion: csolve gave e^x = -1 as ln(-1)*/
     {"e^(I+Ji", "e^I(cos(J)+isin(J"},
     {"(I+Ji)^X", "e^(Xln(I+Ji"},
     {"X^(I+Ji", "e^((I+Ji)ln(X"},
