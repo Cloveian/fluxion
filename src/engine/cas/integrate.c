@@ -3,6 +3,8 @@
 #include "cas.h"
 #include "steps.h"
 
+#include <math.h>
+
 #define SUBS_MAX 4 /*u-substitutions in one integral*/
 #define CANDS_MAX 8 /*pieces tried as u, each one a d/dx and a full simplify*/
 #define ROUNDS_MAX 12 /*lines of rules before it gives up*/
@@ -406,8 +408,90 @@ static pcas_ast_t *integral_of(pcas_ast_t *I, steps_t *s) {
     return cur;
 }
 
+/*e with x = pt, as a float*/
+static bool float_at(pcas_ast_t *e, pcas_ast_t *x, pcas_ast_t *pt, double *v) {
+    pcas_ast_t *c = ast_Copy(e);
+    bool ok = c != NULL && substitute(c, x, pt) && approx_float(c, v);
+
+    ast_Cleanup(c);
+    return ok;
+}
+
+/*for what domain can't pin down. tan sec cot csc of ax+b have their poles at pi/2 + pi n (or pi n), so
+  whether one's in [a, b] is just where ax+b goes. a root of something at most quadratic in x has its lowest
+  point at an end or the vertex, under 0 there isn't real and 0 inside could be on the bottom. anything
+  else, no telling*/
+static bool fine_between(pcas_ast_t *e, pcas_ast_t *x, pcas_ast_t *pa, pcas_ast_t *pb) {
+    pcas_ast_t *c, *u, *k;
+    double ua, ub, lo, hi, off, n, q[3], A, B, C, m, v;
+    int i;
+
+    if(e->type != NODE_OPERATOR || !has_symbol(e, x->op.symbol))
+        return true;
+    for(c = ast_ChildGet(e, 0); c != NULL; c = c->next)
+        if(!fine_between(c, x, pa, pb))
+            return false;
+
+    switch(optype(e)) {
+    case OP_TAN: case OP_SEC: case OP_COT: case OP_CSC:
+        u = ast_ChildGet(e, 0);
+        if((k = linear(u, x)) == NULL)
+            return false;
+        ast_Cleanup(k);
+        if(!float_at(u, x, pa, &ua) || !float_at(u, x, pb, &ub))
+            return false;
+        lo = ua < ub ? ua : ub;
+        hi = ua < ub ? ub : ua;
+        off = optype(e) == OP_TAN || optype(e) == OP_SEC ? 1.5707963267949 : 0;
+        n = ceil((lo - off) / 3.14159265358979 - 1e-9);
+        return off + n * 3.14159265358979 > hi + 1e-9;
+    case OP_POW: case OP_ROOT:
+        u = isoptype(e, OP_POW) ? ast_ChildGet(e, 0) : ast_ChildGet(e, 1);
+        c = isoptype(e, OP_POW) ? ast_ChildGet(e, 1) : NULL;
+        if(c != NULL && c->type == NODE_NUMBER && mp_rat_is_integer(c->op.num))
+            return true;    /*a whole power, real anywhere*/
+        if(!has_symbol(u, x->op.symbol))
+            return true;
+        /*A x^2 + B x + C off its values at -1 0 1, and 2 to make sure that's all it is*/
+        for(i = 0; i < 3; i++) {
+            k = ast_MakeInt(i - 1);
+            if(k == NULL || !float_at(u, x, k, &q[i])) {
+                ast_Cleanup(k);
+                return false;
+            }
+            ast_Cleanup(k);
+        }
+        C = q[1];
+        A = (q[0] + q[2]) / 2 - C;
+        B = (q[2] - q[0]) / 2;
+        k = ast_MakeInt(2);
+        if(k == NULL || !float_at(u, x, k, &v) || fabs(v - (4 * A + 2 * B + C)) > 1e-6 * (1 + fabs(v))) {
+            ast_Cleanup(k);
+            return false;
+        }
+        ast_Cleanup(k);
+        if(!float_at(u, x, pa, &ua) || !float_at(u, x, pb, &ub))
+            return false;
+        m = ua < ub ? ua : ub;
+        if(A > 0) { /*the vertex, if it's inside*/
+            v = -B / (2 * A);
+            if(!float_at(x, x, pa, &lo) || !float_at(x, x, pb, &hi))
+                return false;
+            if(v > (lo < hi ? lo : hi) && v < (lo < hi ? hi : lo)) {
+                if(A * v * v + B * v + C <= 1e-9)
+                    return false;
+            }
+        }
+        return m >= -1e-9;
+    case OP_DIV: case OP_ADD: case OP_MULT: case OP_SIN: case OP_COS: case OP_TAN_INV: case OP_ABS:
+        return true;
+    default:
+        return false;
+    }
+}
+
 /*f defined the whole way from a to b, so F(b) - F(a) is the area. 1/x^2 from -1 to 1 would come out -2.
-false for a hole or a bound in between, or anything domain can't pin down (tan's pi/2 + pi n)*/
+false for a hole or a bound in between, or anything domain can't pin down that fine_between can't either*/
 static bool defined_between(pcas_ast_t *I) {
     domain_t d;
     double a, b, t, h;
@@ -422,13 +506,23 @@ static bool defined_between(pcas_ast_t *I) {
         a = b;
         b = t;
     }
-    ok = !d.partial && !d.empty;
+    ok = !d.empty;
+    if(ok && d.partial) { /*and f there at both ends, 1/sqrt(9-x^2) at 3 isn't*/
+        pcas_ast_t *f = ast_ChildGet(I, 0), *x = ast_ChildGet(I, 1);
+
+        ok = fine_between(f, x, ast_ChildGet(I, 2), ast_ChildGet(I, 3))
+             && float_at(f, x, ast_ChildGet(I, 2), &h) && float_at(f, x, ast_ChildGet(I, 3), &h);
+    }
     if(ok && d.lower != NULL)
         ok = approx_double(d.lower, &h) && (d.lower_open ? a > h : a >= h);
     if(ok && d.upper != NULL)
         ok = approx_double(d.upper, &h) && (d.upper_open ? b < h : b <= h);
-    for(i = 0; i < d.nholes && ok; i++)
-        ok = approx_double(d.holes[i], &h) && (h < a || h > b);
+    for(i = 0; i < d.nholes && ok; i++) {
+        if(has_symbol(d.holes[i], SYM_N)) /*a family, tan's pi/2 + pi n*/
+            ok = fine_between(ast_ChildGet(I, 0), ast_ChildGet(I, 1), ast_ChildGet(I, 2), ast_ChildGet(I, 3));
+        else
+            ok = approx_double(d.holes[i], &h) && (h < a || h > b);
+    }
     domain_free(&d);
     return ok;
 }

@@ -950,7 +950,14 @@ simplify; integral(1/X^2,X,-1,1); integral(1/X^2,X,-1,1)
 simplify; integral(1/X^2,X,1,2); 1/2
 simplify; integral(sqrt(X),X,0,4); 16/3
 simplify; integral(1/X,X,-2,-1); -ln(2)
-simplify; integral(tan(X),X,0,1); integral(tan(X),X,0,1)
+simplify; integral(tan(X),X,0,1); ln(1/abs(cos(1)))
+#tan sec cot csc of ax+b, a pole in between or not. a root of a quadratic, under 0 in between or 0 at an end of a 1/sqrt
+simplify; integral(tan(X),X,0,2); integral(tan(X),X,0,2)
+simplify; integral(csc(X)^2,X,-1,1); integral(csc(X)^2,X,-1,1)
+simplify; integral(sec(2X)^2,X,1,2); tan(4)/2_(tan(2))/2
+simplify; integral(X/sqrt(9_X^2),X,0,1); 3_2*2^(1/2)
+simplify; integral(1/sqrt(9_X^2),X,0,3); integral(1/(9_X^2)^(1/2),X,0,3)
+simplify; integral(sqrt(1_X^2),X,0,2); integral((1_X^2)^(1/2),X,0,2)
 simplify; integral(ln(X),X,0,1); integral(ln(X),X,0,1)
 #antideriv: no integral left and d/dx of it is f again, checked at x = 0.2, 0.5, 0.7
 antideriv; X^2; X
