@@ -676,6 +676,7 @@ static int far_pow(pcas_ast_t *base, pcas_ast_t *ex, pcas_ast_t *var, pcas_ast_t
     fx = far(ex, var, &x, tries);
     if(fb == FAR_NONE || fx == FAR_NONE) {
     } else if(fx == FAR_FIN) { /*x only in the base*/
+        fold_fraction(x);   /*the light simplify leaves 1/3 as a / to read the bottom off*/
         s = sign_of(x);
         if(fb == FAR_FIN) {
             if(sign_of(b) == 0 && s == 1 && x->type == NODE_NUMBER && mp_int_is_even(mp_rat_denom_ref(x->op.num))
@@ -691,8 +692,8 @@ static int far_pow(pcas_ast_t *base, pcas_ast_t *ex, pcas_ast_t *var, pcas_ast_t
             out = fin(v, ast_MakeInt(0));
         } else if(s == 1 && fb == FAR_UP) {
             out = FAR_UP;
-        } else if(s == 1 && x->type == NODE_NUMBER && mp_rat_to_ints(x->op.num, &n, &den) == MP_OK && den == 1) {
-            out = n % 2 == 0 ? FAR_UP : FAR_DOWN; /*(-inf)^3*/
+        } else if(s == 1 && x->type == NODE_NUMBER && mp_rat_to_ints(x->op.num, &n, &den) == MP_OK && den % 2 == 1) {
+            out = n % 2 == 0 ? FAR_UP : FAR_DOWN; /*(-inf)^3, (-inf)^(1/3) too. an even bottom isn't real*/
         }
     } else if(sign_of(b) == 1) { /*x only in the power, 2^x*/
         g = ast_MakeBinary(OP_ADD, ast_Copy(b), ast_MakeInt(-1));

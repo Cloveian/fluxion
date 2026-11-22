@@ -110,7 +110,7 @@ static bool split_term(pcas_ast_t *e, Symbol var, pcas_ast_t *coef, int *k) {
 
 /*a/b with both numbers becomes the one rational. normalize splits every
   rational into a/b, so right after a simplify is where this is needed*/
-static void fold_fraction(pcas_ast_t *e) {
+void fold_fraction(pcas_ast_t *e) {
     pcas_ast_t *a, *b, *r;
 
     if(!isoptype(e, OP_DIV))

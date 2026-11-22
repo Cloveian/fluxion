@@ -245,6 +245,8 @@ what solve and system sort their roots by*/
 pcas_ast_t *approx_number(pcas_ast_t *e);
 /*Fluxion: the same as a double, false when it isn't a plain real number (pi/2 + pi n, i)*/
 bool approx_double(pcas_ast_t *e, double *v);
+/*Fluxion: a/b with both numbers becomes the one rational, in place. right after a simplify, that leaves them split*/
+void fold_fraction(pcas_ast_t *e);
 /*Fluxion: is the symbol s anywhere in e*/
 bool has_symbol(const pcas_ast_t *e, Symbol s);
 

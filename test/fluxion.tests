@@ -810,6 +810,12 @@ simplify; limit(acos(X),X,1,1); limit(acos(X),X,1,1)
 simplify; limit(acos(X),X,1,-1); 0
 simplify; limit(asec(X+2),X,-1,-1); limit(asec(2+X),X,-1,-1)
 simplify; limit(asec(X+2),X,-1,1); 0
+#an odd root of something heading to -inf heads there too, an even one isn't real
+simplify; limit((3X_1)^(1/3),X,-inf); -inf
+simplify; limit((1_X)^(1/3),X,inf); -inf
+simplify; limit((X+1)*(-X/2_2)^(1/3),X,inf); -inf
+simplify; limit((X_1)^(2/3),X,-inf); inf
+simplify; limit((X_1)^(1/2),X,-inf); limit((-1+X)^(1/2),X,-inf)
 simplify; limit(tan(X),X,pi/2); limit(tan(X),X,pi/2)
 simplify; limit(sin(1/X),X,0); limit(sin(1/X),X,0)
 simplify; limit(ln(X),X,1); 0
