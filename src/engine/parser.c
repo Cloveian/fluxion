@@ -16,6 +16,7 @@ struct Identifier ti_table[AMOUNT_TOKENS] = {
 
     {1, {0xB0}},                            /*TOK_NEGATE*/
     {1, {0x0C}}, {1, {0x0D}}, {1, {0x0F}},  /*TOK_RECIPROCAL, TOK_SQUARE, TOK_CUBE*/
+    {2, {0xBB, 0xFB}},                      /*TOK_PERCENT. Fluxion: made up, the 84 has no %*/
     {1, {0x2D}},                            /*TOK_FACTORIAL*/
 
     {2, {0xEF, 0x34}},          /*TOK_LOG_BASE*/
@@ -62,6 +63,7 @@ struct Identifier str_table[AMOUNT_TOKENS] = {
 
     {1, "-"},                               /*TOK_NEGATE*/
     {5, "^(-1)"}, {2, "^2"}, {2, "^3"},     /*TOK_RECIPROCAL, TOK_SQUARE, TOK_CUBE*/
+    {1, "%"},                               /*TOK_PERCENT*/
     {1, "!"},                               /*TOK_FACTORIAL*/
 
     {5, "logb("},                   /*TOK_LOG_BASE*/
@@ -282,6 +284,7 @@ uint8_t precedence(TokenType type) {
     case TOK_POWER:  case TOK_RECIPROCAL:
     case TOK_SQUARE: case TOK_CUBE:
     case TOK_ROOT:   case TOK_FACTORIAL:
+    case TOK_PERCENT:
         return 15;
     case TOK_SCIENTIFIC:
         return 20;
@@ -376,6 +379,10 @@ void translate(pcas_ast_t *e) {
     case TOK_CUBE:
         optype(e) = OP_POW;
         ast_ChildAppend(e, ast_MakeNumber(num_FromInt(3)));
+        break;
+    case TOK_PERCENT: /*Fluxion: over 100, like the nspire. 20%*50 is 10*/
+        optype(e) = OP_DIV;
+        ast_ChildAppend(e, ast_MakeNumber(num_FromInt(100)));
         break;
     case TOK_FACTORIAL:  optype(e) = OP_FACTORIAL; break;
     case TOK_LOG_BASE:

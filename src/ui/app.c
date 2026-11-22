@@ -1264,7 +1264,7 @@ static bool pick_into(editor_t *into, const item_t *it, bool dry) {
 
     if(it->kind == ITEM_CHAR) {
         static const struct { const char *engine; char c; } chars[] = {
-            { "pi", CH_PI }, { "e", CH_EULER }, { "i", CH_IMAG }, { "theta", CH_THETA }, { "!", '!' },
+            { "pi", CH_PI }, { "e", CH_EULER }, { "i", CH_IMAG }, { "theta", CH_THETA }, { "!", '!' }, { "%", '%' },
             { ".", '.' }, { "-", ED_NEG }, { "[E]", ED_SCI }, { "+", ED_PLUS }, { "_", ED_SUB },
             { "*", ED_TIMES }, { "/", ED_DIVIDE }, { "(", '(' }, { ")", ')' }, { ",", ',' },
             { "=", '=' }, { "X", 'x' },
@@ -1813,6 +1813,9 @@ static const char *const popup_trig[] = {
 /* the nspire's pi key */
 static const char popup_constants[] = { CH_PI, CH_EULER, CH_IMAG, CH_INF, CH_THETA, CH_DEG };
 
+/* the nspire's ?!> key */
+static const char popup_marks[] = { '!', '%', CH_DEG };
+
 /* one grid of characters, or one of functions */
 typedef struct {
     const char *chars;
@@ -1823,6 +1826,7 @@ typedef struct {
 static const popup_set_t math_set = { popup_chars, NULL, (int)sizeof popup_chars, 5, 22 };
 static const popup_set_t trig_set = { NULL, popup_trig, (int)(sizeof popup_trig / sizeof popup_trig[0]), 6, 44 };
 static const popup_set_t constants_set = { popup_constants, NULL, (int)sizeof popup_constants, 6, 22 };
+static const popup_set_t marks_set = { popup_marks, NULL, (int)sizeof popup_marks, 3, 22 };
 
 static const popup_set_t *pset = &math_set;
 static int popup = -1; /* selected one, -1 = closed */
@@ -1887,7 +1891,7 @@ static void ans_first(void) {
 
 static ed_row_t *clipboard;
 
-static const popup_set_t *const popup_sets[] = { &math_set, &trig_set, &constants_set };
+static const popup_set_t *const popup_sets[] = { &math_set, &trig_set, &constants_set, &marks_set };
 
 /* what a key does to the line. false to quit */
 static bool edit_act(action_t a) {

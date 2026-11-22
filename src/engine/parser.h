@@ -27,6 +27,7 @@ typedef enum _TokenType {
     /*Unary*/
     TOK_NEGATE,
     TOK_RECIPROCAL, TOK_SQUARE, TOK_CUBE,
+    TOK_PERCENT, /*Fluxion*/
     TOK_FACTORIAL,
 
     TOK_LOG_BASE,

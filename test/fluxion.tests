@@ -647,6 +647,14 @@ decimal; abs(-3); 3
 decimal; 5!; 120
 decimal; 10!; 3.6288E6
 
+#percent is over 100, like the nspire
+simplify; 25%; 1/4
+simplify; 20%*50; 10
+simplify; 50%X; X/2
+simplify; 150%+1; 5/2
+simplify; (X+1)%; 1/100+X/100
+decimal; 12.5%; 0.125
+
 #Six significant digits, trailing zeros dropped, rounded half up
 decimal; 0; 0
 decimal; 9.5; 9.5

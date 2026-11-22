@@ -26,7 +26,7 @@ static const bind_t binds[] = {
     FUNC(K_SIN, 0, "sin"), FUNC(K_COS, 0, "cos"), FUNC(K_TAN, 0, "tan"),
     DO(K_TRIG, 0, A_POPUP, POPUP_TRIG),
     DO(K_PI, 0, A_POPUP, POPUP_CONSTANTS),
-    DO(K_MARKS, 0, A_POPUP, POPUP_MATH),    /* the OS's has ? ! $ and such, mine has ! and the degree */
+    DO(K_MARKS, 0, A_POPUP, POPUP_MARKS),
     DO(K_LEFT, 0, A_LEFT, 0), DO(K_RIGHT, 0, A_RIGHT, 0), DO(K_UP, 0, A_UP, 0), DO(K_DOWN, 0, A_DOWN, 0),
     DO(K_DEL, 0, A_BACKSPACE, 0), DO(K_ESC, 0, A_ESC, 0),
     DO(K_ENTER, 0, A_ENTER, 0), DO(K_RETURN, 0, A_ENTER, 0), DO(K_CLICK, 0, A_ENTER, 0),

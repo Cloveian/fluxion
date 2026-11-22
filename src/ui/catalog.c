@@ -124,6 +124,8 @@ ITEM(it_logb,     "log_b", "logb", ITEM_TEMPLATE, "logb($,$)", HAVE_YES, "argume
      "logarithm with any base. log_2(8) -> 3")
 ITEM(it_abs,      "|x|",   "abs", ITEM_TEMPLATE, "abs($)",   HAVE_YES, NULL,
      "absolute value, the distance from 0. |-5| -> 5")
+ITEM(it_percent,  "%",     NULL, ITEM_CHAR,     "%",        HAVE_YES, NULL,
+     "percent, over 100. 20%*50 -> 10")
 ITEM(it_fact,     "!",     NULL, ITEM_CHAR,     "!",        HAVE_YES, NULL,
      "factorial, multiplies 1 up to n. 5! -> 120")
 ITEM(it_int,      "int",   "int", ITEM_FUNCTION, "int($)",   HAVE_YES, "floor, like the TI's int(",
@@ -277,7 +279,7 @@ const item_t *const catalog[] = {
     &it_x, &it_letters, &it_pi, &it_e, &it_i, &it_theta,
     &it_power, &it_square, &it_recip, &it_sqrt, &it_cbrt, &it_nroot,
     &it_sin, &it_cos, &it_tan, &it_asin, &it_acos, &it_atan, &it_cot, &it_sec, &it_csc, &it_acot, &it_asec, &it_acsc, &it_ln, &it_exp, &it_log, &it_pow10,
-    &it_sinh, &it_cosh, &it_tanh, &it_asinh, &it_acosh, &it_atanh, &it_logb, &it_abs, &it_fact, &it_int,
+    &it_sinh, &it_cosh, &it_tanh, &it_asinh, &it_acosh, &it_atanh, &it_logb, &it_abs, &it_percent, &it_fact, &it_int,
     &it_gcd, &it_lcm, &it_ncr, &it_npr, &it_amplitude,
     &it_frac, &it_parens, &it_piecewise,
     &it_simplify, &it_expand, &it_subst, &it_evaluate, &it_factor, &it_solve, &it_asym, &it_domain, &it_range, &it_system,

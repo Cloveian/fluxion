@@ -146,6 +146,7 @@ Everything Fluxion does right now, as tables. Yes / partly / no first, the other
 | Feature         |       |
 | --------------- | ----- |
 | Factorials      | yes   |
+| Percent         | yes   |
 | GCD and LCM     | yes\* |
 | Complex numbers | yes\* |
 | Big integers    | yes   |

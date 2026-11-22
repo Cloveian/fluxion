@@ -39,7 +39,7 @@ typedef enum {
     A_MOD           /* n the M_ bit, tapped */
 } act_t;
 
-enum { POPUP_MATH, POPUP_TRIG, POPUP_CONSTANTS };
+enum { POPUP_MATH, POPUP_TRIG, POPUP_CONSTANTS, POPUP_MARKS };
 
 typedef struct {
     act_t op;

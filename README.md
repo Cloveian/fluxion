@@ -74,7 +74,7 @@ The keys do what they do in its own OS, so most of it you already know:
 | `enter` | simplify, `ctrl` `enter` a decimal just once |
 | `menu` | the folders drop down from the top, a number opens one, `esc` goes back. On the catalog or the steps page it lists that page's keys |
 | `ctrl` `x²` `^` `e^x` `10^x` | √, ⁿ√, ln, log |
-| `trig` `π▸` | all 12 trig functions, and π e i ∞ θ ° |
+| `trig` `π▸` `?!▸` | all 12 trig functions, π e i ∞ θ °, and ! % ° |
 | `ctrl` `÷`, `ctrl` `=` | fraction, and `=` `≠` `<` `>` `≤` `≥` |
 | `shift` + arrows | select, `ctrl` `X` `C` `V` cut, copy, paste, `ctrl` `Z` or `ctrl` `esc` undo |
 | `del`, `ctrl` `del` | backspace, clear the line |

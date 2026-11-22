@@ -183,7 +183,7 @@ keys don't stand in for other keys anymore, each keypad has a table of key + mod
 | `var` | stored names | sto-> | |
 | `trig` | popup with all 12 | | |
 | `π▸` | popup with π e i ∞ θ ° | | |
-| `?!▸` | the `[math]` popup | | |
+| `?!▸` | popup with ! % ° | | |
 | `cat` | catalog | the `[math]` popup | |
 | template key | Templates folder | | |
 | `menu` | the folders, or a page's keys | same | |
