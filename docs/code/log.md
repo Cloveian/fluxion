@@ -1,5 +1,17 @@
 # Log
 
+## 2026-11-22 (night) - fuzzing solve till it stopped lying
+
+- a sympy fuzz of solve, 400 equations a seed, found sqrt(x) = -1 answering x = 1 (29 of 29 like it) and e^(4x-2) = -1 answering 1/2 + ln(-1)/4. an even root is never under 0 and a positive number to a power never at or under it, so those are false now, and abs(lin) = c (every one was unknown) is two answers
+- sqrt(lin) = lin gets squared now, solved, and every root plugged back in. the plug in had to be into the equation as *typed*, cuz simplify turns sqrt(-3x) into i sqrt(3) sqrt(x), and in that form sqrt(-3x) = 4x checks out at x = -3/16 (it doesn't). real roots like (-27+3sqrt(17))/8 were getting dropped the same way
+- then the big one: **the app solves with complex on** (csolve) and the tests mostly use solve, so all of the range checks from today were behind `!complex` and the app was still saying asin(x) = 4 has x = sin(4). ugh. they run both ways now (asin's real part stays in its strip, a principal root's real part is never under 0), only e^x = -1 has an x there, and that's i pi now not ln(-1)
+- complex roots of a squared radical get checked with an actual complex float evaluator (cvalue in approx.c, principal branch), sqrt(3x+2) = 2x+3 has two of those and sqrt(x) = -4x-4 has none. the full simplify that did it before was ~390 s on the CE guess for one equation, it's ~4 now
+- the last fuzz: 1200 solves and 1200 csolves, 0 wrong. the 5 csolve still gives up on are cubics with one real root, their complex pair is commented out on purpose (minutes to draw on the calc)
+- limits: the fuzz's gave ups are gone, odd roots head to -inf when what's under them does and (x/(x+1))^(1/3) at -inf is 1. 79219 out of memory runs over everything new, 0 crashes
+- a 1/2 that simplify leaves as a / instead of one number got me *four times* today, in solve.c and limit.c (`fold_fraction` is exported and gets called at each one). every `NODE_NUMBER` check that might see a fraction wants an audit, awake
+- percent too, 25% is 1/4 and 20%*50 is 10
+- still open: the simplify letters-are-positive thing (sqrt(x^2) is x), steps for radical equations, and that audit
+
 ## 2026-11-21 - the nspire, and keys that do things
 
 - **`make nspire`**, Ndless on the CX and CX II. ran on my CX II first try except every answer said it took 20083.1 s, Ndless's `_times()` returns without filling anything in so `clock()` added up stack junk. it reads the first timer at 32768 Hz now (like nSDL) and puts it back how the OS had it on the way out
