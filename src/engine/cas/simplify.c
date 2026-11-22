@@ -1147,7 +1147,7 @@ bool simplify(pcas_ast_t *e, unsigned short flags) {
         if(flags & SIMP_RATIONAL)
             while(!pcas_check() && simplify_rational(e))     intermediate_change = did_change = true;
         if(flags & SIMP_EVAL)
-            while(!pcas_check() && eval(e, EVAL_EASY))       intermediate_change = did_change = true;
+            while(!pcas_check() && eval(e, EVAL_EASY | EVAL_POWERS_FIT))       intermediate_change = did_change = true; /*Fluxion: FIT, (3/100)^2 left 100^2 on the bottom*/
         
         if(flags & SIMP_DERIV) {
             intermediate_change |= eval_derivative_nodes(e);

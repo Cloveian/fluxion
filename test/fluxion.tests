@@ -654,6 +654,12 @@ simplify; 50%X; X/2
 simplify; 150%+1; 5/2
 simplify; (X+1)%; 1/100+X/100
 decimal; 12.5%; 0.125
+simplify; 3%^2; 9/10000
+
+#a power spread over a fraction late in simplify, the bottom only got folded for bases up to 10
+simplify; (3/100)^2; 9/10000
+simplify; (3/11)^2; 9/121
+simplify; (3/20)^2; 9/400
 
 #Six significant digits, trailing zeros dropped, rounded half up
 decimal; 0; 0
