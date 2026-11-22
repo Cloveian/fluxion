@@ -161,6 +161,15 @@ static mp_rat rat_from(real x) {
     return r;
 }
 
+bool approx_float(pcas_ast_t *e, double *x) {
+    real r;
+
+    if(!value(e, &r))
+        return false;
+    *x = r;
+    return true;
+}
+
 bool approx(pcas_ast_t *e) {
     pcas_ast_t *child;
     bool changed = false;

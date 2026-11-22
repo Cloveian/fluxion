@@ -1110,7 +1110,7 @@ static bool past_range(pcas_ast_t *side, pcas_ast_t *in, pcas_ast_t *v, bool com
     case OP_SIN_INV: case OP_TAN_INV: case OP_CSC_INV: lo = -pi / 2; break;
     case OP_COS_INV: case OP_COT_INV: case OP_SEC_INV: lo = 0; break;
     case OP_POW: case OP_ROOT: case OP_ABS:
-        if(!approx_double(v, &x))
+        if(!approx_float(v, &x))
             return false;
         if(op == OP_ABS)
             return x < -1e-5;
@@ -1135,7 +1135,7 @@ static bool past_range(pcas_ast_t *side, pcas_ast_t *in, pcas_ast_t *v, bool com
         return false;
     default: return false;
     }
-    if(!approx_double(v, &x))
+    if(!approx_float(v, &x))
         return false; /*a letter in it, can't tell*/
     hi = lo + pi;
     if(op == OP_TAN_INV || op == OP_COT_INV)
@@ -1535,25 +1535,71 @@ static bool half_power(pcas_ast_t *e) {
     return half;
 }
 
+static bool near_zero(pcas_ast_t *v);
+
+/*Fluxion: root put into expr, the equation as typed. simplify pulls i out of sqrt(-3x) and then sqrt(-3x) =
+  4x checks out at x = -3/16, so it's the typed one. 1 it's 0 there, 0 it isn't (a decimal clearly off,
+  or an i a real x cant make), -1 no telling. exact tries the full simplify for a yes when the float cant tell*/
+static int checks_out(pcas_ast_t *expr, Symbol var, pcas_ast_t *root, bool exact) {
+    pcas_ast_t *v = ast_Copy(expr), *sym = ast_MakeSymbol(var), *w = NULL;
+    int out = -1;
+    double d;
+
+    /*a float can't check a complex one, and the full simplify of one plugged in was ~390 s on the calc*/
+    if(v != NULL && sym != NULL && !has_imaginary_node(root)) {
+        substitute(v, sym, root);
+        /*the float straight off the tree, a simplify pulls an i out of sqrt(-3(-27+sqrt(153))/8) too*/
+        if(near_zero(v))
+            out = 1;
+        else if(approx_float(v, &d))
+            out = 0;
+        else if(exact && (w = ast_Copy(v)) != NULL && (simplify(w, SIMP_ALL), is_zero(w))) /*only when the float cant, and a yes is wanted*/
+            out = 1;
+    }
+    ast_Cleanup(v);
+    ast_Cleanup(w);
+    ast_Cleanup(sym);
+    return out;
+}
+
+/*Fluxion: var under a root or in a power that isn't a whole number, where plugging back in can catch a wrong root*/
+static bool has_root_of(pcas_ast_t *e, Symbol var) {
+    pcas_ast_t *c, *p;
+
+    if(e->type != NODE_OPERATOR)
+        return false;
+    if(isoptype(e, OP_ROOT) && has_symbol(e, var))
+        return true;
+    if(isoptype(e, OP_POW) && has_symbol(ast_ChildGet(e, 0), var)) {
+        p = ast_ChildGet(e, 1);
+        if(p->type != NODE_NUMBER || !mp_rat_is_integer(p->op.num))
+            return true;
+    }
+    for(c = ast_ChildGet(e, 0); c != NULL; c = c->next)
+        if(has_root_of(c, var))
+            return true;
+    return false;
+}
+
 /*Fluxion: v is 0 as far as a decimal can tell, next to the size of its terms. a float's 7 digits against
   100000100 left a 1 behind*/
 static bool near_zero(pcas_ast_t *v) {
     pcas_ast_t *c;
     double d, t, size = 1;
 
-    if(!approx_double(v, &d))
+    if(!approx_float(v, &d))
         return false;
     if(isoptype(v, OP_ADD))
         for(c = ast_ChildGet(v, 0); c != NULL; c = c->next)
-            if(approx_double(c, &t))
+            if(approx_float(c, &t))
                 size += t < 0 ? -t : t;
     return (d < 0 ? -d : d) <= 1e-5 * size;
 }
 
 /*Fluxion: sqrt(3x+2) = 2x+3, var under a sqrt and outside it. c sqrt(u) + rest = 0 squared is c^2 u = rest^2.
-  that also has the roots of c sqrt(u) = -rest, so each root gets plugged back into e and the ones that dont come out 0 go. u linear only, system.c does its own sqrt(x^2+9999)*/
-static int solve_root_away(pcas_ast_t *e, Symbol var, pcas_ast_t **out, bool complex) {
-    pcas_ast_t *t, *f, *term = NULL, *root = NULL, *sq, *sym;
+  that also has the roots of c sqrt(u) = -rest, so each root gets plugged back into expr and the ones that dont come out 0 go. u linear only, system.c does its own sqrt(x^2+9999)*/
+static int solve_root_away(pcas_ast_t *e, pcas_ast_t *expr, Symbol var, pcas_ast_t **out, bool complex) {
+    pcas_ast_t *t, *f, *term = NULL, *root = NULL, *sq;
     coefs_t p;
     bool linear, unsure = false;
     int n, i, k;
@@ -1593,19 +1639,12 @@ static int solve_root_away(pcas_ast_t *e, Symbol var, pcas_ast_t **out, bool com
     n = solve_ex(sq, var, out, complex);
     ast_Cleanup(sq);
 
-    sym = ast_MakeSymbol(var);
     for(i = k = 0; n > 0 && i < n; i++) {
-        pcas_ast_t *v = ast_Copy(e);
-        bool keep = false;
+        int works = checks_out(expr, var, out[i], true);
+        bool keep = works == 1;
 
-        if(v != NULL) {
-            substitute(v, sym, out[i]);
-            simplify(v, SIMP_ALL);
-            keep = is_zero(v) || near_zero(v);
-        }
-        ast_Cleanup(v);
-        /*a complex root the decimal cant check could still be one (sqrt(3x+2) = 2x+3 has two), unknown beats a wrong false*/
-        if(!keep && complex && has_imaginary_node(out[i]))
+        /*one it cant check could still be one (sqrt(3x+2) = 2x+3 has two complex ones), unknown beats a wrong false*/
+        if(works == -1)
             unsure = true;
         if(keep)
             out[k++] = out[i];
@@ -1617,7 +1656,6 @@ static int solve_root_away(pcas_ast_t *e, Symbol var, pcas_ast_t **out, bool com
             out[i] = NULL;
         n = k;
     }
-    ast_Cleanup(sym);
     if(unsure) {
         for(i = 0; i < k; i++) {
             ast_Cleanup(out[i]);
@@ -1740,7 +1778,20 @@ int solve_ex(pcas_ast_t *expr, Symbol var, pcas_ast_t **out, bool complex) {
         n = solve_over(expr, var, out, complex);
     if(n == SOLVE_UNKNOWN && !pcas_cancelled) { /*Fluxion*/
         clear_roots(out);
-        n = solve_root_away(e, var, out, complex);
+        n = solve_root_away(e, expr, var, out, complex);
+    }
+    if(n > 0 && !pcas_cancelled && has_root_of(expr, var)) { /*Fluxion: sqrt(-x) = -2 got x = -4 off simplify's i sqrt(x)*/
+        int i, k;
+
+        for(i = k = 0; i < n; i++) {
+            if(!has_imaginary_node(out[i]) && checks_out(expr, var, out[i], false) == 0)
+                ast_Cleanup(out[i]);
+            else
+                out[k++] = out[i];
+        }
+        for(i = k; i < n; i++)
+            out[i] = NULL;
+        n = k;
     }
 
     if(pcas_cancelled) /*half a root list isn't an answer either*/

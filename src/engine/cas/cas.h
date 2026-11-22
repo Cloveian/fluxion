@@ -257,6 +257,8 @@ bool has_symbol(const pcas_ast_t *e, Symbol s);
     combine them: 2sqrt(2)X -> 2.82843X.
 */
 bool approx(pcas_ast_t *e);
+/*Fluxion: e as a float straight off the tree, no simplify. false with a letter left or where it isn't real, sqrt(-1)*/
+bool approx_float(pcas_ast_t *e, double *x);
 
 /*Fluxion: r as a decimal with digits significant digits: 1.25, 0.333333, 2.28892E7.
 plain from 0.001 up to 10^digits. buf needs digits + 10 chars*/
