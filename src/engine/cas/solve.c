@@ -1108,9 +1108,11 @@ static bool past_range(pcas_ast_t *side, pcas_ast_t *in, pcas_ast_t *v) {
     switch(op) {
     case OP_SIN_INV: case OP_TAN_INV: case OP_CSC_INV: lo = -pi / 2; break;
     case OP_COS_INV: case OP_COT_INV: case OP_SEC_INV: lo = 0; break;
-    case OP_POW: case OP_ROOT:
+    case OP_POW: case OP_ROOT: case OP_ABS:
         if(!approx_double(v, &x))
             return false;
+        if(op == OP_ABS)
+            return x < -1e-5;
         /*a positive number to any power is over 0, e^x = -1 had ln(-1) for an x*/
         if(op == OP_POW && in == b && ((a->type == NODE_NUMBER && mp_rat_compare_zero(a->op.num) > 0)
            || (a->type == NODE_SYMBOL && (a->op.symbol == SYM_EULER || a->op.symbol == SYM_PI))))
@@ -1190,6 +1192,7 @@ static int isolate(pcas_ast_t *e, Symbol var, pcas_ast_t **out, bool complex) {
                 break;
             case OP_ROOT: if(in == b) t = ast_MakeBinary(OP_POW, o, ast_Copy(a)); break;
             case OP_LOG:  if(in == b) t = ast_MakeBinary(OP_POW, ast_Copy(a), o); break;
+            case OP_ABS:  t = o; break; /*Fluxion: and -o, after the loop*/
             /*the whole family, not just the principal one. the second one for
               sin and cos gets added after the loop, unless the two are half a
               turn apart (sin = 0, cos = 0), then it's one family every pi*/
@@ -1237,6 +1240,13 @@ static int isolate(pcas_ast_t *e, Symbol var, pcas_ast_t **out, bool complex) {
                 for(i = 0; i < k && m < SOLVE_MAX; i++)
                     other[m++] = ast_MakeBinary(OP_MULT, ast_MakeInt(-1), ast_Copy(other[i]));
             }
+        }
+        if(op == OP_ABS) { /*Fluxion: abs(u) = o is u = o or u = -o, the one 0 once*/
+            int k = m;
+
+            for(i = 0; i < k && m < SOLVE_MAX; i++)
+                if(!is_zero(other[i]))
+                    other[m++] = ast_MakeBinary(OP_MULT, ast_MakeInt(-1), ast_Copy(other[i]));
         }
         if((op == OP_SIN || op == OP_COS) && !half) {
             /*sin: pi - asin(v), cos: -acos(v), each plus the turns again. the

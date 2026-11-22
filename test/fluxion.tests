@@ -759,6 +759,12 @@ solve; X^(1/3)=-2; X; -8
 solve; e^(4X_2)=-1; X; false
 solve; 3^(4X)=-1; X; false
 solve; e^X=0; X; false
+#abs(u) = c is u = c or u = -c, it gave up before
+solve; abs(4X+4)=3; X; -7/4,-1/4
+solve; abs(-X_3)=2; X; -5,-1
+solve; abs(X)=0; X; 0
+solve; abs(X)=-1; X; false
+solve; abs(X_2)+1=4; X; -1,5
 
 #integer logs come out exact
 simplify; log(1000)+logb(8,2); 6
