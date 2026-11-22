@@ -765,6 +765,11 @@ solve; abs(-X_3)=2; X; -5,-1
 solve; abs(X)=0; X; 0
 solve; abs(X)=-1; X; false
 solve; abs(X_2)+1=4; X; -1,5
+#the app solves with complex on, and the ranges skipped it. e^x = -1 is the one that does have an x there
+csolve; asin(X)=4; X; false
+csolve; sqrt(X)=-1; X; false
+csolve; acos(X)=-1; X; false
+csolve; abs(X_2)=3; X; -1,5
 
 #integer logs come out exact
 simplify; log(1000)+logb(8,2); 6

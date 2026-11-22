@@ -1099,8 +1099,9 @@ static void clear_denominators(pcas_ast_t **e) {
 
 /*Fluxion: v is a number side never gives, so asin(x) = 4 has no x (in = child with x). asin atan acsc
   give -pi/2 to pi/2, acos asec acot 0 to pi. atan and acot never reach the ends,
-  acsc skips 0 and asec pi/2. 1e-5 of slack, the decimal is a float's worth*/
-static bool past_range(pcas_ast_t *side, pcas_ast_t *in, pcas_ast_t *v) {
+  acsc skips 0 and asec pi/2. 1e-5 of slack, the decimal is a float's worth. all of it holds with
+  complex on for a real v too, except e^x = -1 (i pi)*/
+static bool past_range(pcas_ast_t *side, pcas_ast_t *in, pcas_ast_t *v, bool complex) {
     OperatorType op = optype(side);
     pcas_ast_t *a = ast_ChildGet(side, 0), *b = ast_ChildGet(side, 1);
     double x, lo, hi, pi = 3.14159265358979;
@@ -1114,7 +1115,7 @@ static bool past_range(pcas_ast_t *side, pcas_ast_t *in, pcas_ast_t *v) {
         if(op == OP_ABS)
             return x < -1e-5;
         /*a positive number to any power is over 0, e^x = -1 had ln(-1) for an x*/
-        if(op == OP_POW && in == b && ((a->type == NODE_NUMBER && mp_rat_compare_zero(a->op.num) > 0)
+        if(!complex && op == OP_POW && in == b && ((a->type == NODE_NUMBER && mp_rat_compare_zero(a->op.num) > 0)
            || (a->type == NODE_SYMBOL && (a->op.symbol == SYM_EULER || a->op.symbol == SYM_PI))))
             return x <= 0;
         /*an even root is never under 0, sqrt(x) = -1 came back x = 1. the 1/2 can still be a / here*/
@@ -1167,11 +1168,11 @@ static int isolate(pcas_ast_t *e, Symbol var, pcas_ast_t **out, bool complex) {
         if(in == NULL)
             goto nope;
 
-        if(!complex) { /*Fluxion: past what that layer ever gives, no root there*/
+        { /*Fluxion: past what that layer ever gives, no root there. the app solves with complex on*/
             int k = 0;
 
             for(i = 0; i < m; i++) {
-                if(past_range(side, in, other[i]))
+                if(past_range(side, in, other[i], complex))
                     ast_Cleanup(other[i]);
                 else
                     other[k++] = other[i];
