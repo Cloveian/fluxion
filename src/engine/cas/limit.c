@@ -158,6 +158,8 @@ static bool defined_at(pcas_ast_t *e, pcas_ast_t *var, pcas_ast_t *a) {
             return (c->type == NODE_NUMBER && mp_rat_is_integer(c->op.num)) || real_at(e, var, a);
         }
         v = value_at(ast_ChildGet(e, 1), var, a);
+        if(v != NULL)
+            fold_fraction(v);   /*simplify leaves the 1/2 of sqrt as a /*/
         ok = v != NULL && v->type == NODE_NUMBER && mp_rat_compare_zero(v->op.num) > 0;
         ast_Cleanup(v);
         return ok;

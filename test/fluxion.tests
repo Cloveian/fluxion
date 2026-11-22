@@ -857,6 +857,9 @@ simplify; limit(asin(1+1/X),X,inf); limit(asin(1+1/X),X,inf)
 simplify; limit(acos((X+1)/(X+3)),X,inf); 0
 simplify; limit(sqrt(X),X,0,-1); limit(X^(1/2),X,0,-1)
 simplify; limit(sqrt(X),X,0,1); 0
+#both ways at the edge plugs in like sqrt(x) at 0, the 1/2 came out of simplify a / and didn't count as over 0
+simplify; limit((2X_1)^(1/2),X,1/2); 0
+simplify; limit(sqrt(X^2_4),X,-2); 0
 simplify; limit(acos(X),X,1,1); limit(acos(X),X,1,1)
 simplify; limit(acos(X),X,1,-1); 0
 simplify; limit(asec(X+2),X,-1,-1); limit(asec(2+X),X,-1,-1)
