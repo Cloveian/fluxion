@@ -57,8 +57,22 @@ static const bind_t binds[] = {
     { K_SUB, M_SHIFT, { A_ITEM, 0, "deriv" } },
 };
 
+static const key_label_t labels[] = {
+    { K_0, "0" }, { K_1, "1" }, { K_2, "2" }, { K_3, "3" }, { K_4, "4" },
+    { K_5, "5" }, { K_6, "6" }, { K_7, "7" }, { K_8, "8" }, { K_9, "9" },
+    { K_DOT, "." }, { K_NEG, "(-)" }, { K_ADD, "+" }, { K_SUB, "-" },
+    { K_MUL, "x" }, { K_DIV, "/" }, { K_LPAREN, "(" }, { K_RPAREN, ")" },
+    { K_COMMA, "," }, { K_EQUALS, "=" }, { K_EE, "EE" }, { K_VARS, "var" },
+    { K_POW, "^" }, { K_SQUARE, "x^2" }, { K_EX, "e^x" }, { K_TENX, "10^x" },
+    { K_SIN, "sin" }, { K_COS, "cos" }, { K_TAN, "tan" }, { K_TRIG, "trig" }, { K_PI, "pi" },
+    { K_ENTER, "enter" },
+};
+
 const keypad_t keypad = {
     binds, sizeof binds / sizeof binds[0],
+    labels, sizeof labels / sizeof labels[0],
+    { { M_CTRL, "ctrl+" }, { M_SHIFT, "shift+" }, { 0, "" } },
+    "0-9", "a-z",
     { M_SHIFT, 0 },     /* ctrl + a key with nothing on it does nothing */
     M_SHIFT, 0,
     { M_CTRL, M_SHIFT, 0 },

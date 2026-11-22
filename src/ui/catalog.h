@@ -2,10 +2,10 @@
 #define FLUXION_CATALOG_H
 
 /*
-    everything you can type or do in Fluxion, in one place: what it is, which key
-    types it, which soft-key folder it lives in, what it becomes for the engine,
-    and whether the engine can actually do it yet. the menus and the editor are
-    built from this, so adding something means adding it here.
+    everything you can type or do in Fluxion, in one place: what it is, which
+    soft-key folder it lives in, what it becomes for the engine, and whether the
+    engine can actually do it yet. the menus and the editor are built from this,
+    so adding something means adding it here.
 
     see docs/design-choices/input.md (nspire style) and ui.md (the folders).
 */
@@ -33,7 +33,6 @@ typedef struct {
     const char *label; /* how it looks in a menu */
     const char *word; /* what you type to get it (sin, pi, solve), NULL if it cant be typed */
     item_kind_t kind;
-    const char *keys; /* TI keys that type it (a proposal), NULL means folder-only */
     const char *engine; /* engine string syntax, $ is a slot to fill */
     have_t have;
     const char *note;

@@ -76,7 +76,7 @@ C - Nspire style, adapted for the difference in keys
 
 ## Keys
 
-basically like typing on a computer, the cursor is a line and `[on]` is Ctrl. the other keys mean what they mean on the TI-84 (everything is in [`catalog.c`](https://github.com/Cloveian/fluxion/blob/main/src/ui/catalog.c))
+basacally like typing on a computer, the cursor is a line and `[on]` is Ctrl. the other keys mean what they mean on the TI-84 (everything is in [`bind_ce.c`](https://github.com/Cloveian/fluxion/blob/main/src/ui/bind_ce.c))
 
 ### Editing
 
@@ -123,7 +123,7 @@ with something selected: typing replaces it, `(` `÷` `√` `sin` etc go *around
 ### Not done yet
 
 - ~~the full key map (every key x plain / 2nd / alpha / 2nd+alpha / on)~~ it's a table now, `ui/bind_ce.c`, every key and modifier that does something is a row in it
-- the catalog's key column is the CE's keys written out by hand, so the nspire leaves it blank (it said `[2nd][x^2]` for √). it could come out of the tables instead
+- ~~the catalog's key column is the CE's keys written out by hand, so the nspire leaves it blank (it said `[2nd][x^2]` for √)~~ it comes out of the tables now. the first time the catalog opens, every row of the keypad's table gets typed on a scratch line and so does every item, and the ones that match share a key. so the nspire's says ctrl+x^2, and θ found its `[alpha][3]` that the hand written ones never had
 
 ### Menus
 

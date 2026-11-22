@@ -1199,6 +1199,36 @@ static bool setting_on(const item_t *it) {
     return (simp_flags & setting(it)) != 0;
 }
 
+static void type_text(editor_t *e, const char *s) {
+    for(; *s != '\0'; s++)
+        ed_insert_char(e, *s);
+}
+
+/* x^2, x^-1. make an exponent with this in it, then step back out */
+static void power_of(editor_t *e, const char *what) {
+    ed_insert(e, ED_POW, NULL);
+    type_text(e, what);
+    ed_right(e);
+}
+
+/* the typing ones into e, false if a isn't typing */
+static bool type_action(editor_t *e, action_t a) {
+    switch(a.op) {
+    case A_CHAR:     ed_insert_char(e, (char)a.n); break;
+    case A_FUNC:     ed_insert(e, ED_FUNC, a.s); break;
+    case A_TEMPLATE: ed_insert(e, (ed_kind_t)a.n, NULL); break;
+    case A_POWER:    power_of(e, a.s); break;
+    case A_TYPE:
+        type_text(e, a.s);
+        if(a.n != 0)
+            ed_insert(e, (ed_kind_t)a.n, NULL);
+        break;
+    default:
+        return false;
+    }
+    return true;
+}
+
 /*
     what picking an item does, worked out from its engine syntax (catalog.c).
     returns false if the editor can't do it yet. with dry set, only checks.
@@ -1233,14 +1263,27 @@ static bool pick_into(editor_t *into, const item_t *it, bool dry) {
         return false;
 
     if(it->kind == ITEM_CHAR) {
-        char c = strcmp(s, "pi") == 0 ? CH_PI : strcmp(s, "e") == 0 ? CH_EULER :
-                 strcmp(s, "i") == 0 ? CH_IMAG : strcmp(s, "theta") == 0 ? CH_THETA :
-                 strcmp(s, "!") == 0 ? '!' : 0;
-        if(c == 0)
-            return false;
-        if(!dry)
-            ed_insert_char(into, c);
-        return true;
+        static const struct { const char *engine; char c; } chars[] = {
+            { "pi", CH_PI }, { "e", CH_EULER }, { "i", CH_IMAG }, { "theta", CH_THETA }, { "!", '!' },
+            { ".", '.' }, { "-", ED_NEG }, { "[E]", ED_SCI }, { "+", ED_PLUS }, { "_", ED_SUB },
+            { "*", ED_TIMES }, { "/", ED_DIVIDE }, { "(", '(' }, { ")", ')' }, { ",", ',' },
+            { "=", '=' }, { "X", 'x' },
+        };
+        static const char neg_one[] = { ED_NEG, '1', '\0' };
+        unsigned i;
+
+        if(strcmp(s, "^2") == 0 || strcmp(s, "^(-1)") == 0) {
+            if(!dry)
+                power_of(into, s[1] == '2' ? "2" : neg_one);
+            return true;
+        }
+        for(i = 0; i < sizeof chars / sizeof chars[0]; i++)
+            if(strcmp(s, chars[i].engine) == 0) {
+                if(!dry)
+                    ed_insert_char(into, chars[i].c);
+                return true;
+            }
+        return false;   /* 0-9 and A-Z, a whole row of keys */
     }
 
     {
@@ -1548,8 +1591,82 @@ static const char *cat_label(int i) {
         return folders[cat_order[i] - CAT_FOLDER].name;
     return cat_item(i)->label;
 }
-static const char *cat_keys(int i)  { return cat_header(i) || NSPIRE ? NULL : cat_item(i)->keys; } /* the CE's keys, wrong on the nspire */
 static const char *cat_help(int i)  { return cat_header(i) ? NULL : cat_item(i)->help; }
+
+/* the key column. which row of the keypad's table types what picking the item
+   would, both typed on a scratch line and compaired. found on the first open,
+   a byte per item */
+#define NO_KEY     255
+#define LINE_BYTES 48
+static unsigned char cat_key[256];
+
+static size_t line_bytes(const editor_t *e, unsigned char *buf) {
+    ed_row_t *r = ed_copy_line(e);
+    size_t n = r != NULL ? ed_row_save(r, buf, LINE_BYTES) : 0;
+
+    ed_row_free(r);
+    return n;
+}
+
+static void cat_find_keys(void) {
+    struct { size_t n; unsigned char b[LINE_BYTES]; } *typed = malloc(keypad.count * sizeof *typed); /* ~5 KB, just while it looks */
+    unsigned char want[LINE_BYTES];
+    editor_t s;
+    unsigned k, b;
+    size_t n;
+
+    memset(cat_key, NO_KEY, sizeof cat_key);
+    if(typed == NULL || !ed_init(&s)) {
+        free(typed);
+        return;
+    }
+    /* both sides start inside a ( so a ) has something to close */
+    for(b = 0; b < keypad.count; b++) {
+        ed_clear(&s);
+        ed_insert_char(&s, '(');
+        typed[b].n = type_action(&s, keypad.binds[b].a) ? line_bytes(&s, typed[b].b) : 0;
+    }
+
+    for(k = 0; k < catalog_count && k < sizeof cat_key; k++) {
+        const item_t *it = catalog[k];
+        bool simplify = strcmp(it->label, "simplify") == 0;     /* that one's enter */
+
+        if(it->kind == ITEM_SETTING || it->kind == ITEM_FOLDER)
+            continue;
+        ed_clear(&s);
+        ed_insert_char(&s, '(');
+        n = pick_into(&s, it, false) ? line_bytes(&s, want) : 0;
+        for(b = 0; b < keypad.count && b < NO_KEY; b++) {
+            const action_t *a = &keypad.binds[b].a;
+
+            if((a->op == A_ITEM && names_builtin(a->s, (int)strlen(a->s)) == it)
+               || (simplify && a->op == A_ENTER && keypad.binds[b].mods == 0)
+               || (n > 0 && typed[b].n == n && memcmp(typed[b].b, want, n) == 0)) {
+                cat_key[k] = (unsigned char)b;
+                break;
+            }
+        }
+    }
+    ed_free(&s);
+    free(typed);
+}
+
+static const char *cat_keys(int i) {
+    static char text[24];
+    const char *engine;
+    unsigned b;
+
+    if(cat_header(i))
+        return NULL;
+    engine = cat_item(i)->engine;
+    if(engine != NULL && strcmp(engine, "0-9") == 0)
+        return keypad.digits;
+    if(engine != NULL && strcmp(engine, "A-Z") == 0)
+        return keypad.letters;
+    if((b = cat_key[cat_order[i]]) == NO_KEY)
+        return NULL;
+    return bind_text(keypad.binds[b].key, keypad.binds[b].mods, text, sizeof text) ? text : NULL;
+}
 
 static bool cat_pick(int i) {
     const item_t *it;
@@ -1674,6 +1791,7 @@ static void catalog_open(void) {
         cat_sorted(CAT_KEYS, false);
         cat_sorted(CAT_ALL, true);
         catalog_page.count = cat_count;
+        cat_find_keys();
     }
     page_open(&catalog_page);
 }
@@ -1754,18 +1872,6 @@ static bool popup_act(action_t a) {
 
 /* typing (key -> editor) */
 
-static void type_text(const char *s) {
-    for(; *s != '\0'; s++)
-        ed_insert_char(&ed, *s);
-}
-
-/* x^2, x^-1. make an exponent with this in it, then step back out */
-static void power_of(const char *what) {
-    ed_insert(&ed, ED_POW, NULL);
-    type_text(what);
-    ed_right(&ed);
-}
-
 /* typed one after another these are one undo step */
 static bool runs(int c) {
     return (c >= '0' && c <= '9') || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '.' || c == ','
@@ -1776,7 +1882,7 @@ static bool runs(int c) {
    TI. not (-), that's starting a new number */
 static void ans_first(void) {
     if(ed_is_empty(&ed) && last_answer() != NULL)
-        type_text("ans");
+        type_text(&ed, "ans");
 }
 
 static ed_row_t *clipboard;
@@ -1807,19 +1913,15 @@ static bool edit_act(action_t a) {
         if(a.n == ED_DIVIDE && ed_has_selection(&ed))   /* on top of a fraction (nspire) */
             ed_insert(&ed, ED_FRAC, NULL);
         else
-            ed_insert_char(&ed, (char)a.n);     /* sto-> is value -> name, see names.c */
+            type_action(&ed, a);     /* sto-> is value -> name, see names.c */
         break;
-    case A_FUNC:   ed_insert(&ed, ED_FUNC, a.s); break;
     case A_TEMPLATE:
         if(a.n == ED_POW)
             ans_first();
-        ed_insert(&ed, (ed_kind_t)a.n, NULL);
+        type_action(&ed, a);
         break;
-    case A_POWER:  power_of(a.s); break;
-    case A_TYPE:
-        type_text(a.s);
-        if(a.n != 0)
-            ed_insert(&ed, (ed_kind_t)a.n, NULL);
+    case A_FUNC: case A_POWER: case A_TYPE:
+        type_action(&ed, a);
         break;
     case A_ITEM: {
         const item_t *it = names_builtin(a.s, (int)strlen(a.s));

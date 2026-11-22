@@ -2,6 +2,8 @@
 
 #include "bind.h"
 
+#include <stdio.h>
+
 static bool lookup(keycode_t key, unsigned mods, action_t *a) {
     unsigned i;
 
@@ -47,4 +49,31 @@ action_t bind_key(keycode_t key, unsigned mods) {
     }
     a.op = A_NONE;
     return a;
+}
+
+bool bind_text(keycode_t key, unsigned mods, char *buf, int n) {
+    const char *label = NULL;
+    char letter[2] = { 0, 0 };
+    unsigned i;
+    int used = 0;
+
+    for(i = 0; i < keypad.label_count; i++)
+        if(keypad.labels[i].key == key)
+            label = keypad.labels[i].label;
+    if(label == NULL && key >= K_LETTER_A && key <= K_LETTER_Z) {
+        letter[0] = (char)('a' + (key - K_LETTER_A));
+        label = letter;
+    }
+    if(label == NULL)
+        return false;
+
+    buf[0] = '\0';
+    for(i = 0; i < sizeof keypad.mod_text / sizeof keypad.mod_text[0]; i++)
+        if(keypad.mod_text[i].bit & mods) {
+            used += snprintf(buf + used, (size_t)(n - used), "%s", keypad.mod_text[i].text);
+            if(used > n - 1)    /* cut off, stays on the last byte */
+                used = n - 1;
+        }
+    snprintf(buf + used, (size_t)(n - used), "%s", label);
+    return true;
 }

@@ -76,8 +76,23 @@ static const bind_t binds[] = {
     DO(K_ON, M_2ND | M_ALPHA, A_SCREEN_OFF, 0),
 };
 
+static const key_label_t labels[] = {
+    { K_0, "[0]" }, { K_1, "[1]" }, { K_2, "[2]" }, { K_3, "[3]" }, { K_4, "[4]" },
+    { K_5, "[5]" }, { K_6, "[6]" }, { K_7, "[7]" }, { K_8, "[8]" }, { K_9, "[9]" },
+    { K_DOT, "[.]" }, { K_NEG, "[(-)]" }, { K_ADD, "[+]" }, { K_SUB, "[-]" },
+    { K_MUL, "[x]" }, { K_DIV, "[/]" }, { K_LPAREN, "[(]" }, { K_RPAREN, "[)]" },
+    { K_COMMA, "[,]" }, { K_XT, "[x,t,theta,n]" }, { K_STO, "[sto->]" },
+    { K_POW, "[^]" }, { K_SQUARE, "[x^2]" }, { K_RECIP, "[x^-1]" },
+    { K_SIN, "[sin]" }, { K_COS, "[cos]" }, { K_TAN, "[tan]" }, { K_LN, "[ln]" }, { K_LOG, "[log]" },
+    { K_MATH, "[math]" }, { K_APPS, "[apps]" }, { K_PRGM, "[prgm]" }, { K_YEQU, "[y=]" },
+    { K_ENTER, "[enter]" },
+};
+
 const keypad_t keypad = {
     binds, sizeof binds / sizeof binds[0],
+    labels, sizeof labels / sizeof labels[0],
+    { { M_ON, "[on]" }, { M_2ND, "[2nd]" }, { M_ALPHA, "[alpha]" } },
+    "[0]-[9]", "[alpha] + key",
     { M_ON, M_ALPHA },  /* [2nd] + a key with nothing up there does nothing */
     M_2ND | M_ALPHA, M_ALPHA,
     { M_2ND, M_ALPHA, M_ON },
