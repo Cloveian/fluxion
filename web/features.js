@@ -1,8 +1,8 @@
 // the "what it does" cards. names and yes / no come out of docs/features.md (make web copies
-// it into build/), the little note and the keys to show each one out of feature-demos.txt.
-// so editing the doc is editing the page
+// it into build/), the little note and the keys to show each one out of feature-demos.txt (and
+// feature-demos-nspire.txt for the nspire's keys). so editing the doc is editing the page
 
-async function text(url) {
+export async function text(url) {
     try {
         const r = await fetch(url);
         return r.ok ? await r.text() : "";
@@ -42,6 +42,17 @@ function demos(txt) {
     return map;
 }
 
+// name | keys
+function keymap(txt) {
+    const map = new Map();
+    for (const line of txt.split("\n")) {
+        if (!line.trim() || line.startsWith("#")) continue;
+        const [name, keys = ""] = line.split("|").map(c => c.trim());
+        if (keys) map.set(name, keys);
+    }
+    return map;
+}
+
 // *dih*rivatives keeps its italics, the rest is plain text
 function label(el, name) {
     name.split(/\*([^*]+)\*/).forEach((part, i) => {
@@ -50,7 +61,7 @@ function label(el, name) {
     });
 }
 
-const tag = (name, cls, parent) => parent.appendChild(Object.assign(document.createElement(name), cls ? { className: cls } : {}));
+export const tag = (name, cls, parent) => parent.appendChild(Object.assign(document.createElement(name), cls ? { className: cls } : {}));
 
 // two columns, the cards split between them so they come out as close to the same height
 // as they can (a folder's only a handful, so just try every split), each column still in
@@ -99,7 +110,7 @@ const folderOf = title => {
 };
 
 // a pastel each, round the colour wheel. same list as TINTS in tools/frames.py
-const TINTS = ["pink", "peach", "butter", "mint", "blue", "lilac"];
+export const TINTS = ["pink", "peach", "butter", "mint", "blue", "lilac"];
 
 // which cards touch isnt known till they're dealt into columns, so colour after. a card
 // can't have the colour of anything touching it (the one above, anything beside it), then
@@ -125,11 +136,12 @@ function tint(cards) {
     }
 }
 
-// play(li, keys) is called when someone picks one
+// play(li, { ce, nspire }) is called when someone picks one, with the keys for each calc
 export async function cards(play) {
-    const [{ cards, facts }, extra] = await Promise.all([
+    const [{ cards, facts }, extra, nspire] = await Promise.all([
         text("build/features.md").then(tables),
         text("feature-demos.txt").then(demos),
+        text("feature-demos-nspire.txt").then(keymap),
     ]);
     const box = document.getElementById("cards"), nope = [];
 
@@ -159,11 +171,12 @@ export async function cards(play) {
                 why.onkeydown = e => e.stopPropagation();
             }
             if (!more?.keys) return;
+            const keys = { ce: more.keys, nspire: nspire.get(r.name) };
             li.classList.add("demo");
             li.tabIndex = 0;
             li.setAttribute("role", "button");
-            li.onclick = () => play(li, more.keys);
-            li.onkeydown = e => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), play(li, more.keys));
+            li.onclick = () => play(li, keys);
+            li.onkeydown = e => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), play(li, keys));
         });
     }
     // the soft key bar over the cards, f1-f5 with a folder each. one open at a time

@@ -190,7 +190,7 @@ bool poly_expand(pcas_ast_t *e);
   remainder was 0. both have to be polynomials in just var with number coefficients,
   NULL otherwise*/
 pcas_ast_t *poly_quotient(pcas_ast_t *top, pcas_ast_t *bot, Symbol var, bool *exact);
-/*Fluxion: what's left of top after the same division (new tree). bot just var, top
+/*Fluxion: what's left of top after the same *dih*vision (new tree). bot just var, top
   can have other letters too, NULL when either isn't a polynomial*/
 pcas_ast_t *poly_remainder(pcas_ast_t *top, pcas_ast_t *bot, Symbol var);
 

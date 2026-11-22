@@ -20,6 +20,9 @@ convimg.yaml.lst
 __pycache__/
 .playwright-mcp/
 /build-web/
+/build-web-nspire/
 /web/build/
 /build-nspire/
 /bin-nspire/
+/bin-bundle/
+/release/

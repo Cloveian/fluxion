@@ -180,8 +180,8 @@ Everything Fluxion does right now, as tables. Yes / partly / no first, the other
 
 |               |                                        |
 | ------------- | -------------------------------------- |
-| Runs on       | TI-84 Plus CE, OS 5.5+ with arTIfiCE   |
-| Install       | App (installer) or program             |
-| Program needs | `clibs.8xg` on the calc                |
+| Runs on       | TI-84 Plus CE (OS 5.5+ with arTIfiCE), TI-Nspire CX / CX II (Ndless) |
+| Install       | App (installer) or program on the CE, a `.tns` on the Nspire |
+| Program needs | `clibs.8xg` on the CE                  |
 | Also runs on  | PC (SDL window), browser (WebAssembly) |
 | Answer forms  | By hand, expanded, factored, decimal   |

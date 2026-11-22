@@ -48,6 +48,7 @@
                 <div class="buttons">
                     <a class="button quiet" href="#features">Features</a>
                     <a class="button quiet" href="#install">Install</a>
+                    <a id="goto-new" class="button quiet" href="#whats-new" hidden>What's new</a>
                     <a class="button quiet" href="https://github.com/Cloveian/fluxion">Source</a>
                     <button id="try" class="primary">Try it</button>
                 </div>
@@ -55,7 +56,7 @@
             <!-- the keyboard map is keys_pc.c's. closed until someone opens it -->
             <details id="keys" class="panel keys">
                 <summary>Key mappings</summary>
-                <div class="key-tables">
+                <div class="key-tables ce">
                     <div>
                         <h4>Keyboard</h4>
                         <dl>
@@ -89,10 +90,45 @@
                         </dl>
                     </div>
                 </div>
+                <!-- the nspire's, from ui/bind_nspire.c. letters and symbols just type -->
+                <div class="key-tables nspire">
+                    <div>
+                        <h4>Keyboard</h4>
+                        <dl>
+                            <dt><kbd>Ctrl</kbd></dt><dd><kbd class="calc second">ctrl</kbd></dd>
+                            <dt><kbd>Backspace</kbd></dt><dd><kbd class="calc">del</kbd></dd>
+                            <dt><kbd>Delete</kbd></dt><dd><kbd class="calc">del</kbd></dd>
+                            <dt><kbd>Esc</kbd></dt><dd><kbd class="calc">esc</kbd></dd>
+                            <dt><kbd>Enter</kbd></dt><dd><kbd class="calc light">enter</kbd></dd>
+                            <dt><kbd>Shift</kbd> + <kbd>arrows</kbd></dt><dd><kbd class="calc">shift</kbd><span class="sep">+</span><kbd class="calc light">←</kbd> <kbd class="calc light">→</kbd></dd>
+                            <dt><kbd>Ctrl</kbd> + <kbd class="any">key</kbd></dt><dd><kbd class="calc second">ctrl</kbd><span class="sep">+</span><kbd class="calc any">key</kbd></dd>
+                        </dl>
+                    </div>
+                    <div>
+                        <h4>Calculator</h4>
+                        <dl>
+                            <dt>Fraction</dt><dd><kbd class="calc second">ctrl</kbd><span class="sep">+</span><kbd class="calc light">÷</kbd></dd>
+                            <dt>Square root</dt><dd><kbd class="calc second">ctrl</kbd><span class="sep">+</span><kbd class="calc">x²</kbd></dd>
+                            <dt>nth root</dt><dd><kbd class="calc second">ctrl</kbd><span class="sep">+</span><kbd class="calc">^</kbd></dd>
+                            <dt>ln, log</dt><dd><kbd class="calc second">ctrl</kbd><span class="sep">+</span><kbd class="calc">eˣ</kbd> <kbd class="calc">10ˣ</kbd></dd>
+                            <dt>Answer forms</dt><dd><kbd class="calc second">ctrl</kbd><span class="sep">+</span><kbd class="calc light">enter</kbd></dd>
+                            <dt>Select</dt><dd><kbd class="calc">shift</kbd><span class="sep">+</span><kbd class="calc light">←</kbd> <kbd class="calc light">→</kbd></dd>
+                            <dt>Integral, derivative</dt><dd><kbd class="calc">shift</kbd><span class="sep">+</span><kbd class="calc light">+</kbd> <kbd class="calc light">−</kbd></dd>
+                            <dt>Cut, copy, paste</dt><dd><kbd class="calc second">ctrl</kbd><span class="sep">+</span><kbd class="calc">x</kbd> <kbd class="calc">c</kbd> <kbd class="calc">v</kbd></dd>
+                            <dt>Undo</dt><dd><kbd class="calc second">ctrl</kbd><span class="sep">+</span><kbd class="calc">z</kbd></dd>
+                            <dt>Clear the screen</dt><dd><kbd class="calc second">ctrl</kbd><span class="sep">+</span><kbd class="calc">del</kbd></dd>
+                        </dl>
+                    </div>
+                </div>
             </details>
         </div>
 
         <div class="device">
+            <!-- which calculator, the nspire's own wasm only comes down when someone picks it -->
+            <div class="models" role="group" aria-label="Calculator">
+                <button id="model-ce" aria-pressed="true">TI-84 Plus CE</button>
+                <button id="model-nspire" aria-pressed="false">TI-Nspire CX II</button>
+            </div>
             <div id="calc"></div>
             <p class="note"><span class="tip" tabindex="0" data-tip="It's Fluxion's own C code, the same code that runs on the calculator, compiled for your browser. There's no TI OS or ROM anywhere. On the real calculator it's slower, but still very usable.">This is not an emulator</span></p>
         </div>
@@ -110,15 +146,31 @@
             <section id="install" class="install">
                 <h2>Install</h2>
                 <dl id="facts" class="facts"></dl>
+                <h3>TI-84 Plus CE</h3>
                 <ol>
                     <li>If you're on OS 5.5 or newer, jailbreak it with <a href="https://yvantt.github.io/arTIfiCE/">arTIfiCE</a>, and get a shell like <a href="https://github.com/mateoconlechuga/cesium">Cesium</a>.</li>
                     <li>Send the <a href="https://github.com/CE-Programming/libraries/releases">CE C libraries</a> <span class="nowrap">(<code>clibs.8xg</code>).</span></li>
-                    <li>From <a href="https://github.com/Cloveian/fluxion/releases">releases</a>, send <code>Fluxion-app.b84</code> with TI Connect CE, then run <code>FLUXINST</code> once. Fluxion shows up under apps.</li>
+                    <li>From <a href="https://github.com/Cloveian/fluxion/releases">releases</a>, send <code>Fluxion-TI84CE-TIConnectCE.b84</code> with TI Connect CE (or <code>Fluxion-TI84CE-TiLP.tig</code> with TiLP), then run <code>FLUXINST</code> once. Fluxion shows up under apps.</li>
+                </ol>
+                <h3>TI-Nspire CX / CX II</h3>
+                <ol>
+                    <li>Install <a href="https://ndless.me">Ndless</a>: r2022 on a CX II with OS 6.4.0.74, or r2021 on a CX with OS 4.5.5. A CX II on 6.3 has to update to 6.4 first.</li>
+                    <li>From <a href="https://github.com/Cloveian/fluxion/releases">releases</a>, send <code>Fluxion-Nspire.tns</code> with the TI software or TiLP, then open it from My Documents.</li>
+                    <li><code>home</code> quits it.</li>
                 </ol>
             </section>
 
+            <!-- the release notes, filled from docs/releases.md by whatsnew.js. stays hidden if that doesn't load -->
+            <section id="whats-new" class="whats-new" hidden>
+                <h2>What's new</h2>
+                <p class="hint">fresh out of the oven (ﾉ◕ヮ◕)ﾉ*:･ﾟ✧</p>
+                <div id="versions" class="versions" role="group" aria-label="Release"></div>
+                <div id="release"></div>
+                <p class="more"><a href="docs/releases/">Every release so far</a> · <a href="https://github.com/Cloveian/fluxion/releases">Grab one</a></p>
+            </section>
+
             <footer>
-                <p>Made by <a href="https://github.com/Cloveian">Cloveian</a>. The math engine started as <a href="https://github.com/nathanfarlow/PineappleCAS">PineappleCAS</a> by Nathan Farlow, big numbers are <a href="https://github.com/creachadair/imath">imath</a>, the installer is <a href="https://github.com/RoccoLoxPrograms/CEaShell-Installer">CEaShell's</a>, and the keypad up there was measured off <a href="https://github.com/CE-Programming/CEmu">CEmu</a>'s.</p>
+                <p>Made by <a href="https://github.com/Cloveian">Cloveian</a>. The math engine started as <a href="https://github.com/nathanfarlow/PineappleCAS">PineappleCAS</a> by Nathan Farlow, big numbers are <a href="https://github.com/creachadair/imath">imath</a>, the installer is <a href="https://github.com/RoccoLoxPrograms/CEaShell-Installer">CEaShell's</a>, and the keypad up there was measured off <a href="https://github.com/CE-Programming/CEmu">CEmu</a>'s (the Nspire's off the real thing, with its labels from <a href="https://github.com/nspire-emus/firebird">Firebird</a>'s).</p>
                 <p><a href="docs/">Design notes</a> · not made by or affiliated with Texas Instruments</p>
             </footer>
         </div>

@@ -21,7 +21,8 @@
         const log = document.getElementById("log");
         let n = 0;
         calculator(document.getElementById("pad"), (name, held) =>
-            log.textContent = `${++n}: ${Object.keys(held).filter(m => held[m]).map(m => m + "+").join("")}${name}`);
+            log.textContent = `${++n}: ${Object.keys(held).filter(m => held[m]).map(m => m + "+").join("")}${name}`,
+            new URLSearchParams(location.search).get("model") ?? "ce"); // ?model=nspire
     </script>
 </body>
 </html>

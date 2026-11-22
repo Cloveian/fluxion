@@ -14,7 +14,7 @@ What has to be done before a release.
 - [ ] Credit PineappleCAS, keep its MIT licence text
 
 ## Release
-- [ ] GitHub release with `Fluxion-app.b84` (or `FLUXINST.8xp` + the six `FLUXAPP` appvars)
+- [ ] `make release`, then a GitHub release with everything in `release/Fluxion-<version>/` (`Fluxion-TI84CE-TIConnectCE.b84`, `Fluxion-TI84CE-TiLP.tig`, `Fluxion-TI84CE-loose-files.zip` with the loose `FLUXINST.8xp` + `FLUXAPP` appvars, and `Fluxion-Nspire.tns`)
 - [ ] Demo video recorded in CEmu (most people don't have a CE)
 
 ---

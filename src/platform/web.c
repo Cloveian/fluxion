@@ -18,7 +18,11 @@ static const struct { const char *name; keycode_t key; } names[] = {
     { "x^2", K_SQUARE }, { "log", K_LOG }, { "ln", K_LN }, { "sto", K_STO },
     { "neg", K_NEG }, { "enter", K_ENTER }, { "on", K_ON },
     { "up", K_UP }, { "down", K_DOWN }, { "left", K_LEFT }, { "right", K_RIGHT },
-    { "menu", K_MENU }, { "trig", K_TRIG }, /* the nspire's, so scripts can try them */
+    /* the nspire's, so scripts can try them and the page's nspire keypad has something to press */
+    { "menu", K_MENU }, { "trig", K_TRIG }, { "esc", K_ESC }, { "doc", K_DOC }, { "home", K_HOME },
+    { "cat", K_CAT }, { "template", K_TEMPLATE }, { "pi", K_PI }, { "ee", K_EE }, { "?!", K_MARKS },
+    { "10^x", K_TENX }, { "e^x", K_EX }, { "return", K_RETURN }, { "click", K_CLICK },
+    { "ctrl", K_CTRL }, { "shift", K_SHIFT },
 };
 
 keycode_t keys_from_char(char c) {
@@ -38,6 +42,7 @@ keycode_t keys_from_char(char c) {
     case '(': return K_LPAREN;
     case ')': return K_RPAREN;
     case ',': return K_COMMA;
+    case '=': return K_EQUALS;  /* the CE has no such key, its page types = as [2nd][math] */
     case '.': return K_DOT;
     case '~': return K_NEG;
     default:  return K_NONE;
@@ -72,7 +77,12 @@ void web_press(int key, int on, int second, int alpha) {
     if(count == QUEUE)
         return;     /* someone's mashing, they won't miss it */
     p.key = (keycode_t)key;
+#ifdef _TINSPIRE
+    (void)alpha;    /* two modifiers there, the page sends them as on and second */
+    p.held = (on ? M_CTRL : 0) | (second ? M_SHIFT : 0);
+#else
     p.held = (on ? M_ON : 0) | (second ? M_2ND : 0) | (alpha ? M_ALPHA : 0);
+#endif
     queue[(head + count++) % QUEUE] = p;
 }
 

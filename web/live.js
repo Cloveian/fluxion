@@ -3,7 +3,7 @@
 import createFluxion from "./build/fluxion.js";
 import { calculator } from "./calc.js";
 
-export async function live(parent) {
+export async function live(parent, model = "ce") {
     const box = document.createElement("div");
     box.className = "live";
     box.style.position = "relative";
@@ -33,10 +33,11 @@ export async function live(parent) {
     function press(name, held = {}) {
         if (!mod) return; // still loading
         const key = codes[name] ??= mod.ccall("web_key", "number", ["string"], [name]);
-        if (key) mod._web_press(key, +!!held.on, +!!held.second, +!!held.alpha);
+        // the nspire's ctrl and shift go in as the first two, web.c knows which build it is
+        if (key) mod._web_press(key, +!!(held.on ?? held.ctrl), +!!(held.second ?? held.shift), +!!held.alpha);
     }
 
-    const calc = calculator(box, press);
+    const calc = calculator(box, press, model);
     const s = calc.screen, pct = (a, b) => `${(a / b * 100).toFixed(3)}%`;
     Object.assign(canvas.style, {
         position: "absolute",
@@ -73,7 +74,8 @@ export async function live(parent) {
         paint();
     }
 
-    mod = await createFluxion({
+    const create = model === "ce" ? createFluxion : (await import("./build/fluxion-nspire.js")).default;
+    mod = await create({
         // called as Module.present, so this is the module. the first frame comes from main(),
         // before createFluxion has even resolved
         present(fb) {
@@ -93,7 +95,19 @@ export async function live(parent) {
         },
     });
 
-    return { press, light: calc.light, calc, canvas };
+    // wipes the half typed line and the screen, the history stays (up arrow) like on the calc
+    const wipe = () => {
+        if (model === "ce") {
+            press("clear");
+            press("clear", { on: true });
+        } else {
+            for (let i = 0; i < 3; i++) press("esc"); // out of a page or a menu in a menu, ctrl+del doesn't
+            press("del", { ctrl: true });
+            press("del", { ctrl: true });
+        }
+    };
+
+    return { press, light: calc.light, calc, canvas, box, model, wipe };
 }
 
 // the computer's keyboard, same layout as the PC build (keys_pc.c's header has the table).
@@ -105,7 +119,53 @@ const KEYS = {
 };
 const REPEATS = new Set(["up", "down", "left", "right", "clear", "del"]);
 
+// the nspire's: its keys are the computer's, letters and symbols type themselves. ctrl is ctrl,
+// let go on its own it's a tap. shift is just shift (capitols and ( ^ need it), only with the arrows
+// does it mean something, that's select
+const NSPIRE_KEYS = {
+    Enter: "enter", Backspace: "del", Delete: "del", Escape: "esc", Home: "home",
+    ArrowUp: "up", ArrowDown: "down", ArrowLeft: "left", ArrowRight: "right",
+};
+const NSPIRE_REPEATS = new Set(["up", "down", "left", "right", "del"]);
+// ctrl + these, anything else is the browser's (ctrl+r, ctrl+w ...)
+const NSPIRE_CTRL = /^[zxcv17=+\-\/^]$/;
+
+function nspireKeyboard(fx) {
+    let alone = false; // ctrl's down with nothing else since
+
+    function down(e) {
+        if (e.key === "Control") {
+            if (!e.repeat) alone = true;
+            e.preventDefault();
+            return;
+        }
+        alone = false;
+        if (e.metaKey || e.altKey) return;
+        const name = NSPIRE_KEYS[e.key] ?? (e.key.length === 1 ? e.key : null);
+        if (!name || (e.repeat && !NSPIRE_REPEATS.has(name))) return;
+        if (e.ctrlKey && name.length === 1 && !NSPIRE_CTRL.test(name)) return;
+        e.preventDefault();
+        fx.press(name, { ctrl: e.ctrlKey, shift: e.shiftKey && ["up", "down", "left", "right"].includes(name) });
+        fx.light(name);
+    }
+
+    function up(e) {
+        if (e.key !== "Control" || !alone) return;
+        alone = false;
+        fx.press("ctrl");
+        fx.light("ctrl");
+    }
+
+    addEventListener("keydown", down);
+    addEventListener("keyup", up);
+    return () => {
+        removeEventListener("keydown", down);
+        removeEventListener("keyup", up);
+    };
+}
+
 export function keyboard(fx) {
+    if (fx.model === "nspire") return nspireKeyboard(fx);
     let alone = null; // the modifier that's down with nothing else since
 
     function send(name, held = {}) {

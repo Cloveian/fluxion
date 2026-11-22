@@ -1,0 +1,13 @@
+# autoplay scripts for the nspire, the same problems as demo.txt. name: keys (key names as in demo.txt, ctrl+ and shift+ are held down for that key, the letters are keys of their own here)
+fractions: 6 x ctrl+/ x + 1 right - 5 ctrl+/ x + 1 enter
+sqrt: ctrl+x^2 3 5 * 1 0 8 enter
+solve: menu 1 3 5 x x^2 + 6 x = 3 , x enter
+copy-paste: menu 1 1 ( x + 2 ) ^ 3 enter menu 1 2 up enter enter
+cubic: menu 1 3 x ^ 3 right - 3 x + 1 enter
+solve-letters: menu 1 3 ctrl+/ 3 x - y down x + y right = 5 ctrl+/ 8 right , x enter
+inequality: menu 1 3 x x^2 - 4 ctrl+= 3 0 , x enter
+roots: menu 1 5 x ^ 4 right - 1 , x enter
+derivative: menu 2 1 ctrl+e^x x right ctrl+/ x enter
+circle-line: menu 1 4 x x^2 + y x^2 = 2 5 , y = x + 1 enter
+range: menu 1 a 3 x x^2 + 1 , x enter
+hyperbola: menu 1 e 2 x x^2 ctrl+/ 9 right - y x^2 ctrl+/ 1 6 right = 1 enter

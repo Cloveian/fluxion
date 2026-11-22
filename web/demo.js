@@ -1,25 +1,39 @@
 // the autoplay. types problems on the keypad like someone would, sits on the answer for a bit,
-// then the next one. the problems are in demo.txt, same key names as web/wall/scripts.txt,
-// alpha+ means alpha's held down for that key
+// then the next one. the problems are in demo.txt (demo-nspire.txt for the nspire), same key names
+// as web/wall/scripts.txt. alpha+ means alpha's held down for that key, ctrl+ and shift+ the same
+// on the nspire
 
-// a lone lowercase letter gets the alpha key it's printed above (x has its own)
+// a lone lowercase letter gets the alpha key it's printed above (x has its own). the CE's only,
+// the nspire's letters are keys
 const ALPHA = {
     a: "math", b: "apps", c: "prgm", d: "x^-1", e: "sin", f: "cos", g: "tan", h: "^",
     i: "x^2", j: ",", k: "(", l: ")", m: "/", n: "log", o: "7", p: "8", q: "9", r: "*",
     s: "ln", t: "4", u: "5", v: "6", w: "-", y: "1", z: "2",
 };
-const HELD = { "on+": "on", "2nd+": "second", "alpha+": "alpha" };
-const KEY_OF = { on: "on", second: "2nd", alpha: "alpha" };
+// per calculator: held prefixes and the key each one lights, plus what clears the screen (the press, the keys to light)
+const MODEL = {
+    ce: {
+        held: { "on+": "on", "2nd+": "second", "alpha+": "alpha" },
+        keyOf: { on: "on", second: "2nd", alpha: "alpha" },
+        screen: ["clear", { on: true }], lit: ["on", "clear"],
+    },
+    nspire: {
+        held: { "ctrl+": "ctrl", "shift+": "shift" },
+        keyOf: { ctrl: "ctrl", shift: "shift" },
+        screen: ["del", { ctrl: true }], lit: ["ctrl", "del"],
+    },
+};
 
 export async function load(url = "demo.txt") {
     const text = await (await fetch(url)).text();
     return text.split("\n").filter(l => l.trim() && !l.startsWith("#")).map(l => l.slice(l.indexOf(":") + 1).trim());
 }
 
-function presses(script) {
+function presses(script, model) {
+    const { held: HELD } = MODEL[model];
     return script.split(/\s+/).map(token => {
-        if (token === "x") return { name: "xt", held: {} };
-        if (ALPHA[token]) return { name: ALPHA[token], held: { alpha: true } };
+        if (model === "ce" && token === "x") return { name: "xt", held: {} };
+        if (model === "ce" && ALPHA[token]) return { name: ALPHA[token], held: { alpha: true } };
         const held = {};
         for (let more = true; more;) {
             more = false;
@@ -38,31 +52,32 @@ const sleep = ms => new Promise(done => setTimeout(done, ms));
 const between = (lo, hi) => lo + Math.random() * (hi - lo);
 
 export function autoplay(fx, problems) {
+    const model = MODEL[fx.model], taps = Object.values(model.keyOf);
     let run = 0;
 
     // types one script, false if something else took over halfway
     async function type(script, id) {
-        const keys = presses(script);
+        const keys = presses(script, fx.model);
         for (const [i, { name, held }] of keys.entries()) {
             if (id !== run) return false;
             if (name === "enter") await sleep(600); // a beat to see the whole thing typed
-            const gap = name === "alpha" || name === "2nd" ? between(110, 160) : between(150, 280);
+            const gap = taps.includes(name) ? between(110, 160) : between(150, 280);
             fx.press(name, held);
             fx.light(name, 140);
             // held ones stay lit until the next key, so a run of alpha+ looks like one long hold
             for (const mod of Object.keys(held))
-                fx.light(KEY_OF[mod], keys[i + 1]?.held[mod] ? gap + 400 : 140);
+                fx.light(model.keyOf[mod], keys[i + 1]?.held[mod] ? gap + 400 : 140);
             await sleep(gap);
         }
         await sleep(2900);
         return id === run;
     }
 
-    // [on][clear] clears the screen and keeps the history, like it would for you
+    // [on][clear] ([ctrl][del] on the nspire) clears the screen and keeps the history, like it would for you
     async function clear() {
-        fx.press("clear", { on: true });
-        fx.light("on", 160);
-        fx.light("clear", 140);
+        fx.press(...model.screen);
+        fx.light(model.lit[0], 160);
+        fx.light(model.lit[1], 140);
         await sleep(500);
     }
 
@@ -79,7 +94,7 @@ export function autoplay(fx, problems) {
         // one script right now (a feature someone clicked), and it stays on the answer after
         async show(script) {
             const id = ++run;
-            fx.press("clear"); // whatever was half typed
+            fx.wipe(); // whatever was half typed, and whatever page was open
             await clear();
             await type(script, id);
         },

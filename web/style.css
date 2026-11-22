@@ -102,7 +102,7 @@ h1 .mu { color: var(--blue); }
 
 /* the three links on the left, try it on its own on the right pointing at the calc */
 .buttons { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 30px 0 4px; }
-.button.quiet { padding: .5em 1.05em; font-size: .92rem; }
+.button.quiet { padding: .5em .85em; font-size: .92rem; }
 /* by the panel's width, not the window's: in between sizes the row didn't fit and try it
    wrapped onto its own line pushed right. too narrow for one row -> try it full width under them */
 .intro { container-type: inline-size; }
@@ -211,13 +211,20 @@ kbd.any, kbd.calc.any { border: 1px dashed #5a566a; color: var(--muted); font-st
 kbd.any { border-image: none; }
 kbd.calc.alpha { color: #12160a; }
 
-/* the whole calc fits on screen, it's 162 x 367 and the note wants a bit under it */
+/* the whole calc fits on screen, it's 162 x 367 (the nspire too) and the note wants a bit under
+   it, the switch a bit over */
 #calc {
-    width: min(100%, calc((100vh - 90px) * 162 / 367));
+    width: min(100%, calc((100vh - 140px) * 162 / 367));
     margin: 0 auto;
     filter: drop-shadow(0 30px 60px rgb(0 0 0 / .6));
 }
 #calc svg { display: block; width: 100%; height: auto; }
+/* which calculator's showing */
+.models, .versions { display: flex; gap: 8px; }
+.models button, .versions button { padding: .4em .9em; font-size: .88rem; white-space: nowrap; }
+.models { justify-content: center; margin: 0 auto 14px; }
+/* the key tables for the other one stay out of the way */
+body[data-model="nspire"] .key-tables.ce, body:not([data-model="nspire"]) .key-tables.nspire { display: none; }
 .note { margin-top: 14px; color: var(--muted); font-size: .85rem; text-align: center; }
 /* the explanation's in a tooltip so the line under the calc stays one short sentence */
 .tip { position: relative; border-bottom: 1px dotted var(--muted); cursor: help; outline: none; }
@@ -248,6 +255,21 @@ kbd.calc.alpha { color: #12160a; }
 
 .install { margin: 40px 0; padding: 8px 32px 20px; }
 .install li { margin: .5em 0; }
+.install h3 { margin: 18px 0 4px; color: var(--mint); font: 500 .75rem var(--mono); letter-spacing: .08em; text-transform: uppercase; }
+
+/* the what's new card, one release at a time (whatsnew.js). a card like the feature ones but its
+   list is running text, so it doesn't get their flex rows. the fill's frames.css */
+.whats-new { margin: 40px 0; }
+.versions { flex-wrap: wrap; margin: 6px 0 16px; }
+.release { margin: 0; padding: 14px 22px 12px; }
+.release .date { margin-left: 10px; color: var(--muted); font: 500 .8rem var(--mono); }
+.release .lede { margin: 0 0 4px; color: var(--ink); }
+.release h4 { margin: 16px 0 4px; color: var(--tint); font: 500 .75rem var(--mono); letter-spacing: .08em; text-transform: uppercase; }
+.release ul { margin: 0; padding: 0; list-style: none; }
+.release li { position: relative; margin: .4em 0; padding-left: 1.3em; }
+.release li::before { content: ":"; position: absolute; left: .25em; color: var(--tint); font-family: var(--mono); }
+.release strong { color: var(--tint); font-weight: 600; }
+.whats-new .more { margin: 16px 0 0; color: var(--muted); font-size: .9rem; }
 code { padding: .1em .35em; font-size: .9em; white-space: nowrap; } /* a wrapped one split its frame in two on phones */
 .nowrap { white-space: nowrap; } /* keeps (clibs.8xg) together, the ( got left behind on its own */
 
@@ -276,7 +298,7 @@ footer { padding: 8px 0 48px; color: var(--muted); font-size: .9rem; }
 .folders { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin: 6px 0 16px; container-type: inline-size; }
 .folders button { display: flex; flex-direction: column; align-items: center; gap: 1px; padding: .4em .2em .5em; font-size: .92rem; white-space: nowrap; }
 .folders small { color: var(--green); font: 500 .7rem var(--mono); }
-.folders [aria-pressed="true"] { color: var(--bg); }
+.folders [aria-pressed="true"], .models [aria-pressed="true"], .versions [aria-pressed="true"] { color: var(--bg); }
 .folders [aria-pressed="true"] small { color: #1e6626; } /* the calc's alpha label green, the pastel one vanishes */
 @container (max-width: 420px) { .folders button { font-size: .78rem; } }
 /* columns the same height, the short one's cards grow to fill so the bottoms line up */
@@ -286,7 +308,8 @@ footer { padding: 8px 0 48px; color: var(--muted); font-size: .9rem; }
 .card { margin: 0; padding: 14px 18px 10px; }
 /* the heading's the highlighted tab at the top of a TI menu, solid with black on it.
    the fill's a border-image in frames.css for the cut corners */
-.card h3 { display: inline-block; margin: 0 0 8px -2px; padding: 2px 8px 1px; color: var(--bg); font: 500 .8rem var(--mono); letter-spacing: .08em; text-transform: uppercase; }
+.card h3, .release h3 { display: inline-block; margin: 0 0 8px -2px; padding: 2px 8px 1px; color: var(--bg); font: 500 .8rem var(--mono); letter-spacing: .08em; text-transform: uppercase; }
+.release h3 { text-transform: none; } /* a version, not shouted */
 /* a pastel each, the outline's the same colour dimmed (frames.css) */
 .tint-pink { --tint: var(--tint-pink); }
 .tint-blue { --tint: var(--tint-blue); }

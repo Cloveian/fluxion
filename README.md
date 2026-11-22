@@ -39,13 +39,13 @@ You need a TI-84 Plus CE.
 1. If you're on OS 5.5 or newer, jailbreak with [arTIfiCE](https://yvantt.github.io/arTIfiCE/) and get a shell like [Cesium](https://github.com/mateoconlechuga/cesium)
 2. Send the [CE C libraries](https://github.com/CE-Programming/libraries/releases) (`clibs.8xg`) to the calculator
 3. From [releases](https://github.com/Cloveian/fluxion/releases), either
-   - **the app** (what I use): send `Fluxion-app.b84` (or `FLUXINST.8xp` and the six `FLUXAPP` files), run `FLUXINST` once, and Fluxion shows up under apps
+   - **the app** (what I use): send `Fluxion-TI84CE-TIConnectCE.b84` with TI Connect CE, or `Fluxion-TI84CE-TiLP.tig` with TiLP (or unzip `Fluxion-TI84CE-loose-files.zip` and send `FLUXINST.8xp` and the eight `FLUXAPP` files), run `FLUXINST` once, and Fluxion shows up under apps
    - **the program**: send `Fluxion-program.b84` (or `FLUXION.8xp` and its three appvars) and run it from Cesium
 
 ### TI-Nspire CX / CX II
 
 1. Install [Ndless](https://ndless.me): r2022 on a CX II with OS 6.4.0.74, or r2021 on a CX with OS 4.5.5 (a CX II on 6.3 has to update to 6.4 first)
-2. Build `Fluxion.tns` with `make nspire` (see Building), send it over with the TI software or TiLP, and open it from My Documents
+2. Send `Fluxion-Nspire.tns` from [releases](https://github.com/Cloveian/fluxion/releases) (or build it yourself with `make nspire`, see Building, it ends up as `bin-nspire/Fluxion.tns`) over with the TI software or TiLP, and open it from My Documents
 3. `home` quits it
 
 ## Keys
@@ -91,6 +91,8 @@ Needs the [CE C toolchain](https://github.com/CE-Programming/toolchain) (v15):
 make                          # all of the ones below, one after the other
 make ce                       # bin-app/Fluxion.8ek, the app
 make installer                # bin-installer/, the app + its installer (see installer/README.md)
+make bundle                   # bin-bundle/, the installer as one .b84 (TI Connect CE) and one .tig (TiLP)
+make release                  # tests, both calculators, the bundles, and all the files to send in release/Fluxion-<version>/
 make test                     # PC build + engine tests
 ./build-pc/fluxion-app        # run it in a window on the PC
 make web                      # web/build/, the same thing for a browser (needs emscripten)
@@ -118,7 +120,7 @@ i did (and still do) the design and the core of it myself, the engine work, edit
 - Fonts from the X11 misc-fixed set (public domain)
 - Built with the [CE C toolchain](https://github.com/CE-Programming/toolchain)
 - The app installer is [CEaShell-Installer](https://github.com/RoccoLoxPrograms/CEaShell-Installer) by RoccoLox Programs, unmodified
-- The keypad on the web page was measured off [CEmu](https://github.com/CE-Programming/CEmu)'s (no code from it)
+- The keypad on the web page was measured off [CEmu](https://github.com/CE-Programming/CEmu)'s, and the Nspire one off a photo of the real calculator, with its key order and labels from [Firebird](https://github.com/nspire-emus/firebird)'s keypad (no code or images from either)
 
 ## License
 

@@ -3,6 +3,8 @@
 #   make               all of them: ce, pc, web and nspire, one after the other
 #   make ce            bin-app/Fluxion.8ek, the CE app
 #   make installer     bin-installer/, the app as appvars + its installer
+#   make bundle        bin-bundle/, the installer files as one .b84 (TI Connect CE) and one .tig (TiLP)
+#   make release       tests, both calculators, the bundles, and everything to send in release/Fluxion-<version>/
 #   make pc            build-pc/fluxion (PineappleCAS's command line) + build-pc/fluxion-app
 #   make test          PC build + the engine's tests + the identity mask check
 #   make budget        what each test line costs, the CE guess too
@@ -14,7 +16,7 @@
 # CE, PC and nspire goals don't mix in one call, the CE toolchain has its own test and clean
 
 PC_PHONY = pc test budget web clean-pc
-PC_GOALS = $(PC_PHONY) build-pc/% build-web/% web/%
+PC_GOALS = $(PC_PHONY) build-pc/% build-web/% build-web-nspire/% web/%
 NSPIRE_GOALS = nspire clean-nspire build-nspire/% bin-nspire/%
 
 ifeq ($(MAKECMDGOALS),)
@@ -113,17 +115,36 @@ build-web/%.o: src/%.c
 
 -include $(WEB_OBJECTS:.o=.d)
 
+WEB_LINK = -O2 -lm -sASYNCIFY -sALLOW_MEMORY_GROWTH -sMODULARIZE -sEXPORT_ES6 -sENVIRONMENT=web \
+           -sEXPORTED_RUNTIME_METHODS=HEAPU8,ccall
+
 web/build/fluxion.js: $(WEB_OBJECTS)
 	@mkdir -p $(@D)
-	$(EMCC) $^ -O2 -lm -sASYNCIFY -sALLOW_MEMORY_GROWTH -sMODULARIZE -sEXPORT_ES6 -sENVIRONMENT=web \
-		-sEXPORTED_RUNTIME_METHODS=HEAPU8,ccall -o $@
+	$(EMCC) $^ $(WEB_LINK) -o $@
 
-# the page reads the feature tables straight out of the docs
-web/build/features.md: docs/features.md
+# the same again with the nspire's keys, for the page's toggle. only what _TINSPIRE changes gets
+# built twice (ui, platform, editor, render), the engine objects are the ones above. the nspire's
+# own platform files stay out, web.c and the PC ones stand in like they do for the CE
+WEB_NSPIRE_SOURCES := $(filter-out src/platform/keys_nspire.c src/platform/window_nspire.c src/platform/clock_nspire.c, \
+                        $(filter-out src/engine/%,$(WEB_SOURCES)))
+WEB_NSPIRE_OBJECTS := $(WEB_NSPIRE_SOURCES:src/%.c=build-web-nspire/%.o)
+
+build-web-nspire/%.o: src/%.c
+	@mkdir -p $(@D)
+	$(EMCC) -std=c99 $(WEB_FLAGS) -D_TINSPIRE -c $< -o $@
+
+-include $(WEB_NSPIRE_OBJECTS:.o=.d)
+
+web/build/fluxion-nspire.js: $(WEB_NSPIRE_OBJECTS) $(filter build-web/engine/%,$(WEB_OBJECTS))
+	@mkdir -p $(@D)
+	$(EMCC) $^ $(WEB_LINK) -o $@
+
+# the page reads the feature tables and the release notes straight out of the docs
+web/build/%.md: docs/%.md
 	@mkdir -p $(@D)
 	cp $< $@
 
-web: web/build/fluxion.js web/build/features.md
+web: web/build/fluxion.js web/build/fluxion-nspire.js web/build/features.md web/build/releases.md
 
 test: $(TARGET) build-pc/identity-masks build-pc/layout-dump build-pc/view build-pc/editor-test build-pc/fluxion-app
 	./$(TARGET) test test/pcas.tests
@@ -134,7 +155,7 @@ budget: $(TARGET)
 	./$(TARGET) budget test/fluxion.tests
 
 clean-pc:
-	rm -rf build-pc build-web web/build
+	rm -rf build-pc build-web build-web-nspire web/build
 
 .PHONY: $(PC_PHONY)
 
@@ -239,5 +260,47 @@ installer:
 	$(CONVBIN) --iformat 8ek --input $(BINDIR)/$(NAME).8ek --oformat 8xv-split --maxvarsize $(APPVAR_SPLIT_SIZE) --name $(APPVAR_PREFIX) --output $(INSTALLER_OUT)/$(APPVAR_PREFIX).8xv
 	@ls -l $(INSTALLER_OUT)
 .PHONY: installer
+
+# ----------------------------
+# bundles and the release folder
+# ----------------------------
+# 'make bundle': the installer files as one .b84 for TI Connect CE (convbin makes it) and one
+# .tig for TiLP (a zip, TiLP's own group format), in bin-bundle/. the installer folder gets
+# wiped on every 'make installer' so they live next to it
+# 'make release': the tests, the app and installer, the nspire build, the bundles, then all of
+# it in release/Fluxion-<version>/, the loose installer files in one .zip (the same
+# files as the .tig, but TiLP only takes that one by its name). the version is the top '## vX.Y.Z' heading of
+# docs/releases.md, or make release VERSION=vX.Y.Z. the nspire build and the tests are their
+# own makes, CE / PC / nspire goals don't mix
+
+BUNDLE_OUT = bin-bundle
+# the names people download: calculator, then what opens it. no version in them, that's the folder's
+ASSET_B84 = $(NAME)-TI84CE-TIConnectCE.b84
+ASSET_TIG = $(NAME)-TI84CE-TiLP.tig
+ASSET_ZIP = $(NAME)-TI84CE-loose-files.zip
+ASSET_TNS = $(NAME)-Nspire.tns
+VERSION ?= $(shell sed -n 's/^## \(v[0-9][0-9.]*\).*/\1/p' docs/releases.md 2>/dev/null | head -1)
+RELEASE_DIR = release/$(NAME)-$(VERSION)
+
+bundle: installer
+	rm -rf $(BUNDLE_OUT)
+	mkdir -p $(BUNDLE_OUT)
+	files="$(INSTALLER_OUT)/$(INSTALLER_NAME).8xp $$(ls -v $(INSTALLER_OUT)/$(APPVAR_PREFIX).*.8xv)"; \
+	$(CONVBIN) -k b84 -n $(NAME) -o $(BUNDLE_OUT)/$(ASSET_B84) $$(for f in $$files; do printf -- '-i %s ' $$f; done) && \
+	zip -q -j $(BUNDLE_OUT)/$(ASSET_TIG) $$files
+	@ls -l $(BUNDLE_OUT)
+
+release:
+	@test -n "$(VERSION)" || { echo "no version: put a '## vX.Y.Z' heading on top of docs/releases.md, or make release VERSION=vX.Y.Z"; exit 1; }
+	$(MAKE) test
+	$(MAKE) bundle
+	$(MAKE) nspire
+	rm -rf $(RELEASE_DIR)
+	mkdir -p $(RELEASE_DIR)
+	cp $(BUNDLE_OUT)/$(ASSET_B84) $(BUNDLE_OUT)/$(ASSET_TIG) $(RELEASE_DIR)/
+	cp bin-nspire/$(NAME).tns $(RELEASE_DIR)/$(ASSET_TNS)
+	files="$(INSTALLER_OUT)/$(INSTALLER_NAME).8xp $$(ls -v $(INSTALLER_OUT)/$(APPVAR_PREFIX).*.8xv)"; zip -q -j $(RELEASE_DIR)/$(ASSET_ZIP) $$files
+	@echo; echo "$(RELEASE_DIR)/:"; ls -l $(RELEASE_DIR)
+.PHONY: bundle release
 
 endif

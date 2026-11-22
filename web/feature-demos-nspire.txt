@@ -1,0 +1,70 @@
+# name | keys, what a card plays on the nspire (names as in feature-demos.txt, and the notes come from there). key names as in demo-nspire.txt. a card with no line here plays on the CE instead
+Polynomial equations | menu 1 3 5 x x^2 + 6 x = 3 enter
+Exact cubics | menu 1 3 x ^ 3 right - 3 x + 1 enter
+Complex roots | menu 1 3 x x^2 + 2 x + 5 enter
+Literal equations | menu 1 3 x x^2 + b x + c enter
+Exp, log and root equations | menu 1 3 e^x 2 x right = 5 enter
+Absolute value equations | menu 1 3 menu 4 6 4 x + 4 right = 3 enter
+Rational equations | menu 1 3 1 ctrl+/ x right + 1 ctrl+/ x + 1 right = 1 enter
+Trig equations | menu 1 3 sin x right = 1 ctrl+/ 2 enter
+Inequalities | menu 1 3 x ^ 3 right - 4 x ctrl+= 4 0 enter
+Solve steps | menu 1 3 5 x x^2 + 6 x = 3 enter menu 5 1
+Exact simplification | 2 / 3 + 1 / 4 enter
+'By hand' form | ( x + 1 ) x^2 - ( x - 1 ) x^2 enter
+Rationalizing | 1 / ctrl+x^2 2 enter
+Expand | menu 1 1 ( x + 2 ) ^ 3 enter
+Polynomial factoring | menu 1 2 x ^ 3 right + x x^2 - 8 x - 1 2 enter
+Multivariable factoring | menu 1 2 x ^ 4 right - y ^ 4 enter
+Prime factoring | menu 1 2 3 6 0 enter
+*Dih*rivatives | menu 2 1 e^x x x^2 right enter
+Derivative at a value | menu 2 2 x ^ 3 right , x , 2 enter
+Integrals | menu 2 3 x x^2 , x , 0 , 3 enter
+Limits | menu 2 4 sin x right / x , x , 0 enter
+Linear systems | menu 1 4 2 x - y = 7 , x + y = 2 enter
+Systems with letters | menu 1 4 a x + y = 1 , x - y = 2 , x , y enter
+Nonlinear systems | menu 1 4 x x^2 + y x^2 = 2 5 , y = x + 1 enter
+Decimals to fractions | . 3 7 5 enter
+Nested fractions | ctrl+/ 1 + 1 ctrl+/ x right down 1 - 1 ctrl+/ x enter
+Root simplification | ctrl+x^2 1 2 right + ctrl+x^2 2 7 enter
+Roots of negatives | menu 4 4 neg 5 4 right + ctrl+x^2 neg 8 enter
+Exact logs | ctrl+10^x 1 0 0 0 right + menu 4 7 2 right 3 2 enter
+Exact trig values | cos 3 pi 1 ctrl+/ 4 enter
+Reciprocal trig | menu 3 8 pi 1 ctrl+/ 3 enter
+Hyperbolic functions | menu 2 1 menu 3 d x x^2 enter
+Trig identities | 2 sin x right cos x enter
+Domain | menu 1 a 2 ctrl+x^2 4 - x right ctrl+/ x + 1 enter
+Range | menu 1 a 3 x e^x neg x enter
+Asymptotes and holes | menu 1 a 1 ctrl+/ x x^2 - 1 down x x^2 - x enter
+Inverse functions | menu 1 7 2 x + 3 enter
+Amplitude | a m p l i t u d e ( 3 sin 2 x right + 4 cos 2 x right ) enter
+Piecewise | menu 4 d x x^2 , x ctrl+= 3 0 , 2 x + 1 , x ctrl+= 6 0 enter
+Polynomial from roots | menu 1 6 2 , neg 3 , 5 enter
+2D editor | ctrl+x^2 ctrl+/ x ^ 4 right down 9 enter
+Templates | menu 4 5 4 right 4 8 enter
+Grabbing fractions | 2 x ctrl+/ 3 right + x ctrl+/ 6 enter
+Ghost brackets | ( x + 1 ) ( x - 1 enter
+Auto ans | 2 ^ 1 0 enter / 4 enter
+Selection | x x^2 - 1 shift+left shift+left shift+left shift+left / x - 1 enter
+History | ctrl+x^2 5 0 enter up up
+Copy and paste | menu 1 1 ( x + 1 ) ^ 3 enter up ctrl+c menu 1 2 ctrl+v enter
+Undo | ctrl+x^2 1 8 ctrl+del ctrl+z enter
+Soft key folders | menu 1
+Catalog | cat g enter 1 2 , 1 8 enter
+Sticky modifiers | ctrl x^2 9 right + ctrl / 1 down 2 enter
+Radians and degrees | doc enter esc sin 3 0 enter doc enter esc
+Themes (dark, light + 4 more) | doc down down down down enter esc 2 / 3 + 1 / 4 enter doc down down down down enter enter enter enter enter esc
+Stored variables | 5 ctrl+vars r enter pi 1 r x^2 enter ctrl+vars r enter
+Factorials | 1 0 ctrl+= 7 enter
+Percent | 2 0 ?! 2 * 5 0 enter
+GCD and LCM | g c d ( 8 4 , 1 2 0 ) enter
+Complex numbers | ctrl+x^2 neg 1 6 right + ctrl+x^2 neg 9 right enter
+Big integers | menu 1 9 2 ^ 1 0 0 enter
+Slope, distance, midpoint | menu 1 b 1 1 , 2 , 4 , 8 enter menu 1 b 2 1 , 2 , 4 , 8 enter
+Parallel and perpendicular lines | menu 1 b 5 2 , 1 , 1 enter
+Triangle solving | menu 1 c 1 3 , 4 , 5 , , , enter
+Shape formulas | menu 1 d 3 3 , 4 enter
+Ellipses | menu 1 e 1 4 x x^2 + 9 y x^2 = 3 6 enter
+Hyperbolas | menu 1 e 2 x x^2 ctrl+/ 9 right - y x^2 ctrl+/ 1 6 right = 1 enter
+Conic from points | menu 1 e 1 1 , 2 , 6 , 2 , 4 , 2 enter
+Combinations, permutations | menu 3 t 1 0 , 3 enter
+Independent events | menu 1 f 2 1 ctrl+/ 2 right , 1 ctrl+/ 3 enter

@@ -1157,7 +1157,7 @@ static pcas_ast_t *poly_to_ast(Symbol var, mp_int *c, int deg) {
     return sum;
 }
 
-/*every rational root, divided out. s = 2 for roots in X^2 of an even one, x^4-5x^2+6 is (x^2-2)(x^2-3)*/
+/*every rational root, *dih*vided out. s = 2 for roots in X^2 of an even one, x^4-5x^2+6 is (x^2-2)(x^2-3)*/
 static void poly_take_roots(poly_t *poly, int s) {
     mp_small p, q;
     int i;
@@ -1495,7 +1495,7 @@ static pcas_ast_t *term_den(pcas_ast_t *t) {
     den = as_product(den);
 
     /*factoring hands back 20000^2 and eval leaves it. folded and multiplied into the one
-      number, two numbers in a bottom got divided out of the one number in the lcm twice*/
+      number, two numbers in a bottom got *dih*vided out of the one number in the lcm twice*/
     for(f = ast_ChildGet(den, 0); f != NULL; f = f->next) {
         pcas_ast_t *b = power_base(f, &n);
 

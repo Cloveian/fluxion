@@ -3,9 +3,11 @@ Exact cubics |  | y= 3 xt ^ 3 right - 3 xt + 1 enter
 Complex roots | Quadratic factors only | y= 3 xt x^2 + 2 xt + 5 enter
 Literal equations |  | y= 3 xt x^2 + alpha apps xt + alpha prgm enter
 Exp, log and root equations |  | y= 3 2nd ln 2 xt right 2nd math 5 enter
+Absolute value equations |  | y= 3 trace 6 4 xt + 4 right 2nd math 3 enter
 Rational equations |  | y= 3 1 alpha xt xt right + 1 alpha xt xt + 1 right 2nd math 1 enter
 Trig equations |  | y= 3 sin xt right 2nd math 1 alpha xt 2 enter
 Inequalities | Not trig ones | y= 3 xt ^ 3 right - 4 xt math 4 0 enter
+Solve steps | Solve, derivatives, limits and integrals | y= 3 5 xt x^2 + 6 xt 2nd math 3 enter graph 1
 Exact simplification |  | 2 / 3 + 1 / 4 enter
 'By hand' form | What you'd write on paper, one fraction, multiplied out only when that's shorter | ( xt + 1 ) x^2 - ( xt - 1 ) x^2 enter
 *Dih*frent "simplest" form(s) |  | ( xt + 1 ) x^2 / 2 - 1 / 2 enter 2nd enter 2nd enter 2nd enter 2nd enter
@@ -16,6 +18,7 @@ Multivariable factoring | By pattern only | y= 2 xt ^ 4 right - alpha 1 ^ 4 ente
 Prime factoring |  | y= 2 3 6 0 enter
 *Dih*rivatives | With respect to x | window 1 2nd ln xt x^2 right enter
 Derivative at a value | Typed out, no template | window 2 xt ^ 3 right , xt , 2 enter
+Integrals | Typed out, no template | window 3 xt x^2 , xt , 0 , 3 enter
 Limits | At a number or ∞, typed out | window 4 sin xt right / xt , xt , 0 enter
 Linear systems | Up to 4 equations | y= 4 2 xt - alpha 1 2nd math 7 , xt + alpha 1 2nd math 2 enter
 Systems with letters |  | y= 4 alpha math xt + alpha 1 2nd math 1 , xt - alpha 1 2nd math 2 , xt , alpha 1 enter
@@ -49,12 +52,13 @@ Soft key folders |  | y= right right down down down enter 1 enter
 Catalog |  | 2nd 0 alpha tan enter 1 2 , 1 8 enter
 Sticky modifiers |  | alpha alpha prgm 7 ln ^ alpha ( 0 enter
 Radians and degrees |  | mode enter clear sin 3 0 enter mode enter clear
-Light theme |  |
+Themes (dark, light + 4 more) | From the mode menu | mode down down down down enter clear 2 / 3 + 1 / 4 enter mode down down down down enter enter enter enter enter clear
 Remembers everything after closing |  |
 Stored variables |  | 5 sto alpha * enter 2nd ^ alpha * x^2 enter sto alpha * enter
 Cancelling slow answers |  |
 Out of memory recovery |  |
 Factorials |  | 1 0 math 7 enter
+Percent | From the catalog, no % key | 2 0 2nd 0 graph down enter * 5 0 enter
 GCD and LCM | Whole numbers only | zoom up up up up up enter 8 4 , 1 2 0 enter
 Complex numbers | No complex division | 2nd x^2 neg 1 6 right + 2nd x^2 neg 9 right enter
 Big integers |  | y= 9 2 ^ 1 0 0 enter

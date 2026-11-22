@@ -423,7 +423,7 @@ static bool eval_root_factors(pcas_ast_t *e, mp_int n, mp_small k, pcas_ast_t *e
     return changed;
 }
 
-/*Fluxion: n^(1/k) with n a d-th power for a d dividing k, 4^(1/4) is 2^(1/2) and 1000^(1/6) sqrt(10). the biggest d first.
+/*Fluxion: n^(1/k) with n a d-th power for a d *dih*viding k, 4^(1/4) is 2^(1/2) and 1000^(1/6) sqrt(10). the biggest d first.
   kept out of eval_root_factors, its p/q caller wants s*r^(1/q) back with its own q*/
 static bool eval_root_down(pcas_ast_t *e, mp_int n, mp_small k) {
     mp_rat base;
