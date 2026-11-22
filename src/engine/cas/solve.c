@@ -1097,15 +1097,39 @@ static void clear_denominators(pcas_ast_t **e) {
     num_Cleanup(l);
 }
 
-/*Fluxion: v is a number op never gives, so asin(x) = 4 has no x. asin atan acsc
+/*Fluxion: v is a number side never gives, so asin(x) = 4 has no x (in = child with x). asin atan acsc
   give -pi/2 to pi/2, acos asec acot 0 to pi. atan and acot never reach the ends,
   acsc skips 0 and asec pi/2. 1e-5 of slack, the decimal is a float's worth*/
-static bool past_range(OperatorType op, pcas_ast_t *v) {
+static bool past_range(pcas_ast_t *side, pcas_ast_t *in, pcas_ast_t *v) {
+    OperatorType op = optype(side);
+    pcas_ast_t *a = ast_ChildGet(side, 0), *b = ast_ChildGet(side, 1);
     double x, lo, hi, pi = 3.14159265358979;
 
     switch(op) {
     case OP_SIN_INV: case OP_TAN_INV: case OP_CSC_INV: lo = -pi / 2; break;
     case OP_COS_INV: case OP_COT_INV: case OP_SEC_INV: lo = 0; break;
+    case OP_POW: case OP_ROOT:
+        if(!approx_double(v, &x))
+            return false;
+        /*a positive number to any power is over 0, e^x = -1 had ln(-1) for an x*/
+        if(op == OP_POW && in == b && ((a->type == NODE_NUMBER && mp_rat_compare_zero(a->op.num) > 0)
+           || (a->type == NODE_SYMBOL && (a->op.symbol == SYM_EULER || a->op.symbol == SYM_PI))))
+            return x <= 0;
+        /*an even root is never under 0, sqrt(x) = -1 came back x = 1. the 1/2 can still be a / here*/
+        if(op == OP_POW && in == a) {
+            pcas_ast_t *p = ast_Copy(b);
+            bool even = false;
+
+            if(p != NULL) {
+                fold_fraction(p);
+                even = p->type == NODE_NUMBER && mp_int_is_even(mp_rat_denom_ref(p->op.num));
+            }
+            ast_Cleanup(p);
+            return even && x < -1e-5;
+        }
+        if(op == OP_ROOT && in == b && a->type == NODE_NUMBER && mp_rat_is_integer(a->op.num) && mp_int_is_even(mp_rat_numer_ref(a->op.num)))
+            return x < -1e-5;
+        return false;
     default: return false;
     }
     if(!approx_double(v, &x))
@@ -1141,11 +1165,11 @@ static int isolate(pcas_ast_t *e, Symbol var, pcas_ast_t **out, bool complex) {
         if(in == NULL)
             goto nope;
 
-        if(!complex) { /*Fluxion: out of the inverse's reach, no root there*/
+        if(!complex) { /*Fluxion: past what that layer ever gives, no root there*/
             int k = 0;
 
             for(i = 0; i < m; i++) {
-                if(past_range(op, other[i]))
+                if(past_range(side, in, other[i]))
                     ast_Cleanup(other[i]);
                 else
                     other[k++] = other[i];
