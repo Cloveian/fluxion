@@ -125,6 +125,45 @@ static bool hand_off(pcas_ast_t *L, pcas_ast_t *R, Symbol var, steps_t *s) {
     return true;
 }
 
+static bool var_on_bottom(pcas_ast_t *e, Symbol var) {
+    pcas_ast_t *c;
+
+    if(e->type != NODE_OPERATOR)
+        return false;
+    if(isoptype(e, OP_DIV) && has_symbol(ast_ChildGet(e, 1), var))
+        return true;
+    for(c = ast_ChildGet(e, 0); c != NULL; c = c->next)
+        if(var_on_bottom(c, var))
+            return true;
+    return false;
+}
+
+/*1/x + 1/2 = 3: it all goes over one bottom, and the top = 0 is the next line. takes over L and R[0]*/
+static bool clear_fractions(pcas_ast_t **L, pcas_ast_t **R, Symbol var, steps_t *out) {
+    pcas_ast_t *f = ast_MakeBinary(OP_ADD, ast_Copy(*L), ast_MakeBinary(OP_MULT, ast_MakeInt(-1), ast_Copy(*R)));
+    pcas_ast_t *top;
+
+    simplify(f, SIMP_LIGHT | SIMP_LIKE_TERMS);
+    comdenom(f, false);
+    if(!isoptype(f, OP_DIV) || !has_symbol(ast_ChildGet(f, 1), var)) {
+        ast_Cleanup(f);
+        return false;
+    }
+    top = ast_Copy(ast_ChildGet(f, 0));
+    ast_Cleanup(f);
+    if(isoptype(top, OP_ADD) && is_negative_for_sure(ast_ChildGetLast(top))) { /*-5x+2 = 0 is 5x-2 = 0, the last term is the highest power*/
+        top = ast_MakeBinary(OP_MULT, ast_MakeInt(-1), top);
+        expand(top, EXP_ALL);
+        simplify(top, SIMP_NORMALIZE | SIMP_COMMUTATIVE | SIMP_EVAL | SIMP_LIKE_TERMS);
+    }
+    steps_rule(&out->line[out->n - 1], "clear the fractions");
+    ast_Cleanup(*L);
+    ast_Cleanup(*R);
+    *L = top;
+    *R = ast_MakeInt(0);
+    return add_line(out, *L, R, 1) != NULL;
+}
+
 bool steps_layers(pcas_ast_t *left, pcas_ast_t *right, Symbol var, steps_t *out) {
     pcas_ast_t *L = ast_Copy(left), *R[STEP_EQS_MAX] = {NULL}, *tmp;
     pcas_ast_t *by = NULL, *next[STEP_EQS_MAX] = {NULL}; /*this layer's, freed at done if it bails halfway*/
@@ -142,8 +181,13 @@ bool steps_layers(pcas_ast_t *left, pcas_ast_t *right, Symbol var, steps_t *out)
     }
     if(!has_symbol(L, var) || add_line(out, L, R, 1) == NULL)
         goto done;
+    if(var_on_bottom(L, var) || var_on_bottom(R[0], var)) {
+        if(!clear_fractions(&L, &R[0], var, out) || !hand_off(L, R[0], var, out))
+            goto done;
+        handed = true;
+    }
 
-    while((L->type != NODE_SYMBOL || has_symbol(R[0], var)) && !pcas_cancelled) {
+    while(!handed && (L->type != NODE_SYMBOL || has_symbol(R[0], var)) && !pcas_cancelled) {
         pcas_ast_t *in, *a, *b;
         const char *rule = NULL;
         char move = 0;

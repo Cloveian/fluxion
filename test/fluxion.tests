@@ -1119,6 +1119,11 @@ steps; 3e^(2X)=12; X; 3e^(2X)=12|/3|e^(2X)=4|takethelogofbothsides|2X=ln(4)|/2|X
 steps; 2sqrt(X_1)=6; X; 2sqrt((X_1))=6|/2|sqrt((X_1))=3|squarebothsides|X_1=9|+1|X=10
 steps; sqrt(2X+3)=X; X; sqrt((2X+3))=X|squarebothsides|2X+3=X^2|_X^2|-X^2+2X+3=0|*-1|X^2_2X_3=0|(X_3)(X+1)=0|X_3=0orX+1=0|X=3orX=-1|checktheanswers|X=3
 steps; sqrt(X)=X_2; X; sqrt(X)=X_2|squarebothsides|X=(X_2)^2|X=X^2_4X+4|_X^2_4X+4|-X^2+5X_4=0|*-1|X^2_5X+4=0|(X_4)(X_1)=0|X_4=0orX_1=0|X=4orX=1|checktheanswers|X=4
+#fractions with an x on the bottom: all over one bottom, the top = 0 from there. solve has the last word on what's left
+steps; 1/X+1/2=3; X; 1/X+1/2=3|clearthefractions|5X_2=0|+2|5X=2|/5|X=2/5
+steps; 6/X=3; X; 6/X=3|clearthefractions|3X_6=0|+6|3X=6|/3|X=2
+steps; (X+1)/(X_1)=2; X; (X+1)/(X_1)=2|clearthefractions|X_3=0|+3|X=3
+steps; X/(X_2)=2/(X_2); X; none
 #not a shape it does yet, or a method that doesn't fit
 steps; X^2+X+1=0; Xfactor; none
 steps; X^2+X=2; Xroot; none
