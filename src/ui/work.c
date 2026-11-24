@@ -22,6 +22,8 @@ static pcas_ast_t *lhs, *rhs;
 static pcas_ast_t *sys[SYSTEM_MAX]; /* the equations of a system, else NULLs */
 static Symbol sys_vars[SYSTEM_MAX];
 static int sys_n;
+static int cmd_kind = -1; /* a STEPS_ kind when the page is for tangent(, critical( and the like */
+static pcas_ast_t *cmd_f, *cmd_a;
 static char expr_kind; /* 'e' for expand, 'f' factor, 0 when calc is a d/dx, limit or integral */
 static pcas_ast_t *calc; /* the d/dx, limit or integral node for those steps, else NULL */
 static Symbol var;
@@ -204,6 +206,8 @@ static bool build(void) {
         ok = steps_system(sys, sys_n, sys_vars, &s);
     else if(calc == NULL && rel != 0)
         ok = steps_ineq(lhs, rhs, rel, var, &s);
+    else if(cmd_kind >= 0)
+        ok = steps_command(cmd_kind, cmd_f, cmd_a, var, &s);
     else if(calc == NULL)
         ok = steps_solve(lhs, rhs, var, method, &s);
     else if(expr_kind != 0)
@@ -285,6 +289,20 @@ static const char *open_node(pcas_ast_t *e, char kind, const char *why) {
     return NULL;
 }
 
+const char *work_open_command(int kind, pcas_ast_t *f, pcas_ast_t *a, Symbol v) {
+    cmd_kind = kind;
+    cmd_f = ast_Copy(f);
+    cmd_a = a != NULL ? ast_Copy(a) : NULL;
+    var = v;
+    rel = 0;
+    if(!build()) {
+        work_close();
+        return "no steps for this one yet";
+    }
+    open = true;
+    return NULL;
+}
+
 const char *work_open_expr(bool expand, pcas_ast_t *e) {
     return open_node(e, expand ? 'e' : 'f', expand ? "nothing to open up" : "no steps for this one yet");
 }
@@ -305,6 +323,10 @@ void work_close(void) {
     ast_Cleanup(rhs);
     ast_Cleanup(calc);
     lhs = rhs = calc = NULL;
+    ast_Cleanup(cmd_f);
+    ast_Cleanup(cmd_a);
+    cmd_f = cmd_a = NULL;
+    cmd_kind = -1;
     expr_kind = 0;
     for(i = 0; i < sys_n; i++)
         ast_Cleanup(sys[i]);
@@ -314,7 +336,7 @@ void work_close(void) {
 }
 
 bool work_act(action_t a) {
-    if(a.op == A_SOFT && calc == NULL && rel == 0 && sys_n == 0) {
+    if(a.op == A_SOFT && calc == NULL && rel == 0 && sys_n == 0 && cmd_kind < 0) {
         Method m = (Method)a.n;
 
         /* one that doesn't fit leaves the steps as they are */
@@ -370,10 +392,10 @@ void work_draw(void) {
         screen_color(COL_DIM);
         screen_vline(x0 + w - 2, y0 + (bottom - y0) * top / nrows, bar_h > 2 ? bar_h : 2);
     }
-    if(calc == NULL && rel == 0 && sys_n == 0)
+    if(calc == NULL && rel == 0 && sys_n == 0 && cmd_kind < 0)
         draw_softkeys(&areas.keys, method_keys, (int)method, off);
 }
 
 const char *const *work_softkeys(void) {
-    return calc == NULL && rel == 0 && sys_n == 0 ? method_keys : NULL;
+    return calc == NULL && rel == 0 && sys_n == 0 && cmd_kind < 0 ? method_keys : NULL;
 }

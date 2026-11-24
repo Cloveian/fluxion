@@ -53,6 +53,9 @@ bool steps_system(pcas_ast_t **eqs, int n, const Symbol *vars, steps_t *out);
 bool steps_expand(pcas_ast_t *e, steps_t *out);
 /*factor( on a polynomial in one letter: its own factoring lines up to the product, no = 0*/
 bool steps_factor(pcas_ast_t *e, steps_t *out);
+/*tangent(f, a), critical(f), extrema(f) or inflect(f) worked out in var: the derivative steps, then the equation steps for where it's 0. a is the point for the tangent, NULL for the rest*/
+enum { STEPS_TANGENT, STEPS_CRITICAL, STEPS_EXTREMA, STEPS_INFLECT };
+bool steps_command(int kind, pcas_ast_t *f, pcas_ast_t *a, Symbol var, steps_t *out);
 /*t's lines on the end of s. t's first line is the one s ends on, so only its move comes over. false (t freed) when they don't fit*/
 bool steps_append(steps_t *s, steps_t *t);
 /*a polynomial past x^2 that factors into lines and quadratics: factor, each factor = 0, each solved (polysteps.c). false if it doesn't*/

@@ -3,6 +3,8 @@
 #include "app.h"
 #include "args.h"
 #include "ineq.h"
+#include "work.h"
+#include "engine/cas/steps.h"
 
 #include <string.h>
 #include <time.h>
@@ -225,10 +227,25 @@ static void implicit(char **piece, int n, box_t *in) {
     ast_Cleanup(fy);
 }
 
+/* the pieces of a command (not implicit): the function in a[0], the point in a[1] for a tangent, the variable from a letter at the end, x if there isn't one.
+   what's wrong with them, or NULL. a[] is the caller's to free either way */
+static const char *read_command(int c, char **piece, int n, pcas_ast_t **a, Symbol *var, char *shown) {
+    pcas_error_t err = E_SUCCESS;
+    int i;
+
+    *var = SYM_X;
+    *shown = 'x';
+    if(n == cmds[c].most && !args_var(piece[n - 1], var, shown))
+        return cmds[c].usage;
+    for(i = 0; i < (c == C_TANGENT ? 2 : 1); i++)
+        if((a[i] = args_parse(piece[i], &err)) == NULL)
+            return error_text[err];
+    return NULL;
+}
+
 bool calc1_run(const char *cmd, char *src, box_t *in) {
     pcas_ast_t *a[ARGS_MAX] = { NULL }, *d, *roots[SOLVE_MAX] = { NULL };
     char *piece[ARGS_MAX + 1];
-    pcas_error_t err = E_SUCCESS;
     const char *message = NULL;
     box_t *out = NULL;
     clock_t start;
@@ -253,18 +270,9 @@ bool calc1_run(const char *cmd, char *src, box_t *in) {
         implicit(piece, n, in);
         return true;
     }
-    /* a letter at the end is the variable, tangent has the point before it */
-    if(n == cmds[c].most && !args_var(piece[n - 1], &var, &shown)) {
-        push(in, NULL, cmds[c].usage, 0);
-        return true;
-    }
-    for(i = 0; i < (c == C_TANGENT ? 2 : 1) && message == NULL; i++)
-        if((a[i] = args_parse(piece[i], &err)) == NULL)
-            message = error_text[err];
+    message = read_command(c, piece, n, a, &var, &shown);
     if(message != NULL) {
         push(in, NULL, message, 0);
-        for(i = 0; i < ARGS_MAX; i++)
-            ast_Cleanup(a[i]);
         return true;
     }
 
@@ -295,4 +303,27 @@ bool calc1_run(const char *cmd, char *src, box_t *in) {
     for(i = 0; i < ARGS_MAX; i++)
         ast_Cleanup(a[i]);
     return true;
+}
+
+const char *calc1_work(const char *cmd, char *src) {
+    pcas_ast_t *a[ARGS_MAX] = { NULL };
+    char *piece[ARGS_MAX + 1], shown;
+    const char *message;
+    Symbol var;
+    int c, n, i;
+
+    for(c = 0; c < C_COUNT && strcmp(cmd, cmds[c].name) != 0; c++)
+        ;
+    if(c == C_COUNT || c == C_IMPLICIT || c == C_INCREASING)
+        return "no steps for that one yet";
+    n = args_split(src, piece, ARGS_MAX);
+    if(n < cmds[c].least || n > cmds[c].most)
+        return cmds[c].usage;
+    message = read_command(c, piece, n, a, &var, &shown);
+    if(message == NULL)
+        message = work_open_command(c == C_TANGENT ? STEPS_TANGENT : c == C_CRITICAL ? STEPS_CRITICAL : c == C_EXTREMA ? STEPS_EXTREMA : STEPS_INFLECT,
+                                    a[0], a[1], var);
+    for(i = 0; i < ARGS_MAX; i++) /*the page copies what it keeps*/
+        ast_Cleanup(a[i]);
+    return message;
 }

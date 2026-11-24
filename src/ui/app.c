@@ -1124,6 +1124,13 @@ static void show_steps(void) {
         status = work_open_expr(strcmp(cmd, "expand") == 0, e);
         return;
     }
+    if(cmd != NULL && (strcmp(cmd, "tangent") == 0 || strcmp(cmd, "critical") == 0 || strcmp(cmd, "extrema") == 0
+                       || strcmp(cmd, "inflect") == 0)) {
+        src = ed_command_arg(&view);
+        status = src != NULL ? calc1_work(cmd, src) : "nothing to show the work for";
+        free(src);
+        return;
+    }
     if(cmd == NULL) {
         /* d/dx(...), limit(...) or integral(...) is the whole line, or it isn't one */
         pcas_error_t err;

@@ -385,6 +385,46 @@ static void steps_text(const steps_t *s, char *got, unsigned size) {
     }
 }
 
+/*Fluxion: steps; tangent:f,a or critical:f or extrema:f or inflect:f; X; the lines*/
+static bool test_cmd_steps(test_t *t) {
+    static const char *const names[] = { "tangent:", "critical:", "extrema:", "inflect:" };
+    int kind = 0;
+    char *src, *comma;
+    pcas_error_t err = E_SUCCESS;
+    pcas_ast_t *f, *a = NULL;
+    char got[MAX_PAR * 2] = "";
+    steps_t s;
+    bool passed;
+
+    while(kind < 4 && strncmp(t->arg1, names[kind], strlen(names[kind])) != 0)
+        kind++;
+    src = t->arg1 + strlen(names[kind]);
+    comma = kind == STEPS_TANGENT ? strchr(src, ',') : NULL;
+    if(comma != NULL)
+        *comma = '\0';
+    f = parse((uint8_t*)src, strlen(src), str_table, &err);
+    if(comma != NULL && err == E_SUCCESS)
+        a = parse((uint8_t*)comma + 1, strlen(comma + 1), str_table, &err);
+    if(err != E_SUCCESS || f == NULL || (kind == STEPS_TANGENT && a == NULL)) {
+        printf("Test failed on line %u. Unable to parse %s\n", t->line, t->arg1);
+        ast_Cleanup(f);
+        ast_Cleanup(a);
+        return false;
+    }
+    if(!steps_command(kind, f, a, (Symbol)t->arg2[0], &s))
+        strcpy(got, "none");
+    else
+        steps_text(&s, got, sizeof(got));
+    passed = strcmp(got, t->arg3) == 0;
+    if(!passed)
+        printf("Test failed on line %u. Expected %s but got %s\n", t->line, t->arg3, got);
+    if(s.n > 0)
+        steps_free(&s);
+    ast_Cleanup(f);
+    ast_Cleanup(a);
+    return passed;
+}
+
 /*Fluxion: steps; expand:(X+1)(X+2) or factor:X^2+5X+6; X; the lines. the last line of expand has to be what expand says*/
 static bool test_expr_steps(test_t *t) {
     bool expand_cmd = strncmp(t->arg1, "expand:", 7) == 0;
@@ -415,8 +455,12 @@ static bool test_expr_steps(test_t *t) {
         passed = same_value(check, s.line[s.n - 1].eq[0].left);
         if(!passed)
             printf("Test failed on line %u. The steps end somewhere else than expand\n", t->line);
-    } else if(passed && ok) { /*factored form is the same polynomial*/
-        passed = same_value(e, s.line[s.n - 1].eq[0].left);
+    } else if(passed && ok) { /*the factored form multiplied out is the polynomial*/
+        check = ast_MakeBinary(OP_ADD, ast_Copy(e), ast_MakeBinary(OP_MULT, ast_MakeInt(-1), ast_Copy(s.line[s.n - 1].eq[0].left)));
+        simplify(check, SIMP_NORMALIZE | SIMP_COMMUTATIVE | SIMP_RATIONAL);
+        expand(check, EXP_ALL);
+        simplify(check, SIMP_ALL);
+        passed = is_ast_int(check, 0);
         if(!passed)
             printf("Test failed on line %u. The factored form isn't the polynomial\n", t->line);
     }
@@ -578,6 +622,9 @@ static bool test_steps(test_t *t) {
 
     if(strncmp(t->arg1, "expand:", 7) == 0 || strncmp(t->arg1, "factor:", 7) == 0)
         return test_expr_steps(t);
+    if(strncmp(t->arg1, "tangent:", 8) == 0 || strncmp(t->arg1, "critical:", 9) == 0 || strncmp(t->arg1, "extrema:", 8) == 0
+       || strncmp(t->arg1, "inflect:", 8) == 0)
+        return test_cmd_steps(t);
     if(eq != NULL && strchr(t->arg1, ',') != NULL && strpbrk(t->arg1, "<>") == NULL)
         return test_system_steps(t);
     if(eq == NULL && strpbrk(t->arg1, "<>") == NULL)
