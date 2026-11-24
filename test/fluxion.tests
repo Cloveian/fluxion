@@ -203,6 +203,7 @@ simplifytext; sqrt(X)sqrt(4); 2sqrt(X)
 simplifytext; sqrt(1/X); sqrt((1/X))
 simplifytext; ln(X^2); 2ln(abs(X))
 simplifytext; ln(X^3); 3ln(X)
+simplifytext; (2X/X^5)^(1/3); 3root(2/X^4)
 simplify; abs(-2pi); 2pi
 simplify; abs(-3sqrt(2)); 3sqrt(2)
 simplify; abs(-ie^2); e^2

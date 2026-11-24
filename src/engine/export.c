@@ -61,6 +61,7 @@ pcas_ast_t *leftmost(pcas_ast_t *e) {
                 return e;
             /*FALLTHROUGH*/
         case OP_POW: /*Fluxion: a power of 2 isn't a sqrt, the * in 5*2^X stays*/
+        case OP_DIV: /*Fluxion: 2 times (1/X^4) was 21/X^4*/
         case OP_LOG:
         case OP_FACTORIAL:
             return leftmost(opbase(e));

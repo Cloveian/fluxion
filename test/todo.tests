@@ -7,6 +7,10 @@
 solve; 2X^2=3; X; -sqrt(6)/2,sqrt(6)/2
 
 
+#Integral: abs(x) has no rule, so sqrt(x^2) (now abs(x)) stays an integral
+#gives: integral(abs(X),X,-1,1)
+simplify; integral(sqrt(X^2),X,-1,1); 1
+
 #Decimal: float isn't good for 6 digits after a power: pi^2 = 9.869604..., but float(pi)^2 = 9.869605
 #gives: 9.86961
 decimal; pi^2; 9.8696
