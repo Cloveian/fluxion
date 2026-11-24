@@ -29,6 +29,59 @@ pcas_ast_t *combine(pcas_ast_t *add, pcas_ast_t *b) {
     return expanded;
 }
 
+/*(A/B)^C is A^C/B^C for a whole C, or a B over 0. otherwise sqrt(1/X) and 1/sqrt(X) differ below 0*/
+static bool div_splits(pcas_ast_t *base, pcas_ast_t *power) {
+    return is_whole_node(power) || known_positive(ast_ChildGet(base, 1));
+}
+
+/*Fluxion: (AB)^C only comes apart over factors that cant be negative, sqrt(-3X^3Y) is sqrt(3)abs(X)sqrt(-XY) and sqrt(XY) stays whole, both could be under 0. NULL if nothing comes out*/
+static pcas_ast_t *split_product(pcas_ast_t *base, pcas_ast_t *power) {
+    pcas_ast_t *out = ast_MakeOperator(OP_MULT), *rest = ast_MakeOperator(OP_MULT), *c, *p, *r;
+    mp_small n;
+    unsigned i;
+
+    if(out == NULL || rest == NULL) { /*oom*/
+        if(out != NULL)
+            ast_Cleanup(out);
+        if(rest != NULL)
+            ast_Cleanup(rest);
+        return NULL;
+    }
+    for(i = 0; i < ast_ChildLength(base); i++) {
+        c = ast_ChildGet(base, i);
+        if(known_positive(c)) {
+            ast_ChildAppend(out, ast_MakeBinary(OP_POW, ast_Copy(c), ast_Copy(power)));
+        } else if(c->type == NODE_NUMBER && mp_rat_compare_zero(c->op.num) < 0) { /*-3 is 3 and a -1*/
+            if(mp_rat_compare_value(c->op.num, -1, 1) != 0) {
+                p = ast_Copy(c);
+                mp_rat_abs(p->op.num, p->op.num);
+                ast_ChildAppend(out, ast_MakeBinary(OP_POW, p, ast_Copy(power)));
+            }
+            ast_ChildAppend(rest, ast_MakeNumber(num_FromInt(-1)));
+        } else if(isoptype(c, OP_POW) && is_whole_node(ast_ChildGet(c, 1))
+                  && mp_int_to_int(mp_rat_numer_ref(ast_ChildGet(c, 1)->op.num), &n) == MP_OK && n >= 2) { /*X^3 is X^2 and an X*/
+            ast_ChildAppend(out, ast_MakeBinary(OP_POW,
+                                    ast_MakeBinary(OP_POW, ast_Copy(ast_ChildGet(c, 0)), ast_MakeNumber(num_FromInt((int)(n - n % 2)))),
+                                    ast_Copy(power)));
+            if(n % 2)
+                ast_ChildAppend(rest, ast_Copy(ast_ChildGet(c, 0)));
+        } else {
+            ast_ChildAppend(rest, ast_Copy(c));
+        }
+    }
+    if(ast_ChildLength(out) == 0) {
+        ast_Cleanup(out);
+        ast_Cleanup(rest);
+        return NULL;
+    }
+    if(ast_ChildLength(rest) > 0) {
+        r = ast_ChildLength(rest) == 1 ? ast_Copy(ast_ChildGet(rest, 0)) : ast_Copy(rest);
+        ast_ChildAppend(out, ast_MakeBinary(OP_POW, r, ast_Copy(power)));
+    }
+    ast_Cleanup(rest);
+    return out;
+}
+
 static bool _expand(pcas_ast_t *e, unsigned char flags) {
     unsigned i, j;
 
@@ -38,8 +91,17 @@ static bool _expand(pcas_ast_t *e, unsigned char flags) {
     if(pcas_cancelled) /*Fluxion: stop here, the answer's being thrown away*/
         return false;
 
-    for(i = 0; i < ast_ChildLength(e); i++)
-        did_change |= _expand(ast_ChildGet(e, i), flags);
+    for(i = 0; i < ast_ChildLength(e); i++) {
+        pcas_ast_t *child = ast_ChildGet(e, i);
+
+        /*Fluxion: a fraction under a power that wont split stays one, 3*(1/X) under sqrt never joined back up*/
+        if(i == 0 && isoptype(e, OP_POW) && isoptype(child, OP_DIV) && !div_splits(child, ast_ChildGet(e, 1))) {
+            for(j = 0; j < ast_ChildLength(child); j++)
+                did_change |= _expand(ast_ChildGet(child, j), flags);
+        } else {
+            did_change |= _expand(child, flags);
+        }
+    }
 
     do {
         intermediate_change = false;
@@ -125,26 +187,34 @@ static bool _expand(pcas_ast_t *e, unsigned char flags) {
 
                 /*Change (AB)^2 to A^2B^2*/
                 if(isoptype(base, OP_MULT)) {
-                    pcas_ast_t *replacement = ast_MakeOperator(OP_MULT);
+                    pcas_ast_t *replacement;
 
-                    for(j = 0; j < ast_ChildLength(base); j++) {
-                        pcas_ast_t *cur = ast_ChildGet(base, j);
+                    if(is_whole_node(power)) {
+                        replacement = ast_MakeOperator(OP_MULT);
 
-                        ast_ChildAppend(replacement, ast_MakeBinary(OP_POW,
-                                                                    ast_Copy(cur),
-                                                                    ast_Copy(power)
-                        ));
+                        for(j = 0; j < ast_ChildLength(base); j++) {
+                            pcas_ast_t *cur = ast_ChildGet(base, j);
+
+                            ast_ChildAppend(replacement, ast_MakeBinary(OP_POW,
+                                                                        ast_Copy(cur),
+                                                                        ast_Copy(power)
+                            ));
+                        }
+                    } else {
+                        replacement = split_product(base, power);
                     }
 
-                    replace_node(e, replacement);
+                    if(replacement != NULL) {
+                        replace_node(e, replacement);
 
-                    intermediate_change = true;
-                    did_change = true;
-                    continue;
+                        intermediate_change = true;
+                        did_change = true;
+                        continue;
+                    }
                 }
 
-                /*Change (A/B)^2 to A^2/B^2&*/
-                else if(isoptype(base, OP_DIV)) {
+                /*Change (A/B)^2 to A^2/B^2&. a B under 0 needs the whole number*/
+                else if(isoptype(base, OP_DIV) && div_splits(base, power)) {
                     pcas_ast_t *new_num, *new_den, *new_div;
                     new_num = ast_MakeBinary(OP_POW, ast_Copy(ast_ChildGet(base, 0)), ast_Copy(power));
                     new_den = ast_MakeBinary(OP_POW, ast_Copy(ast_ChildGet(base, 1)), ast_Copy(power));

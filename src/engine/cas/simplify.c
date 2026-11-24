@@ -556,8 +556,11 @@ bool simplify_canonical_form(pcas_ast_t *e, unsigned char flags) {
 
                         /*If the powers are the same*/
                         /*Fluxion: not for sums, (X_1)^2(X+1)^2 is what factor handed back*/
+                        /*Fluxion: and sqrt(X)sqrt(Y) only joins with a whole power or one side over 0, both under 0 gives the other sign*/
                         if(isoptype(ichild, OP_POW) && ast_Compare(ast_ChildGet(ichild, 1), ast_ChildGet(jchild, 1))
-                           && !isoptype(a, OP_ADD) && !isoptype(b, OP_ADD)) {
+                           && !isoptype(a, OP_ADD) && !isoptype(b, OP_ADD)
+                           && (is_whole_node(ast_ChildGet(ichild, 1))
+                               || known_positive(a) || known_positive(b))) {
                             merged = number_power(a, b, ast_ChildGet(ichild, 1));
                             if(merged == NULL)
                                 merged = ast_MakeBinary(OP_POW, ast_MakeBinary(OP_MULT, ast_Copy(a), ast_Copy(b)), ast_Copy(ast_ChildGet(ichild, 1)));

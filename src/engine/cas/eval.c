@@ -444,6 +444,33 @@ static bool eval_root_down(pcas_ast_t *e, mp_int n, mp_small k) {
     return false;
 }
 
+/*Fluxion: a whole number node, and an even one*/
+bool is_whole_node(pcas_ast_t *e) {
+    return e->type == NODE_NUMBER && mp_rat_is_integer(e->op.num);
+}
+
+bool is_even_node(pcas_ast_t *e) {
+    return is_whole_node(e) && mp_int_is_even(mp_rat_numer_ref(e->op.num));
+}
+
+/*Fluxion: 1+1 as an exponent, XX makes X^(1+1) before it settles on 2*/
+static bool number_sum(pcas_ast_t *e) {
+    pcas_ast_t *c;
+
+    if(e->type == NODE_NUMBER)
+        return true;
+    if(e->type != NODE_OPERATOR)
+        return false;
+    for(c = ast_ChildGet(e, 0); c != NULL; c = c->next)
+        if(!number_sum(c))
+            return false;
+    return true;
+}
+
+static bool pending_sum(pcas_ast_t *e) {
+    return (isoptype(e, OP_ADD) || isoptype(e, OP_MULT)) && number_sum(e);
+}
+
 static bool eval_pow(pcas_ast_t *e, unsigned short flags) {
     /*a^b*/
     pcas_ast_t *a, *b;
@@ -487,6 +514,26 @@ static bool eval_pow(pcas_ast_t *e, unsigned short flags) {
         /*b == 1*/
         else if(is_ast_int(b, 1)) {
             replace_node(e, a);
+            return true;
+        }
+
+        /*Fluxion: abs(A)^even is A^even*/
+        if(isoptype(a, OP_ABS) && is_even_node(b)) {
+            replace_node(e, ast_MakeBinary(OP_POW, ast_Copy(ast_ChildGet(a, 0)), ast_Copy(b)));
+            return true;
+        }
+
+        /*Fluxion: (X^2)^(1/2) is abs(X), an even B only keeps the sign if C is a whole number*/
+        if(isoptype(a, OP_POW) && pending_sum(ast_ChildGet(a, 1)))
+            return false; /*wait for the exponent to be a number*/
+        if(isoptype(a, OP_POW) && is_even_node(ast_ChildGet(a, 1)) && !is_whole_node(b)) {
+            replace_node(e, ast_MakeBinary(OP_POW,
+                                            ast_MakeUnary(OP_ABS, ast_Copy(ast_ChildGet(a, 0))),
+                                            ast_MakeBinary(OP_MULT,
+                                                ast_Copy(ast_ChildGet(a, 1)),
+                                                ast_Copy(b)
+                                                )
+                                            ));
             return true;
         }
 
@@ -732,11 +779,15 @@ static bool eval_int(pcas_ast_t *e, unsigned short flags) {
 }
 
 /*Fluxion: pi, e, and those or a number above 0 to a number's power (sqrt(2), e^2)*/
-static bool positive_factor(pcas_ast_t *c) {
+bool known_positive(pcas_ast_t *c) {
     pcas_ast_t *b, *p;
 
+    if(c->type == NODE_NUMBER)
+        return mp_rat_compare_zero(c->op.num) > 0;
     if(c->type == NODE_SYMBOL)
         return c->op.symbol == SYM_PI || c->op.symbol == SYM_EULER;
+    if(isoptype(c, OP_DIV)) /*1/2 stays a/b after normalize*/
+        return known_positive(ast_ChildGet(c, 0)) && known_positive(ast_ChildGet(c, 1));
     if(!isoptype(c, OP_POW))
         return false;
     b = ast_ChildGet(c, 0);
@@ -747,10 +798,10 @@ static bool positive_factor(pcas_ast_t *c) {
         return false;
     if(b->type == NODE_NUMBER)
         return mp_rat_compare_zero(b->op.num) > 0;
-    return positive_factor(b);
+    return known_positive(b);
 }
 
-/*Fluxion: abs(-3ix) -> 3abs(x), positive_factor ones out as they are. absolute_val only flips the first minus*/
+/*Fluxion: abs(-3ix) -> 3abs(x), known_positive ones out as they are. absolute_val only flips the first minus*/
 static bool abs_product(pcas_ast_t *e, pcas_ast_t *a) {
     pcas_ast_t *out = ast_MakeOperator(OP_MULT), *c, *next;
     bool changed = false;
@@ -762,7 +813,7 @@ static bool abs_product(pcas_ast_t *e, pcas_ast_t *a) {
         if(c->type == NODE_SYMBOL && c->op.symbol == SYM_IMAG) {
             ast_Cleanup(ast_ChildRemove(a, c));
             changed = true;
-        } else if(c->type == NODE_NUMBER || positive_factor(c)) {
+        } else if(c->type == NODE_NUMBER || known_positive(c)) {
             if(c->type == NODE_NUMBER)
                 mp_rat_abs(c->op.num, c->op.num);
             ast_ChildAppend(out, ast_ChildRemove(a, c));
@@ -787,7 +838,7 @@ static bool eval_abs(pcas_ast_t *e, unsigned short flags) {
         return false;
     if(isoptype(a, OP_MULT)) /*Fluxion*/
         return abs_product(e, a);
-    if(positive_factor(a)) { /*Fluxion: abs(sqrt(2)), a product's leftover once its powers settle*/
+    if(known_positive(a)) { /*Fluxion: abs(sqrt(2)), a product's leftover once its powers settle*/
         replace_node(e, a);
         return true;
     }
@@ -829,17 +880,23 @@ static bool eval_log(pcas_ast_t *e, unsigned short flags) {
         powers are evaluated*/
         /*log(A^B)=Blog(A)*/
 
-        if(isoptype(val, OP_POW)) {
+        if(isoptype(val, OP_POW) && !pending_sum(ast_ChildGet(val, 1))) {
             pcas_ast_t *power_base, *power_exponent;
 
             power_base = ast_ChildGet(val, 0);
             power_exponent = ast_ChildGet(val, 1);
 
+            /*Fluxion: ln(X^2) is real for a negative X too, 2ln(abs(X))*/
+            if(is_even_node(power_exponent))
+                power_base = ast_MakeUnary(OP_ABS, ast_Copy(power_base));
+            else
+                power_base = ast_Copy(power_base);
+
             replace_node(e, ast_MakeBinary(OP_MULT,
                                 ast_Copy(power_exponent),
                                 ast_MakeBinary(OP_LOG,
                                     ast_Copy(base),
-                                    ast_Copy(power_base)
+                                    power_base
                                 )
                             ));
             return true;

@@ -189,6 +189,20 @@ simplify; abs(-3i); 3
 simplify; abs(-2i/3); 2/3
 simplify; abs(-3X); 3abs(X)
 simplify; abs(-3/X); 3/abs(X)
+#letters can be negative, so an even power under a root is an abs and a sign only comes out of what's known to be over 0
+simplifytext; sqrt(X^2); abs(X)
+simplifytext; sqrt(X^4); X^2
+simplifytext; sqrt(12X^2); 2sqrt(3)abs(X)
+simplifytext; sqrt(X*X); abs(X)
+simplifytext; (X^2)^(3/2); abs(X)^3
+simplifytext; sqrt(X^3Y); sqrt((XY))abs(X)
+simplifytext; sqrt(-X); sqrt((-X))
+simplifytext; sqrt(-3X); sqrt((-3X))
+simplifytext; sqrt(X)sqrt(Y); sqrt(X)sqrt(Y)
+simplifytext; sqrt(X)sqrt(4); 2sqrt(X)
+simplifytext; sqrt(1/X); sqrt((1/X))
+simplifytext; ln(X^2); 2ln(abs(X))
+simplifytext; ln(X^3); 3ln(X)
 simplify; abs(-2pi); 2pi
 simplify; abs(-3sqrt(2)); 3sqrt(2)
 simplify; abs(-ie^2); e^2

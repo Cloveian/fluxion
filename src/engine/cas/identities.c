@@ -14,7 +14,7 @@
 
     I and J are reserved for real numbers.
 
-    Fluxion: R is a number above 0
+    Fluxion: R is a number above 0, or pi, e and those to a number's power
 */
 pcas_id_t id_general[ID_NUM_GENERAL] = {
     /*logb(value, base)*/
@@ -194,7 +194,7 @@ pcas_id_t id_hyperbolic[ID_NUM_HYPERBOLIC] = {
 };
 
 pcas_id_t id_complex[ID_NUM_COMPLEX] = {
-    {"(-I)^(X/Y)", "e^(ipiX/Y)I^(X/Y"}, /*Fluxion: was any A, sqrt(-(2+2isqrt(3))) came out the other root*/
+    {"(-R)^(X/Y)", "e^(ipiX/Y)R^(X/Y"}, /*Fluxion: was any A, sqrt(-(2+2isqrt(3))) came out the other root*/
     {"1/i", "-i"},
     {"ln(-1", "ipi"}, /*Fluxion: csolve gave e^x = -1 as ln(-1)*/
     {"e^(I+Ji", "e^I(cos(J)+isin(J"},
@@ -298,7 +298,7 @@ static bool letter_fits(Symbol s, pcas_ast_t *e) {
     if(s == 'I' || s == 'J') /*We assume something is real if it does not have an imaginary node. This could be wrong.*/
         return !has_imaginary_node(e);
     if(s == 'R')
-        return e->type == NODE_NUMBER && mp_rat_compare_zero(e->op.num) > 0;
+        return known_positive(e);
     return true;
 }
 

@@ -314,6 +314,13 @@ The node must be completely simplified for this to work, because it does not det
 multiplying by more than one negative to make a positive. */
 bool is_negative_for_sure(pcas_ast_t *a);
 
+/*Fluxion: a whole number node, an even one*/
+bool is_whole_node(pcas_ast_t *e);
+bool is_even_node(pcas_ast_t *e);
+
+/*Fluxion: a number over 0, pi, e, or those to a number's power. false just means not known*/
+bool known_positive(pcas_ast_t *c);
+
 /*Returns true if changed. Expects completely simplified. Removes the negative in the multiplier or number.*/
 bool absolute_val(pcas_ast_t *e);
 

@@ -1632,6 +1632,14 @@ bool comdenom(pcas_ast_t *e, bool factored) {
         }
     }
 
+    /*Fluxion: sqrt(2(D_C)/A) stays whole, the top of that fraction is factored here*/
+    if(factored && isoptype(e, OP_POW) && isoptype(ast_ChildGet(e, 0), OP_DIV)) {
+        child = ast_ChildGet(ast_ChildGet(e, 0), 0);
+        factor(child, FAC_ALL);
+        simplify(child, SIMP_COMMUTATIVE | SIMP_EVAL);
+        changed = true;
+    }
+
     /*X(Y+1/Y) is now X((Y^2+1)/Y): one fraction*/
     if(changed)
         simplify(e, SIMP_COMMUTATIVE | SIMP_RATIONAL);
