@@ -1607,36 +1607,67 @@ static void clear_roots(pcas_ast_t **out) {
     }
 }
 
-/*Fluxion: the roots of a squared-up equation that still work in expr. SOLVE_UNKNOWN if one can't be checked, unknown beats a wrong false*/
-static int keep_checked(pcas_ast_t *expr, Symbol var, pcas_ast_t **out, int n) {
+/*Fluxion: every log in e with var in its argument has an argument over 0 at root. -1 when one can't be told*/
+static int logs_defined(pcas_ast_t *e, Symbol var, pcas_ast_t *root) {
+    pcas_ast_t *c;
+    int r = 1, k;
+
+    if(e->type != NODE_OPERATOR)
+        return 1;
+    if(isoptype(e, OP_LOG) && has_symbol(ast_ChildGet(e, 1), var)) {
+        pcas_ast_t *v = ast_Copy(ast_ChildGet(e, 1)), *sym = ast_MakeSymbol(var);
+        double x;
+
+        if(v == NULL || sym == NULL) {
+            ast_Cleanup(v);
+            ast_Cleanup(sym);
+            return -1;
+        }
+        substitute(v, sym, root);
+        if(!approx_double(v, &x))
+            r = -1;
+        else if(x <= 1e-9)
+            r = 0;
+        ast_Cleanup(v);
+        ast_Cleanup(sym);
+        if(r == 0)
+            return 0;
+    }
+    for(c = ast_ChildGet(e, 0); c != NULL; c = c->next) {
+        k = logs_defined(c, var, root);
+        if(k == 0)
+            return 0;
+        if(k < 0)
+            r = -1;
+    }
+    return r;
+}
+
+/*Fluxion: the roots of a squared-up equation that still work in expr, or with logs set the ones that keep every log argument over 0. SOLVE_UNKNOWN if one cant be told*/
+static int keep_checked(pcas_ast_t *expr, Symbol var, pcas_ast_t **out, int n, bool logs) {
     bool unsure = false;
     int i, k;
 
-    for(i = k = 0; n > 0 && i < n; i++) {
-        int works = checks_out(expr, var, out[i], true);
-        bool keep = works == 1;
+    if(n <= 0)
+        return n;
+    for(i = k = 0; i < n; i++) {
+        int works = logs ? logs_defined(expr, var, out[i]) : checks_out(expr, var, out[i], true);
 
         /*one it cant check could still be one (sqrt(3x+2) = 2x+3 has two complex ones), unknown beats a wrong false*/
-        if(works == -1)
+        if(works < 0)
             unsure = true;
-        if(keep)
+        if(works == 1)
             out[k++] = out[i];
         else
             ast_Cleanup(out[i]);
     }
-    if(n > 0) {
-        for(i = k; i < n; i++)
-            out[i] = NULL;
-        n = k;
-    }
+    for(i = k; i < n; i++)
+        out[i] = NULL;
     if(unsure) {
-        for(i = 0; i < k; i++) {
-            ast_Cleanup(out[i]);
-            out[i] = NULL;
-        }
+        clear_roots(out);
         return SOLVE_UNKNOWN;
     }
-    return n;
+    return k;
 }
 
 /*Fluxion: sqrt(3x+2) = 2x+3, var under a sqrt and outside it. c sqrt(u) + rest = 0 squared is c^2 u = rest^2.
@@ -1657,7 +1688,7 @@ static int solve_root_away(pcas_ast_t *e, pcas_ast_t *expr, Symbol var, pcas_ast
                 if(half_power(f))
                     r = f;
         if(r != NULL && has_symbol(ast_ChildGet(r, 0), var)) {
-            if(term != NULL && ++seen > 2) /*two is fine, squaring one off leaves the other once*/
+            if(term != NULL && ++seen > 2) /*two is fine, squarring one off leaves the other once*/
                 return SOLVE_UNKNOWN;
             if(term == NULL) {
                 term = t;
@@ -1684,7 +1715,7 @@ static int solve_root_away(pcas_ast_t *e, pcas_ast_t *expr, Symbol var, pcas_ast
     n = solve_ex(sq, var, out, complex);
     ast_Cleanup(sq);
 
-    return keep_checked(expr, var, out, n);
+    return keep_checked(expr, var, out, n, false);
 }
 
 /*Fluxion: abs(u) with var in it and more var around, abs(x) = 2x + 3 or abs(x - 1) = abs(x + 2). c abs(u) + rest = 0 squared is c^2 u^2 = rest^2,
@@ -1723,51 +1754,14 @@ static int solve_abs(pcas_ast_t *e, pcas_ast_t *expr, Symbol var, pcas_ast_t **o
     n = solve_ex(sq, var, out, complex);
     ast_Cleanup(sq);
 
-    return keep_checked(expr, var, out, n);
-}
-
-/*Fluxion: every log in e with var in its argument has an argument over 0 at root. -1 when one can't be told*/
-static int logs_defined(pcas_ast_t *e, Symbol var, pcas_ast_t *root) {
-    pcas_ast_t *c;
-    int r = 1, k;
-
-    if(e->type != NODE_OPERATOR)
-        return 1;
-    if(isoptype(e, OP_LOG) && has_symbol(ast_ChildGet(e, 1), var)) {
-        pcas_ast_t *v = ast_Copy(ast_ChildGet(e, 1)), *sym = ast_MakeSymbol(var);
-        double x;
-
-        if(v == NULL || sym == NULL) {
-            ast_Cleanup(v);
-            ast_Cleanup(sym);
-            return -1;
-        }
-        substitute(v, sym, root);
-        if(!approx_double(v, &x))
-            r = -1;
-        else if(x <= 1e-9)
-            r = 0;
-        ast_Cleanup(v);
-        ast_Cleanup(sym);
-        if(r == 0)
-            return 0;
-    }
-    for(c = ast_ChildGet(e, 0); c != NULL; c = c->next) {
-        k = logs_defined(c, var, root);
-        if(k == 0)
-            return 0;
-        if(k < 0)
-            r = -1;
-    }
-    return r;
+    return keep_checked(expr, var, out, n, false);
 }
 
 /*Fluxion: ln(u) + ln(w) + rest = 0 with var in more than one log, ln(x) + ln(x + 2) = 3. the logs go into one, u^a w^b = e^(-rest),
 that gets solved and the roots that put any argument at 0 or under go (the one log case is isolate's)*/
 static int solve_logs(pcas_ast_t *e, pcas_ast_t *expr, Symbol var, pcas_ast_t **out, bool complex) {
     pcas_ast_t *t, *prod = ast_MakeOperator(OP_MULT), *rest = ast_MakeOperator(OP_ADD), *eq;
-    int logs = 0, n, i, k;
-    bool unsure = false;
+    int logs = 0, n;
 
     if(prod == NULL || rest == NULL || !isoptype(e, OP_ADD)) {
         ast_Cleanup(prod);
@@ -1807,26 +1801,7 @@ static int solve_logs(pcas_ast_t *e, pcas_ast_t *expr, Symbol var, pcas_ast_t **
     n = solve_ex(eq, var, out, complex);
     ast_Cleanup(eq);
 
-    for(i = k = 0; n > 0 && i < n; i++) {
-        int ok = logs_defined(expr, var, out[i]);
-
-        if(ok < 0)
-            unsure = true;
-        if(ok == 1)
-            out[k++] = out[i];
-        else
-            ast_Cleanup(out[i]);
-    }
-    if(n > 0) {
-        for(i = k; i < n; i++)
-            out[i] = NULL;
-        n = k;
-    }
-    if(unsure) {
-        clear_roots(out);
-        return SOLVE_UNKNOWN;
-    }
-    return n;
+    return keep_checked(expr, var, out, n, true);
 }
 
 /*Fluxion: var under a fraction bar, (3x-y)/(x+y) = 5/8. clear_denominators only takes numbers off,
