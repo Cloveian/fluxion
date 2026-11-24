@@ -999,12 +999,12 @@ static bool run(editor_t *line) {
         return true;
     }
     /* ellipse( and hyperbola( take one too, they're let through to conic_run.
-       piecewise( for its x=v (and x = 0 as a condition) */
+       piecewise( for its x=v (and x = 0 as a condition), implicit( for the equation */
     if(strchr(src, '=') != NULL
        && (cmd == NULL || (strcmp(cmd, "ellipse") != 0 && strcmp(cmd, "hyperbola") != 0
-                           && strcmp(cmd, "piecewise") != 0))) {
+                           && strcmp(cmd, "piecewise") != 0 && strcmp(cmd, "implicit") != 0))) {
         free(src);
-        status = "= goes in solve(, system(, piecewise( or a conic";
+        status = "= goes in solve(, system(, piecewise(, implicit( or a conic";
         return false;
     }
     in = ed_layout(line, &draw_font, false);

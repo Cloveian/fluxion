@@ -12,7 +12,7 @@
 
 #define ARGS_MAX 4
 
-enum { C_TANGENT, C_CRITICAL, C_EXTREMA, C_INFLECT, C_COUNT };
+enum { C_TANGENT, C_CRITICAL, C_EXTREMA, C_INFLECT, C_IMPLICIT, C_COUNT };
 
 static const struct {
     const char *name, *usage;
@@ -22,6 +22,7 @@ static const struct {
     { "critical", "critical(f, x)", 1, 2 },
     { "extrema", "extrema(f, x)", 1, 2 },
     { "inflect", "inflect(f, x)", 1, 2 },
+    { "implicit", "implicit(equation, y, x)", 1, 3 },
 };
 
 /* d/dvar of f, times over. NULL on oom or cancelled */
@@ -142,6 +143,57 @@ static box_t *turning_points(pcas_ast_t *f, Symbol var, bool inflection, const c
     return col;
 }
 
+/* implicit(x^2+y^2=25, y, x): dy/dx = -(dF/dx)/(dF/dy) of F = left - right. y and x are the defaults */
+static void implicit(char **piece, int n, box_t *in) {
+    pcas_ast_t *l, *r = NULL, *f, *x, *y, *fx, *fy, *answer;
+    Symbol dep = SYM_Y, ind = SYM_X;
+    char label[12] = "dy/dx =", *eq = strchr(piece[0], '=');
+    pcas_error_t err = E_SUCCESS;
+    const char *message = NULL;
+    box_t *out = NULL;
+
+    if(eq == NULL || (n > 1 && !args_var(piece[1], &dep, &label[1])) || (n > 2 && !args_var(piece[2], &ind, &label[4]))
+       || dep == ind) {
+        push(in, NULL, cmds[C_IMPLICIT].usage, 0);
+        return;
+    }
+    *eq = '\0';
+    l = args_parse(piece[0], &err);
+    if(l != NULL)
+        r = args_parse(eq + 1, &err);
+    if(l == NULL || r == NULL) {
+        ast_Cleanup(l);
+        push(in, NULL, error_text[err], 0);
+        return;
+    }
+    f = ast_MakeBinary(OP_ADD, l, ast_MakeBinary(OP_MULT, ast_MakeInt(-1), r));
+    x = ast_MakeSymbol((char)ind);
+    y = ast_MakeSymbol((char)dep);
+    fx = slope_of(f, x);
+    fy = slope_of(f, y);
+    if(fx == NULL || fy == NULL)
+        message = pcas_oom ? "out of memory" : "cancelled";
+    else if(is_ast_int(fy, 0))
+        message = "no y in it, so no dy/dx";
+    else {
+        answer = ast_MakeBinary(OP_DIV, ast_MakeBinary(OP_MULT, ast_MakeInt(-1), ast_Copy(fx)), ast_Copy(fy));
+        simplify(answer, SIMP_ALL);
+        if(pcas_cancelled) {
+            message = pcas_oom ? "out of memory" : "cancelled";
+        } else {
+            out = labelled(label, value_box(answer));
+            layout_finish(out, &draw_font);
+        }
+        ast_Cleanup(answer);
+    }
+    push(in, out, message, 0);
+    ast_Cleanup(f);
+    ast_Cleanup(x);
+    ast_Cleanup(y);
+    ast_Cleanup(fx);
+    ast_Cleanup(fy);
+}
+
 bool calc1_run(const char *cmd, char *src, box_t *in) {
     pcas_ast_t *a[ARGS_MAX] = { NULL }, *d, *roots[SOLVE_MAX] = { NULL };
     char *piece[ARGS_MAX + 1];
@@ -164,6 +216,10 @@ bool calc1_run(const char *cmd, char *src, box_t *in) {
     n = args_split(src, piece, ARGS_MAX);
     if(n < cmds[c].least || n > cmds[c].most) {
         push(in, NULL, cmds[c].usage, 0);
+        return true;
+    }
+    if(c == C_IMPLICIT) {
+        implicit(piece, n, in);
         return true;
     }
     /* a letter at the end is the variable, tangent has the point before it */

@@ -40,8 +40,8 @@ ITEM(it_close,    ")",     NULL, ITEM_CHAR, ")",     HAVE_YES, NULL,
      "closing parenthesis, ends a group or a function's input")
 ITEM(it_comma,    ",",     NULL, ITEM_CHAR, ",",     HAVE_YES, "between arguments: logb(x,2)",
      "separates the inputs of a function, like solve(2x=6,x)")
-ITEM(it_equals,   "=",     NULL, ITEM_CHAR, "=", HAVE_PARTLY, "solve( system( and ellipse( hyperbola( piecewise(: the engine has no equations, the app splits the line",
-     "equals sign, for solve, system, piecewise and the conics. solve(2x=6,x) -> x = 3")
+ITEM(it_equals,   "=",     NULL, ITEM_CHAR, "=", HAVE_PARTLY, "solve( system( and ellipse( hyperbola( piecewise( implicit(: the engine has no equations, the app splits the line",
+     "equals sign, for solve, system, piecewise, implicit and the conics. solve(2x=6,x) -> x = 3")
 
 /* variables and constants */
 ITEM(it_x,        "x",     NULL, ITEM_CHAR, "X", HAVE_YES, "shown lowercase",
@@ -154,6 +154,10 @@ ITEM(it_extrema, "extrema", "extrema", ITEM_COMMAND, "extrema($)", HAVE_PARTLY,
 ITEM(it_inflect, "inflect", "inflect", ITEM_COMMAND, "inflect($)", HAVE_PARTLY,
      "inflect(f,x): the points where f'' = 0 and changes sign",
      "where the curve changes from bending up to bending down. inflect(x^3,x) -> inflection (0, 0)")
+
+ITEM(it_implicit, "implicit", "implicit", ITEM_COMMAND, "implicit($)", HAVE_PARTLY,
+     "implicit(equation,y,x): dy/dx as -(dF/dx)/(dF/dy) of left - right. y and x are the defaults",
+     "the slope of a curve that isn't a function of x. implicit(x^2+y^2=25) -> dy/dx = -x/y")
 
 /* Templates */
 ITEM(it_frac,     "n/d",   NULL, ITEM_TEMPLATE, "($)/($)", HAVE_YES, "empty fraction, cursor in the top",
@@ -300,7 +304,7 @@ const item_t *const catalog[] = {
     &it_triangle, &it_circle, &it_rect, &it_squareshape, &it_trap, &it_sphere, &it_cyl, &it_cone,
     &it_cube, &it_box, &it_polygon, &it_pand, &it_por,
     &it_ellipse, &it_hyperbola,
-    &it_deriv, &it_deriv_at, &it_integral, &it_limit, &it_tangent, &it_critical, &it_extrema, &it_inflect,
+    &it_deriv, &it_deriv_at, &it_integral, &it_limit, &it_tangent, &it_critical, &it_extrema, &it_inflect, &it_implicit,
     &it_id_basic, &it_id_trig, &it_id_hyp, &it_id_cplx, &it_id_tconst, &it_id_iconst, &it_clear, &it_steps
 };
 const unsigned catalog_count = sizeof catalog / sizeof catalog[0];
@@ -329,7 +333,7 @@ static const item_t *const algebra[] = {
     &it_fn_info, &it_lines, &it_shapes, &it_solids, &it_conics, &it_prob
 };
 static const item_t *const calculus[] = {
-    &it_deriv, &it_deriv_at, &it_integral, &it_limit, &it_tangent, &it_critical, &it_extrema, &it_inflect
+    &it_deriv, &it_deriv_at, &it_integral, &it_limit, &it_tangent, &it_critical, &it_extrema, &it_inflect, &it_implicit
 };
 static const item_t *const functions[] = {
     &it_sin, &it_cos, &it_tan, &it_asin, &it_acos, &it_atan, &it_cot, &it_sec, &it_csc, &it_acot, &it_asec, &it_acsc,

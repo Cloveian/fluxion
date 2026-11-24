@@ -46,6 +46,7 @@ Everything Fluxion does right now, as tables. Yes / partly / no first, the other
 | Integrals             | yes\* |
 | Limits                | yes\* |
 | Tangent line          | yes   |
+| Implicit derivatives  | yes\* |
 | Critical points       | yes\* |
 | Max, min, inflections | yes\* |
 
