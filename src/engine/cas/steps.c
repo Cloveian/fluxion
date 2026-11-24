@@ -970,6 +970,29 @@ bool steps_fit(pcas_ast_t *left, pcas_ast_t *right, Symbol var, Method m) {
     return fit;
 }
 
+bool steps_append(steps_t *s, steps_t *t) {
+    step_t *last = &s->line[s->n - 1];
+    int k, j;
+
+    if(s->n + t->n - 1 > STEPS_MAX || t->n < 2) {
+        steps_free(t);
+        return false;
+    }
+    last->move = t->line[0].move;
+    last->by = t->line[0].by;
+    memcpy(last->rules, t->line[0].rules, sizeof(last->rules));
+    for(j = 0; j < t->line[0].eqs; j++) {
+        ast_Cleanup(t->line[0].eq[j].left);
+        ast_Cleanup(t->line[0].eq[j].right);
+        ast_Cleanup(t->line[0].eq[j].pm);
+        ast_Cleanup(t->line[0].eq[j].den);
+    }
+    for(k = 1; k < t->n; k++)
+        s->line[s->n++] = t->line[k];
+    t->n = 0;
+    return true;
+}
+
 bool steps_linear(pcas_ast_t *left, pcas_ast_t *right, Symbol var, steps_t *out) {
     side_t side[2];
     bool ok = false;
@@ -992,7 +1015,7 @@ bool steps_solve(pcas_ast_t *left, pcas_ast_t *right, Symbol var, Method m, step
 
     out->n = 0;
     if(!read_sides(left, right, var, side))
-        return m == METHOD_OPTIMAL && steps_layers(left, right, var, out);
+        return m == METHOD_OPTIMAL && (steps_layers(left, right, var, out) || steps_poly(left, right, var, out));
     if(fits(side, m)) {
         switch(pick(side, m)) {
         case METHOD_ROOT:

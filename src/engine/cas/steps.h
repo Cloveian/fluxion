@@ -47,6 +47,10 @@ typedef struct {
 bool steps_solve(pcas_ast_t *left, pcas_ast_t *right, Symbol var, Method m, steps_t *out);
 /*left = right a layer a line (layers.c): sqrt(x+3) = 5, 2^x = 8, abs(x) = 4, ln(x) = 2. ends on what solve gives, false if it can't*/
 bool steps_layers(pcas_ast_t *left, pcas_ast_t *right, Symbol var, steps_t *out);
+/*t's lines on the end of s. t's first line is the one s ends on, so only its move comes over. false (t freed) when they don't fit*/
+bool steps_append(steps_t *s, steps_t *t);
+/*a polynomial past x^2 that factors into lines and quadratics: factor, each factor = 0, each solved (polysteps.c). false if it doesn't*/
+bool steps_poly(pcas_ast_t *left, pcas_ast_t *right, Symbol var, steps_t *out);
 /*ax+b = cx+d the way steps_solve does it, false when a side isn't a line in var. steps_ineq's linear ones*/
 bool steps_linear(pcas_ast_t *left, pcas_ast_t *right, Symbol var, steps_t *out);
 /*left rel right, rel is < > l (<=) or g (>=). a line works the sign along, the rest by a sign chart: the zeros, a test point in each gap, the pieces. false if it's all reals, none, or a shape it can't read*/

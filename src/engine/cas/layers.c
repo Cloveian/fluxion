@@ -101,28 +101,10 @@ static bool check_answers(pcas_ast_t *left, pcas_ast_t *right, Symbol var, steps
 /*an x on both sides now (a root squared away): the quadratic steps carry on from the last line, its first line is that one. fit first, solve would come back in here for a shape it can't read*/
 static bool hand_off(pcas_ast_t *L, pcas_ast_t *R, Symbol var, steps_t *s) {
     static steps_t t; /*~1 KB, off the stack*/
-    step_t *last = &s->line[s->n - 1];
-    int k, j;
 
     if(!steps_fit(L, R, var, METHOD_OPTIMAL) || !steps_solve(L, R, var, METHOD_OPTIMAL, &t))
         return false;
-    if(s->n + t.n - 1 > STEPS_MAX || t.n < 2) {
-        steps_free(&t);
-        return false;
-    }
-    last->move = t.line[0].move;
-    last->by = t.line[0].by;
-    memcpy(last->rules, t.line[0].rules, sizeof(last->rules));
-    for(j = 0; j < t.line[0].eqs; j++) {
-        ast_Cleanup(t.line[0].eq[j].left);
-        ast_Cleanup(t.line[0].eq[j].right);
-        ast_Cleanup(t.line[0].eq[j].pm);
-        ast_Cleanup(t.line[0].eq[j].den);
-    }
-    for(k = 1; k < t.n; k++)
-        s->line[s->n++] = t.line[k];
-    t.n = 0;
-    return true;
+    return steps_append(s, &t);
 }
 
 static bool var_on_bottom(pcas_ast_t *e, Symbol var) {
