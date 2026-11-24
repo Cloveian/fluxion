@@ -1,5 +1,5 @@
 # random expressions through build-pc/fluxion, checked numerically against sympy
-# usage: python3 tools/fuzz.py [count] [seed] [pos|any] [simplify|expand|factor|derivative|integral|solve] [-v]   (pos = letters only get positive test points)
+# usage: python3 tools/fuzz.py [count] [seed] [pos|any] [simplify|expand|factor|derivative|integral|solve|limit] [-v]   (pos = letters only get positive test points)
 import random, re, subprocess, sys
 import sympy as sp
 from sympy.parsing.sympy_parser import parse_expr, standard_transformations, implicit_multiplication_application, convert_xor
@@ -106,21 +106,60 @@ def solve_check(expr, roots):
     truth = sp.solveset(f, X, sp.S.Reals)
     if not isinstance(truth, sp.FiniteSet):
         return None
-    # solveset hands back roots of the combined ln(x)+ln(x+4), the ones the real function isn't defined at get dropped
-    tv = sorted(float(t) for t in truth if abs(complex(f.subs(X, t).evalf()).imag) < 1e-9 and not any(a.has(sp.log) and complex(a.args[0].subs(X, t).evalf()).real < 0 for a in f.atoms(sp.log)))
+    # solveset has roots of the combined ln(x)+ln(x+4) the real function isn't defined at
+    def defined(t):
+        if abs(complex(f.subs(X, t).evalf()).imag) > 1e-9:
+            return False
+        return all(complex(a.args[0].subs(X, t).evalf()).real >= 0 for a in f.atoms(sp.log))
+    tv = sorted(float(t) for t in truth if defined(t))
     gv = sorted(float(v.evalf()) for v in vals)
     gv = [g for i, g in enumerate(gv) if i == 0 or abs(g - gv[i - 1]) > 1e-9]
     if len(tv) != len(gv) or any(abs(x - y) > 1e-6 for x, y in zip(tv, gv)):
         return f"missed or extra: want {tv}"
     return None
 
+def gen_lim():
+    # calc 1 limits: holes, sin(x)/x kinds at 0, rational / exp / root at inf, a few with no two-sided limit
+    a, b, c = nz(1, 4), nz(-4, 4), nz(-4, 4)
+    return random.choice([
+        (f"((X_{a})(X+{b}))/((X_{a})(X+{c}))", str(a)), (f"(X^2_{a * a})/(X_{a})", str(a)), (f"sin({a}X)/({abs(b)}X)", "0"),
+        (f"(1_cos({a}X))/X^2", "0"), (f"(e^({a}X)_1)/X", "0"), (f"ln(1+{a}X)/X", "0"), (f"(sqrt(X+{a * a})_{a})/X", "0"),
+        (f"tan({a}X)/X", "0"), (f"({a}X^2+{b}X+1)/({abs(c)}X^2+X+{a})", "inf"), (f"({a}X^3+X)/({abs(b)}X^2+1)", "inf"),
+        ("X^2/e^X", "inf"), ("X*e^(0_X)", "inf"), (f"sqrt(X^2+{a}X)_X", "inf"), (f"(1+{a}/X)^X", "inf"), ("ln(X)/X", "inf"),
+        (f"{a}X*sin(1/X)", "inf"), (f"1/(X_{a})", str(a)), (f"1/(X_{a})^2", str(a)), (f"abs(X_{a})/(X_{a})", str(a)),
+        (f"({a}X+{b})/(X_{c})", str(c)), (f"(sqrt(X+{a * a})_{a})/(X+{b})", "0"),
+    ])
+
+def lim_check(expr, pt, out):
+    f = to_sympy(expr)
+    where = {"inf": sp.oo}.get(pt) or sp.Integer(pt)
+    sides = ["-"] if pt == "inf" else ["+", "-"]
+    vals = [sp.limit(f, X, where, dir=d) for d in sides]
+    if any(v.has(sp.nan) or v.has(sp.I) or v.has(sp.AccumBounds) for v in vals):
+        return "skip"
+    dne = len(vals) == 2 and vals[0] != vals[1]
+    gave_up = out.startswith("limit(")
+    if dne:
+        return None if gave_up else f"sympy says no limit ({vals[0]} / {vals[1]}), got {out}"
+    if gave_up:
+        return "skip"
+    want = vals[0]
+    if out in ("inf", "-inf"):
+        return None if want == (sp.oo if out == "inf" else -sp.oo) else f"want {want}, got {out}"
+    got = to_sympy(out)
+    if want in (sp.oo, -sp.oo) or abs(complex((got - want).evalf())) > 1e-6:
+        return f"want {want}, got {out}"
+    return None
+
 def run(expr):
+    if cmd == "limit":
+        expr = f"limit({expr[0]},X,{expr[1]})"
     if cmd == "solve":
         p = subprocess.run(["build-pc/fluxion", "solve", expr], capture_output=True, text=True, timeout=20)
         return re.findall(r"^Root: (.*)$", p.stdout, re.M)
     if cmd == "integral":
         expr = f"integral({expr},X)"
-    p = subprocess.run(["build-pc/fluxion", "simplify" if cmd == "integral" else cmd, expr] + (["X"] if cmd == "derivative" else []), capture_output=True, text=True, timeout=20)
+    p = subprocess.run(["build-pc/fluxion", "simplify" if cmd in ("integral", "limit") else cmd, expr] + (["X"] if cmd == "derivative" else []), capture_output=True, text=True, timeout=20)
     m = re.search(r"^Output: (.*)$", p.stdout, re.M)
     return m.group(1) if m else None
 
@@ -140,7 +179,20 @@ def val(f, px, py):
 
 bad, why, skipped, ok = [], [], 0, 0
 for i in range(count):
-    expr = gen_int() if cmd == "integral" else gen_eq() if cmd == "solve" else gen(random.choice([1, 2, 2, 3]))
+    expr = gen_int() if cmd == "integral" else gen_eq() if cmd == "solve" else gen_lim() if cmd == "limit" else gen(random.choice([1, 2, 2, 3]))
+    if cmd == "limit":
+        try:
+            out = run(expr)
+            problem = lim_check(expr[0], expr[1], out) if out is not None else "skip"
+        except subprocess.TimeoutExpired:
+            bad.append((expr, "TIMEOUT", "timeout")); continue
+        except Exception as ex:
+            skipped += 1; why.append((expr, f"{ex}")); continue
+        if problem == "skip":
+            skipped += 1; why.append((expr, f"{out}")); continue
+        if problem: bad.append((expr, out, problem))
+        else: ok += 1
+        continue
     if cmd == "solve":
         try:
             roots = run(expr)
@@ -186,6 +238,6 @@ print(f"{ok} ok, {len(bad)} wrong, {skipped} skipped of {count} (seed {seed}, {m
 if "-v" in sys.argv:
     for expr, r in why: print(f"  skipped {expr} -> {r}")
 for expr, out, w in bad:
-    if cmd == "solve":
+    if cmd in ("solve", "limit"):
         print(f"  {expr}\n    -> {out}\n    {w}"); continue
     print(f"  {expr}\n    -> {out}\n    at X={w[0]:.3f} Y={w[1]:.3f}: want {w[2]:.5g}, got {w[3]}" if w else f"  {expr} -> {out}")
