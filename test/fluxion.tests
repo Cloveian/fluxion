@@ -1023,6 +1023,7 @@ simplify; integral(X*e^X,X); -e^X+Xe^X
 simplify; integral(X*ln(X),X); (ln(X)X^2)/2_(X^2)/4
 simplify; integral(X^2*sin(X),X); -cos(X)X^2+2Xsin(X)+2cos(X)
 simplify; integral(atan(X),X); atan(X)X_(ln(2abs(1+X^2)))/2
+simplify; integral(X*e^(-2X),X); (-X)/(2e^(2X))_1/(4e^(2X))
 simplify; integral(e^X*sin(X),X); integral(e^Xsin(X),X)
 #u-substitution: some piece of it is u and the rest is u' (up to a number)
 antideriv; 2Xcos(X^2); X

@@ -1,5 +1,5 @@
 # random expressions through build-pc/fluxion, checked numerically against sympy
-# usage: python3 tools/fuzz.py [count] [seed] [pos|any] [simplify|expand|factor|derivative] [-v]   (pos = letters only get positive test points)
+# usage: python3 tools/fuzz.py [count] [seed] [pos|any] [simplify|expand|factor|derivative|integral] [-v]   (pos = letters only get positive test points)
 import random, re, subprocess, sys
 import sympy as sp
 from sympy.parsing.sympy_parser import parse_expr, standard_transformations, implicit_multiplication_application, convert_xor
@@ -60,8 +60,20 @@ def to_sympy(s):
     out = re.sub("(" + ATOM + r")\s*root\s*(" + ATOM + ")", r"rootf(\1,\2)", out)
     return parse_expr(out, local_dict=names, transformations=tr)
 
+def gen_int():
+    # the integrals a calc 1 class has: x^k times something, trig powers, 1/(quadratic), sums of those
+    k, a, b = random.randint(1, 3), random.randint(1, 4), random.randint(-3, 3) or 1
+    return random.choice([
+        f"X^{k}*e^X", f"X^{k}*sin(X)", f"X^{k}*cos({a}X)", f"X*ln(X)", f"X^{k}*ln(X)", "atan(X)", f"{a}X*e^({b}X)",
+        f"sin(X)^{k + 1}", f"cos(X)^{k + 1}", f"sin({a}X)^2", f"cos({a}X)^3", f"sin(X)^2*cos(X)", "sin(X)*cos(X)",
+        f"1/(X^2_{a * a})", f"1/(X^2+{a + b + 4}X+{a + 1})", f"1/(X^2+{a * a})", f"X/(X^2+{a})", f"({a}X+{b})/(X^2_1)", f"1/(X^3_X)",
+        f"sqrt({a}X+{b + 4})", f"{a}X*sqrt(X^2+{a})", f"e^({a}X)*{b}", f"{a}/(X+{b + 4})", f"X^{k}+{a}X+{b}", f"tan(X)", f"sec(X)^2",
+    ])
+
 def run(expr):
-    p = subprocess.run(["build-pc/fluxion", cmd, expr] + (["X"] if cmd == "derivative" else []), capture_output=True, text=True, timeout=20)
+    if cmd == "integral":
+        expr = f"integral({expr},X)"
+    p = subprocess.run(["build-pc/fluxion", "simplify" if cmd == "integral" else cmd, expr] + (["X"] if cmd == "derivative" else []), capture_output=True, text=True, timeout=20)
     m = re.search(r"^Output: (.*)$", p.stdout, re.M)
     return m.group(1) if m else None
 
@@ -81,7 +93,7 @@ def val(f, px, py):
 
 bad, why, skipped, ok = [], [], 0, 0
 for i in range(count):
-    expr = gen(random.choice([1, 2, 2, 3]))
+    expr = gen_int() if cmd == "integral" else gen(random.choice([1, 2, 2, 3]))
     try:
         out = run(expr)
     except subprocess.TimeoutExpired:
@@ -97,6 +109,9 @@ for i in range(count):
     worst = None
     for px, py in points():
         a, b = val(fi, px, py), val(fo, px, py)
+        if cmd == "integral":  # the answer's slope should be the integrand (the constant doesn't show), abs has no clean *dih*rivative
+            lo, hi = val(fo, px - 1e-5, py), val(fo, px + 1e-5, py)
+            b = (hi - lo) / 2e-5 if lo is not None and hi is not None else None
         if a is None or abs(a.imag) > 1e-9 or abs(a) > 1e8 or a != a:
             continue  # input not real here
         if b is None or abs(a - b) > 1e-4 * max(1, abs(a)):

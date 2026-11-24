@@ -525,6 +525,10 @@ static const char *one_rule(pcas_ast_t *e, subs_t *subs) {
             integral(ast_MakeBinary(OP_DIV, ast_MakeInt(1), ast_Copy(ast_ChildGet(f, 1))), x)));
         return "constant multiple";
     }
+    if(isoptype(f, OP_DIV) && isoptype(ast_ChildGet(f, 1), OP_MULT) && (c = constant_part(ast_ChildGet(f, 1), x, &rest)) != NULL) { /*1/(2e^(2x))*/
+        replace_node(e, ast_MakeBinary(OP_DIV, integral(ast_MakeBinary(OP_DIV, ast_Copy(ast_ChildGet(f, 0)), rest), x), c));
+        return "constant multiple";
+    }
     if((name = table(f, x, &n)) != NULL) {
         replace_node(e, n);
         return name;
@@ -535,7 +539,21 @@ static const char *one_rule(pcas_ast_t *e, subs_t *subs) {
         return name;
     if((name = partial_fractions(e)) != NULL)
         return name;
-    return by_parts(e, subs);
+    if((name = by_parts(e, subs)) != NULL)
+        return name;
+    if(isoptype(f, OP_DIV) && liate(ast_ChildGet(f, 1), x) == 1 && isoptype(ast_ChildGet(f, 1), OP_POW)) { /*X/e^(2X) is X e^(-2X), simplify wrote it the first way*/
+        pcas_ast_t *bottom = ast_ChildGet(f, 1), *as = ast_MakeBinary(OP_MULT, ast_Copy(ast_ChildGet(f, 0)),
+            ast_MakeBinary(OP_POW, ast_Copy(ast_ChildGet(bottom, 0)), ast_MakeBinary(OP_MULT, ast_MakeInt(-1), ast_Copy(ast_ChildGet(bottom, 1)))));
+
+        simplify(as, SIMP_NORMALIZE | SIMP_COMMUTATIVE); /*not eval, that writes the -2X back as a bottom*/
+        n = integral(as, x);
+        if(n != NULL && (name = by_parts(n, subs)) != NULL) {
+            replace_node(e, n);
+            return name;
+        }
+        ast_Cleanup(n);
+    }
+    return NULL;
 }
 
 /*F for the integral node I, new. NULL when some piece has no rule. the lines go in s when it isn't NULL*/
