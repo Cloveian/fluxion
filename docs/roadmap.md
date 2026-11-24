@@ -38,7 +38,7 @@
 - [x] Integrals. table, u-sub, by parts (LIATE), sin / cos powers, partial fractions over rational roots, with steps
 - [x] Tangent lines, critical points, max / min and inflections, implicit *dih*rivatives
 - [x] Increasing / decreasing intervals, increasing(f,x)
-- [ ] One-sided limits
+- [x] One-sided limits, a 4th argument of 1 or -1, limit(abs(x)/x,x,0,1)
 - [ ] Limits that need the conjugate, sqrt(x^2+x) - x flips back and forth forever
 - [ ] Steps for limits at ∞ the paper way (divide by x^n), its one line right now
 - [x] More integrals: sqrt(1-x^2) and sqrt(x^2+1) forms, 1/(x^2+bx+c) with irrational roots, e^x sin(x), x atan(x), x^5 e^x, abs(x), sec and csc, tan^n, sec^n, sin^2 cos^2.

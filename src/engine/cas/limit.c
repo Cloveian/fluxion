@@ -242,6 +242,41 @@ static int sign_of(pcas_ast_t *v) {
     return s;
 }
 
+/*abs(u) from side dir of a is u or -u. how many came off, -1 if a sign can't be told*/
+static int drop_abs(pcas_ast_t *e, pcas_ast_t *var, pcas_ast_t *a, int dir) {
+    pcas_ast_t *c, *u, *v, *d;
+    int n = 0, k, sg;
+
+    if(e->type != NODE_OPERATOR)
+        return 0;
+    for(c = ast_ChildGet(e, 0); c != NULL; c = c->next) {
+        if((k = drop_abs(c, var, a, dir)) < 0)
+            return -1;
+        n += k;
+    }
+    if(!isoptype(e, OP_ABS) || !has_symbol(e, var->op.symbol))
+        return n;
+    u = ast_Copy(ast_ChildGet(e, 0));
+    v = u != NULL ? value_at(u, var, a) : NULL;
+    sg = v != NULL ? sign_of(v) : 2;
+    ast_Cleanup(v);
+    if(sg == 0) { /*0 at a, so it goes the way u does*/
+        d = slope_of(u, var);
+        v = d != NULL ? value_at(d, var, a) : NULL;
+        sg = v != NULL ? sign_of(v) : 2;
+        if(sg != 2)
+            sg *= dir;
+        ast_Cleanup(d);
+        ast_Cleanup(v);
+    }
+    if(sg == 0 || sg == 2) {
+        ast_Cleanup(u);
+        return -1;
+    }
+    replace_node(e, sg > 0 ? u : ast_MakeBinary(OP_MULT, ast_MakeInt(-1), u));
+    return n + 1;
+}
+
 /*the side e is on once x is big, x = 10^4. which way a piece comes in to 0, -1/x from below*/
 static int sign_far(pcas_ast_t *e, pcas_ast_t *var) {
     pcas_ast_t *c = ast_Copy(e), *big = ast_MakeInt(10000);
@@ -925,6 +960,15 @@ static pcas_ast_t *limit_of(pcas_ast_t *f, pcas_ast_t *var, pcas_ast_t *a, steps
     }
     if(has_symbol(a, SYM_INF)) /*inf+1, 2inf*/
         return NULL;
+    if(dir != 0 && (g = ast_Copy(f)) != NULL) { /*abs(x-3) from the right is x-3*/
+        if(drop_abs(g, var, a, dir) > 0) {
+            steps_rule(l, dir > 0 ? "abs from the right" : "abs from the left");
+            out = limit_of(g, var, a, s, root, dir);
+            ast_Cleanup(g);
+            return out;
+        }
+        ast_Cleanup(g);
+    }
     g = ast_Copy(f);
     if(dir != 0 && !real_beside(f, var, a, dir)) {  /*sqrt(x) at 0 from the left*/
         ast_Cleanup(g);

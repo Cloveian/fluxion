@@ -131,12 +131,19 @@ def gen_lim():
         ("X^2/e^X", "inf"), ("X*e^(0_X)", "inf"), (f"sqrt(X^2+{a}X)_X", "inf"), (f"(1+{a}/X)^X", "inf"), ("ln(X)/X", "inf"),
         (f"{a}X*sin(1/X)", "inf"), (f"1/(X_{a})", str(a)), (f"1/(X_{a})^2", str(a)), (f"abs(X_{a})/(X_{a})", str(a)),
         (f"({a}X+{b})/(X_{c})", str(c)), (f"(sqrt(X+{a * a})_{a})/(X+{b})", "0"),
-    ])
+    ] + one_sided(a))
 
-def lim_check(expr, pt, out):
+def one_sided(a):
+    # the same kinds with a side picked: |x|/x and 1/x at a point, e^(1/x), roots and logs from the right
+    side = random.choice(["1", "-1"])
+    return [(f"abs(X_{a})/(X_{a})", str(a), side), (f"1/(X_{a})", str(a), side), ("e^(1/X)", "0", side), ("atan(1/X)", "0", side),
+            ("1/X^2", "0", side), ("sqrt(X)", "0", "1"), ("ln(X)", "0", "1"), ("X*ln(X)", "0", "1"), ("X^X", "0", "1"),
+            (f"(X^2_{a * a})/abs(X_{a})", str(a), side), (f"sin(X)/abs(X)", "0", side), (f"ln(abs(X_{a}))", str(a), side)]
+
+def lim_check(expr, pt, out, side=None):
     f = to_sympy(expr)
     where = {"inf": sp.oo}.get(pt) or sp.Integer(pt)
-    sides = ["-"] if pt == "inf" else ["+", "-"]
+    sides = ["-"] if pt == "inf" else [{"1": "+", "-1": "-"}[side]] if side else ["+", "-"]
     vals = [sp.limit(f, X, where, dir=d) for d in sides]
     if any(v.has(sp.nan) or v.has(sp.I) or v.has(sp.AccumBounds) for v in vals):
         return "skip"
@@ -156,7 +163,7 @@ def lim_check(expr, pt, out):
 
 def run(expr):
     if cmd == "limit":
-        expr = f"limit({expr[0]},X,{expr[1]})"
+        expr = f"limit({expr[0]},X,{expr[1]}{',' + expr[2] if len(expr) > 2 else ''})"
     if cmd == "solve":
         p = subprocess.run(["build-pc/fluxion", "solve", expr], capture_output=True, text=True, timeout=20)
         return re.findall(r"^Root: (.*)$", p.stdout, re.M)
@@ -186,7 +193,7 @@ for i in range(count):
     if cmd == "limit":
         try:
             out = run(expr)
-            problem = lim_check(expr[0], expr[1], out) if out is not None else "skip"
+            problem = lim_check(expr[0], expr[1], out, expr[2] if len(expr) > 2 else None) if out is not None else "skip"
         except subprocess.TimeoutExpired:
             bad.append((expr, "TIMEOUT", "timeout")); continue
         except Exception as ex:

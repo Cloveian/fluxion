@@ -969,6 +969,11 @@ simplify; limit(ln(X),X,0,1); -inf
 simplify; limit(1/(X_2),X,2,-1); -inf
 simplify; limit(abs(X)/X,X,0); limit(abs(X)/X,X,0)
 simplify; limit(X,X,0,2); limit(X,X,0,2)
+#abs(u) from one side is u or -u, so it comes off and the 0/0 works as usual
+simplify; limit(sin(X)/abs(X),X,0,1); 1
+simplify; limit(sin(X)/abs(X),X,0,-1); -1
+simplify; limit((X^2_9)/abs(X_3),X,3,-1); -6
+simplify; limit(abs(X)/X,X,0,-1); -1
 
 #integral(f, x) and integral(f, x, a, b): sum and constant multiple, then a table for f(ax+b). no +C on the answer, like the nspire
 simplify; integral(X^2,X); X^3/3
