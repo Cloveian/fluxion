@@ -2,6 +2,7 @@
 
 #include "app.h"
 #include "args.h"
+#include "ineq.h"
 
 #include <string.h>
 #include <time.h>
@@ -12,7 +13,7 @@
 
 #define ARGS_MAX 4
 
-enum { C_TANGENT, C_CRITICAL, C_EXTREMA, C_INFLECT, C_IMPLICIT, C_COUNT };
+enum { C_TANGENT, C_CRITICAL, C_EXTREMA, C_INFLECT, C_IMPLICIT, C_INCREASING, C_COUNT };
 
 static const struct {
     const char *name, *usage;
@@ -23,6 +24,7 @@ static const struct {
     { "extrema", "extrema(f, x)", 1, 2 },
     { "inflect", "inflect(f, x)", 1, 2 },
     { "implicit", "implicit(equation, y, x)", 1, 3 },
+    { "increasing", "increasing(f, x)", 1, 2 },
 };
 
 /* d/dvar of f, times over. NULL on oom or cancelled */
@@ -143,6 +145,35 @@ static box_t *turning_points(pcas_ast_t *f, Symbol var, bool inflection, const c
     return col;
 }
 
+/* where f' is over 0 and where it's under, one line each */
+static box_t *slopes(pcas_ast_t *f, Symbol var, char shown, const char **message) {
+    pcas_ast_t *d = derive(f, var, 1);
+    box_t *col = NULL, *up, *down;
+    const char *why = NULL;
+
+    if(d == NULL)
+        return NULL;
+    if(!has_symbol(d, var)) { /* a line, or a constant */
+        *message = "the slope is the same everywhere";
+        ast_Cleanup(d);
+        return NULL;
+    }
+    up = ineq_box(d, var, shown, '>', true, &why);
+    down = up != NULL ? ineq_box(d, var, shown, '<', true, &why) : NULL;
+    if(up != NULL && down != NULL) {
+        col = layout_box(BOX_COL, 0);
+        layout_add(col, labelled("increasing", up));
+        layout_add(col, labelled("decreasing", down));
+        layout_finish(col, &draw_font);
+    } else {
+        layout_free(up);
+        layout_free(down);
+        *message = why;
+    }
+    ast_Cleanup(d);
+    return col;
+}
+
 /* implicit(x^2+y^2=25, y, x): dy/dx = -(dF/dx)/(dF/dy) of F = left - right. y and x are the defaults */
 static void implicit(char **piece, int n, box_t *in) {
     pcas_ast_t *l, *r = NULL, *f, *x, *y, *fx, *fy, *answer;
@@ -252,6 +283,8 @@ bool calc1_run(const char *cmd, char *src, box_t *in) {
         ast_Cleanup(d);
         for(i = 0; i < k; i++)
             ast_Cleanup(roots[i]);
+    } else if(c == C_INCREASING) {
+        out = slopes(a[0], var, shown, &message);
     } else {
         out = turning_points(a[0], var, c == C_INFLECT, &message);
     }

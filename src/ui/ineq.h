@@ -9,6 +9,9 @@
    with in. f stays the caller's */
 void ineq_run(pcas_ast_t *f, Symbol var, char shown, char rel, box_t *in);
 
+/* the same answer as a box (NULL with failure set to why), for the commands that put it in a bigger one. one_row puts the pieces side by side, "or" between. f stays the caller's */
+box_t *ineq_box(pcas_ast_t *f, Symbol var, char shown, char rel, bool one_row, const char **failure);
+
 /* one piece of an interval answer: lo < x < hi, x <= hi, x > lo, or x = c when
    lo and hi are the same tree. NULL for no end on that side, the bools say if the
    end is in. range( uses it too, with y. the trees are copied, not kept */

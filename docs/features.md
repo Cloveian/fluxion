@@ -49,6 +49,7 @@ Everything Fluxion does right now, as tables. Yes / partly / no first, the other
 | Implicit derivatives  | yes\* |
 | Critical points       | yes\* |
 | Max, min, inflections | yes\* |
+| Up and down intervals | yes   |
 
 ### Systems
 

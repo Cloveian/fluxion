@@ -37,6 +37,7 @@
 - [x] Limits. plug in, cancel, l'Hopital, and to ∞ / -∞
 - [x] Integrals. table, u-sub, by parts (LIATE), sin / cos powers, partial fractions over rational roots, with steps
 - [x] Tangent lines, critical points, max / min and inflections, implicit *dih*rivatives
+- [x] Increasing / decreasing intervals, increasing(f,x)
 - [ ] One-sided limits
 - [ ] Limits that need the conjugate, sqrt(x^2+x) - x flips back and forth forever
 - [ ] Steps for limits at ∞ the paper way (divide by x^n), its one line right now

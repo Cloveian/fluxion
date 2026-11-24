@@ -154,6 +154,9 @@ ITEM(it_extrema, "extrema", "extrema", ITEM_COMMAND, "extrema($)", HAVE_PARTLY,
 ITEM(it_inflect, "inflect", "inflect", ITEM_COMMAND, "inflect($)", HAVE_PARTLY,
      "inflect(f,x): the points where f'' = 0 and changes sign",
      "where the curve changes from bending up to bending down. inflect(x^3,x) -> inflection (0, 0)")
+ITEM(it_increasing, "increasing", "increasing", ITEM_COMMAND, "increasing($)", HAVE_PARTLY,
+     "increasing(f,x): where f' is over 0 and where it's under, as intervals",
+     "where the curve goes up and where it goes down. increasing(x^3-3x,x) -> increasing x < -1 or x > 1, decreasing -1 < x < 1")
 
 ITEM(it_implicit, "implicit", "implicit", ITEM_COMMAND, "implicit($)", HAVE_PARTLY,
      "implicit(equation,y,x): dy/dx as -(dF/dx)/(dF/dy) of left - right. y and x are the defaults",
@@ -304,7 +307,7 @@ const item_t *const catalog[] = {
     &it_triangle, &it_circle, &it_rect, &it_squareshape, &it_trap, &it_sphere, &it_cyl, &it_cone,
     &it_cube, &it_box, &it_polygon, &it_pand, &it_por,
     &it_ellipse, &it_hyperbola,
-    &it_deriv, &it_deriv_at, &it_integral, &it_limit, &it_tangent, &it_critical, &it_extrema, &it_inflect, &it_implicit,
+    &it_deriv, &it_deriv_at, &it_integral, &it_limit, &it_tangent, &it_critical, &it_extrema, &it_inflect, &it_implicit, &it_increasing,
     &it_id_basic, &it_id_trig, &it_id_hyp, &it_id_cplx, &it_id_tconst, &it_id_iconst, &it_clear, &it_steps
 };
 const unsigned catalog_count = sizeof catalog / sizeof catalog[0];
@@ -333,7 +336,7 @@ static const item_t *const algebra[] = {
     &it_fn_info, &it_lines, &it_shapes, &it_solids, &it_conics, &it_prob
 };
 static const item_t *const calculus[] = {
-    &it_deriv, &it_deriv_at, &it_integral, &it_limit, &it_tangent, &it_critical, &it_extrema, &it_inflect, &it_implicit
+    &it_deriv, &it_deriv_at, &it_integral, &it_limit, &it_tangent, &it_critical, &it_extrema, &it_inflect, &it_implicit, &it_increasing
 };
 static const item_t *const functions[] = {
     &it_sin, &it_cos, &it_tan, &it_asin, &it_acos, &it_atan, &it_cot, &it_sec, &it_csc, &it_acot, &it_asec, &it_acsc,

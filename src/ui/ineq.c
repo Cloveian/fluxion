@@ -150,13 +150,12 @@ static bool truth(const bool *gap, const bool *edge, int p) {
     return p % 2 == 0 ? gap[p / 2] : edge[p / 2];
 }
 
-void ineq_run(pcas_ast_t *f, Symbol var, char shown, char rel, box_t *in) {
+box_t *ineq_box(pcas_ast_t *f, Symbol var, char shown, char rel, bool one_row, const char **failure) {
     edge_t edges[EDGES_MAX];
     bool gap[EDGES_MAX + 1], edge[EDGES_MAX];
     pcas_ast_t *g = ast_Copy(f), *top, *bottom = NULL;
     const char *fail = NULL;
     box_t *col = NULL;
-    clock_t start = clock();
     int n = 0, i, p, runs = 0;
 
     simplify(g, SIMP_ALL);
@@ -194,7 +193,7 @@ void ineq_run(pcas_ast_t *f, Symbol var, char shown, char rel, box_t *in) {
     /* each run of true bits in a row is one piece of the answer. a run starting
        or ending on a gap has that side open, on an edge closed */
     if(fail == NULL && col == NULL) {
-        col = layout_box(BOX_COL, 0);
+        col = layout_box(one_row ? BOX_ROW : BOX_COL, 0);
         for(p = 0; p <= 2 * n; p++) {
             pcas_ast_t *lo = NULL, *hi = NULL;
             int q = p;
@@ -214,8 +213,12 @@ void ineq_run(pcas_ast_t *f, Symbol var, char shown, char rel, box_t *in) {
                 runs = 1;
                 break;
             }
-            if(runs++ > 0)
-                layout_add(col, layout_text("or", 0));
+            if(runs++ > 0) {
+                if(one_row)
+                    put_text(col, "or");
+                else
+                    layout_add(col, layout_text("or", 0));
+            }
             layout_add(col, ineq_row(shown, lo, p % 2 == 1, hi, q % 2 == 1));
             p = q;
         }
@@ -227,9 +230,18 @@ void ineq_run(pcas_ast_t *f, Symbol var, char shown, char rel, box_t *in) {
 
     if(col != NULL)
         layout_finish(col, &draw_font);
-    push(in, col, fail, (unsigned long)((clock() - start) * 1000 / CLOCKS_PER_SEC));
+    *failure = fail;
 
     for(i = 0; i < n; i++)
         ast_Cleanup(edges[i].at);
     ast_Cleanup(g);
+    return col;
+}
+
+void ineq_run(pcas_ast_t *f, Symbol var, char shown, char rel, box_t *in) {
+    clock_t start = clock();
+    const char *fail = NULL;
+    box_t *col = ineq_box(f, var, shown, rel, false, &fail);
+
+    push(in, col, fail, (unsigned long)((clock() - start) * 1000 / CLOCKS_PER_SEC));
 }
