@@ -1110,9 +1110,23 @@ steps; integral(2Xcos(X^2),X); X; integral(2Xcos(X^2), X) | constant multiple | 
 steps; integral(X^2,X,0,3); X; integral(X^2, X, 0, 3) | power rule | X^3/3 | F(b) - F(a) | 3^3/3_0^3/3 | 9
 steps; integral(cos(3X),X); X; integral(cos(3X), X) | trig rule | sin(3X)/3 | + C | sin(3X)/3+C
 steps; integral(e^(X^2),X); X; none
+#a layer a line (layers.c), ending on the roots solve has. a root squared away can bring in one that doesn't fit, so those get checked
+steps; sqrt(X+3)=5; X; sqrt((X+3))=5|squarebothsides|X+3=25|_3|X=22
+steps; 2^X=8; X; 2^X=8|takethelogofbothsides|X=3
+steps; abs(X_1)=4; X; abs(X_1)=4|twocases|X_1=4orX_1=-4|+1|X=5orX=-3
+steps; ln(X)=2; X; ln(X)=2|raisebothsidestothebase|X=e^2
+steps; 3e^(2X)=12; X; 3e^(2X)=12|/3|e^(2X)=4|takethelogofbothsides|2X=ln(4)|/2|X=ln(4)/2
+steps; 2sqrt(X_1)=6; X; 2sqrt((X_1))=6|/2|sqrt((X_1))=3|squarebothsides|X_1=9|+1|X=10
+steps; sqrt(2X+3)=X; X; sqrt((2X+3))=X|squarebothsides|2X+3=X^2|_X^2|-X^2+2X+3=0|*-1|X^2_2X_3=0|(X_3)(X+1)=0|X_3=0orX+1=0|X=3orX=-1|checktheanswers|X=3
+steps; sqrt(X)=X_2; X; sqrt(X)=X_2|squarebothsides|X=(X_2)^2|X=X^2_4X+4|_X^2_4X+4|-X^2+5X_4=0|*-1|X^2_5X+4=0|(X_4)(X_1)=0|X_4=0orX_1=0|X=4orX=1|checktheanswers|X=4
 #not a shape it does yet, or a method that doesn't fit
 steps; X^2+X+1=0; Xfactor; none
 steps; X^2+X=2; Xroot; none
 steps; sin(X)=1; X; none
-steps; 2^X=4; X; none
+steps; sqrt(X)=-1; X; none
+steps; X^3=8; X; none
+steps; sqrt(X+1)+sqrt(X)=2; X; none
+steps; sin(X)=X; X; none
+steps; sqrt(X)=X^3; X; none
+steps; 2^X=-3; X; none
 steps; 3X+5=-3; Xformula; none

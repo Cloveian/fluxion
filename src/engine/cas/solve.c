@@ -1016,7 +1016,7 @@ static int count_var(pcas_ast_t *e, Symbol var) {
 }
 
 /*the other children of e, copied, as a sum or a product*/
-static pcas_ast_t *rest_of(pcas_ast_t *e, pcas_ast_t *skip, OperatorType op) {
+pcas_ast_t *rest_of(pcas_ast_t *e, pcas_ast_t *skip, OperatorType op) {
     pcas_ast_t *r = ast_MakeOperator(op), *c;
 
     for(c = ast_ChildGet(e, 0); c != NULL; c = c->next)
@@ -1025,7 +1025,7 @@ static pcas_ast_t *rest_of(pcas_ast_t *e, pcas_ast_t *skip, OperatorType op) {
     return r;
 }
 
-static bool whole_number(pcas_ast_t *e, mp_small *n) {
+bool whole_number(pcas_ast_t *e, mp_small *n) {
     mp_small den;
 
     return e->type == NODE_NUMBER && mp_rat_to_ints(e->op.num, n, &den) == MP_OK && den == 1;

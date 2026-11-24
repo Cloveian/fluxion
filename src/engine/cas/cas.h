@@ -234,6 +234,10 @@ bool eval(pcas_ast_t *e, unsigned short flags);
 int solve(pcas_ast_t *e, Symbol var, pcas_ast_t **out);
 /*Fluxion: solve() with the complex roots of quadratics too. the app wants them, asym and friends don't*/
 int solve_ex(pcas_ast_t *e, Symbol var, pcas_ast_t **out, bool complex);
+/*Fluxion: the other children of e, copied, as a sum or a product of op (solve.c, layers.c)*/
+pcas_ast_t *rest_of(pcas_ast_t *e, pcas_ast_t *skip, OperatorType op);
+/*Fluxion: e is a whole number that fits n*/
+bool whole_number(pcas_ast_t *e, mp_small *n);
 
 /*Fluxion: the trig families solve() gives (pi/6 + 2 pi n) turned into the ones
   from 0 up to hi, which is 2pi, or 360 in degrees. small integers go in for n

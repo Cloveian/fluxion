@@ -974,7 +974,7 @@ bool steps_solve(pcas_ast_t *left, pcas_ast_t *right, Symbol var, Method m, step
 
     out->n = 0;
     if(!read_sides(left, right, var, side))
-        return false;
+        return m == METHOD_OPTIMAL && steps_layers(left, right, var, out);
     if(fits(side, m)) {
         switch(pick(side, m)) {
         case METHOD_ROOT:

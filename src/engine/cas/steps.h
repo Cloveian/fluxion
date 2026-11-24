@@ -42,6 +42,8 @@ typedef struct {
 
 /*left = right worked out for var, false (and nothing in out) if it's a shape or method it doesn't do*/
 bool steps_solve(pcas_ast_t *left, pcas_ast_t *right, Symbol var, Method m, steps_t *out);
+/*left = right a layer a line (layers.c): sqrt(x+3) = 5, 2^x = 8, abs(x) = 4, ln(x) = 2. ends on what solve gives, false if it can't*/
+bool steps_layers(pcas_ast_t *left, pcas_ast_t *right, Symbol var, steps_t *out);
 /*just the check, for greying out the method menu*/
 bool steps_fit(pcas_ast_t *left, pcas_ast_t *right, Symbol var, Method m);
 /*d/dx(f) one rule at a time, every d/dx still left gets one per line, then the value plugged in if it's at one. d is the deriv node, false if a rule doesn't fit*/
