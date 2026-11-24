@@ -1010,7 +1010,14 @@ antideriv; 1/sqrt(9_4X^2); X
 antideriv; 1/(1+X^2); X
 antideriv; 1/sqrt(1_X^2); X
 simplify; integral(1/(X^2+4),X); atan(X/2)/2
-simplify; integral(1/(X^2_4),X); integral(1/(X^2_4),X)
+simplify; integral(1/(X^2_4),X); ln(abs(-2+X)/abs(2+X))/4
+#partial fractions over distinct rational roots, and sin or cos to a power (half angle, or one left over for u-substitution)
+simplify; integral(1/(X^2_1),X); ln(abs(-1+X)/abs(1+X))/2
+simplify; integral(1/(X^2+3X+2),X); ln(abs(1+X)/abs(2+X))
+simplify; integral(sin(X)/(X^2_1),X); integral(sin(X)/(X^2_1),X)
+simplify; integral(sin(X)^2,X); X/2_(sin(2X))/4
+simplify; integral(cos(X)^3,X); sin(X)_(sin(X)^3)/3
+simplify; integral(sin(X)^4,X); sin(4X)/32+(3X)/8_(sin(2X))/4
 #by parts, u by LIATE (log, inverse trig, power, trig, exp). e^x sin(x) goes round, it stays
 simplify; integral(X*e^X,X); -e^X+Xe^X
 simplify; integral(X*ln(X),X); (ln(X)X^2)/2_(X^2)/4
@@ -1115,6 +1122,7 @@ steps; integral(3X^2+2X,X); X; integral(3X^2+2X, X) | sum rule | integral(3X^2, 
 steps; integral(2Xcos(X^2),X); X; integral(2Xcos(X^2), X) | constant multiple | 2integral(Xcos(X^2), X) | u-substitution | U=X^2 | 2integral(cos(U)/2, U) | constant multiple | integral(cos(U), U) | trig rule | sin(U) | back to x | sin(X^2) | + C | sin(X^2)+C
 steps; integral(X^2,X,0,3); X; integral(X^2, X, 0, 3) | power rule | X^3/3 | F(b) - F(a) | 3^3/3_0^3/3 | 9
 steps; integral(cos(3X),X); X; integral(cos(3X), X) | trig rule | sin(3X)/3 | + C | sin(3X)/3+C
+steps; integral(sin(X)^2,X); X; integral(sin(X)^2,X)|powerreduction|integral(1/2,X)+integral((-cos(2X))/2,X)|constantrule,constantmultiple|X/2+integral(-cos(2X),X)/2|constantmultiple|X/2_(integral(cos(2X),X))/2|trigrule|X/2_(sin(2X))/4|+C|X/2_(sin(2X))/4+C
 steps; integral(X*e^X,X); X; integral(Xe^X, X) | integration by parts | Xe^X_integral(e^X, X) | exp rule | Xe^X_e^X | + C | Xe^X_e^X+C
 steps; integral(e^(X^2),X); X; none
 #a layer a line (layers.c), ending on the roots solve has. a root squared away can bring in one that doesn't fit, so those get checked

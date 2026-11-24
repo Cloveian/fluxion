@@ -403,6 +403,99 @@ static const char *by_parts(pcas_ast_t *e, subs_t *subs) {
     return "integration by parts";
 }
 
+/*sin(u)^n and cos(u)^n, u linear, n 2 to 6*/
+static const char *trig_power(pcas_ast_t *e) {
+    pcas_ast_t *f = ast_ChildGet(e, 0), *x = ast_ChildGet(e, 1), *b, *u, *a, *g, *trig;
+    mp_small n;
+    bool sine;
+
+    if(!isoptype(f, OP_POW) || !whole_number(ast_ChildGet(f, 1), &n) || n < 2 || n > 6)
+        return NULL;
+    b = ast_ChildGet(f, 0);
+    if(!isoptype(b, OP_SIN) && !isoptype(b, OP_COS))
+        return NULL;
+    u = ast_ChildGet(b, 0);
+    if((a = linear(u, x)) == NULL)
+        return NULL;
+    ast_Cleanup(a);
+    sine = isoptype(b, OP_SIN);
+    if(n % 2 == 0) { /*half angle, ((1-cos(2u))/2)^(n/2)*/
+        trig = ast_MakeUnary(OP_COS, ast_MakeBinary(OP_MULT, ast_MakeInt(2), ast_Copy(u)));
+        g = ast_MakeBinary(OP_POW, /*the sum as the base, expand only does the power of one*/
+                ast_MakeBinary(OP_ADD, ast_MakeBinary(OP_DIV, ast_MakeInt(1), ast_MakeInt(2)),
+                    ast_MakeBinary(OP_MULT, ast_MakeBinary(OP_DIV, ast_MakeInt(sine ? -1 : 1), ast_MakeInt(2)), trig)),
+                ast_MakeInt((int)(n / 2)));
+    } else {
+        trig = ast_MakeUnary(sine ? OP_COS : OP_SIN, ast_Copy(u)); /*one out front, the rest (1-cos(u)^2)^((n-1)/2) for u-substitution*/
+        g = ast_MakeBinary(OP_MULT, ast_Copy(b),
+                ast_MakeBinary(OP_POW,
+                    ast_MakeBinary(OP_ADD, ast_MakeInt(1),
+                        ast_MakeBinary(OP_MULT, ast_MakeInt(-1), ast_MakeBinary(OP_POW, trig, ast_MakeInt(2)))),
+                    ast_MakeInt((int)((n - 1) / 2))));
+    }
+    expand(g, EXP_ALL);
+    simplify(g, SIMP_LIGHT);
+    if(isoptype(g, OP_ADD)) { /*a term each, the like terms pass would factor 1/4+cos/2+cos^2/4 back into a square*/
+        pcas_ast_t *sum = ast_MakeOperator(OP_ADD), *t;
+
+        for(t = ast_ChildGet(g, 0); t != NULL && sum != NULL; t = t->next)
+            ast_ChildAppend(sum, integral(ast_Copy(t), x));
+        ast_Cleanup(g);
+        g = sum;
+        replace_node(e, g);
+    } else {
+        replace_node(e, integral(g, x));
+    }
+    return n % 2 == 0 ? "power reduction" : "trig identity";
+}
+
+/*P/Q with Q a quadratic or cubic over *dih*stinct rational roots and P of a lower degree: A1/(x-r1) + A2/(x-r2) + ..., Ai = P(ri)/Q'(ri)*/
+static const char *partial_fractions(pcas_ast_t *e) {
+    pcas_ast_t *f = ast_ChildGet(e, 0), *x = ast_ChildGet(e, 1), *roots[SOLVE_MAX] = { NULL }, *lead = NULL, *sum, *t, *num, *den, *wrap;
+    int dp, dq, i, j, n;
+    bool ok = true;
+
+    if(!isoptype(f, OP_DIV))
+        return NULL;
+    dq = poly_degree(ast_ChildGet(f, 1), x->op.symbol, &lead);
+    dp = poly_degree(ast_ChildGet(f, 0), x->op.symbol, NULL); /*-1 for sin(x) or e^x up there*/
+    if(dq < 2 || dq > 3 || dp < 0 || dp >= dq) {
+        ast_Cleanup(lead);
+        return NULL;
+    }
+    n = solve_ex(ast_ChildGet(f, 1), x->op.symbol, roots, false);
+    for(i = 0; i < n && ok; i++) {
+        fold_fraction(roots[i]);
+        ok = roots[i]->type == NODE_NUMBER;
+    }
+    if(n != dq || !ok || (sum = ast_MakeOperator(OP_ADD)) == NULL) {
+        for(i = 0; i < n; i++)
+            ast_Cleanup(roots[i]);
+        ast_Cleanup(lead);
+        return NULL;
+    }
+    for(i = 0; i < n; i++) {
+        wrap = ast_MakeBinary(OP_MULT, ast_MakeInt(1), ast_Copy(ast_ChildGet(f, 0))); /*substitute works on what's under the node*/
+        substitute(wrap, x, roots[i]);
+        num = wrap;
+        den = ast_Copy(lead);
+        for(j = 0; j < n; j++)
+            if(j != i)
+                den = ast_MakeBinary(OP_MULT, den,
+                        ast_MakeBinary(OP_ADD, ast_Copy(roots[i]), ast_MakeBinary(OP_MULT, ast_MakeInt(-1), ast_Copy(roots[j]))));
+        t = ast_MakeBinary(OP_DIV, num, den);
+        simplify(t, SIMP_ALL);
+        ast_ChildAppend(sum, ast_MakeBinary(OP_MULT, t,
+                ast_MakeBinary(OP_DIV, ast_MakeInt(1),
+                    ast_MakeBinary(OP_ADD, ast_Copy(x), ast_MakeBinary(OP_MULT, ast_MakeInt(-1), ast_Copy(roots[i]))))));
+    }
+    for(i = 0; i < n; i++)
+        ast_Cleanup(roots[i]);
+    ast_Cleanup(lead);
+    replace_node(e, integral(sum, x));
+    return "partial fractions";
+}
+
 /*one rule on the integral node e, in place. its name, NULL when nothing fits*/
 static const char *one_rule(pcas_ast_t *e, subs_t *subs) {
     pcas_ast_t *f = ast_ChildGet(e, 0), *x = ast_ChildGet(e, 1), *n, *c, *rest;
@@ -436,7 +529,11 @@ static const char *one_rule(pcas_ast_t *e, subs_t *subs) {
         replace_node(e, n);
         return name;
     }
+    if((name = trig_power(e)) != NULL)
+        return name;
     if((name = usub(e, subs)) != NULL)
+        return name;
+    if((name = partial_fractions(e)) != NULL)
         return name;
     return by_parts(e, subs);
 }
