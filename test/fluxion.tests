@@ -762,6 +762,9 @@ solve; asec(X)=pi/3; X; 2
 solve; acsc(2X)=pi/6; X; 1
 #past what the inverse ever gives, nothing. the ends that are in still work
 solve; asin(X)=4; X; false
+solve; cos(X)=3/2; X; false
+solve; sin(X)^2=3/2; X; false
+solve; sin(3X)=-3/2; X; false
 solve; asin(X)=pi/2; X; 1
 solve; acos(X)=-1; X; false
 solve; acos(X)=pi; X; -1

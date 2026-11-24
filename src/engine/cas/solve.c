@@ -1109,6 +1109,8 @@ static bool past_range(pcas_ast_t *side, pcas_ast_t *in, pcas_ast_t *v, bool com
     switch(op) {
     case OP_SIN_INV: case OP_TAN_INV: case OP_CSC_INV: lo = -pi / 2; break;
     case OP_COS_INV: case OP_COT_INV: case OP_SEC_INV: lo = 0; break;
+    case OP_SIN: case OP_COS: /*sin(x) = 3/2 has no real x, even with complex on*/
+        return approx_float(v, &x) && (x < -1 - 1e-5 || x > 1 + 1e-5);
     case OP_POW: case OP_ROOT: case OP_ABS:
         if(!approx_float(v, &x))
             return false;

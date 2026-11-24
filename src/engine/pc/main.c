@@ -32,6 +32,7 @@ void display_help() {
     printf("\tfactor [expression]\t\tFactors expression\n");
     printf("\texpand [expression]\t\tExpands expression\n");
     printf("\tderivative [expression] [respect to] [(optional) eval at]\n");
+    printf("\tsolve [expression]\t\tReal roots of expression = 0 for X, one per Root line\n");
 }
 
 /*Trim null terminated string*/
@@ -550,6 +551,50 @@ int run_derivative(int argc, char **argv) {
     return 0;
 }
 
+/*Fluxion: roots of e = 0 for X, a Root: line each (all / none / unknown otherwise)*/
+int run_solve(int argc, char **argv) {
+    uint8_t *trimmed, *output;
+    unsigned trimmed_len, output_len;
+    pcas_error_t err;
+    pcas_ast_t *e, *roots[SOLVE_MAX] = {NULL};
+    int n, i;
+
+    if(argc <= 2) {
+        display_help();
+        return -1;
+    }
+
+    trimmed = trim(argv[2], &trimmed_len);
+    e = parse(trimmed, trimmed_len, str_table, &err);
+    printf("%s\n", error_text[err]);
+    free(trimmed);
+    if(err != E_SUCCESS || e == NULL)
+        return -1;
+
+    simplify(e, SIMP_ALL);
+    n = solve(e, SYM_X, roots);
+    if(pcas_oom)
+        printf("Out of memory\n");
+    else if(n == SOLVE_ALL)
+        printf("Root: all\n");
+    else if(n == SOLVE_UNKNOWN)
+        printf("Root: unknown\n");
+    else if(n == 0)
+        printf("Root: none\n");
+    for(i = 0; i < n && !pcas_oom; i++) {
+        output = export_to_binary(roots[i], &output_len, str_table, &err);
+        if(err == E_SUCCESS && output != NULL) {
+            printf("Root: %.*s\n", output_len, output);
+            free(output);
+        }
+    }
+
+    for(i = 0; i < n; i++)
+        ast_Cleanup(roots[i]);
+    ast_Cleanup(e);
+    return 0;
+}
+
 int main(int argc, char **argv) {
     int ret;
 
@@ -562,6 +607,7 @@ int main(int argc, char **argv) {
         else if(!strncmp(argv[1], "comdenom", 8)) ret = run_factor(argc, argv);
         else if(!strcmp(argv[1], "expand"))     ret = run_expand(argc, argv);
         else if(!strcmp(argv[1], "derivative")) ret = run_derivative(argc, argv);
+        else if(!strcmp(argv[1], "solve"))      ret = run_solve(argc, argv); /*Fluxion*/
         else {
             display_help();
             return -1;
