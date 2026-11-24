@@ -5,7 +5,7 @@
 
 #include "cas.h"
 
-#define STEP_EQS_MAX 3  /*x_2=0 or x+3=0, and a=1, b=6, c=1*/
+#define STEP_EQS_MAX 4  /*x_2=0 or x+3=0, a=1, b=6, c=1, and the zeros or pieces of an inequality*/
 #define STEPS_MAX 24
 
 typedef enum {
@@ -23,6 +23,8 @@ typedef enum {
 just left with neither: an expression, = the line above (*dih*rivative and limit steps)*/
 typedef struct {
     pcas_ast_t *left, *right, *pm, *den;
+    pcas_ast_t *low; /*-2 < x < 3: low is the -2, x is left, 3 is right. NULL for the usual*/
+    char rel, low_rel; /*between left and right, and low and left: < > l (<=) g (>=), 0 is =*/
 } step_eq_t;
 
 typedef struct {
@@ -32,6 +34,7 @@ typedef struct {
     bool as_is; /*kept away from the canonical form, the formula with the numbers just put in*/
     char move;      /*done to both sides on the way to the next line: + _ * / r, n for rules, or 0*/
     pcas_ast_t *by; /*the 5 of _5*/
+    bool flip; /*the move turned the sign round: dividing a < by a negative*/
     const char *rules[STEP_RULES_MAX]; /*move n: the rules used, "product rule"*/
 } step_t;
 
@@ -44,6 +47,10 @@ typedef struct {
 bool steps_solve(pcas_ast_t *left, pcas_ast_t *right, Symbol var, Method m, steps_t *out);
 /*left = right a layer a line (layers.c): sqrt(x+3) = 5, 2^x = 8, abs(x) = 4, ln(x) = 2. ends on what solve gives, false if it can't*/
 bool steps_layers(pcas_ast_t *left, pcas_ast_t *right, Symbol var, steps_t *out);
+/*ax+b = cx+d the way steps_solve does it, false when a side isn't a line in var. steps_ineq's linear ones*/
+bool steps_linear(pcas_ast_t *left, pcas_ast_t *right, Symbol var, steps_t *out);
+/*left rel right, rel is < > l (<=) or g (>=). a line works the sign along, the rest by a sign chart: the zeros, a test point in each gap, the pieces. false if it's all reals, none, or a shape it can't read*/
+bool steps_ineq(pcas_ast_t *left, pcas_ast_t *right, char rel, Symbol var, steps_t *out);
 /*just the check, for greying out the method menu*/
 bool steps_fit(pcas_ast_t *left, pcas_ast_t *right, Symbol var, Method m);
 /*d/dx(f) one rule at a time, every d/dx still left gets one per line, then the value plugged in if it's at one. d is the deriv node, false if a rule doesn't fit*/

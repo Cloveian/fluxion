@@ -874,6 +874,8 @@ void steps_shown(steps_t *s) {
                 simplify_canonical_form(q->pm, CANONICAL_ALL);
             if(q->den != NULL)
                 simplify_canonical_form(q->den, CANONICAL_ALL);
+            if(q->low != NULL)
+                simplify_canonical_form(q->low, CANONICAL_ALL);
         }
         if(s->line[i].by != NULL)
             simplify_canonical_form(s->line[i].by, CANONICAL_ALL);
@@ -968,6 +970,22 @@ bool steps_fit(pcas_ast_t *left, pcas_ast_t *right, Symbol var, Method m) {
     return fit;
 }
 
+bool steps_linear(pcas_ast_t *left, pcas_ast_t *right, Symbol var, steps_t *out) {
+    side_t side[2];
+    bool ok = false;
+
+    out->n = 0;
+    if(!read_sides(left, right, var, side))
+        return false;
+    if(side[0].deg <= 1 && side[1].deg <= 1 && (side[0].deg == 1 || side[1].deg == 1))
+        ok = linear(left, right, var, side, out);
+    side_free(&side[0]);
+    side_free(&side[1]);
+    if(!ok)
+        steps_free(out);
+    return ok;
+}
+
 bool steps_solve(pcas_ast_t *left, pcas_ast_t *right, Symbol var, Method m, steps_t *out) {
     side_t side[2];
     bool ok = false;
@@ -1013,6 +1031,7 @@ void steps_free(steps_t *s) {
             ast_Cleanup(s->line[i].eq[j].right);
             ast_Cleanup(s->line[i].eq[j].pm);
             ast_Cleanup(s->line[i].eq[j].den);
+            ast_Cleanup(s->line[i].eq[j].low);
         }
         ast_Cleanup(s->line[i].by);
     }

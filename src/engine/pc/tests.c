@@ -326,6 +326,11 @@ static void append_tree(char *buf, unsigned size, pcas_ast_t *e) {
     free(out);
 }
 
+/*Fluxion: the sign of a steps line: = or < > <= >=*/
+static const char *rel_str(char rel) {
+    return rel == '<' ? "<" : rel == '>' ? ">" : rel == 'l' ? "<=" : rel == 'g' ? ">=" : "=";
+}
+
 /*Fluxion: the steps as one line, the way the test file writes them*/
 static void steps_text(const steps_t *s, char *got, unsigned size) {
     int i, j, k;
@@ -338,10 +343,16 @@ static void steps_text(const steps_t *s, char *got, unsigned size) {
                 strncat(got, s->line[i].list ? "," : "or", size - strlen(got) - 1);
             else if(i > 0)
                 strncat(got, "|", size - strlen(got) - 1);
+            if(q->low != NULL) {
+                append_tree(got, size, q->low);
+                strncat(got, rel_str(q->low_rel), size - strlen(got) - 1);
+            }
             append_tree(got, size, q->left);
             if(q->right == NULL && q->pm == NULL) /*just an expression, *dih*rivative steps*/
                 continue;
-            strncat(got, q->den != NULL ? "=(" : "=", size - strlen(got) - 1);
+            strncat(got, rel_str(q->rel), size - strlen(got) - 1);
+            if(q->den != NULL)
+                strncat(got, "(", size - strlen(got) - 1);
             if(q->right != NULL)
                 append_tree(got, size, q->right);
             if(q->pm != NULL) {
@@ -368,6 +379,8 @@ static void steps_text(const steps_t *s, char *got, unsigned size) {
             move[1] = s->line[i].move;
             strncat(got, move, size - strlen(got) - 1);
             append_tree(got, size, s->line[i].by);
+            if(s->line[i].flip)
+                strncat(got, "flip", size - strlen(got) - 1);
         }
     }
 }
@@ -404,6 +417,44 @@ static bool test_calc_steps(test_t *t) {
     return passed;
 }
 
+/*Fluxion: steps; left<right (or > <= >=); var; the lines. the chart's test points are written |tX... (|t-3), a flipped sign |/-2flip*/
+static bool test_ineq_steps(test_t *t) {
+    pcas_ast_t *left, *right;
+    char *sign = strpbrk(t->arg1, "<>"), got[MAX_PAR * 2] = "", rel;
+    pcas_error_t err;
+    steps_t s;
+    int len = 1;
+    bool passed;
+
+    rel = *sign == '<' ? 'l' : 'g';
+    if(sign[1] != '=') {
+        rel = *sign;
+    } else {
+        len = 2;
+    }
+    *sign = '\0';
+    left = parse((uint8_t*)t->arg1, strlen(t->arg1), str_table, &err);
+    right = err == E_SUCCESS ? parse((uint8_t*)sign + len, strlen(sign + len), str_table, &err) : NULL;
+    if(err != E_SUCCESS || left == NULL || right == NULL) {
+        printf("Test failed on line %u. Unable to parse the inequality\n", t->line);
+        ast_Cleanup(left);
+        ast_Cleanup(right);
+        return false;
+    }
+    if(!steps_ineq(left, right, rel, (Symbol)t->arg2[0], &s))
+        strcpy(got, "none");
+    else
+        steps_text(&s, got, sizeof(got));
+    passed = strcmp(got, t->arg3) == 0;
+    if(!passed)
+        printf("Test failed on line %u. Expected %s but got %s\n", t->line, t->arg3, got);
+    if(s.n > 0)
+        steps_free(&s);
+    ast_Cleanup(left);
+    ast_Cleanup(right);
+    return passed;
+}
+
 /*Fluxion: steps; equation; var and a method (X, Xformula, ...); the lines joinned with |, the move between
 two lines as its sign and what it uses (_5, /3), or none. a last line of var = numbers has to be what solve says*/
 static bool test_steps(test_t *t) {
@@ -416,8 +467,10 @@ static bool test_steps(test_t *t) {
     int m, i, j, n;
     bool passed;
 
-    if(eq == NULL)
+    if(eq == NULL && strpbrk(t->arg1, "<>") == NULL)
         return test_calc_steps(t);
+    if(eq == NULL || strpbrk(t->arg1, "<>") != NULL)
+        return test_ineq_steps(t);
     for(m = 0; m < METHOD_COUNT && strcmp(t->arg2 + 1, methods[m]) != 0; m++);
     if(m == METHOD_COUNT) {
         printf("Test failed on line %u. steps; equation; var and method; lines\n", t->line);

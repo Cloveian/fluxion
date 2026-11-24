@@ -21,6 +21,7 @@ static bool open;
 static pcas_ast_t *lhs, *rhs;
 static pcas_ast_t *calc; /* the d/dx, limit or integral node for those steps, else NULL */
 static Symbol var;
+static char rel; /* 0 for an equation, else < > or l g (<= >=) */
 static Method method;
 static box_t *rows[ROWS_MAX];
 static bool is_move[ROWS_MAX];
@@ -70,6 +71,19 @@ static box_t *right_box(const step_eq_t *q) {
     return frac;
 }
 
+/* the sign between two sides, = unless the line is an inequality */
+static const char *rel_text(char sign) {
+    static char t[2][2] = { { CH_LE, '\0' }, { CH_GE, '\0' } };
+
+    switch(sign) {
+    case '<': return "<";
+    case '>': return ">";
+    case 'l': return t[0];
+    case 'g': return t[1];
+    default: return "=";
+    }
+}
+
 /* x+2 = 0  or  x+3 = 0, a = 1, b = 6  or  = 2x sin(x) */
 static box_t *line_box(const step_t *l, bool first) {
     box_t *row = layout_box(BOX_ROW, 0);
@@ -93,8 +107,12 @@ static box_t *line_box(const step_t *l, bool first) {
             add_spaced(row, layout_text("or", 0));
             layout_add(row, layout_space(LAYOUT_SPACE(0)));
         }
+        if(l->eq[j].low != NULL) {
+            layout_add(row, layout_build(l->eq[j].low, &draw_font));
+            add_spaced(row, layout_text(rel_text(l->eq[j].low_rel), 0));
+        }
         layout_add(row, layout_build(l->eq[j].left, &draw_font));
-        add_spaced(row, layout_text("=", 0));
+        add_spaced(row, layout_text(rel_text(l->eq[j].rel), 0));
         layout_add(row, right_box(&l->eq[j]));
     }
     layout_finish(row, &draw_font);
@@ -120,6 +138,14 @@ static box_t *move_box(const step_t *l) {
         root = layout_box(BOX_ROOT, 0);
         layout_add(root, layout_text("  ", 0)); /* a space box has no height, the sign came out flat */
         layout_add(row, root);
+    } else if(l->move == 't') {
+        /* a test point: x = -3 */
+        pcas_ast_t *x = ast_MakeSymbol(var);
+
+        layout_add(row, layout_build(x, &draw_font));
+        ast_Cleanup(x);
+        add_spaced(row, layout_text("=", 0));
+        layout_add(row, layout_build(l->by, &draw_font));
     } else {
         layout_add(row, text(l->move == '_' ? CH_MINUS : l->move == '/' ? CH_DIV : l->move == '*' ? CH_TIMES : l->move));
         by = layout_build(l->by, &draw_font);
@@ -130,6 +156,10 @@ static box_t *move_box(const step_t *l) {
             by = p;
         }
         layout_add(row, by);
+        if(l->flip) {
+            layout_add(row, layout_space(2 * LAYOUT_SPACE(0)));
+            layout_add(row, layout_text("flip it", 0));
+        }
     }
     layout_finish(row, &draw_font);
     return row;
@@ -166,7 +196,9 @@ static bool build(void) {
     bool ok;
     int i;
 
-    if(calc == NULL)
+    if(calc == NULL && rel != 0)
+        ok = steps_ineq(lhs, rhs, rel, var, &s);
+    else if(calc == NULL)
         ok = steps_solve(lhs, rhs, var, method, &s);
     else
         ok = steps_calc(calc, &s);
@@ -189,17 +221,13 @@ static bool build(void) {
 
 const char *work_open(char *src) {
     pcas_ast_t *l, *r;
-    char shown, rel;
-    const char *why = read_equation(src, &l, &r, &var, &shown, &rel);
+    char shown, sign;
+    const char *why = read_equation(src, &l, &r, &var, &shown, &sign);
     int m;
 
     if(why != NULL)
         return why;
-    if(rel != 0) {
-        ast_Cleanup(l);
-        ast_Cleanup(r);
-        return "no steps for inequalities yet";
-    }
+    rel = sign == CH_LE ? 'l' : sign == CH_GE ? 'g' : sign;
     if(setting_angle == ANGLE_DEGREES) { /* back out again in build() */
         l = degrees_in(l);
         r = r != NULL ? degrees_in(r) : NULL;
@@ -221,6 +249,7 @@ const char *work_open(char *src) {
 
 const char *work_open_calc(pcas_ast_t *e) {
     calc = e;
+    rel = 0;
     if(!build()) {
         work_close();
         return "no steps for this one yet";
@@ -239,11 +268,12 @@ void work_close(void) {
     ast_Cleanup(rhs);
     ast_Cleanup(calc);
     lhs = rhs = calc = NULL;
+    rel = 0;
     open = false;
 }
 
 bool work_act(action_t a) {
-    if(a.op == A_SOFT && calc == NULL) {
+    if(a.op == A_SOFT && calc == NULL && rel == 0) {
         Method m = (Method)a.n;
 
         /* one that doesn't fit leaves the steps as they are */
@@ -299,10 +329,10 @@ void work_draw(void) {
         screen_color(COL_DIM);
         screen_vline(x0 + w - 2, y0 + (bottom - y0) * top / nrows, bar_h > 2 ? bar_h : 2);
     }
-    if(calc == NULL)
+    if(calc == NULL && rel == 0)
         draw_softkeys(&areas.keys, method_keys, (int)method, off);
 }
 
 const char *const *work_softkeys(void) {
-    return calc == NULL ? method_keys : NULL;
+    return calc == NULL && rel == 0 ? method_keys : NULL;
 }

@@ -1170,6 +1170,15 @@ steps; 2cos(X)+1=0; X; 2cos(X)+1=0 | _1 | 2cos(X)=-1 | /2 | cos(X)=-1/2 | invers
 steps; tan(3X)=1; X; tan(3X)=1 | inverse tangent | 3X=Npi+pi/4 | /3 | X=pi/12+(Npi)/3
 steps; sin(X)=1; X; sin(X)=1 | inverse sine | X=2Npi+pi/2
 steps; sin(X)=0; X; sin(X)=0 | inverse sine | X=Npi
+#inequalities. a line carries the sign along and turns it for a negative, the rest is a sign chart: factor, the zeros, a test point in each gap (|t-3), the gaps that fit
+steps; 2X+3<7; X; 2X+3<7|_3|2X<4|/2|X<2
+steps; -2X+3<7; X; -2X+3<7|_3|-2X<4|/-2flip|X>-2
+steps; X^2_4>0; X; X^2_4>0|factor|(X_2)(X+2)>0|wherethetopis0|X=-2,X=2|t-3|(-3_2)(-3+2)=5|t0|(0_2)(0+2)=-4|t3|(3_2)(3+2)=5|keepthegapsthatfit|X<-2orX>2
+steps; X^2_4<0; X; X^2_4<0|factor|(X_2)(X+2)<0|wherethetopis0|X=-2,X=2|t-3|(-3_2)(-3+2)=5|t0|(0_2)(0+2)=-4|t3|(3_2)(3+2)=5|keepthegapsthatfit|-2<X<2
+steps; (X_1)/(X+2)>0; X; (X_1)/(X+2)>0|wherethetopis0|X=1|wherethebottomis0,leftout|X=-2|t-3|(-3_1)/(-3+2)=4|t0|(0_1)/(0+2)=-1/2|t2|(2_1)/(2+2)=1/4|keepthegapsthatfit|X<-2orX>1
+steps; X^2_3X+2<=0; X; X^2_3X+2<=0|factor|(X_1)(X_2)<=0|wherethetopis0|X=1,X=2|t0|(0_1)(0_2)=2|t3/2|(3/2_1)(3/2_2)=-1/4|t3|(3_1)(3_2)=2|keepthegapsthatfit|1<=X<=2
+steps; X^2>100000000000000; X; none
+steps; X^2<=1000000; X; X^2<=1000000|_1000000|X^2_1000000<=0|factor|(X_1000)(X+1000)<=0|wherethetopis0|X=-1000,X=1000|t-1001|(-1001_1000)(-1001+1000)=2001|t0|(0_1000)(0+1000)=-1000000|t1001|(1001_1000)(1001+1000)=2001|keepthegapsthatfit|-1000<=X<=1000
 steps; sqrt(X)=X^3; X; none
 steps; 2^X=-3; X; none
 steps; 3X+5=-3; Xformula; none
