@@ -571,8 +571,7 @@ int run_solve(int argc, char **argv) {
     if(err != E_SUCCESS || e == NULL)
         return -1;
 
-    simplify(e, SIMP_ALL);
-    n = solve(e, SYM_X, roots);
+    n = solve(e, SYM_X, roots); /*the app doesnt simplify first either*/
     if(pcas_oom)
         printf("Out of memory\n");
     else if(n == SOLVE_ALL)

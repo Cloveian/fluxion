@@ -770,6 +770,13 @@ solve; cos(X)^2=cos(X); X; pi/2+Npi,2piN
 solve; 2sin(X)^2_sin(X)_1=0; X; (-pi)/6+2piN,2piN+(7pi)/6,pi/2+2piN
 solve; e^(2X)_3e^X+2=0; X; 0,ln(2)
 solve; e^(2X)_4e^X+5=0; X; false
+#two radicals, an abs next to more x, and logs that get combined. the roots that put a log argument at 0 or under go
+solve; sqrt(X+1)+sqrt(X)=3; X; 16/9
+solve; sqrt(2X+1)_sqrt(X)=1; X; 0,4
+solve; abs(X)=2X+3; X; -1
+solve; abs(X_1)=abs(X+2); X; -1/2
+solve; ln(X)+ln(X_3)=ln(10); X; 5
+solve; ln(X)+ln(X+2)=3; X; -1+(1+e^3)^(1/2)
 solve; asin(X)=pi/2; X; 1
 solve; acos(X)=-1; X; false
 solve; acos(X)=pi; X; -1

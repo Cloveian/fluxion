@@ -1598,48 +1598,19 @@ static bool near_zero(pcas_ast_t *v) {
     return (re < 0 ? -re : re) + (im < 0 ? -im : im) <= 1e-5 * size;
 }
 
-/*Fluxion: sqrt(3x+2) = 2x+3, var under a sqrt and outside it. c sqrt(u) + rest = 0 squared is c^2 u = rest^2.
-  that also has the roots of c sqrt(u) = -rest, so each root gets plugged back into expr and the ones that dont come out 0 go. u linear only, system.c does its own sqrt(x^2+9999)*/
-static int solve_root_away(pcas_ast_t *e, pcas_ast_t *expr, Symbol var, pcas_ast_t **out, bool complex) {
-    pcas_ast_t *t, *f, *term = NULL, *root = NULL, *sq;
-    coefs_t p;
-    bool linear, unsure = false;
-    int n, i, k;
+static void clear_roots(pcas_ast_t **out) {
+    int i;
 
-    if(!isoptype(e, OP_ADD))
-        return SOLVE_UNKNOWN;
-    for(t = ast_ChildGet(e, 0); t != NULL; t = t->next) {
-        pcas_ast_t *r = half_power(t) ? t : NULL;
-
-        if(isoptype(t, OP_MULT))
-            for(f = ast_ChildGet(t, 0); f != NULL; f = f->next)
-                if(half_power(f))
-                    r = f;
-        if(r != NULL && has_symbol(ast_ChildGet(r, 0), var)) {
-            if(term != NULL) /*two of them, squaring once leaves one*/
-                return SOLVE_UNKNOWN;
-            term = t;
-            root = r;
-        }
+    for(i = 0; i < SOLVE_MAX && out[i] != NULL; i++) {
+        ast_Cleanup(out[i]);
+        out[i] = NULL;
     }
-    if(term == NULL)
-        return SOLVE_UNKNOWN;
-    linear = read_poly(ast_ChildGet(root, 0), var, &p);
-    if(linear) {
-        linear = p.deg == 1;
-        coefs_free(&p);
-    }
-    if(!linear)
-        return SOLVE_UNKNOWN;
+}
 
-    sq = ast_MakeBinary(OP_ADD,
-            ast_MakeBinary(OP_MULT, ast_MakeBinary(OP_POW, term == root ? ast_MakeInt(1) : rest_of(term, root, OP_MULT), ast_MakeInt(2)),
-                           ast_Copy(ast_ChildGet(root, 0))),
-            ast_MakeBinary(OP_MULT, ast_MakeInt(-1), ast_MakeBinary(OP_POW, rest_of(e, term, OP_ADD), ast_MakeInt(2))));
-    if(sq == NULL)
-        return SOLVE_UNKNOWN;
-    n = solve_ex(sq, var, out, complex);
-    ast_Cleanup(sq);
+/*Fluxion: the roots of a squared-up equation that still work in expr. SOLVE_UNKNOWN if one can't be checked, unknown beats a wrong false*/
+static int keep_checked(pcas_ast_t *expr, Symbol var, pcas_ast_t **out, int n) {
+    bool unsure = false;
+    int i, k;
 
     for(i = k = 0; n > 0 && i < n; i++) {
         int works = checks_out(expr, var, out[i], true);
@@ -1663,6 +1634,196 @@ static int solve_root_away(pcas_ast_t *e, pcas_ast_t *expr, Symbol var, pcas_ast
             ast_Cleanup(out[i]);
             out[i] = NULL;
         }
+        return SOLVE_UNKNOWN;
+    }
+    return n;
+}
+
+/*Fluxion: sqrt(3x+2) = 2x+3, var under a sqrt and outside it. c sqrt(u) + rest = 0 squared is c^2 u = rest^2.
+  that also has the roots of c sqrt(u) = -rest, so each root gets plugged back into expr and the ones that dont come out 0 go. u linear only, system.c does its own sqrt(x^2+9999)*/
+static int solve_root_away(pcas_ast_t *e, pcas_ast_t *expr, Symbol var, pcas_ast_t **out, bool complex) {
+    pcas_ast_t *t, *f, *term = NULL, *root = NULL, *sq;
+    coefs_t p;
+    bool linear;
+    int n, seen = 1;
+
+    if(!isoptype(e, OP_ADD))
+        return SOLVE_UNKNOWN;
+    for(t = ast_ChildGet(e, 0); t != NULL; t = t->next) {
+        pcas_ast_t *r = half_power(t) ? t : NULL;
+
+        if(isoptype(t, OP_MULT))
+            for(f = ast_ChildGet(t, 0); f != NULL; f = f->next)
+                if(half_power(f))
+                    r = f;
+        if(r != NULL && has_symbol(ast_ChildGet(r, 0), var)) {
+            if(term != NULL && ++seen > 2) /*two is fine, squaring one off leaves the other once*/
+                return SOLVE_UNKNOWN;
+            if(term == NULL) {
+                term = t;
+                root = r;
+            }
+        }
+    }
+    if(term == NULL)
+        return SOLVE_UNKNOWN;
+    linear = read_poly(ast_ChildGet(root, 0), var, &p);
+    if(linear) {
+        linear = p.deg == 1;
+        coefs_free(&p);
+    }
+    if(!linear)
+        return SOLVE_UNKNOWN;
+
+    sq = ast_MakeBinary(OP_ADD,
+            ast_MakeBinary(OP_MULT, ast_MakeBinary(OP_POW, term == root ? ast_MakeInt(1) : rest_of(term, root, OP_MULT), ast_MakeInt(2)),
+                           ast_Copy(ast_ChildGet(root, 0))),
+            ast_MakeBinary(OP_MULT, ast_MakeInt(-1), ast_MakeBinary(OP_POW, rest_of(e, term, OP_ADD), ast_MakeInt(2))));
+    if(sq == NULL)
+        return SOLVE_UNKNOWN;
+    n = solve_ex(sq, var, out, complex);
+    ast_Cleanup(sq);
+
+    return keep_checked(expr, var, out, n);
+}
+
+/*Fluxion: abs(u) with var in it and more var around, abs(x) = 2x + 3 or abs(x - 1) = abs(x + 2). c abs(u) + rest = 0 squared is c^2 u^2 = rest^2,
+which also has the roots of c abs(u) = -rest the other way round, so the ones that dont work in expr go. two abs terms square one off at a time*/
+static int solve_abs(pcas_ast_t *e, pcas_ast_t *expr, Symbol var, pcas_ast_t **out, bool complex) {
+    pcas_ast_t *t, *f, *term = NULL, *ab = NULL, *sq;
+    int n, seen = 0;
+
+    if(!isoptype(e, OP_ADD))
+        return SOLVE_UNKNOWN;
+    for(t = ast_ChildGet(e, 0); t != NULL; t = t->next) {
+        pcas_ast_t *a = isoptype(t, OP_ABS) ? t : NULL;
+
+        if(isoptype(t, OP_MULT))
+            for(f = ast_ChildGet(t, 0); f != NULL; f = f->next)
+                if(isoptype(f, OP_ABS))
+                    a = f;
+        if(a != NULL && has_symbol(a, var)) {
+            if(++seen > 2)
+                return SOLVE_UNKNOWN;
+            if(term == NULL) {
+                term = t;
+                ab = a;
+            }
+        }
+    }
+    if(term == NULL)
+        return SOLVE_UNKNOWN;
+
+    sq = ast_MakeBinary(OP_ADD,
+            ast_MakeBinary(OP_MULT, ast_MakeBinary(OP_POW, term == ab ? ast_MakeInt(1) : rest_of(term, ab, OP_MULT), ast_MakeInt(2)),
+                           ast_MakeBinary(OP_POW, ast_Copy(ast_ChildGet(ab, 0)), ast_MakeInt(2))),
+            ast_MakeBinary(OP_MULT, ast_MakeInt(-1), ast_MakeBinary(OP_POW, rest_of(e, term, OP_ADD), ast_MakeInt(2))));
+    if(sq == NULL)
+        return SOLVE_UNKNOWN;
+    n = solve_ex(sq, var, out, complex);
+    ast_Cleanup(sq);
+
+    return keep_checked(expr, var, out, n);
+}
+
+/*Fluxion: every log in e with var in its argument has an argument over 0 at root. -1 when one can't be told*/
+static int logs_defined(pcas_ast_t *e, Symbol var, pcas_ast_t *root) {
+    pcas_ast_t *c;
+    int r = 1, k;
+
+    if(e->type != NODE_OPERATOR)
+        return 1;
+    if(isoptype(e, OP_LOG) && has_symbol(ast_ChildGet(e, 1), var)) {
+        pcas_ast_t *v = ast_Copy(ast_ChildGet(e, 1)), *sym = ast_MakeSymbol(var);
+        double x;
+
+        if(v == NULL || sym == NULL) {
+            ast_Cleanup(v);
+            ast_Cleanup(sym);
+            return -1;
+        }
+        substitute(v, sym, root);
+        if(!approx_double(v, &x))
+            r = -1;
+        else if(x <= 1e-9)
+            r = 0;
+        ast_Cleanup(v);
+        ast_Cleanup(sym);
+        if(r == 0)
+            return 0;
+    }
+    for(c = ast_ChildGet(e, 0); c != NULL; c = c->next) {
+        k = logs_defined(c, var, root);
+        if(k == 0)
+            return 0;
+        if(k < 0)
+            r = -1;
+    }
+    return r;
+}
+
+/*Fluxion: ln(u) + ln(w) + rest = 0 with var in more than one log, ln(x) + ln(x + 2) = 3. the logs go into one, u^a w^b = e^(-rest),
+that gets solved and the roots that put any argument at 0 or under go (the one log case is isolate's)*/
+static int solve_logs(pcas_ast_t *e, pcas_ast_t *expr, Symbol var, pcas_ast_t **out, bool complex) {
+    pcas_ast_t *t, *prod = ast_MakeOperator(OP_MULT), *rest = ast_MakeOperator(OP_ADD), *eq;
+    int logs = 0, n, i, k;
+    bool unsure = false;
+
+    if(prod == NULL || rest == NULL || !isoptype(e, OP_ADD)) {
+        ast_Cleanup(prod);
+        ast_Cleanup(rest);
+        return SOLVE_UNKNOWN;
+    }
+    for(t = ast_ChildGet(e, 0); t != NULL; t = t->next) {
+        pcas_ast_t *lg = isoptype(t, OP_LOG) ? t : NULL, *coef = NULL;
+
+        if(isoptype(t, OP_MULT) && ast_ChildGet(t, 2) == NULL && isoptype(ast_ChildGet(t, 1), OP_LOG)) {
+            lg = ast_ChildGet(t, 1);
+            coef = ast_ChildGet(t, 0);
+        }
+        if(!has_symbol(t, var)) {
+            ast_ChildAppend(rest, ast_Copy(t));
+        } else if(lg != NULL && ast_ChildGet(lg, 0)->type == NODE_SYMBOL && ast_ChildGet(lg, 0)->op.symbol == SYM_EULER
+                  && (coef == NULL || coef->type == NODE_NUMBER) && has_symbol(lg, var)) {
+            ast_ChildAppend(prod, ast_MakeBinary(OP_POW, ast_Copy(ast_ChildGet(lg, 1)), coef == NULL ? ast_MakeInt(1) : ast_Copy(coef)));
+            logs++;
+        } else {
+            logs = 0;
+            break;
+        }
+    }
+    if(logs < 2) {
+        ast_Cleanup(prod);
+        ast_Cleanup(rest);
+        return SOLVE_UNKNOWN;
+    }
+    /*prod - e^(-rest) = 0*/
+    eq = ast_MakeBinary(OP_ADD, prod,
+            ast_MakeBinary(OP_MULT, ast_MakeInt(-1),
+                           ast_MakeBinary(OP_POW, ast_MakeSymbol(SYM_EULER), ast_MakeBinary(OP_MULT, ast_MakeInt(-1), rest))));
+    if(eq == NULL)
+        return SOLVE_UNKNOWN;
+    simplify(eq, SIMP_ALL); /*e^(ln(10)) is 10 before it goes in a root*/
+    n = solve_ex(eq, var, out, complex);
+    ast_Cleanup(eq);
+
+    for(i = k = 0; n > 0 && i < n; i++) {
+        int ok = logs_defined(expr, var, out[i]);
+
+        if(ok < 0)
+            unsure = true;
+        if(ok == 1)
+            out[k++] = out[i];
+        else
+            ast_Cleanup(out[i]);
+    }
+    if(n > 0) {
+        for(i = k; i < n; i++)
+            out[i] = NULL;
+        n = k;
+    }
+    if(unsure) {
+        clear_roots(out);
         return SOLVE_UNKNOWN;
     }
     return n;
@@ -1719,15 +1880,6 @@ static int solve_over(pcas_ast_t *expr, Symbol var, pcas_ast_t **out, bool compl
     ast_Cleanup(sym);
     ast_Cleanup(c);
     return n;
-}
-
-static void clear_roots(pcas_ast_t **out) {
-    int i;
-
-    for(i = 0; i < SOLVE_MAX && out[i] != NULL; i++) {
-        ast_Cleanup(out[i]);
-        out[i] = NULL;
-    }
 }
 
 /*Fluxion: the first sin / cos / tan or base^(var stuff) in e*/
@@ -1910,6 +2062,14 @@ int solve_ex(pcas_ast_t *expr, Symbol var, pcas_ast_t **out, bool complex) {
     if(n == SOLVE_UNKNOWN && !pcas_cancelled) { /*Fluxion*/
         clear_roots(out);
         n = solve_root_away(e, expr, var, out, complex);
+    }
+    if(n == SOLVE_UNKNOWN && !pcas_cancelled) { /*Fluxion*/
+        clear_roots(out);
+        n = solve_abs(e, expr, var, out, complex);
+    }
+    if(n == SOLVE_UNKNOWN && !pcas_cancelled) { /*Fluxion*/
+        clear_roots(out);
+        n = solve_logs(e, expr, var, out, complex);
     }
     if(n == SOLVE_UNKNOWN && !pcas_cancelled) { /*Fluxion*/
         clear_roots(out);

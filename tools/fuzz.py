@@ -106,7 +106,8 @@ def solve_check(expr, roots):
     truth = sp.solveset(f, X, sp.S.Reals)
     if not isinstance(truth, sp.FiniteSet):
         return None
-    tv = sorted(float(t) for t in truth)
+    # solveset hands back roots of the combined ln(x)+ln(x+4), the ones the real function isn't defined at get dropped
+    tv = sorted(float(t) for t in truth if abs(complex(f.subs(X, t).evalf()).imag) < 1e-9 and not any(a.has(sp.log) and complex(a.args[0].subs(X, t).evalf()).real < 0 for a in f.atoms(sp.log)))
     gv = sorted(float(v.evalf()) for v in vals)
     gv = [g for i, g in enumerate(gv) if i == 0 or abs(g - gv[i - 1]) > 1e-9]
     if len(tv) != len(gv) or any(abs(x - y) > 1e-6 for x, y in zip(tv, gv)):
