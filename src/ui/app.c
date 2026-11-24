@@ -7,6 +7,7 @@
 #include "settings.h"
 #include "geom.h"
 #include "polyfn.h"
+#include "calc1.h"
 #include "tri.h"
 #include "ineq.h"
 #include "conic.h"
@@ -1009,7 +1010,7 @@ static bool run(editor_t *line) {
     in = ed_layout(line, &draw_font, false);
     if(geom_run(cmd, src, in) || polyfn_run(cmd, src, in) || tri_run(cmd, src, in)
        || conic_run(cmd, src, in) || piece_run(cmd, src, in) || shapes_run(cmd, src, in)
-       || range_run(cmd, src, in)) {
+       || range_run(cmd, src, in) || calc1_run(cmd, src, in)) {
         free(src);
         return true;
     }

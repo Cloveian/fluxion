@@ -1213,7 +1213,8 @@ static const char *const commands[] = { "expand", "factor", "eval", "solve", "as
                                         "triangle", "amplitude", "pand", "por",
                                         "ellipse", "hyperbola", "piecewise",
                                         "circle", "rect", "square", "trap", "sphere", "cyl", "cone", "cube",
-                                        "box", "polygon" };
+                                        "box", "polygon",
+                                        "tangent", "critical", "extrema", "inflect" };
 
 const char *ed_command(const editor_t *ed) {
     const ed_node_t *n;

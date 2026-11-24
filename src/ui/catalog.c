@@ -142,6 +142,19 @@ ITEM(it_amplitude, "amplitude", "amplitude", ITEM_COMMAND, "amplitude($)", HAVE_
      "amplitude(f,x): |A| of A*sin(Bx+C)+D or cos, sqrt(a^2+b^2) for a*sin(u)+b*cos(u). anything else is a message",
      "how far a sine or cosine wave goes from its middle. amplitude(3sin(2x)+1,x) -> 3")
 
+ITEM(it_tangent, "tangent", "tangent", ITEM_COMMAND, "tangent($)", HAVE_YES,
+     "tangent(f,a,x): y = f'(a)(x-a)+f(a). the x is optional",
+     "the tangent line to f at x = a. tangent(x^2,3) -> y = 6x-9")
+ITEM(it_critical, "critical", "critical", ITEM_COMMAND, "critical($)", HAVE_PARTLY,
+     "critical(f,x): where f' = 0, real ones. as far as solve gets",
+     "where the slope is 0. critical(x^3-3x,x) -> x = -1, 1")
+ITEM(it_extrema, "extrema", "extrema", ITEM_COMMAND, "extrema($)", HAVE_PARTLY,
+     "extrema(f,x): the points where f' = 0 and changes sign, max or min. a flat spot that doesn't turn isn't one",
+     "the highest and lowest turning points. extrema(x^3-3x,x) -> max (-1, 2), min (1, -2)")
+ITEM(it_inflect, "inflect", "inflect", ITEM_COMMAND, "inflect($)", HAVE_PARTLY,
+     "inflect(f,x): the points where f'' = 0 and changes sign",
+     "where the curve changes from bending up to bending down. inflect(x^3,x) -> inflection (0, 0)")
+
 /* Templates */
 ITEM(it_frac,     "n/d",   NULL, ITEM_TEMPLATE, "($)/($)", HAVE_YES, "empty fraction, cursor in the top",
      "an empty fraction. type the top, then move down to type the bottom")
@@ -287,7 +300,7 @@ const item_t *const catalog[] = {
     &it_triangle, &it_circle, &it_rect, &it_squareshape, &it_trap, &it_sphere, &it_cyl, &it_cone,
     &it_cube, &it_box, &it_polygon, &it_pand, &it_por,
     &it_ellipse, &it_hyperbola,
-    &it_deriv, &it_deriv_at, &it_integral, &it_limit,
+    &it_deriv, &it_deriv_at, &it_integral, &it_limit, &it_tangent, &it_critical, &it_extrema, &it_inflect,
     &it_id_basic, &it_id_trig, &it_id_hyp, &it_id_cplx, &it_id_tconst, &it_id_iconst, &it_clear, &it_steps
 };
 const unsigned catalog_count = sizeof catalog / sizeof catalog[0];
@@ -316,7 +329,7 @@ static const item_t *const algebra[] = {
     &it_fn_info, &it_lines, &it_shapes, &it_solids, &it_conics, &it_prob
 };
 static const item_t *const calculus[] = {
-    &it_deriv, &it_deriv_at, &it_integral, &it_limit
+    &it_deriv, &it_deriv_at, &it_integral, &it_limit, &it_tangent, &it_critical, &it_extrema, &it_inflect
 };
 static const item_t *const functions[] = {
     &it_sin, &it_cos, &it_tan, &it_asin, &it_acos, &it_atan, &it_cot, &it_sec, &it_csc, &it_acot, &it_asec, &it_acsc,
