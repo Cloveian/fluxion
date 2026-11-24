@@ -1,5 +1,5 @@
 # random expressions through build-pc/fluxion, checked numerically against sympy
-# usage: python3 tools/fuzz.py [count] [seed] [pos|any] [simplify|expand|factor|derivative|integral|solve|limit] [-v]   (pos = letters only get positive test points)
+# usage: python3 tools/fuzz.py [count] [seed] [pos|any] [simplify|expand|factor|derivative|integral|solve|limit|critical] [-v]   (pos = letters only get positive test points)
 import random, re, subprocess, sys
 import sympy as sp
 from sympy.parsing.sympy_parser import parse_expr, standard_transformations, implicit_multiplication_application, convert_xor
@@ -65,7 +65,7 @@ def gen_int():
     # the integrals a calc 1 class has: x^k times something, trig powers, 1/(quadratic), sums of those
     k, a, b = random.randint(1, 3), random.randint(1, 4), random.randint(-3, 3) or 1
     return random.choice([
-        f"X^{k}*e^X", f"X^{k}*sin(X)", f"X^{k}*cos({a}X)", f"X*ln(X)", f"X^{k}*ln(X)", "atan(X)", f"{a}X*e^({b}X)",
+        f"X^{k}*e^X", f"X^{k}*sin(X)", f"X^{k}*cos({a}X)", "X*ln(X)", f"X^{k}*ln(X)", "atan(X)", f"{a}X*e^({b}X)",
         f"sin(X)^{k + 1}", f"cos(X)^{k + 1}", f"sin({a}X)^2", f"cos({a}X)^3", f"sin(X)^2*cos(X)", "sin(X)*cos(X)",
         f"1/(X^2_{a * a})", f"1/(X^2+{a + b + 4}X+{a + 1})", f"1/(X^2+{a * a})", f"X/(X^2+{a})", f"({a}X+{b})/(X^2_1)", f"1/(X^3_X)",
         f"sqrt({a}X+{b + 4})", f"{a}X*sqrt(X^2+{a})", f"e^({a}X)*{b}", f"{a}/(X+{b + 4})", f"X^{k}+{a}X+{b}", f"tan(X)", f"sec(X)^2",
@@ -138,12 +138,16 @@ def one_sided(a):
     side = random.choice(["1", "-1"])
     return [(f"abs(X_{a})/(X_{a})", str(a), side), (f"1/(X_{a})", str(a), side), ("e^(1/X)", "0", side), ("atan(1/X)", "0", side),
             ("1/X^2", "0", side), ("sqrt(X)", "0", "1"), ("ln(X)", "0", "1"), ("X*ln(X)", "0", "1"), ("X^X", "0", "1"),
-            (f"(X^2_{a * a})/abs(X_{a})", str(a), side), (f"sin(X)/abs(X)", "0", side), (f"ln(abs(X_{a}))", str(a), side)]
+            (f"(X^2_{a * a})/abs(X_{a})", str(a), side), ("sin(X)/abs(X)", "0", side), (f"ln(abs(X_{a}))", str(a), side)]
 
 def lim_check(expr, pt, out, side=None):
     f = to_sympy(expr)
     where = {"inf": sp.oo}.get(pt) or sp.Integer(pt)
-    sides = ["-"] if pt == "inf" else [{"1": "+", "-1": "-"}[side]] if side else ["+", "-"]
+    sides = ["+", "-"]
+    if pt == "inf":
+        sides = ["-"]
+    elif side:
+        sides = ["+" if side == "1" else "-"]
     vals = [sp.limit(f, X, where, dir=d) for d in sides]
     if any(v.has(sp.nan) or v.has(sp.I) or v.has(sp.AccumBounds) for v in vals):
         return "skip"
@@ -159,6 +163,46 @@ def lim_check(expr, pt, out, side=None):
     got = to_sympy(out)
     if want in (sp.oo, -sp.oo) or abs(complex((got - want).evalf())) > 1e-6:
         return f"want {want}, got {out}"
+    return None
+
+def gen_fn():
+    # functions a calc 1 class asks critical points of
+    a, b, c = nz(1, 4), nz(-5, 5), nz(-5, 5)
+    return random.choice([
+        f"X^3_{3 * a}X", f"X^3+{a}X^2_{b}X", f"X^4_{2 * a}X^2+{c}", f"{a}X^2+{b}X+{c}", f"X^3_{3 * a}X^2+{b}", f"X*e^(0_{a}X)", f"X*e^({a}X)",
+        "X^2*e^(0_X)", f"X/(X^2+{a})", f"(X^2+{a})/X", f"X^2/(X_{a})", "X*ln(X)", "ln(X)/X", "sin(X)+X", "X_2sin(X)", "cos(X)^2", f"sqrt(X)_{a}X",
+        "X^(2/3)", f"X^3/(X^2+{a})", f"abs(X_{a})", f"e^X_{a}X", f"X^5_5X^4", f"(X_{a})^2*(X+{abs(b) + 1})",
+    ])
+
+def critical_check(f_str, roots):
+    # roots of f' as solve gives them, against sympy's *dih*rivative of f
+    f = to_sympy(f_str)
+    d = sp.diff(f, X)
+    fam = any("N" in r for r in roots)
+    for r in roots:
+        v = to_sympy(r)
+        if abs(complex(v.subs(Nn, 0).evalf()).imag) > 1e-9:
+            return f"root {r} isn't real"
+        for k in ((0, 1) if fam else (0,)):
+            vv = complex(d.subs(X, v.subs(Nn, k)).evalf())
+            if abs(vv) > 1e-6 or vv != vv:
+                return f"f'({r}) = {vv:.3g}"
+    if fam:
+        return None
+    truth = sp.solveset(d, X, sp.S.Reals)
+    if not isinstance(truth, sp.FiniteSet):
+        return None
+    def defined(t):
+        try:
+            dv = complex(d.subs(X, t).evalf())
+            return abs(complex(f.subs(X, t).evalf()).imag) < 1e-9 and dv == dv
+        except Exception:
+            return False
+    tv = sorted(float(t) for t in truth if defined(t))
+    gv = sorted(float(to_sympy(r).evalf()) for r in roots)
+    gv = [g for i, g in enumerate(gv) if i == 0 or abs(g - gv[i - 1]) > 1e-9]
+    if len(tv) != len(gv) or any(abs(x - y) > 1e-6 for x, y in zip(tv, gv)):
+        return f"missed or extra: want {tv}"
     return None
 
 def run(expr):
@@ -190,6 +234,28 @@ def val(f, px, py):
 bad, why, skipped, ok = [], [], 0, 0
 for i in range(count):
     expr = gen_int() if cmd == "integral" else gen_eq() if cmd == "solve" else gen_lim() if cmd == "limit" else gen(random.choice([1, 2, 2, 3]))
+    if cmd == "critical":
+        f_str = gen_fn()
+        try:
+            d = subprocess.run(["build-pc/fluxion", "simplify", f"deriv({f_str},X,X)"], capture_output=True, text=True, timeout=20)
+            dm = re.search(r"^Output: (.*)$", d.stdout, re.M)
+            if dm is None:
+                skipped += 1; why.append((f_str, "no derivative")); continue
+            p = subprocess.run(["build-pc/fluxion", "solve", dm.group(1)], capture_output=True, text=True, timeout=20)
+            roots = re.findall(r"^Root: (.*)$", p.stdout, re.M)
+        except subprocess.TimeoutExpired:
+            bad.append((f_str, "TIMEOUT", None)); continue
+        if roots == ["unknown"] or roots == ["all"]:
+            skipped += 1; why.append((f_str, f"{dm.group(1)} -> {roots}")); continue
+        if roots == ["none"]:
+            roots = []
+        try:
+            problem = critical_check(f_str, roots)
+        except Exception as ex:
+            skipped += 1; why.append((f_str, f"{roots} ({ex})")); continue
+        if problem: bad.append((f_str, roots, problem))
+        else: ok += 1
+        continue
     if cmd == "limit":
         try:
             out = run(expr)
@@ -248,6 +314,6 @@ print(f"{ok} ok, {len(bad)} wrong, {skipped} skipped of {count} (seed {seed}, {m
 if "-v" in sys.argv:
     for expr, r in why: print(f"  skipped {expr} -> {r}")
 for expr, out, w in bad:
-    if cmd in ("solve", "limit"):
+    if cmd in ("solve", "limit", "critical"):
         print(f"  {expr}\n    -> {out}\n    {w}"); continue
     print(f"  {expr}\n    -> {out}\n    at X={w[0]:.3f} Y={w[1]:.3f}: want {w[2]:.5g}, got {w[3]}" if w else f"  {expr} -> {out}")

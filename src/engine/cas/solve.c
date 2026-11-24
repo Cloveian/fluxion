@@ -1802,6 +1802,43 @@ static int solve_logs(pcas_ast_t *e, pcas_ast_t *expr, Symbol var, pcas_ast_t **
     return keep_checked(expr, var, out, n, true);
 }
 
+/*Fluxion: 2x e^(2x) + e^(2x) factors, each factor with the letter in it solved on its own. unknown when one gives up*/
+static int solve_product(pcas_ast_t *e, Symbol var, pcas_ast_t **out, bool complex) {
+    pcas_ast_t *f = ast_Copy(e), *c, *part[SOLVE_MAX];
+    int n = 0, np, i, pieces = 0;
+
+    if(f == NULL)
+        return SOLVE_UNKNOWN;
+    factor(f, FAC_ALL);
+    if(!isoptype(f, OP_MULT)) {
+        ast_Cleanup(f);
+        return SOLVE_UNKNOWN;
+    }
+    for(c = ast_ChildGet(f, 0); c != NULL; c = c->next)
+        pieces += has_symbol(c, var);
+    if(pieces < 2) {
+        ast_Cleanup(f);
+        return SOLVE_UNKNOWN;
+    }
+    for(c = ast_ChildGet(f, 0); c != NULL && n >= 0 && !pcas_cancelled; c = c->next) {
+        if(!has_symbol(c, var))
+            continue;
+        for(i = 0; i < SOLVE_MAX; i++)
+            part[i] = NULL;
+        np = solve_ex(c, var, part, complex);
+        if(np < 0 || n + np > SOLVE_MAX)
+            n = SOLVE_UNKNOWN;
+        for(i = 0; i < np && n >= 0; i++)
+            out[n++] = part[i];
+        for(; i < np; i++)
+            ast_Cleanup(part[i]);
+    }
+    ast_Cleanup(f);
+    if(n < 0)
+        clear_roots(out);
+    return n;
+}
+
 /*Fluxion: var under a fraction bar, (3x-y)/(x+y) = 5/8. clear_denominators only takes numbers off,
 so it goes over one denominator here and the top gets solved. a root that makes the bottom 0
 was never a root (x/x = 0 has none)*/
@@ -2047,6 +2084,10 @@ int solve_ex(pcas_ast_t *expr, Symbol var, pcas_ast_t **out, bool complex) {
     if(n == SOLVE_UNKNOWN && !pcas_cancelled) { /*Fluxion*/
         clear_roots(out);
         n = solve_atom(e, var, out, complex);
+    }
+    if(n == SOLVE_UNKNOWN && !pcas_cancelled) { /*Fluxion*/
+        clear_roots(out);
+        n = solve_product(e, var, out, complex);
     }
     if(n > 0 && !pcas_cancelled && has_root_of(expr, var)) { /*Fluxion: sqrt(-x) = -2 got x = -4 off simplify's i sqrt(x)*/
         int i, k;

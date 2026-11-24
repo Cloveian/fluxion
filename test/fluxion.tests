@@ -777,6 +777,10 @@ solve; abs(X)=2X+3; X; -1
 solve; abs(X_1)=abs(X+2); X; -1/2
 solve; ln(X)+ln(X_3)=ln(10); X; 5
 solve; ln(X)+ln(X+2)=3; X; -1+(1+e^3)^(1/2)
+#a product with a factor that is never 0 (e^x), the other factors each
+solve; 2X*e^(2X)+e^(2X)=0; X; -1/2
+solve; X*e^X=e^X; X; 1
+solve; X*ln(X)=X; X; 0,e
 solve; asin(X)=pi/2; X; 1
 solve; acos(X)=-1; X; false
 solve; acos(X)=pi; X; -1
