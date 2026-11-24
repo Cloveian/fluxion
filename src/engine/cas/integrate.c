@@ -90,6 +90,44 @@ static pcas_ast_t *square_plus(pcas_ast_t *e, pcas_ast_t *x, int sign, pcas_ast_
     return ast_ChildGet(sq, 0);
 }
 
+/*sqrt(c - k u^2), sqrt(c + k u^2) and 1/sqrt(c + k u^2) with u = ax+b, each over a. the 1/sqrt(c - k u^2) is the asin in table_pow*/
+static const char *sqrt_forms(pcas_ast_t *b, pcas_ast_t *n, pcas_ast_t *x, pcas_ast_t **F) {
+    pcas_ast_t *u, *c, *k, *a, *sk, *root, *plus, *second, *G;
+    int half = is_value(n, 1, 2) ? 1 : is_value(n, -1, 2) ? -1 : 0, sg;
+
+    for(sg = 1; half != 0 && sg >= -1; sg -= 2) {
+        if(half < 0 && sg < 0)
+            continue;
+        if((u = square_plus(b, x, sg, &c, &k)) == NULL)
+            continue;
+        if((a = linear(u, x)) != NULL) {
+            sk = sqrt_of(ast_Copy(k));
+            root = sqrt_of(ast_Copy(b));
+            plus = ln_abs(ast_MakeBinary(OP_ADD, ast_MakeBinary(OP_MULT, ast_Copy(sk), ast_Copy(u)), ast_Copy(root)));
+            if(half < 0) {
+                G = ast_MakeBinary(OP_DIV, plus, ast_Copy(sk));
+            } else {
+                if(sg > 0) {
+                    second = plus;
+                } else {
+                    second = ast_MakeUnary(OP_SIN_INV, ast_MakeBinary(OP_DIV, ast_MakeBinary(OP_MULT, ast_Copy(sk), ast_Copy(u)), sqrt_of(ast_Copy(c))));
+                    ast_Cleanup(plus);
+                }
+                G = ast_MakeBinary(OP_ADD, ast_MakeBinary(OP_DIV, ast_MakeBinary(OP_MULT, ast_Copy(u), ast_Copy(root)), ast_MakeInt(2)),
+                                   ast_MakeBinary(OP_MULT, ast_MakeBinary(OP_DIV, ast_Copy(c), ast_MakeBinary(OP_MULT, ast_MakeInt(2), ast_Copy(sk))), second));
+            }
+            ast_Cleanup(sk);
+            ast_Cleanup(root);
+            *F = over(G, a);
+        }
+        ast_Cleanup(c);
+        ast_Cleanup(k);
+        if(a != NULL)
+            return "square root rule";
+    }
+    return NULL;
+}
+
 /*b^n off the table, F new*/
 static const char *table_pow(pcas_ast_t *f, pcas_ast_t *x, pcas_ast_t **F) {
     pcas_ast_t *b = ast_ChildGet(f, 0), *n = ast_ChildGet(f, 1), *u, *a, *c, *k, *G;
@@ -99,7 +137,10 @@ static const char *table_pow(pcas_ast_t *f, pcas_ast_t *x, pcas_ast_t **F) {
 
     if(!has_symbol(n, s) && (a = linear(b, x)) != NULL) {
         if(is_value(n, -1, 1)) {
-            *F = over(ln_abs(ast_Copy(b)), a);
+            pcas_ast_t *inside = ast_MakeBinary(OP_DIV, ast_Copy(b), ast_Copy(a));
+
+            simplify(inside, SIMP_ALL); /*ln|(2u+2)/2| is ln|u+1|, the ln(2) that comes out of 2u+2 is only a constant*/
+            *F = over(ln_abs(inside), a);
             return "log rule";
         }
         *F = over(ast_MakeBinary(OP_DIV, ast_MakeBinary(OP_POW, ast_Copy(b), ast_MakeBinary(OP_ADD, ast_Copy(n), ast_MakeInt(1))),
@@ -142,7 +183,7 @@ static const char *table_pow(pcas_ast_t *f, pcas_ast_t *x, pcas_ast_t **F) {
         if(a != NULL)
             return "inverse trig rule";
     }
-    return NULL;
+    return sqrt_forms(b, n, x, F);
 }
 
 /*sin(u), ln(u), ... with u = ax+b*/
@@ -157,6 +198,9 @@ static const char *table_fn(pcas_ast_t *f, pcas_ast_t *x, pcas_ast_t **F) {
     case OP_COS:  G = ast_MakeUnary(OP_SIN, ast_Copy(u)); break;
     case OP_TAN:  G = ast_MakeBinary(OP_MULT, ast_MakeInt(-1), ln_abs(ast_MakeUnary(OP_COS, ast_Copy(u)))); break;
     case OP_COT:  G = ln_abs(ast_MakeUnary(OP_SIN, ast_Copy(u))); break;
+    case OP_SEC: G = ln_abs(ast_MakeBinary(OP_ADD, ast_Copy(f), ast_MakeUnary(OP_TAN, ast_Copy(u)))); break;
+    case OP_CSC: G = ln_abs(ast_MakeBinary(OP_ADD, ast_Copy(f), ast_MakeBinary(OP_MULT, ast_MakeInt(-1), ast_MakeUnary(OP_COT, ast_Copy(u))))); break;
+    case OP_ABS: G = ast_MakeBinary(OP_DIV, ast_MakeBinary(OP_MULT, ast_Copy(u), ast_Copy(f)), ast_MakeInt(2)); name = "abs rule"; break;
     case OP_SINH: G = ast_MakeUnary(OP_COSH, ast_Copy(u)); name = "hyperbolic rule"; break;
     case OP_COSH: G = ast_MakeUnary(OP_SINH, ast_Copy(u)); name = "hyperbolic rule"; break;
     case OP_LOG: /*u ln u - u, over ln(b) for log base b*/
