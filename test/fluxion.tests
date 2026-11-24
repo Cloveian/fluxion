@@ -1039,7 +1039,19 @@ simplify; integral(X*ln(X),X); (ln(X)X^2)/2_(X^2)/4
 simplify; integral(X^2*sin(X),X); -cos(X)X^2+2Xsin(X)+2cos(X)
 simplify; integral(atan(X),X); atan(X)X_(ln(2abs(1+X^2)))/2
 simplify; integral(X*e^(-2X),X); (-X)/(2e^(2X))_1/(4e^(2X))
-simplify; integral(e^X*sin(X),X); integral(e^Xsin(X),X)
+simplify; integral(e^X*sin(X),X); (sin(X)e^X)/2_(e^Xcos(X))/2
+#past the table: long division, a quadratic bottom with no rational roots (atan or a ln), e^ax times sin or cos, five parts for x^5 e^x, ln(x)^2
+simplify; integral(X^5*e^X,X); X^5e^X_5X^4e^X+20X^3e^X_60X^2e^X+120Xe^X_120e^X
+simplify; integral(ln(X)^2,X); -2Xln(X)+Xln(X)^2+2X
+simplify; integral(X*atan(X),X); (-X)/2+atan(X)/2+(X^2atan(X))/2
+simplify; integral(X^2/(X^2+1),X); X_atan(X)
+simplify; integral(e^(2X)*cos(3X),X); (2e^(2X)cos(3X))/13+(3e^(2X)sin(3X))/13
+simplify; integral(1/(X^2+2X+3),X); (sqrt(2)atan(sqrt(2)/2+(Xsqrt(2))/2))/2
+simplify; integral(1/(X^2+X_1),X); (sqrt(5)ln(abs(2X+1_sqrt(5))/abs(2X+sqrt(5)+1)))/5
+simplify; integral((2X+3)/(X^2+X+1),X); (4sqrt(3)atan(sqrt(3)/3+(2Xsqrt(3))/3))/3+ln(abs(X^2+X+1))
+simplify; integral(1/(X^2+2X+1),X); -1/(X+1)
+simplify; integral(X/(X^2+4X+8),X); ln(abs(X^2+4X+8))/2_atan(X/2+1)
+simplify; integral(X^3/(X+1),X); X^3/3_(X^2)/2+X_ln(abs(X+1))
 #u-substitution: some piece of it is u and the rest is u' (up to a number)
 antideriv; 2Xcos(X^2); X
 antideriv; Xe^(X^2); X

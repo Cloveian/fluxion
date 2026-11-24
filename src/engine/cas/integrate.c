@@ -17,7 +17,7 @@ typedef struct {
     int parts; /*integrations by parts so far*/
 } subs_t;
 
-#define PARTS_MAX 4 /*e^x sin(x) goes around forever, x^3 sin(x) needs 3*/
+#define PARTS_MAX 6 /*x^5 e^x needs 5*/
 
 static pcas_ast_t *integral_of(pcas_ast_t *I, steps_t *s);
 
@@ -340,6 +340,8 @@ static int liate(pcas_ast_t *p, pcas_ast_t *x) {
     case OP_POW:
         if(ast_Compare(ast_ChildGet(p, 0), x) && !has_symbol(ast_ChildGet(p, 1), s))
             return 3;
+        if(isoptype(ast_ChildGet(p, 0), OP_LOG) && !has_symbol(ast_ChildGet(p, 1), s)) /*ln(x)^2 goes first like ln(x)*/
+            return 5;
         return !has_symbol(ast_ChildGet(p, 0), s) ? 1 : 0;
     default:
         return 0;
@@ -449,6 +451,67 @@ static const char *trig_power(pcas_ast_t *e) {
     return n % 2 == 0 ? "power reduction" : "trig identity";
 }
 
+/*e^E sin(T) in one go, E = ax+c and T = bx+d: e^E (a sin T - b cos T)/(a^2+b^2), and a cos T + b sin T on top for cos(T)*/
+static const char *exp_trig(pcas_ast_t *e) {
+    pcas_ast_t *f = ast_ChildGet(e, 0), *x = ast_ChildGet(e, 1), *ex = NULL, *tr = NULL, *c, *a, *b, *num, *den, *s, *co;
+    bool sine;
+
+    if(!isoptype(f, OP_MULT) || ast_ChildLength(f) != 2)
+        return NULL;
+    for(c = ast_ChildGet(f, 0); c != NULL; c = c->next) {
+        if(isoptype(c, OP_POW) && ast_ChildGet(c, 0)->type == NODE_SYMBOL && ast_ChildGet(c, 0)->op.symbol == SYM_EULER)
+            ex = c;
+        else if(isoptype(c, OP_SIN) || isoptype(c, OP_COS))
+            tr = c;
+    }
+    if(ex == NULL || tr == NULL)
+        return NULL;
+    a = linear(ast_ChildGet(ex, 1), x);
+    b = linear(ast_ChildGet(tr, 0), x);
+    if(a == NULL || b == NULL) {
+        ast_Cleanup(a);
+        ast_Cleanup(b);
+        return NULL;
+    }
+    sine = isoptype(tr, OP_SIN);
+    s = ast_MakeUnary(OP_SIN, ast_Copy(ast_ChildGet(tr, 0)));
+    co = ast_MakeUnary(OP_COS, ast_Copy(ast_ChildGet(tr, 0)));
+    num = sine ? ast_MakeBinary(OP_ADD, ast_MakeBinary(OP_MULT, ast_Copy(a), s),
+                                ast_MakeBinary(OP_MULT, ast_MakeInt(-1), ast_MakeBinary(OP_MULT, ast_Copy(b), co)))
+               : ast_MakeBinary(OP_ADD, ast_MakeBinary(OP_MULT, ast_Copy(a), co), ast_MakeBinary(OP_MULT, ast_Copy(b), s));
+    den = ast_MakeBinary(OP_ADD, ast_MakeBinary(OP_POW, a, ast_MakeInt(2)), ast_MakeBinary(OP_POW, b, ast_MakeInt(2)));
+    replace_node(e, ast_MakeBinary(OP_MULT, ast_Copy(ex), ast_MakeBinary(OP_DIV, num, den)));
+    return "exponential times trig";
+}
+
+/*P/Q with P as big as Q or bigger, long *dih*vision: the quotient plus the remainder over Q*/
+static const char *long_division(pcas_ast_t *e) {
+    pcas_ast_t *f = ast_ChildGet(e, 0), *x = ast_ChildGet(e, 1), *q, *r, *sum;
+    int dp, dq;
+    bool exact;
+
+    if(!isoptype(f, OP_DIV))
+        return NULL;
+    dq = poly_degree(ast_ChildGet(f, 1), x->op.symbol, NULL);
+    dp = poly_degree(ast_ChildGet(f, 0), x->op.symbol, NULL);
+    if(dq < 1 || dp < dq || (q = poly_quotient(ast_ChildGet(f, 0), ast_ChildGet(f, 1), x->op.symbol, &exact)) == NULL)
+        return NULL;
+    if(exact) {
+        replace_node(e, integral(q, x));
+        return "polynomial division";
+    }
+    r = poly_remainder(ast_ChildGet(f, 0), ast_ChildGet(f, 1), x->op.symbol);
+    if(r == NULL || (sum = ast_MakeOperator(OP_ADD)) == NULL) {
+        ast_Cleanup(q);
+        ast_Cleanup(r);
+        return NULL;
+    }
+    ast_ChildAppend(sum, integral(q, x));
+    ast_ChildAppend(sum, integral(ast_MakeBinary(OP_DIV, r, ast_Copy(ast_ChildGet(f, 1))), x));
+    replace_node(e, sum);
+    return "polynomial division";
+}
+
 /*P/Q with Q a quadratic or cubic over *dih*stinct rational roots and P of a lower degree: A1/(x-r1) + A2/(x-r2) + ..., Ai = P(ri)/Q'(ri)*/
 static const char *partial_fractions(pcas_ast_t *e) {
     pcas_ast_t *f = ast_ChildGet(e, 0), *x = ast_ChildGet(e, 1), *roots[SOLVE_MAX] = { NULL }, *lead = NULL, *sum, *t, *num, *den, *wrap;
@@ -496,6 +559,71 @@ static const char *partial_fractions(pcas_ast_t *e) {
     return "partial fractions";
 }
 
+/*a coefficient poly_coefs left (NULL is 0), as its own copy*/
+static pcas_ast_t *coef_copy(pcas_ast_t *c) {
+    return c != NULL ? ast_Copy(c) : ast_MakeInt(0);
+}
+
+/*(p x + q)/(a x^2 + b x + c) with roots that aren't rational (partial fractions took those): p/(2a) ln|Q| + (q - p b/(2a)) times 1/Q. 1/Q is an atan when b^2-4ac is under 0, a ln of the roots over 0 and -2/(2ax+b) at 0*/
+static const char *quadratic_bottom(pcas_ast_t *e) {
+    pcas_ast_t *f = ast_ChildGet(e, 0), *x = ast_ChildGet(e, 1), *Q = ast_ChildGet(f, 1), *cq[3], *ct[3] = {NULL};
+    pcas_ast_t *A, *B, *C, *p, *q, *twoA, *lin, *D, *r = NULL, *inv = NULL, *res;
+    double dv;
+    int i, dv_top;
+
+    if(!isoptype(f, OP_DIV) || poly_degree(Q, x->op.symbol, NULL) != 2
+       || (dv_top = poly_degree(ast_ChildGet(f, 0), x->op.symbol, NULL)) < 0 || dv_top > 1)
+        return NULL;
+    poly_coefs(Q, x->op.symbol, cq);
+    poly_coefs(ast_ChildGet(f, 0), x->op.symbol, ct);
+    A = coef_copy(cq[2]);
+    B = coef_copy(cq[1]);
+    C = coef_copy(cq[0]);
+    p = coef_copy(ct[1]);
+    q = coef_copy(ct[0]);
+    for(i = 0; i < 3; i++) {
+        ast_Cleanup(cq[i]);
+        ast_Cleanup(ct[i]);
+    }
+    twoA = ast_MakeBinary(OP_MULT, ast_MakeInt(2), ast_Copy(A));
+    lin = ast_MakeBinary(OP_ADD, ast_MakeBinary(OP_MULT, ast_Copy(twoA), ast_Copy(x)), ast_Copy(B));
+    D = ast_MakeBinary(OP_ADD, ast_MakeBinary(OP_POW, ast_Copy(B), ast_MakeInt(2)),
+                       ast_MakeBinary(OP_MULT, ast_MakeInt(-4), ast_MakeBinary(OP_MULT, ast_Copy(A), ast_Copy(C))));
+    simplify(D, SIMP_ALL);
+    res = NULL;
+    if(approx_double(D, &dv)) {
+        if(dv < 0) {
+            r = sqrt_of(ast_MakeBinary(OP_MULT, ast_MakeInt(-1), ast_Copy(D)));
+            inv = ast_MakeBinary(OP_MULT, ast_MakeBinary(OP_DIV, ast_MakeInt(2), ast_Copy(r)),
+                                 ast_MakeUnary(OP_TAN_INV, ast_MakeBinary(OP_DIV, ast_Copy(lin), ast_Copy(r))));
+        } else if(dv > 0) {
+            r = sqrt_of(ast_Copy(D));
+            inv = ast_MakeBinary(OP_MULT, ast_MakeBinary(OP_DIV, ast_MakeInt(1), ast_Copy(r)),
+                                 ln_abs(ast_MakeBinary(OP_DIV, ast_MakeBinary(OP_ADD, ast_Copy(lin), ast_MakeBinary(OP_MULT, ast_MakeInt(-1), ast_Copy(r))),
+                                                       ast_MakeBinary(OP_ADD, ast_Copy(lin), ast_Copy(r)))));
+        } else {
+            inv = ast_MakeBinary(OP_DIV, ast_MakeInt(-2), ast_Copy(lin));
+        }
+        res = ast_MakeBinary(OP_ADD,
+                ast_MakeBinary(OP_MULT, ast_MakeBinary(OP_DIV, ast_Copy(p), ast_Copy(twoA)), ln_abs(ast_Copy(Q))),
+                ast_MakeBinary(OP_MULT,
+                    ast_MakeBinary(OP_ADD, ast_Copy(q), ast_MakeBinary(OP_MULT, ast_MakeInt(-1),
+                        ast_MakeBinary(OP_DIV, ast_MakeBinary(OP_MULT, ast_Copy(p), ast_Copy(B)), ast_Copy(twoA)))),
+                    inv));
+        replace_node(e, res);
+    }
+    ast_Cleanup(A);
+    ast_Cleanup(B);
+    ast_Cleanup(C);
+    ast_Cleanup(p);
+    ast_Cleanup(q);
+    ast_Cleanup(twoA);
+    ast_Cleanup(lin);
+    ast_Cleanup(D);
+    ast_Cleanup(r);
+    return res != NULL ? "complete the square" : NULL;
+}
+
 /*one rule on the integral node e, in place. its name, NULL when nothing fits*/
 static const char *one_rule(pcas_ast_t *e, subs_t *subs) {
     pcas_ast_t *f = ast_ChildGet(e, 0), *x = ast_ChildGet(e, 1), *n, *c, *rest;
@@ -537,7 +665,13 @@ static const char *one_rule(pcas_ast_t *e, subs_t *subs) {
         return name;
     if((name = usub(e, subs)) != NULL)
         return name;
+    if((name = exp_trig(e)) != NULL)
+        return name;
+    if((name = long_division(e)) != NULL)
+        return name;
     if((name = partial_fractions(e)) != NULL)
+        return name;
+    if((name = quadratic_bottom(e)) != NULL)
         return name;
     if((name = by_parts(e, subs)) != NULL)
         return name;
