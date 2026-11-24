@@ -90,7 +90,7 @@ static pcas_ast_t *square_plus(pcas_ast_t *e, pcas_ast_t *x, int sign, pcas_ast_
     return ast_ChildGet(sq, 0);
 }
 
-/*sqrt(c - k u^2), sqrt(c + k u^2) and 1/sqrt(c + k u^2) with u = ax+b, each over a. the 1/sqrt(c - k u^2) is the asin in table_pow*/
+/*sqrt(c - k u^2), sqrt(c + k u^2), 1/sqrt(c + k u^2), u = ax+b. 1/sqrt(c - k u^2) is the asin in table_pow*/
 static const char *sqrt_forms(pcas_ast_t *b, pcas_ast_t *n, pcas_ast_t *x, pcas_ast_t **F) {
     pcas_ast_t *u, *c, *k, *a, *sk, *root, *plus, *second, *G;
     int half = is_value(n, 1, 2) ? 1 : is_value(n, -1, 2) ? -1 : 0, sg;
@@ -139,7 +139,7 @@ static const char *table_pow(pcas_ast_t *f, pcas_ast_t *x, pcas_ast_t **F) {
         if(is_value(n, -1, 1)) {
             pcas_ast_t *inside = ast_MakeBinary(OP_DIV, ast_Copy(b), ast_Copy(a));
 
-            simplify(inside, SIMP_ALL); /*ln|(2u+2)/2| is ln|u+1|, the ln(2) that comes out of 2u+2 is only a constant*/
+            simplify(inside, SIMP_ALL); /*ln|(2u+2)/2| is ln|u+1|, the ln(2) is only a constant*/
             *F = over(ln_abs(inside), a);
             return "log rule";
         }
@@ -449,6 +449,23 @@ static const char *by_parts(pcas_ast_t *e, subs_t *subs) {
     return "integration by parts";
 }
 
+/*e becomes the integrals of the terms of g multiplied out. g taken*/
+static void split_terms(pcas_ast_t *e, pcas_ast_t *g, pcas_ast_t *x) {
+    expand(g, EXP_ALL);
+    simplify(g, SIMP_LIGHT);
+    if(isoptype(g, OP_ADD)) { /*a term each, the like terms pass would factor 1/4+cos/2+cos^2/4 back into a square*/
+        pcas_ast_t *sum = ast_MakeOperator(OP_ADD), *t;
+
+        for(t = ast_ChildGet(g, 0); t != NULL && sum != NULL; t = t->next)
+            ast_ChildAppend(sum, integral(ast_Copy(t), x));
+        ast_Cleanup(g);
+        g = sum;
+        replace_node(e, g);
+    } else {
+        replace_node(e, integral(g, x));
+    }
+}
+
 /*sin(u)^n and cos(u)^n, u linear, n 2 to 6*/
 static const char *trig_power(pcas_ast_t *e) {
     pcas_ast_t *f = ast_ChildGet(e, 0), *x = ast_ChildGet(e, 1), *b, *u, *a, *g, *trig;
@@ -479,19 +496,7 @@ static const char *trig_power(pcas_ast_t *e) {
                         ast_MakeBinary(OP_MULT, ast_MakeInt(-1), ast_MakeBinary(OP_POW, trig, ast_MakeInt(2)))),
                     ast_MakeInt((int)((n - 1) / 2))));
     }
-    expand(g, EXP_ALL);
-    simplify(g, SIMP_LIGHT);
-    if(isoptype(g, OP_ADD)) { /*a term each, the like terms pass would factor 1/4+cos/2+cos^2/4 back into a square*/
-        pcas_ast_t *sum = ast_MakeOperator(OP_ADD), *t;
-
-        for(t = ast_ChildGet(g, 0); t != NULL && sum != NULL; t = t->next)
-            ast_ChildAppend(sum, integral(ast_Copy(t), x));
-        ast_Cleanup(g);
-        g = sum;
-        replace_node(e, g);
-    } else {
-        replace_node(e, integral(g, x));
-    }
+    split_terms(e, g, x);
     return n % 2 == 0 ? "power reduction" : "trig identity";
 }
 
@@ -526,6 +531,80 @@ static const char *exp_trig(pcas_ast_t *e) {
     den = ast_MakeBinary(OP_ADD, ast_MakeBinary(OP_POW, a, ast_MakeInt(2)), ast_MakeBinary(OP_POW, b, ast_MakeInt(2)));
     replace_node(e, ast_MakeBinary(OP_MULT, ast_Copy(ex), ast_MakeBinary(OP_DIV, num, den)));
     return "exponential times trig";
+}
+
+/*b^k, a number for 0 and b itself for 1. b copied*/
+static pcas_ast_t *power_of(pcas_ast_t *b, long k) {
+    if(k == 0)
+        return ast_MakeInt(1);
+    return k == 1 ? ast_Copy(b) : ast_MakeBinary(OP_POW, ast_Copy(b), ast_MakeInt((mp_small)k));
+}
+
+/*tan(u)^n and cot(u)^n from 2, sec(u)^n and csc(u)^n from 3, u linear: the reduction formula, one that has a power 2 lower left to integrate.
+tan^n is tan^(n-1)/(a(n-1)) - tan^(n-2), sec^n is sec^(n-2) tan/(a(n-1)) + (n-2)/(n-1) sec^(n-2)*/
+static const char *trig_reduce(pcas_ast_t *e) {
+    pcas_ast_t *f = ast_ChildGet(e, 0), *x = ast_ChildGet(e, 1), *b, *a, *first, *rest, *low;
+    OperatorType op;
+    mp_small n;
+    bool plain;
+
+    if(!isoptype(f, OP_POW) || !whole_number(ast_ChildGet(f, 1), &n) || n < 2 || n > 8 || ast_ChildGet(f, 0)->type != NODE_OPERATOR)
+        return NULL;
+    b = ast_ChildGet(f, 0);
+    op = optype(b);
+    plain = op == OP_TAN || op == OP_COT; /*the sec and csc ones carry a tan or cot*/
+    if(!(plain || ((op == OP_SEC || op == OP_CSC) && n >= 3)) || (a = linear(ast_ChildGet(b, 0), x)) == NULL)
+        return NULL;
+    low = integral(power_of(b, n - 2), x);
+    if(plain) {
+        first = ast_MakeBinary(OP_DIV, power_of(b, n - 1), ast_MakeBinary(OP_MULT, a, ast_MakeInt((mp_small)(n - 1))));
+        if(op == OP_COT)
+            first = ast_MakeBinary(OP_MULT, ast_MakeInt(-1), first);
+        rest = ast_MakeBinary(OP_MULT, ast_MakeInt(-1), low);
+    } else {
+        first = ast_MakeBinary(OP_DIV,
+                    ast_MakeBinary(OP_MULT, power_of(b, n - 2), ast_MakeUnary(op == OP_SEC ? OP_TAN : OP_COT, ast_Copy(ast_ChildGet(b, 0)))),
+                    ast_MakeBinary(OP_MULT, a, ast_MakeInt((mp_small)(n - 1))));
+        if(op == OP_CSC)
+            first = ast_MakeBinary(OP_MULT, ast_MakeInt(-1), first);
+        rest = ast_MakeBinary(OP_MULT, ast_MakeBinary(OP_DIV, ast_MakeInt((mp_small)(n - 2)), ast_MakeInt((mp_small)(n - 1))), low);
+    }
+    replace_node(e, ast_MakeBinary(OP_ADD, first, rest));
+    return "reduction formula";
+}
+
+/*sin(u)^m cos(u)^n with both even: half angles, ((1 - cos 2u)/2)^(m/2) ((1 + cos 2u)/2)^(n/2) multiplied out*/
+static const char *trig_product(pcas_ast_t *e) {
+    pcas_ast_t *f = ast_ChildGet(e, 0), *x = ast_ChildGet(e, 1), *p, *q, *s = NULL, *c = NULL, *two_u, *a, *g;
+    mp_small m, n;
+
+    if(!isoptype(f, OP_MULT) || ast_ChildLength(f) != 2)
+        return NULL;
+    for(p = ast_ChildGet(f, 0); p != NULL; p = p->next) {
+        if(!isoptype(p, OP_POW) || ast_ChildGet(p, 0)->type != NODE_OPERATOR)
+            return NULL;
+        q = ast_ChildGet(p, 0);
+        if(isoptype(q, OP_SIN))
+            s = p;
+        else if(isoptype(q, OP_COS))
+            c = p;
+    }
+    if(s == NULL || c == NULL || !ast_Compare(ast_ChildGet(ast_ChildGet(s, 0), 0), ast_ChildGet(ast_ChildGet(c, 0), 0))
+       || !whole_number(ast_ChildGet(s, 1), &m) || !whole_number(ast_ChildGet(c, 1), &n) || m % 2 != 0 || n % 2 != 0 || m + n > 8)
+        return NULL;
+    if((a = linear(ast_ChildGet(ast_ChildGet(s, 0), 0), x)) == NULL)
+        return NULL;
+    ast_Cleanup(a);
+    two_u = ast_MakeBinary(OP_MULT, ast_MakeInt(2), ast_Copy(ast_ChildGet(ast_ChildGet(s, 0), 0)));
+    g = ast_MakeBinary(OP_MULT,
+            ast_MakeBinary(OP_POW, ast_MakeBinary(OP_ADD, ast_MakeBinary(OP_DIV, ast_MakeInt(1), ast_MakeInt(2)),
+                ast_MakeBinary(OP_MULT, ast_MakeBinary(OP_DIV, ast_MakeInt(-1), ast_MakeInt(2)), ast_MakeUnary(OP_COS, ast_Copy(two_u)))),
+                ast_MakeInt((mp_small)(m / 2))),
+            ast_MakeBinary(OP_POW, ast_MakeBinary(OP_ADD, ast_MakeBinary(OP_DIV, ast_MakeInt(1), ast_MakeInt(2)),
+                ast_MakeBinary(OP_MULT, ast_MakeBinary(OP_DIV, ast_MakeInt(1), ast_MakeInt(2)), ast_MakeUnary(OP_COS, two_u))),
+                ast_MakeInt((mp_small)(n / 2))));
+    split_terms(e, g, x);
+    return "power reduction";
 }
 
 /*P/Q with P as big as Q or bigger, long *dih*vision: the quotient plus the remainder over Q*/
@@ -706,6 +785,10 @@ static const char *one_rule(pcas_ast_t *e, subs_t *subs) {
         return name;
     }
     if((name = trig_power(e)) != NULL)
+        return name;
+    if((name = trig_reduce(e)) != NULL)
+        return name;
+    if((name = trig_product(e)) != NULL)
         return name;
     if((name = usub(e, subs)) != NULL)
         return name;

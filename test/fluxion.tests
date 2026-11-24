@@ -1062,6 +1062,15 @@ simplify; integral(sec(X),X); ln(abs(tan(X)+sec(X)))
 simplify; integral(csc(2X),X); ln(abs(csc(2X)_cot(2X)))/2
 simplify; integral(X/(X^2+1),X); ln(abs(X^2+1))/2
 simplify; integral(sqrt(9_4X^2),X); (Xsqrt((-4X^2+9)))/2+(9asin((2X)/3))/4
+#tan, cot, sec and csc powers by the reduction formula, sin^2 cos^2 by half angles
+simplify; integral(tan(X)^2,X); -X+tan(X)
+simplify; integral(tan(X)^3,X); tan(X)^2/2+ln(abs(cos(X)))
+simplify; integral(sec(X)^3,X); (tan(X)sec(X))/2+ln(abs(tan(X)+sec(X)))/2
+simplify; integral(sec(X)^4,X); (2tan(X))/3+(sec(X)^2tan(X))/3
+simplify; integral(csc(X)^3,X); ln(abs(csc(X)_cot(X)))/2_(cot(X)csc(X))/2
+simplify; integral(cot(X)^2,X); -X_cot(X)
+simplify; integral(sin(X)^2*cos(X)^2,X); X/8_(sin(4X))/32
+simplify; integral(tan(3X)^2,X); -X+tan(3X)/3
 #u-substitution: some piece of it is u and the rest is u' (up to a number)
 antideriv; 2Xcos(X^2); X
 antideriv; Xe^(X^2); X

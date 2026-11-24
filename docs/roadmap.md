@@ -41,7 +41,7 @@
 - [ ] One-sided limits
 - [ ] Limits that need the conjugate, sqrt(x^2+x) - x flips back and forth forever
 - [ ] Steps for limits at ∞ the paper way (divide by x^n), its one line right now
-- [x] More integrals: sqrt(1-x^2) and sqrt(x^2+1) forms, 1/(x^2+bx+c) with irrational roots, e^x sin(x), x atan(x), x^5 e^x, abs(x), sec and csc. (tan^n, sec^n and sin^2 cos^2 are open)
+- [x] More integrals: sqrt(1-x^2) and sqrt(x^2+1) forms, 1/(x^2+bx+c) with irrational roots, e^x sin(x), x atan(x), x^5 e^x, abs(x), sec and csc, tan^n, sec^n, sin^2 cos^2.
 - [x] Integrals answer without the extra constants (ln(2abs(1+x^2))/2)
 
 ## later

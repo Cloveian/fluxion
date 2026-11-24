@@ -71,7 +71,7 @@ def gen_int():
         f"sqrt({a}X+{b + 4})", f"{a}X*sqrt(X^2+{a})", f"e^({a}X)*{b}", f"{a}/(X+{b + 4})", f"X^{k}+{a}X+{b}", f"tan(X)", f"sec(X)^2",
         f"X^{k + 2}*e^X", f"e^({a}X)*sin({abs(b)}X)", f"e^({a}X)*cos({abs(b)}X)", f"X*atan({a}X)", f"abs({a}X+{b})", f"ln(X)^{k + 1}", f"X*ln(X)^2",
         f"1/(X^2+{a}X+{a + 2})", f"1/(X^2+X_{a})", f"(2X+{b})/(X^2+X+{a})", f"X^2/(X^2+{a})", f"X^3/(X^2+{a})", f"sqrt({a + 3}_X^2)",
-        f"sqrt(X^2+{a})", f"1/sqrt(X^2+{a})", f"1/sqrt({a + 3}_X^2)", f"tan(X)^{k + 1}", f"sec(X)^3", f"sin(X)^2*cos(X)^2", f"asin(X)", f"sec(X)",
+        f"sqrt(X^2+{a})", f"1/sqrt(X^2+{a})", f"1/sqrt({a + 3}_X^2)", f"tan(X)^{k + 1}", f"sec(X)^3", f"sin(X)^2*cos(X)^2", f"asin(X)", f"sec(X)", f"cot(X)^{k + 1}", f"csc(X)^3", f"sec(X)^{k + 2}", f"sin({a}X)^2*cos({a}X)^2", f"sin(X)^2*cos(X)^4", f"tan({a}X)^2",
     ])
 
 def nz(lo, hi):
