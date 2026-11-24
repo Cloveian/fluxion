@@ -1158,11 +1158,18 @@ steps; X/(X_2)=2/(X_2); X; none
 #not a shape it does yet, or a method that doesn't fit
 steps; X^2+X+1=0; Xfactor; none
 steps; X^2+X=2; Xroot; none
-steps; sin(X)=1; X; none
 steps; sqrt(X)=-1; X; none
 steps; X^3=8; X; none
 steps; sqrt(X+1)+sqrt(X)=2; X; none
 steps; sin(X)=X; X; none
+#trig equations, the inverse gives the angles in one turn and the lines after it work on each. N is the turn count
+steps; sin(X)=1/2; X; sin(X)=1/2 | inverse sine | X=2Npi+pi/6 or X=2Npi+(5pi)/6
+steps; sin(2X)=1/2; X; sin(2X)=1/2 | inverse sine | 2X=2Npi+pi/6 or 2X=2Npi+(5pi)/6 | /2 | X=Npi+pi/12 or X=Npi+(5pi)/12
+steps; cos(X)=0; X; cos(X)=0 | inverse cosine | X=Npi+pi/2
+steps; 2cos(X)+1=0; X; 2cos(X)+1=0 | _1 | 2cos(X)=-1 | /2 | cos(X)=-1/2 | inverse cosine | X=2Npi+(2pi)/3 or X=2Npi_(2pi)/3
+steps; tan(3X)=1; X; tan(3X)=1 | inverse tangent | 3X=Npi+pi/4 | /3 | X=pi/12+(Npi)/3
+steps; sin(X)=1; X; sin(X)=1 | inverse sine | X=2Npi+pi/2
+steps; sin(X)=0; X; sin(X)=0 | inverse sine | X=Npi
 steps; sqrt(X)=X^3; X; none
 steps; 2^X=-3; X; none
 steps; 3X+5=-3; Xformula; none

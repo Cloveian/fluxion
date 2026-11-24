@@ -1070,8 +1070,6 @@ static bool nth_roots(pcas_ast_t *p, int n, pcas_ast_t **out) {
     return false;
 }
 
-static pcas_ast_t *turns(int k);
-
 /*x^2/2 - x/2 - 15 = 0 times 2, so factor() gets whole numbers to work with (it
   can't read a fraction node as a coefficient). lcm of the number denominators
   of the terms, then expand the lot. the roots don't change, it's = 0*/
@@ -1213,7 +1211,7 @@ static int isolate(pcas_ast_t *e, Symbol var, pcas_ast_t **out, bool complex) {
                 if(op == OP_COS && isoptype(inv, OP_DIV) && is_ast_int(ast_ChildGet(inv, 1), 2)
                    && ast_ChildGet(inv, 0)->type == NODE_SYMBOL && ast_ChildGet(inv, 0)->op.symbol == SYM_PI)
                     half = true;
-                t = ast_MakeBinary(OP_ADD, inv, turns(op == OP_TAN || half ? 1 : 2));
+                t = ast_MakeBinary(OP_ADD, inv, turns_of(op == OP_TAN || half ? 1 : 2));
                 family = true;
                 break;
             }
@@ -1259,7 +1257,7 @@ static int isolate(pcas_ast_t *e, Symbol var, pcas_ast_t **out, bool complex) {
             for(i = 0; i < k && m < SOLVE_MAX; i++) {
                 pcas_ast_t *neg = ast_MakeBinary(OP_MULT, ast_MakeInt(-1), ast_Copy(ast_ChildGet(other[i], 0)));
 
-                other[m++] = ast_MakeBinary(OP_ADD, op == OP_SIN ? ast_MakeBinary(OP_ADD, ast_MakeSymbol(SYM_PI), neg) : neg, turns(2));
+                other[m++] = ast_MakeBinary(OP_ADD, op == OP_SIN ? ast_MakeBinary(OP_ADD, ast_MakeSymbol(SYM_PI), neg) : neg, turns_of(2));
             }
         }
         side = in;
@@ -1285,7 +1283,7 @@ nope:
 
 /*k pi n, the trig families' integer. n is just the letter n, so an equation
   with its own n in it is going to get confusing (the nspire has n1, n2.. todo)*/
-static pcas_ast_t *turns(int k) {
+pcas_ast_t *turns_of(int k) {
     pcas_ast_t *t = ast_MakeOperator(OP_MULT);
 
     if(t == NULL)

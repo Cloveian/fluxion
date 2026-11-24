@@ -244,6 +244,8 @@ bool whole_number(pcas_ast_t *e, mp_small *n);
   and what lands in range stays, sorted. roots without an n pass through. the
   array is rewritten in place, returns the new count*/
 int solve_in_range(pcas_ast_t **roots, int n, pcas_ast_t *hi);
+/*Fluxion: k pi n, the integer the trig families add (n is the letter n)*/
+pcas_ast_t *turns_of(int k);
 /*Fluxion: e as a decimal, one NUMBER node (a new tree), NULL with a letter left.
 what solve and system sort their roots by*/
 pcas_ast_t *approx_number(pcas_ast_t *e);

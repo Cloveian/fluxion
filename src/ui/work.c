@@ -200,6 +200,10 @@ const char *work_open(char *src) {
         ast_Cleanup(r);
         return "no steps for inequalities yet";
     }
+    if(setting_angle == ANGLE_DEGREES) { /* back out again in build() */
+        l = degrees_in(l);
+        r = r != NULL ? degrees_in(r) : NULL;
+    }
     lhs = l;
     rhs = r != NULL ? r : ast_MakeInt(0); /* solve(x^2-4) is = 0 */
     method = METHOD_OPTIMAL;

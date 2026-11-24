@@ -195,6 +195,7 @@ bool steps_layers(pcas_ast_t *left, pcas_ast_t *right, Symbol var, steps_t *out)
         mp_small n;
         step_t *prev;
         int m2 = m;
+        bool trig = false;
 
         /*an x on both sides: sqrt(2x+3) = x squares first, anything else goes to the quadratic steps*/
         if(has_symbol(R[0], var) && !(isoptype(L, OP_POW) && root_index(ast_ChildGet(L, 1), &n))) {
@@ -276,6 +277,34 @@ bool steps_layers(pcas_ast_t *left, pcas_ast_t *right, Symbol var, steps_t *out)
                 next[j] = ast_MakeBinary(OP_POW, ast_Copy(a), ast_Copy(R[j]));
             rule = "raise both sides to the base";
             break;
+        case OP_SIN: case OP_COS: case OP_TAN: {
+            OperatorType op = optype(L);
+            pcas_ast_t *inv;
+            bool half;
+            double v;
+
+            /*one value only, the second sign of an even root would be 4 families*/
+            if(m != 1 || in != a || (op != OP_TAN && approx_double(R[0], &v) && fabs(v) > 1 + 1e-9))
+                goto done;
+            inv = ast_MakeUnary(op == OP_SIN ? OP_SIN_INV : op == OP_COS ? OP_COS_INV : OP_TAN_INV, ast_Copy(R[0]));
+            if(inv == NULL)
+                goto done;
+            simplify(inv, SIMP_ALL);
+            exact = true;
+            trig = true;
+            half = op == OP_SIN ? is_ast_int(inv, 0)
+                : op == OP_COS && isoptype(inv, OP_DIV) && is_ast_int(ast_ChildGet(inv, 1), 2)
+                  && ast_ChildGet(inv, 0)->type == NODE_SYMBOL && ast_ChildGet(inv, 0)->op.symbol == SYM_PI;
+            next[0] = ast_MakeBinary(OP_ADD, inv, turns_of(op == OP_TAN || half ? 1 : 2));
+            if(op != OP_TAN && !half) { /*sin: pi - inv, cos: -inv, a turn later each*/
+                pcas_ast_t *neg = ast_MakeBinary(OP_MULT, ast_MakeInt(-1), ast_Copy(inv));
+
+                next[1] = ast_MakeBinary(OP_ADD, op == OP_SIN ? ast_MakeBinary(OP_ADD, ast_MakeSymbol(SYM_PI), neg) : neg, turns_of(2));
+                m2 = 2;
+            }
+            rule = op == OP_SIN ? "inverse sine" : op == OP_COS ? "inverse cosine" : "inverse tangent";
+            break;
+        }
         case OP_ABS:
             exact = true;
             for(j = 0; j < m; j++) {
@@ -292,10 +321,17 @@ bool steps_layers(pcas_ast_t *left, pcas_ast_t *right, Symbol var, steps_t *out)
             goto done;
         }
 
+        if(has_symbol(R[0], SYM_N)) /*a turn in it, the lines after the trig one stay exact*/
+            exact = true;
         for(j = 0; j < m2; j++) {
             if(next[j] == NULL)
                 goto done;
             simplify(next[j], exact ? SIMP_ALL : SIMP_LIGHT | SIMP_LIKE_TERMS);
+        }
+        if(trig && m2 == 2 && matches(next[0], next[1])) { /*sin(x) = 1, the same family twice*/
+            ast_Cleanup(next[1]);
+            next[1] = NULL;
+            m2 = 1;
         }
         prev = &out->line[out->n - 1];
         if(rule != NULL)
