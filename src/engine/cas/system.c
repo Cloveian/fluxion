@@ -62,7 +62,7 @@ static pcas_ast_t *minus(pcas_ast_t *a, pcas_ast_t *b) {
 /*row r of the matrix gets its coefficients and constant read off eq. false if eq
   isn't linear in the vars (or oom). the constant goes on the right, so the row
   reads coef . var = const*/
-static bool read_row(pcas_ast_t *eq, int n, const Symbol *vars, pcas_ast_t **row, pcas_ast_t **rhs) {
+bool system_row(pcas_ast_t *eq, int n, const Symbol *vars, pcas_ast_t **row, pcas_ast_t **rhs) {
     pcas_ast_t *e = ast_Copy(eq), *check, *v, *z = ast_MakeInt(0);
     int i;
 
@@ -636,7 +636,7 @@ int solve_system(pcas_ast_t **eqs, int n, const Symbol *vars, pcas_ast_t *out[][
     }
 
     for(i = 0; i < n; i++)
-        if(!read_row(eqs[i], n, vars, m[i], &rhs[i])) {
+        if(!system_row(eqs[i], n, vars, m[i], &rhs[i])) {
             result = SOLVE_UNKNOWN;
             linear = false;
             goto done;

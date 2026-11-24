@@ -47,6 +47,8 @@ typedef struct {
 bool steps_solve(pcas_ast_t *left, pcas_ast_t *right, Symbol var, Method m, steps_t *out);
 /*left = right a layer a line (layers.c): sqrt(x+3) = 5, 2^x = 8, abs(x) = 4, ln(x) = 2. ends on what solve gives, false if it can't*/
 bool steps_layers(pcas_ast_t *left, pcas_ast_t *right, Symbol var, steps_t *out);
+/*n linear equations (each = 0) in n letters, solved by eliminatoin a step at a time: every line is the whole system. false if a coefficient isn't a number, or it has no one answer*/
+bool steps_system(pcas_ast_t **eqs, int n, const Symbol *vars, steps_t *out);
 /*t's lines on the end of s. t's first line is the one s ends on, so only its move comes over. false (t freed) when they don't fit*/
 bool steps_append(steps_t *s, steps_t *t);
 /*a polynomial past x^2 that factors into lines and quadratics: factor, each factor = 0, each solved (polysteps.c). false if it doesn't*/
@@ -73,6 +75,7 @@ void steps_free(steps_t *s);
 int steps_find(pcas_ast_t *e, OperatorType op, pcas_ast_t **d, int n); /*the outermost op nodes in e into d, n so far*/
 step_t *steps_expr(steps_t *s, pcas_ast_t *e); /*a line that's just e, = the one above. takes e*/
 step_t *steps_eq(steps_t *s, pcas_ast_t *left, pcas_ast_t *right); /*left = right, takes both. u = x^2*/
+pcas_ast_t *steps_number(mp_rat r); /*3 or 3/2 as written, a fraction is top over bottom*/
 pcas_ast_t *sqrt_of(pcas_ast_t *v); /*v^(1/2) as written, takes v*/
 void steps_rule(step_t *l, const char *name); /*name on l, move n. once each, two power rules on a line read as one*/
 void steps_shown(steps_t *s); /*every tree in the canonical form, at the end. 3X+5 and not 5+3X*/

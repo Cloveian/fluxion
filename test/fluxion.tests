@@ -1184,5 +1184,11 @@ steps; X^4_5X^2+4=0; X; 4+-5X^2+X^4=0|factor|(X_1)(X+1)(X_2)(X+2)=0|onefactorhas
 steps; 2X^3_6X^2=0; X; -6X^2+2X^3=0|factor|2X^2(X_3)=0|onefactorhastobe0|X=0orX_3=0|solveeach|X=0orX=3|alltheroots|X=0orX=3
 steps; X^3+X=0; X; X^3+X=0|factor|X(X^2+1)=0|onefactorhastobe0|X=0orX^2+1=0|solveeach|X=0|thenextfactor|X^2+1=0|_1|X^2=-1|r|X=+-sqrt(-1)|X=+-i|X=iorX=-i|alltheroots|X=0orX=-iorX=i
 steps; sqrt(X)=X^3; X; none
+#a linear system by elimination, every line is the whole system. the last line has to be what solve_system says
+steps; 2X+Y=5,X_Y=1; XY; 2X+Y=5,X_Y=1|swaptwoequations|X_Y=1,2X+Y=5|cancelaletterfromtheothers|X_Y=1,Y=1|cancelaletterfromtheothers|X=2,Y=1
+steps; X+2Y=3,3X_Y=2; XY; X+2Y=3,3X_Y=2|cancelaletterfromtheothers|X+2Y=3,-Y=-1|cancelaletterfromtheothers|-X=-1,-Y=-1|divideeachbyitsnumber|X=1,Y=1
+steps; X/2+Y/3=1,X_Y=2; XY; X1/2+Y1/3=1,X_Y=2|clearthefractions|3X+2Y=6,X_Y=2|swaptwoequations|X_Y=2,3X+2Y=6|cancelaletterfromtheothers|X_Y=2,Y=0|cancelaletterfromtheothers|X=2,Y=0
+steps; X+Y+Z=6,2X_Y+Z=3,X+2Y_Z=2; XYZ; X+Y+Z=6,2X_Y+Z=3,X+2Y_Z=2|cancelaletterfromtheothers|X+Y+Z=6,-3Y_Z=-9,Y_2Z=-4|swaptwoequations|X+Y+Z=6,Y_2Z=-4,-3Y_Z=-9|cancelaletterfromtheothers|X+3Z=10,Y_2Z=-4,-Z=-3|cancelaletterfromtheothers|-X=-1,-Y=-2,-Z=-3|divideeachbyitsnumber|X=1,Y=2,Z=3
+steps; 2Y=4,X+Y=3; XY; 2Y=4,X+Y=3|swaptwoequations|X+Y=3,2Y=4|cancelaletterfromtheothers|X=1,2Y=4|divideeachbyitsnumber|X=1,Y=2
 steps; 2^X=-3; X; none
 steps; 3X+5=-3; Xformula; none

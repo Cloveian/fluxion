@@ -786,18 +786,15 @@ static void run_domain(char *src, box_t *in) {
 /*
     system(eq, eq, ..., x, y). the pieces between the top level commas with an =
     are equations, the rest are the variables. no variables given, it takes the
-    letters it finds, a to z. writes into src like the other two
+    letters it finds, a to z. writes into src like the other two. NULL when eqs
+    (each lhs - rhs), vars and shown are filled and count is how many, else what to say
 */
-static void run_system(char *src, box_t *in) {
-    pcas_ast_t *eqs[SYSTEM_MAX] = { NULL }, *out[SYSTEM_SETS][SYSTEM_MAX] = { { NULL } }, *rhs;
-    char *piece[2 * SYSTEM_MAX], *s, shown[SYSTEM_MAX];
-    Symbol vars[SYSTEM_MAX];
+const char *read_system(char *src, pcas_ast_t **eqs, Symbol *vars, char *shown, int *count) {
+    pcas_ast_t *rhs;
+    char *piece[2 * SYSTEM_MAX], *s;
     pcas_error_t err = E_SUCCESS;
-    clock_t start;
-    unsigned long ms;
-    int depth = 0, pieces = 1, n = 0, nvars = 0, i, k, got;
+    int depth = 0, pieces = 1, n = 0, nvars = 0, i;
     bool too_many = false;
-    box_t *row, *col;
 
     piece[0] = src;
     for(s = src; *s != '\0'; s++) {
@@ -858,9 +855,26 @@ static void run_system(char *src, box_t *in) {
     if(i < pieces || n == 0 || n != nvars) {
         for(i = 0; i < n; i++)
             ast_Cleanup(eqs[i]);
-        push(in, NULL, err != E_SUCCESS ? error_text[err]
-                       : too_many ? "4 equations is the most it does"
-                       : "system(eq, eq, x, y), as many letters as equations", 0);
+        return err != E_SUCCESS ? error_text[err]
+               : too_many ? "4 equations is the most it does"
+               : "system(eq, eq, x, y), as many letters as equations";
+    }
+    *count = n;
+    return NULL;
+}
+
+static void run_system(char *src, box_t *in) {
+    pcas_ast_t *eqs[SYSTEM_MAX] = { NULL }, *out[SYSTEM_SETS][SYSTEM_MAX] = { { NULL } };
+    char shown[SYSTEM_MAX];
+    Symbol vars[SYSTEM_MAX];
+    clock_t start;
+    unsigned long ms;
+    int n = 0, i, k, got;
+    box_t *row, *col;
+    const char *why = read_system(src, eqs, vars, shown, &n);
+
+    if(why != NULL) {
+        push(in, NULL, why, 0);
         return;
     }
 
@@ -1110,8 +1124,8 @@ static void show_steps(void) {
         }
         ast_Cleanup(e);
     }
-    if(cmd == NULL || (strcmp(cmd, "solve") != 0 && strcmp(cmd, "roots") != 0)) {
-        status = "steps are for solve(, d/dx, limit( and integral(";
+    if(cmd == NULL || (strcmp(cmd, "solve") != 0 && strcmp(cmd, "roots") != 0 && strcmp(cmd, "system") != 0)) {
+        status = "steps are for solve(, system(, d/dx, limit( and integral(";
         return;
     }
     src = ed_command_arg(&view);
@@ -1119,7 +1133,7 @@ static void show_steps(void) {
         status = "nothing to show the work for";
         return;
     }
-    status = work_open(src);
+    status = strcmp(cmd, "system") == 0 ? work_open_system(src) : work_open(src);
     free(src);
 }
 

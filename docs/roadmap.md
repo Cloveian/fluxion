@@ -69,7 +69,7 @@
 - [x] Ellipses and hyperbolas, equation to points and back. lined up with the axes only
 - [x] Piecewise functions. a command for now, no brace template
 - [x] Ghost parens, the fraction grabbing the last term, ans when a line starts with an operator
-- [ ] Show-the-work steps. quadratics, radicals, exp / log / abs, rational equations, trig equations, inequalities, polynomials that factor, *dih*rivatives, limits and integrals have them. systems and the cubics that dont factor (cardano) dont yet
+- [ ] Show-the-work steps. quadratics, radicals, exp / log / abs, rational equations, trig equations, inequalities, polynomials that factor, *dih*rivatives, limits and integrals have them. linear systems have them too. the cubics that dont factor (cardano) and nonlinear systems dont yet
 
 ## more-later
 

@@ -11,7 +11,7 @@ typedef struct {
 } side_t;
 
 /*a fraction as top over bottom, one number node is a decimal to export*/
-static pcas_ast_t *number(mp_rat r) {
+pcas_ast_t *steps_number(mp_rat r) {
     mp_rat top, bottom;
 
     if(mp_rat_is_integer(r))
@@ -64,12 +64,12 @@ static pcas_ast_t *term(mp_rat a, Symbol var, int p) {
     pcas_ast_t *x;
 
     if(p == 0)
-        return number(a);
+        return steps_number(a);
     x = ast_MakeSymbol(var);
     if(p > 1)
         x = ast_MakeBinary(OP_POW, x, ast_MakeInt(p));
     if(mp_rat_compare_value(a, 1, 1) != 0)
-        x = ast_MakeBinary(OP_MULT, number(a), x);
+        x = ast_MakeBinary(OP_MULT, steps_number(a), x);
     return x;
 }
 
@@ -173,7 +173,7 @@ static void prep(pcas_ast_t *left, pcas_ast_t *right, Symbol var, side_t *side, 
         mp_rat m = num_FromInt(1);
 
         mp_int_copy(d, mp_rat_numer_ref(m));
-        add_move(s, '*', number(m));
+        add_move(s, '*', steps_number(m));
         for(i = 0; i < 2; i++)
             for(p = 0; p < 3; p++)
                 mp_rat_mul(side[i].c[p], m, side[i].c[p]);
@@ -220,19 +220,19 @@ static int isolate(steps_t *s, side_t *side, Symbol var, int p) {
     }
     if(mp_rat_compare_zero(side[k].c[0]) != 0) {
         op = take_away(side[k].c[0], size);
-        add_move(s, op, number(size));
+        add_move(s, op, steps_number(size));
         mp_rat_sub(side[o].c[0], side[k].c[0], side[o].c[0]);
         mp_rat_set_value(side[k].c[0], 0, 1);
         add_sides(s, side, var);
     }
     if(mp_rat_compare_value(side[k].c[p], 1, 1) != 0) {
-        add_move(s, '/', number(side[k].c[p]));
+        add_move(s, '/', steps_number(side[k].c[p]));
         mp_rat_div(side[o].c[0], side[k].c[p], side[o].c[0]);
         mp_rat_set_value(side[k].c[p], 1, 1);
         add_sides(s, side, var);
     }
     if(k == 1) /*4/3 = x, written the other way round*/
-        steps_eq(s, term(side[1].c[p], var, p), number(side[0].c[0]));
+        steps_eq(s, term(side[1].c[p], var, p), steps_number(side[0].c[0]));
     num_Cleanup(size);
     return k;
 }
@@ -308,7 +308,7 @@ static pcas_ast_t *root_both(steps_t *s, pcas_ast_t *left, mp_rat v) {
         steps_eq(s, left, ast_MakeInt(0));
         return NULL;
     }
-    root = sqrt_of(number(v));
+    root = sqrt_of(steps_number(v));
     done = root_of(v);
     if(done != NULL && !ast_Compare(root, done) && !is_number(done))
         add_pm(s, ast_Copy(left), NULL, root, NULL);
@@ -375,7 +375,7 @@ static void to_zero(steps_t *s, side_t *side, Symbol var) {
         add_move(s, '_', side_tree(side[1].c, var));
     } else if(mp_rat_compare_zero(side[1].c[0]) != 0) {
         op = take_away(side[1].c[0], size);
-        add_move(s, op, number(size));
+        add_move(s, op, steps_number(size));
     } else {
         moved = false;
     }
@@ -397,7 +397,7 @@ static void to_zero(steps_t *s, side_t *side, Symbol var) {
     for(p = 0; p < 3; p++)
         mp_int_gcd(mp_rat_numer_ref(g), mp_rat_numer_ref(side[0].c[p]), mp_rat_numer_ref(g));
     if(mp_rat_compare_value(g, 1, 1) > 0) {
-        add_move(s, '/', number(g));
+        add_move(s, '/', steps_number(g));
         for(p = 0; p < 3; p++)
             mp_rat_div(side[0].c[p], g, side[0].c[p]);
         add_sides(s, side, var);
@@ -472,7 +472,7 @@ static bool factoring(pcas_ast_t *left, pcas_ast_t *right, Symbol var, side_t *s
             ast_ChildAppend(split, term(c[2], var, 2));
             ast_ChildAppend(split, term(m, var, 1));
             ast_ChildAppend(split, term(n, var, 1));
-            ast_ChildAppend(split, number(c[0]));
+            ast_ChildAppend(split, steps_number(c[0]));
             steps_eq(s, split, ast_MakeInt(0));
         }
     }
@@ -486,7 +486,7 @@ static bool factoring(pcas_ast_t *left, pcas_ast_t *right, Symbol var, side_t *s
     add_or(s, f[0], ast_MakeInt(0), twice ? NULL : f[1], ast_MakeInt(0));
     if(twice)
         ast_Cleanup(f[1]);
-    add_or(s, ast_MakeSymbol(var), number(r[0]), twice ? NULL : ast_MakeSymbol(var), number(r[1]));
+    add_or(s, ast_MakeSymbol(var), steps_number(r[0]), twice ? NULL : ast_MakeSymbol(var), steps_number(r[1]));
 
     for(i = 0; i < 2; i++)
         num_Cleanup(r[i]);
@@ -509,7 +509,7 @@ static bool complete_square(pcas_ast_t *left, pcas_ast_t *right, Symbol var, sid
     to_zero(s, side, var);
 
     if(mp_rat_compare_value(c[2], 1, 1) != 0) {
-        add_move(s, '/', number(c[2]));
+        add_move(s, '/', steps_number(c[2]));
         for(p = 0; p < 2; p++)
             mp_rat_div(c[p], c[2], c[p]);
         mp_rat_set_value(c[2], 1, 1);
@@ -517,7 +517,7 @@ static bool complete_square(pcas_ast_t *left, pcas_ast_t *right, Symbol var, sid
     }
     if(mp_rat_compare_zero(c[0]) != 0) {
         op = take_away(c[0], size);
-        add_move(s, op, number(size));
+        add_move(s, op, steps_number(size));
         mp_rat_neg(c[0], side[1].c[0]);
         mp_rat_set_value(c[0], 0, 1);
         add_sides(s, side, var);
@@ -532,25 +532,25 @@ static bool complete_square(pcas_ast_t *left, pcas_ast_t *right, Symbol var, sid
     x = side_tree(shift, var);
     if(mp_rat_compare_zero(h) != 0) {
         mp_rat_mul(h, h, size);
-        add_move(s, '+', number(size));
+        add_move(s, '+', steps_number(size));
         mp_rat_copy(size, c[0]);
         mp_rat_add(side[1].c[0], size, side[1].c[0]);
         add_sides(s, side, var);
-        steps_eq(s, ast_MakeBinary(OP_POW, ast_Copy(x), ast_MakeInt(2)), number(side[1].c[0]));
+        steps_eq(s, ast_MakeBinary(OP_POW, ast_Copy(x), ast_MakeInt(2)), steps_number(side[1].c[0]));
     }
 
     done = root_both(s, x, side[1].c[0]);
     if(mp_rat_compare_zero(h) != 0) {
         op = take_away(h, size);
-        add_move(s, op, number(size));
+        add_move(s, op, steps_number(size));
         mp_rat_neg(h, h);
         if(done == NULL)
-            steps_eq(s, ast_MakeSymbol(var), number(h));
+            steps_eq(s, ast_MakeSymbol(var), steps_number(h));
         else
-            add_pm(s, ast_MakeSymbol(var), number(h), ast_Copy(done), NULL);
+            add_pm(s, ast_MakeSymbol(var), steps_number(h), ast_Copy(done), NULL);
     }
     if(done != NULL)
-        add_split(s, var, mp_rat_compare_zero(h) != 0 ? number(h) : NULL, done, NULL);
+        add_split(s, var, mp_rat_compare_zero(h) != 0 ? steps_number(h) : NULL, done, NULL);
 
     for(p = 0; p < 3; p++)
         num_Cleanup(shift[p]);
@@ -568,9 +568,9 @@ static pcas_ast_t *times(int k, mp_rat a, mp_rat b) {
         return NULL;
     ast_ChildAppend(t, ast_MakeInt(k));
     if(mp_rat_compare_value(a, 1, 1) != 0)
-        ast_ChildAppend(t, number(a));
+        ast_ChildAppend(t, steps_number(a));
     if(b != NULL && mp_rat_compare_value(b, 1, 1) != 0)
-        ast_ChildAppend(t, number(b));
+        ast_ChildAppend(t, steps_number(b));
     if(ast_ChildLength(t) > 1)
         return t;
     only = ast_ChildRemoveIndex(t, 0);
@@ -587,12 +587,12 @@ static bool formula(pcas_ast_t *left, pcas_ast_t *right, Symbol var, side_t *sid
     prep(left, right, var, side, s);
     to_zero(s, side, var);
 
-    l = steps_eq(s, ast_MakeSymbol('A'), number(c[2]));
+    l = steps_eq(s, ast_MakeSymbol('A'), steps_number(c[2]));
     if(l != NULL) {
         l->eq[1].left = ast_MakeSymbol('B');
-        l->eq[1].right = number(c[1]);
+        l->eq[1].right = steps_number(c[1]);
         l->eq[2].left = ast_MakeSymbol('C');
-        l->eq[2].right = number(c[0]);
+        l->eq[2].right = steps_number(c[0]);
         l->eqs = 3;
         l->list = true;
     }
@@ -601,29 +601,29 @@ static bool formula(pcas_ast_t *left, pcas_ast_t *right, Symbol var, side_t *sid
     mp_rat_neg(c[1], nb);
     mp_rat_mul(two_a, c[2], two_a);
     in = times(-4, c[2], c[0]);
-    in = ast_MakeBinary(OP_ADD, ast_MakeBinary(OP_POW, number(c[1]), ast_MakeInt(2)), in);
-    l = add_pm(s, ast_MakeSymbol(var), number(nb), ast_MakeBinary(OP_ROOT, ast_MakeInt(2), in),
+    in = ast_MakeBinary(OP_ADD, ast_MakeBinary(OP_POW, steps_number(c[1]), ast_MakeInt(2)), in);
+    l = add_pm(s, ast_MakeSymbol(var), steps_number(nb), ast_MakeBinary(OP_ROOT, ast_MakeInt(2), in),
                times(2, c[2], NULL));
     if(l != NULL)
         l->as_is = true;
 
     d = discriminant(side);
-    l = add_pm(s, ast_MakeSymbol(var), number(nb), ast_MakeBinary(OP_ROOT, ast_MakeInt(2), number(d)), number(two_a));
+    l = add_pm(s, ast_MakeSymbol(var), steps_number(nb), ast_MakeBinary(OP_ROOT, ast_MakeInt(2), steps_number(d)), steps_number(two_a));
     if(l != NULL)
         l->as_is = true;
 
     /*sqrt(32) is 4sqrt(2), sqrt(-16) is 4i*/
-    raw = sqrt_of(number(d));
+    raw = sqrt_of(steps_number(d));
     done = root_of(d);
     if(!ast_Compare(raw, done))
-        add_pm(s, ast_MakeSymbol(var), number(nb), ast_Copy(done), number(two_a));
+        add_pm(s, ast_MakeSymbol(var), steps_number(nb), ast_Copy(done), steps_number(two_a));
     ast_Cleanup(raw);
     if(mp_rat_compare_zero(d) == 0) { /*one root, just x=-3*/
         mp_rat_div(nb, two_a, nb);
-        steps_eq(s, ast_MakeSymbol(var), number(nb));
+        steps_eq(s, ast_MakeSymbol(var), steps_number(nb));
         ast_Cleanup(done);
     } else {
-        add_split(s, var, number(nb), done, number(two_a));
+        add_split(s, var, steps_number(nb), done, steps_number(two_a));
     }
 
     num_Cleanup(d);

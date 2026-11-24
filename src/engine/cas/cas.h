@@ -374,6 +374,8 @@ void domain_free(domain_t *d);
 #define SYSTEM_MAX 4
 #define SYSTEM_SETS 6
 int solve_system(pcas_ast_t **eqs, int n, const Symbol *vars, pcas_ast_t *out[][SYSTEM_MAX]);
+/*Fluxion: one equation (= 0) as coefficients in vars[0..n) and the right side, ax + by = c. false if it isn't linear*/
+bool system_row(pcas_ast_t *eq, int n, const Symbol *vars, pcas_ast_t **row, pcas_ast_t **rhs);
 
 /*Fluxion: degree of e (simplified and expanded) as a polynomial in var, -1 if it
   isn't one. the leading coefficient goes in *lead if that's not NULL (new tree)*/

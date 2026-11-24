@@ -19,6 +19,9 @@ static const char *const method_keys[5] = { "optimal", "root", "factor", "square
 
 static bool open;
 static pcas_ast_t *lhs, *rhs;
+static pcas_ast_t *sys[SYSTEM_MAX]; /* the equations of a system, else NULLs */
+static Symbol sys_vars[SYSTEM_MAX];
+static int sys_n;
 static pcas_ast_t *calc; /* the d/dx, limit or integral node for those steps, else NULL */
 static Symbol var;
 static char rel; /* 0 for an equation, else < > or l g (<= >=) */
@@ -196,7 +199,9 @@ static bool build(void) {
     bool ok;
     int i;
 
-    if(calc == NULL && rel != 0)
+    if(sys_n > 0)
+        ok = steps_system(sys, sys_n, sys_vars, &s);
+    else if(calc == NULL && rel != 0)
         ok = steps_ineq(lhs, rhs, rel, var, &s);
     else if(calc == NULL)
         ok = steps_solve(lhs, rhs, var, method, &s);
@@ -247,6 +252,23 @@ const char *work_open(char *src) {
     return NULL;
 }
 
+const char *work_open_system(char *src) {
+    char shown[SYSTEM_MAX];
+    const char *why = read_system(src, sys, sys_vars, shown, &sys_n);
+
+    if(why != NULL) {
+        sys_n = 0;
+        return why;
+    }
+    rel = 0;
+    if(!build()) {
+        work_close();
+        return "steps are for linear systems";
+    }
+    open = true;
+    return NULL;
+}
+
 const char *work_open_calc(pcas_ast_t *e) {
     calc = e;
     rel = 0;
@@ -263,17 +285,22 @@ bool work_is_open(void) {
 }
 
 void work_close(void) {
+    int i;
+
     free_rows();
     ast_Cleanup(lhs);
     ast_Cleanup(rhs);
     ast_Cleanup(calc);
     lhs = rhs = calc = NULL;
+    for(i = 0; i < sys_n; i++)
+        ast_Cleanup(sys[i]);
+    sys_n = 0;
     rel = 0;
     open = false;
 }
 
 bool work_act(action_t a) {
-    if(a.op == A_SOFT && calc == NULL && rel == 0) {
+    if(a.op == A_SOFT && calc == NULL && rel == 0 && sys_n == 0) {
         Method m = (Method)a.n;
 
         /* one that doesn't fit leaves the steps as they are */
@@ -329,10 +356,10 @@ void work_draw(void) {
         screen_color(COL_DIM);
         screen_vline(x0 + w - 2, y0 + (bottom - y0) * top / nrows, bar_h > 2 ? bar_h : 2);
     }
-    if(calc == NULL && rel == 0)
+    if(calc == NULL && rel == 0 && sys_n == 0)
         draw_softkeys(&areas.keys, method_keys, (int)method, off);
 }
 
 const char *const *work_softkeys(void) {
-    return calc == NULL && rel == 0 ? method_keys : NULL;
+    return calc == NULL && rel == 0 && sys_n == 0 ? method_keys : NULL;
 }

@@ -417,6 +417,73 @@ static bool test_calc_steps(test_t *t) {
     return passed;
 }
 
+/*Fluxion: steps; eq,eq,...; letters (XY); the lines. a system by elimination, the whole system on each line*/
+static bool test_system_steps(test_t *t) {
+    pcas_ast_t *eqs[SYSTEM_MAX] = {NULL};
+    Symbol vars[SYSTEM_MAX];
+    char got[MAX_PAR * 2] = "", *piece = t->arg1, *next;
+    pcas_error_t err = E_SUCCESS;
+    steps_t s;
+    int n = 0, i;
+    bool passed;
+
+    for(; piece != NULL && n < SYSTEM_MAX && err == E_SUCCESS; piece = next) {
+        char *eq;
+        pcas_ast_t *rhs = NULL;
+
+        next = strchr(piece, ',');
+        if(next != NULL)
+            *next++ = '\0';
+        eq = strchr(piece, '=');
+        if(eq == NULL)
+            break;
+        *eq = '\0';
+        eqs[n] = parse((uint8_t*)piece, strlen(piece), str_table, &err);
+        rhs = err == E_SUCCESS ? parse((uint8_t*)eq + 1, strlen(eq + 1), str_table, &err) : NULL;
+        if(err != E_SUCCESS || eqs[n] == NULL || rhs == NULL) {
+            ast_Cleanup(rhs);
+            err = err == E_SUCCESS ? E_GENERIC : err;
+            break;
+        }
+        eqs[n] = ast_MakeBinary(OP_ADD, eqs[n], ast_MakeBinary(OP_MULT, ast_MakeInt(-1), rhs));
+        vars[n] = (Symbol)t->arg2[n];
+        n++;
+    }
+    if(err != E_SUCCESS || n < 2 || strlen(t->arg2) != (size_t)n) {
+        printf("Test failed on line %u. steps; eq,eq; letters; lines\n", t->line);
+        for(i = 0; i < n; i++)
+            ast_Cleanup(eqs[i]);
+        return false;
+    }
+    if(!steps_system(eqs, n, vars, &s))
+        strcpy(got, "none");
+    else
+        steps_text(&s, got, sizeof(got));
+    passed = strcmp(got, t->arg3) == 0;
+    if(!passed)
+        printf("Test failed on line %u. Expected %s but got %s\n", t->line, t->arg3, got);
+    if(passed && s.n > 0) { /*the last line against solve_system*/
+        pcas_ast_t *sets[SYSTEM_SETS][SYSTEM_MAX] = {{NULL}};
+        step_t *last = &s.line[s.n - 1];
+        int k, j, sol = solve_system(eqs, n, vars, sets);
+
+        if(sol != 1 || last->eqs != n)
+            passed = false;
+        for(j = 0; passed && j < n; j++)
+            passed = same_value(sets[0][j], last->eq[j].right);
+        if(!passed)
+            printf("Test failed on line %u. The steps end at an answer solve_system doesn't give\n", t->line);
+        for(k = 0; k < SYSTEM_SETS; k++)
+            for(j = 0; j < SYSTEM_MAX; j++)
+                ast_Cleanup(sets[k][j]);
+    }
+    if(s.n > 0)
+        steps_free(&s);
+    for(i = 0; i < n; i++)
+        ast_Cleanup(eqs[i]);
+    return passed;
+}
+
 /*Fluxion: steps; left<right (or > <= >=); var; the lines. the chart's test points are written |tX... (|t-3), a flipped sign |/-2flip*/
 static bool test_ineq_steps(test_t *t) {
     pcas_ast_t *left, *right;
@@ -467,6 +534,8 @@ static bool test_steps(test_t *t) {
     int m, i, j, n;
     bool passed;
 
+    if(eq != NULL && strchr(t->arg1, ',') != NULL && strpbrk(t->arg1, "<>") == NULL)
+        return test_system_steps(t);
     if(eq == NULL && strpbrk(t->arg1, "<>") == NULL)
         return test_calc_steps(t);
     if(eq == NULL || strpbrk(t->arg1, "<>") != NULL)

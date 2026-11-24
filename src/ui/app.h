@@ -29,4 +29,6 @@ box_t *labelled(const char *label, box_t *values);
 pcas_ast_t *read_f(char *src, box_t *in, const char *usage, Symbol *var, char *shown);
 /* the solve( line as its two sides and the variable (ui/work.c too). NULL when it read, or what to say */
 const char *read_equation(char *src, pcas_ast_t **lhs, pcas_ast_t **rhs, Symbol *var, char *shown, char *rel);
+/* system(...) cut into its equations (each lhs - rhs) and letters. what's wrong with it, or NULL */
+const char *read_system(char *src, pcas_ast_t **eqs, Symbol *vars, char *shown, int *count);
 #endif
