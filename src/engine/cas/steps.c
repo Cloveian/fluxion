@@ -1046,9 +1046,13 @@ bool steps_solve(pcas_ast_t *left, pcas_ast_t *right, Symbol var, Method m, step
 }
 
 void steps_free(steps_t *s) {
+    steps_cut(s, 0);
+}
+
+void steps_cut(steps_t *s, int n) {
     int i, j;
 
-    for(i = 0; i < s->n; i++) {
+    for(i = n; i < s->n; i++) {
         for(j = 0; j < s->line[i].eqs; j++) {
             ast_Cleanup(s->line[i].eq[j].left);
             ast_Cleanup(s->line[i].eq[j].right);
@@ -1058,5 +1062,5 @@ void steps_free(steps_t *s) {
         }
         ast_Cleanup(s->line[i].by);
     }
-    s->n = 0;
+    s->n = n;
 }

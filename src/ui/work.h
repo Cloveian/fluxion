@@ -14,6 +14,8 @@
 const char *work_open(char *src);
 /* src is the line inside system( ). linear ones by elimination. NULL when it opened, or what to say */
 const char *work_open_system(char *src);
+/* the steps for expand( or factor( on e (the page keeps it) */
+const char *work_open_expr(bool expand, pcas_ast_t *e);
 /* the steps for d/dx(...), a limit or an integral, e is that node and the page keeps it */
 const char *work_open_calc(pcas_ast_t *e);
 bool work_is_open(void);

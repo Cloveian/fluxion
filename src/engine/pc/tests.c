@@ -385,6 +385,48 @@ static void steps_text(const steps_t *s, char *got, unsigned size) {
     }
 }
 
+/*Fluxion: steps; expand:(X+1)(X+2) or factor:X^2+5X+6; X; the lines. the last line of expand has to be what expand says*/
+static bool test_expr_steps(test_t *t) {
+    bool expand_cmd = strncmp(t->arg1, "expand:", 7) == 0;
+    const char *src = t->arg1 + 7;
+    pcas_error_t err;
+    pcas_ast_t *e = parse((uint8_t*)src, strlen(src), str_table, &err), *check = NULL;
+    char got[MAX_PAR * 2] = "";
+    steps_t s;
+    bool passed, ok;
+
+    if(err != E_SUCCESS || e == NULL) {
+        printf("Test failed on line %u. Unable to parse %s\n", t->line, src);
+        return false;
+    }
+    ok = expand_cmd ? steps_expand(e, &s) : steps_factor(e, &s);
+    if(!ok)
+        strcpy(got, "none");
+    else
+        steps_text(&s, got, sizeof(got));
+    passed = strcmp(got, t->arg3) == 0;
+    if(!passed)
+        printf("Test failed on line %u. Expected %s but got %s\n", t->line, t->arg3, got);
+    if(passed && ok && expand_cmd) {
+        check = ast_Copy(e);
+        simplify(check, SIMP_NORMALIZE | SIMP_COMMUTATIVE | SIMP_RATIONAL);
+        expand(check, EXP_ALL);
+        simplify(check, SIMP_NORMALIZE | SIMP_COMMUTATIVE | SIMP_RATIONAL | SIMP_EVAL | SIMP_LIKE_TERMS);
+        passed = same_value(check, s.line[s.n - 1].eq[0].left);
+        if(!passed)
+            printf("Test failed on line %u. The steps end somewhere else than expand\n", t->line);
+    } else if(passed && ok) { /*factored form is the same polynomial*/
+        passed = same_value(e, s.line[s.n - 1].eq[0].left);
+        if(!passed)
+            printf("Test failed on line %u. The factored form isn't the polynomial\n", t->line);
+    }
+    if(s.n > 0)
+        steps_free(&s);
+    ast_Cleanup(check);
+    ast_Cleanup(e);
+    return passed;
+}
+
 /*Fluxion: steps; deriv(f,X,X), limit(f,X,a) or integral(f,X); X; the lines | the rules | lines, or none. the last line has to be what simplify makes of it*/
 static bool test_calc_steps(test_t *t) {
     pcas_error_t err;
@@ -534,6 +576,8 @@ static bool test_steps(test_t *t) {
     int m, i, j, n;
     bool passed;
 
+    if(strncmp(t->arg1, "expand:", 7) == 0 || strncmp(t->arg1, "factor:", 7) == 0)
+        return test_expr_steps(t);
     if(eq != NULL && strchr(t->arg1, ',') != NULL && strpbrk(t->arg1, "<>") == NULL)
         return test_system_steps(t);
     if(eq == NULL && strpbrk(t->arg1, "<>") == NULL)

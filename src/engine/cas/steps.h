@@ -49,6 +49,10 @@ bool steps_solve(pcas_ast_t *left, pcas_ast_t *right, Symbol var, Method m, step
 bool steps_layers(pcas_ast_t *left, pcas_ast_t *right, Symbol var, steps_t *out);
 /*n linear equations (each = 0) in n letters, solved by eliminatoin a step at a time: every line is the whole system. false if a coefficient isn't a number, or it has no one answer*/
 bool steps_system(pcas_ast_t **eqs, int n, const Symbol *vars, steps_t *out);
+/*expand( a product with a sum in it at a time, then the powers and like terms. false when there's nothing to open*/
+bool steps_expand(pcas_ast_t *e, steps_t *out);
+/*factor( on a polynomial in one letter: its own factoring lines up to the product, no = 0*/
+bool steps_factor(pcas_ast_t *e, steps_t *out);
 /*t's lines on the end of s. t's first line is the one s ends on, so only its move comes over. false (t freed) when they don't fit*/
 bool steps_append(steps_t *s, steps_t *t);
 /*a polynomial past x^2 that factors into lines and quadratics: factor, each factor = 0, each solved (polysteps.c). false if it doesn't*/
@@ -68,6 +72,7 @@ bool steps_integral(pcas_ast_t *I, steps_t *out);
 /*whichever of the three e is, deriv, limit or integral*/
 bool steps_calc(pcas_ast_t *e, steps_t *out);
 void steps_free(steps_t *s);
+void steps_cut(steps_t *s, int n); /*frees the lines from n on, n lines left*/
 
 /*for limit.c and integrate.c, which work their steps out in their own loops*/
 #define STEPS_FOUND_MAX 16

@@ -1219,9 +1219,9 @@ steps; X^2_3X+2<=0; X; X^2_3X+2<=0|factor|(X_1)(X_2)<=0|wherethetopis0|X=1,X=2|t
 steps; X^2>100000000000000; X; none
 steps; X^2<=1000000; X; X^2<=1000000|_1000000|X^2_1000000<=0|factor|(X_1000)(X+1000)<=0|wherethetopis0|X=-1000,X=1000|t-1001|(-1001_1000)(-1001+1000)=2001|t0|(0_1000)(0+1000)=-1000000|t1001|(1001_1000)(1001+1000)=2001|keepthegapsthatfit|-1000<=X<=1000
 #a polynomial past x^2 that factors: factor, each factor = 0, the lines first then each quadratic with its own steps, then every root together
-steps; X^3_2X^2_X+2=0; X; 2+-X+-2X^2+X^3=0|factor|(X_1)(X+1)(X_2)=0|onefactorhastobe0|X_1=0orX+1=0orX_2=0|solveeach|X=1orX=-1orX=2|alltheroots|X=-1orX=1orX=2
-steps; X^4_5X^2+4=0; X; 4+-5X^2+X^4=0|factor|(X_1)(X+1)(X_2)(X+2)=0|onefactorhastobe0|X_1=0orX+1=0orX_2=0orX+2=0|solveeach|X=1orX=-1orX=2orX=-2|alltheroots|X=-2orX=-1orX=1orX=2
-steps; 2X^3_6X^2=0; X; -6X^2+2X^3=0|factor|2X^2(X_3)=0|onefactorhastobe0|X=0orX_3=0|solveeach|X=0orX=3|alltheroots|X=0orX=3
+steps; X^3_2X^2_X+2=0; X; X^3_2X^2_X+2=0|factor|(X_1)(X+1)(X_2)=0|onefactorhastobe0|X_1=0orX+1=0orX_2=0|solveeach|X=1orX=-1orX=2|alltheroots|X=-1orX=1orX=2
+steps; X^4_5X^2+4=0; X; X^4_5X^2+4=0|factor|(X_1)(X+1)(X_2)(X+2)=0|onefactorhastobe0|X_1=0orX+1=0orX_2=0orX+2=0|solveeach|X=1orX=-1orX=2orX=-2|alltheroots|X=-2orX=-1orX=1orX=2
+steps; 2X^3_6X^2=0; X; 2X^3_6X^2=0|factor|2X^2(X_3)=0|onefactorhastobe0|X=0orX_3=0|solveeach|X=0orX=3|alltheroots|X=0orX=3
 steps; X^3+X=0; X; X^3+X=0|factor|X(X^2+1)=0|onefactorhastobe0|X=0orX^2+1=0|solveeach|X=0|thenextfactor|X^2+1=0|_1|X^2=-1|r|X=+-sqrt(-1)|X=+-i|X=iorX=-i|alltheroots|X=0orX=-iorX=i
 steps; sqrt(X)=X^3; X; none
 #a linear system by elimination, every line is the whole system. the last line has to be what solve_system says
@@ -1230,5 +1230,14 @@ steps; X+2Y=3,3X_Y=2; XY; X+2Y=3,3X_Y=2|cancelaletterfromtheothers|X+2Y=3,-Y=-1|
 steps; X/2+Y/3=1,X_Y=2; XY; X1/2+Y1/3=1,X_Y=2|clearthefractions|3X+2Y=6,X_Y=2|swaptwoequations|X_Y=2,3X+2Y=6|cancelaletterfromtheothers|X_Y=2,Y=0|cancelaletterfromtheothers|X=2,Y=0
 steps; X+Y+Z=6,2X_Y+Z=3,X+2Y_Z=2; XYZ; X+Y+Z=6,2X_Y+Z=3,X+2Y_Z=2|cancelaletterfromtheothers|X+Y+Z=6,-3Y_Z=-9,Y_2Z=-4|swaptwoequations|X+Y+Z=6,Y_2Z=-4,-3Y_Z=-9|cancelaletterfromtheothers|X+3Z=10,Y_2Z=-4,-Z=-3|cancelaletterfromtheothers|-X=-1,-Y=-2,-Z=-3|divideeachbyitsnumber|X=1,Y=2,Z=3
 steps; 2Y=4,X+Y=3; XY; 2Y=4,X+Y=3|swaptwoequations|X+Y=3,2Y=4|cancelaletterfromtheothers|X=1,2Y=4|divideeachbyitsnumber|X=1,Y=2
+#expand( opens one product with a sum in it a line, then the powers and like terms. factor( is the polynomial factoring lines up to the product
+steps; expand:(X+1)(X+2); X; (X+1)(X+2)|distribute|X(X+2)+X+2|distribute|X^2+X+2X+2|multiplyoutandaddliketerms|X^2+3X+2
+steps; expand:2(X+3); X; 2(X+3)|distribute|2X+6|multiplyoutandaddliketerms|2X+6
+steps; expand:(2X+1)^2; X; (2X+1)^2|writethepowerasaproduct|(2X+1)(2X+1)|distribute|2X(2X+1)+2X+1|distribute|4X^2+2X+2X+1|multiplyoutandaddliketerms|4X^2+4X+1
+steps; factor:X^2+5X+6; X; X^2+5X+6|(X+2)(X+3)
+steps; factor:2X^2+7X+3; X; 2X^2+7X+3|2X^2+X+6X+3|(2X+1)(X+3)
+steps; factor:X^3_2X^2_X+2; X; X^3_2X^2_X+2|factor|(X_1)(X+1)(X_2)
+steps; factor:X^2_9; X; X^2_9|(X_3)(X+3)
+steps; factor:2X^3_6X^2; X; 2X^3_6X^2|factor|2X^2(X_3)
 steps; 2^X=-3; X; none
 steps; 3X+5=-3; Xformula; none

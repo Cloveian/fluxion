@@ -1099,7 +1099,7 @@ static bool is_action(const item_t *it) {
     return strcmp(it->label, "clear history") == 0 || strcmp(it->label, "show steps") == 0;
 }
 
-/* the steps page for the answer highlighted when the menu opened, or the last one. solve(, d/dx, limit( and integral( for now */
+/* the steps page for the answer highlighted when the menu opened, or the last one. solve(, system(, expand(, factor(, d/dx, limit( and integral( */
 static void show_steps(void) {
     int at = menu_from >= 0 ? menu_from : history_len - 1;
     const char *cmd;
@@ -1110,6 +1110,20 @@ static void show_steps(void) {
         return;
     }
     cmd = ed_command(&view);
+    if(cmd != NULL && (strcmp(cmd, "expand") == 0 || strcmp(cmd, "factor") == 0)) {
+        pcas_error_t err;
+        pcas_ast_t *e;
+
+        src = ed_command_arg(&view);
+        e = src != NULL ? args_parse_deg(src, &err) : NULL;
+        free(src);
+        if(e == NULL) {
+            status = "nothing to show the work for";
+            return;
+        }
+        status = work_open_expr(strcmp(cmd, "expand") == 0, e);
+        return;
+    }
     if(cmd == NULL) {
         /* d/dx(...), limit(...) or integral(...) is the whole line, or it isn't one */
         pcas_error_t err;
@@ -1125,7 +1139,7 @@ static void show_steps(void) {
         ast_Cleanup(e);
     }
     if(cmd == NULL || (strcmp(cmd, "solve") != 0 && strcmp(cmd, "roots") != 0 && strcmp(cmd, "system") != 0)) {
-        status = "steps are for solve(, system(, d/dx, limit( and integral(";
+        status = "steps are for solve(, system(, expand(, factor(, d/dx, limit( and integral(";
         return;
     }
     src = ed_command_arg(&view);

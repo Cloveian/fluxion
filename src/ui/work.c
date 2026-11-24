@@ -22,6 +22,7 @@ static pcas_ast_t *lhs, *rhs;
 static pcas_ast_t *sys[SYSTEM_MAX]; /* the equations of a system, else NULLs */
 static Symbol sys_vars[SYSTEM_MAX];
 static int sys_n;
+static char expr_kind; /* 'e' for expand, 'f' factor, 0 when calc is a d/dx, limit or integral */
 static pcas_ast_t *calc; /* the d/dx, limit or integral node for those steps, else NULL */
 static Symbol var;
 static char rel; /* 0 for an equation, else < > or l g (<= >=) */
@@ -205,6 +206,8 @@ static bool build(void) {
         ok = steps_ineq(lhs, rhs, rel, var, &s);
     else if(calc == NULL)
         ok = steps_solve(lhs, rhs, var, method, &s);
+    else if(expr_kind != 0)
+        ok = expr_kind == 'e' ? steps_expand(calc, &s) : steps_factor(calc, &s);
     else
         ok = steps_calc(calc, &s);
     if(!ok)
@@ -269,15 +272,25 @@ const char *work_open_system(char *src) {
     return NULL;
 }
 
-const char *work_open_calc(pcas_ast_t *e) {
+/* kind as expr_kind. the page keeps e */
+static const char *open_node(pcas_ast_t *e, char kind, const char *why) {
     calc = e;
     rel = 0;
+    expr_kind = kind;
     if(!build()) {
         work_close();
-        return "no steps for this one yet";
+        return why;
     }
     open = true;
     return NULL;
+}
+
+const char *work_open_expr(bool expand, pcas_ast_t *e) {
+    return open_node(e, expand ? 'e' : 'f', expand ? "nothing to open up" : "no steps for this one yet");
+}
+
+const char *work_open_calc(pcas_ast_t *e) {
+    return open_node(e, 0, "no steps for this one yet");
 }
 
 bool work_is_open(void) {
@@ -292,6 +305,7 @@ void work_close(void) {
     ast_Cleanup(rhs);
     ast_Cleanup(calc);
     lhs = rhs = calc = NULL;
+    expr_kind = 0;
     for(i = 0; i < sys_n; i++)
         ast_Cleanup(sys[i]);
     sys_n = 0;

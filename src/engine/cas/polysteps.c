@@ -56,6 +56,14 @@ static bool roots_line(steps_t *out, Symbol var, pcas_ast_t **roots, int n) {
     return l != NULL;
 }
 
+/*a polynomial line in the order you'd write it, x^3 first. the canonical form with the powers combined puts -x in front of x^3*/
+static void show_poly(step_t *l) {
+    simplify(l->eq[0].left, SIMP_NORMALIZE | SIMP_COMMUTATIVE | SIMP_RATIONAL | SIMP_EVAL | SIMP_LIKE_TERMS);
+    simplify_canonical_form(l->eq[0].left, CANONICAL_ALL ^ CANONICAL_COMBINE_POWERS);
+    simplify_canonical_form(l->eq[0].right, CANONICAL_ALL ^ CANONICAL_COMBINE_POWERS);
+    l->as_is = true;
+}
+
 static step_t *last_line(steps_t *s) {
     return &s->line[s->n - 1];
 }
@@ -73,7 +81,7 @@ bool steps_poly(pcas_ast_t *left, pcas_ast_t *right, Symbol var, steps_t *out) {
         return false;
     simplify(l->eq[0].left, SIMP_NORMALIZE | SIMP_EVAL);
     simplify(l->eq[0].right, SIMP_NORMALIZE | SIMP_EVAL);
-    l->as_is = true; /*the way it was typed, the canonical order puts -x in front of x^3*/
+    show_poly(l);
 
     f = ast_MakeBinary(OP_ADD, ast_Copy(left), ast_MakeBinary(OP_MULT, ast_MakeInt(-1), ast_Copy(right)));
     if(f == NULL)
@@ -92,6 +100,7 @@ bool steps_poly(pcas_ast_t *left, pcas_ast_t *right, Symbol var, steps_t *out) {
         l = steps_eq(out, ast_Copy(f), ast_MakeInt(0));
         if(l == NULL)
             goto done;
+        show_poly(l);
     }
     steps_rule(l, "factor");
     l = steps_eq(out, ast_Copy(g), ast_MakeInt(0));
