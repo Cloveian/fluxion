@@ -31,6 +31,7 @@ typedef enum {
     TEST_FACTOR_TEXT, /*Fluxion: factortext; expression; text. factor, then the canonical form, as it's shown*/
     TEST_SIMPLIFY_TEXT, /*Fluxion: simplifytext; expression; text. cancel and simplify like enter, no form setting, as it's shown*/
     TEST_STEPS,     /*Fluxion: steps; equation; var and method; the lines | the move | lines*/
+    TEST_TRUTH,     /*Fluxion: truth; left=right (or < > <= >=); true, false or unknown, then a comma and the route or the counterexample*/
 
     TEST_INVALID
 } TestType;

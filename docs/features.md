@@ -27,6 +27,7 @@ Everything Fluxion does right now, as tables. Yes / partly / no first, the other
 | 'By hand' form                | yes |
 | *Dih*frent "simplest" form(s) | yes |
 | Rationalizing                 | yes |
+| True / false statements       | yes |
 | Expand                        | yes |
 
 ### Factoring

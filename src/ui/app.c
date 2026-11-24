@@ -783,6 +783,50 @@ static void run_domain(char *src, box_t *in) {
     domain_free(&d);
 }
 
+/* 12 = 6*2, 23x = 22x, x + 1 > x: true when it holds for every x, with a point it fails at when it doesn't */
+static void run_truth(char *src, box_t *in) {
+    pcas_ast_t *l, *r;
+    Symbol var;
+    char shown, sign, rel, detail[64] = "";
+    const char *why = read_equation(src, &l, &r, &var, &shown, &sign);
+    box_t *col;
+    truth_t t;
+    clock_t start;
+    int res, j, used = 0;
+
+    if(why != NULL || r == NULL) {
+        ast_Cleanup(l);
+        push(in, NULL, why != NULL ? why : "= goes in solve(, system(, piecewise(, implicit( or a conic", 0);
+        return;
+    }
+    if(setting_angle == ANGLE_DEGREES) {
+        l = degrees_in(l);
+        r = degrees_in(r);
+    }
+    rel = sign == CH_LE ? 'l' : sign == CH_GE ? 'g' : sign == 0 ? '=' : sign;
+    start = clock();
+    res = truth_of(l, r, rel, &t);
+    ast_Cleanup(l);
+    ast_Cleanup(r);
+    if(pcas_cancelled) {
+        push(in, NULL, pcas_oom ? "out of memory" : "cancelled", 0);
+        return;
+    }
+    if(res == TRUTH_FALSE && t.nvars > 0) { /* x = 1, y = 1/2 */
+        for(j = 0; j < t.nvars && used < (int)sizeof detail - 12; j++)
+            used += snprintf(detail + used, sizeof detail - (size_t)used, t.den[j] == 1 ? "%s%c = %d" : "%s%c = %d/%d", j > 0 ? ", " : "",
+                             (char)(t.var[j] - 'A' + 'a'), t.num[j], t.den[j]);
+    } else if(res == TRUTH_TRUE && t.points > 0) {
+        snprintf(detail, sizeof detail, "checked at %d points, not a proof", t.points);
+    }
+    col = layout_box(BOX_COL, 0);
+    layout_add(col, word_box(res == TRUTH_TRUE ? "true" : res == TRUTH_FALSE ? "false" : "can't tell"));
+    if(detail[0] != '\0')
+        layout_add(col, word_box(detail));
+    layout_finish(col, &draw_font);
+    push(in, col, NULL, (unsigned long)((clock() - start) * 1000 / CLOCKS_PER_SEC));
+}
+
 /*
     system(eq, eq, ..., x, y). the pieces between the top level commas with an =
     are equations, the rest are the variables. no variables given, it takes the
@@ -1012,11 +1056,16 @@ static bool run(editor_t *line) {
         free(src);
         return true;
     }
+    if(cmd == NULL && (strpbrk(src, "=<>") != NULL || strchr(src, CH_LE) != NULL || strchr(src, CH_GE) != NULL)) {
+        run_truth(src, ed_layout(line, &draw_font, false));
+        free(src);
+        return true;
+    }
     /* ellipse( and hyperbola( take one too, they're let through to conic_run.
        piecewise( for its x=v (and x = 0 as a condition), implicit( for the equation */
     if(strchr(src, '=') != NULL
-       && (cmd == NULL || (strcmp(cmd, "ellipse") != 0 && strcmp(cmd, "hyperbola") != 0
-                           && strcmp(cmd, "piecewise") != 0 && strcmp(cmd, "implicit") != 0))) {
+       && (strcmp(cmd, "ellipse") != 0 && strcmp(cmd, "hyperbola") != 0
+           && strcmp(cmd, "piecewise") != 0 && strcmp(cmd, "implicit") != 0)) {
         free(src);
         status = "= goes in solve(, system(, piecewise(, implicit( or a conic";
         return false;

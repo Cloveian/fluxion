@@ -41,6 +41,7 @@ TestType resolve_type(char *type) {
     if(!strcmp(type, "factortext")) return TEST_FACTOR_TEXT;
     if(!strcmp(type, "simplifytext")) return TEST_SIMPLIFY_TEXT;
     if(!strcmp(type, "steps"))      return TEST_STEPS;
+    if(!strcmp(type, "truth"))      return TEST_TRUTH;
     if(!strcmp(type, "expand"))     return TEST_EXPAND;
     if(!strcmp(type, "deriv"))      return TEST_DERIV;
     if(!strcmp(type, "solve"))      return TEST_SOLVE;
@@ -570,30 +571,75 @@ static bool test_system_steps(test_t *t) {
     return passed;
 }
 
-/*Fluxion: steps; left<right (or > <= >=); var; the lines. the chart's test points are written |tX... (|t-3), a flipped sign |/-2flip*/
-static bool test_ineq_steps(test_t *t) {
-    pcas_ast_t *left, *right;
-    char *sign = strpbrk(t->arg1, "<>"), got[MAX_PAR * 2] = "", rel;
+/*left<right and friends (= too) split and parsed, rel is = < > l (<=) g (>=). cuts arg1 in two*/
+static bool parse_relation(test_t *t, const char *what, pcas_ast_t **left, pcas_ast_t **right, char *rel) {
+    char *sign = strpbrk(t->arg1, "<>=");
     pcas_error_t err;
-    steps_t s;
     int len = 1;
-    bool passed;
 
-    rel = *sign == '<' ? 'l' : 'g';
-    if(sign[1] != '=') {
-        rel = *sign;
-    } else {
+    *left = *right = NULL;
+    if(sign == NULL) {
+        printf("Test failed on line %u. No =, < or > in the %s\n", t->line, what);
+        return false;
+    }
+    *rel = *sign;
+    if(*sign != '=' && sign[1] == '=') {
+        *rel = *sign == '<' ? 'l' : 'g';
         len = 2;
     }
     *sign = '\0';
-    left = parse((uint8_t*)t->arg1, strlen(t->arg1), str_table, &err);
-    right = err == E_SUCCESS ? parse((uint8_t*)sign + len, strlen(sign + len), str_table, &err) : NULL;
-    if(err != E_SUCCESS || left == NULL || right == NULL) {
-        printf("Test failed on line %u. Unable to parse the inequality\n", t->line);
-        ast_Cleanup(left);
-        ast_Cleanup(right);
+    *left = parse((uint8_t*)t->arg1, strlen(t->arg1), str_table, &err);
+    *right = err == E_SUCCESS ? parse((uint8_t*)sign + len, strlen(sign + len), str_table, &err) : NULL;
+    if(err != E_SUCCESS || *left == NULL || *right == NULL) {
+        printf("Test failed on line %u. Unable to parse the %s\n", t->line, what);
+        ast_Cleanup(*left);
+        ast_Cleanup(*right);
         return false;
     }
+    return true;
+}
+
+/*Fluxion: truth; 23X=22X; false,X=1. true,simplify / true,numerically / false,numbers / unknown. a counterexample is each letter and its value*/
+static bool test_truth(test_t *t) {
+    pcas_ast_t *left, *right;
+    char got[MAX_PAR] = "", rel, piece[32];
+    truth_t tr;
+    int result, j;
+    bool passed;
+
+    if(!parse_relation(t, "statement", &left, &right, &rel))
+        return false;
+    result = truth_of(left, right, rel, &tr);
+    strcpy(got, result == TRUTH_TRUE ? "true" : result == TRUTH_FALSE ? "false" : "unknown");
+    if(tr.route != NULL && strcmp(tr.route, "counterexample") != 0) {
+        strcat(got, ",");
+        strcat(got, tr.route);
+    }
+    for(j = 0; result == TRUTH_FALSE && j < tr.nvars; j++) {
+        sprintf(piece, "%c%c=%d", j == 0 ? ',' : ' ', (char)tr.var[j], tr.num[j]);
+        strcat(got, piece);
+        if(tr.den[j] != 1) {
+            sprintf(piece, "/%d", tr.den[j]);
+            strcat(got, piece);
+        }
+    }
+    passed = strcmp(got, t->arg2) == 0;
+    if(!passed)
+        printf("Test failed on line %u. Expected %s but got %s\n", t->line, t->arg2, got);
+    ast_Cleanup(left);
+    ast_Cleanup(right);
+    return passed;
+}
+
+/*Fluxion: steps; left<right (or > <= >=); var; the lines. the chart's test points are written |tX... (|t-3), a flipped sign |/-2flip*/
+static bool test_ineq_steps(test_t *t) {
+    pcas_ast_t *left, *right;
+    char got[MAX_PAR * 2] = "", rel;
+    steps_t s;
+    bool passed;
+
+    if(!parse_relation(t, "inequality", &left, &right, &rel))
+        return false;
     if(!steps_ineq(left, right, rel, (Symbol)t->arg2[0], &s))
         strcpy(got, "none");
     else
@@ -1064,6 +1110,8 @@ bool test_Run(test_t *t) {
         return test_system(t);
     if(t->type == TEST_STEPS)
         return test_steps(t);
+    if(t->type == TEST_TRUTH)
+        return test_truth(t);
     if(t->type == TEST_ANTIDERIV)
         return test_antideriv(t);
 

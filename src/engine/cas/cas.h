@@ -383,4 +383,17 @@ int poly_degree(pcas_ast_t *e, Symbol var, pcas_ast_t **lead);
 /*Fluxion: the same, and c[0] + c[1]var + c[2]var^2 into c (new trees, NULL for 0, all NULL at -1). higher terms are left out*/
 int poly_coefs(pcas_ast_t *e, Symbol var, pcas_ast_t *c[3]);
 
+/*Fluxion: left rel right (rel is = < > l for <= and g for >=) true for every value of its letters (truth.c). algebra first, then a counterexample for false, and all the sample points agreeing is only a numeric yes (route says so). TRUTH_UNKNOWN when neither works*/
+#define TRUTH_TRUE 1
+#define TRUTH_FALSE 0
+#define TRUTH_UNKNOWN (-1)
+typedef struct {
+    const char *route; /*how it was decided, "simplify" or "counterexample"*/
+    int points; /*sample points that agreed, for a numeric yes*/
+    int nvars;
+    Symbol var[3]; /*the letters a counterexample is for, and what each one is: num/den*/
+    int num[3], den[3];
+} truth_t;
+int truth_of(pcas_ast_t *left, pcas_ast_t *right, char rel, truth_t *t);
+
 #endif

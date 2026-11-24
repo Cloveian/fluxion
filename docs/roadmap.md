@@ -54,6 +54,7 @@
 - [x] Geometry formulas (area, perimeter, volume, angles). circle( box( polygon( etc, angles from triangle and polygon
 - [x] Probability (nCr, nPr, and pand / por for independent events)
 - [x] GCD, LCM and prime factorisation
+- [x] True / false for a bare equation or inequality, 23x=22x is false and says x = 1
 - [x] Percent. over 100 like the nspire, from the catalog (the 84 has no % key), ?!▸ on the nspire
 - [ ] Defining and calling functions like f(x)
 - [x] Domain and range. range(f,x) does pieces between holes and asymptotes, no trig yet
