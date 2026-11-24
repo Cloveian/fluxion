@@ -14,7 +14,12 @@ typedef struct {
     pcas_ast_t *u[SUBS_MAX], *g[SUBS_MAX];
     pcas_ast_t *all; /*the whole integral, U+2x cos(x^2) has a U outside f*/
     int n;
+    int parts; /*integrations by parts so far*/
 } subs_t;
+
+#define PARTS_MAX 4 /*e^x sin(x) goes around forever, x^3 sin(x) needs 3*/
+
+static pcas_ast_t *integral_of(pcas_ast_t *I, steps_t *s);
 
 /*u is a*x + b: a, new. NULL for anything else (or a = 0)*/
 static pcas_ast_t *linear(pcas_ast_t *u, pcas_ast_t *x) {
@@ -320,6 +325,84 @@ static const char *usub(pcas_ast_t *e, subs_t *subs) {
     return NULL;
 }
 
+/*which piece goes first as u in by parts (LIATE), 0 when it isn't one of those: 5 log, 4 inverse trig, 3 a power of x, 2 sin or cos, 1 a number to the x*/
+static int liate(pcas_ast_t *p, pcas_ast_t *x) {
+    Symbol s = x->op.symbol;
+
+    if(ast_Compare(p, x))
+        return 3;
+    if(p->type != NODE_OPERATOR || !has_symbol(p, s))
+        return 0;
+    switch(optype(p)) {
+    case OP_LOG: return 5;
+    case OP_SIN_INV: case OP_COS_INV: case OP_TAN_INV: return 4;
+    case OP_SIN: case OP_COS: return 2;
+    case OP_POW:
+        if(ast_Compare(ast_ChildGet(p, 0), x) && !has_symbol(ast_ChildGet(p, 1), s))
+            return 3;
+        return !has_symbol(ast_ChildGet(p, 0), s) ? 1 : 0;
+    default:
+        return 0;
+    }
+}
+
+/*∫u dv = u v - ∫v du. u is the higest of LIATE in a product, or the whole of a log or inverse trig with dv = 1. v has to come out whole (no integral left in it), the new integral goes round the rules again*/
+static const char *by_parts(pcas_ast_t *e, subs_t *subs) {
+    static int depth; /*v is worked out by integral_of, which can want its own parts*/
+    pcas_ast_t *f = ast_ChildGet(e, 0), *x = ast_ChildGet(e, 1), *u = NULL, *dv, *c, *v, *du, *I;
+    int rank = 0, best = 0, tie = 0;
+
+    if(subs->parts >= PARTS_MAX || depth > 1)
+        return NULL;
+    if(isoptype(f, OP_MULT)) {
+        for(c = ast_ChildGet(f, 0); c != NULL; c = c->next) {
+            rank = liate(c, x);
+            if(rank > best) {
+                best = rank;
+                u = c;
+                tie = 0;
+            } else if(rank == best && rank > 0) {
+                tie = 1;
+            }
+        }
+        if(u == NULL || tie)
+            return NULL;
+        dv = ast_MakeOperator(OP_MULT);
+        for(c = ast_ChildGet(f, 0); c != NULL && dv != NULL; c = c->next)
+            if(c != u)
+                ast_ChildAppend(dv, ast_Copy(c));
+        if(dv != NULL && ast_ChildLength(dv) == 1) { /*a product of one is just it*/
+            c = ast_ChildRemoveIndex(dv, 0);
+            ast_Cleanup(dv);
+            dv = c;
+        }
+    } else if(liate(f, x) >= 4) {
+        u = f;
+        dv = ast_MakeInt(1);
+    } else {
+        return NULL;
+    }
+    if(dv == NULL)
+        return NULL;
+
+    I = integral(dv, x);
+    depth++;
+    v = I != NULL ? integral_of(I, NULL) : NULL;
+    depth--;
+    ast_Cleanup(I);
+    du = v != NULL ? slope_of(u, x) : NULL;
+    if(v == NULL || du == NULL || pcas_cancelled) {
+        ast_Cleanup(v);
+        ast_Cleanup(du);
+        return NULL;
+    }
+    subs->parts++;
+    replace_node(e, ast_MakeBinary(OP_ADD,
+        ast_MakeBinary(OP_MULT, ast_Copy(u), ast_Copy(v)),
+        ast_MakeBinary(OP_MULT, ast_MakeInt(-1), integral(ast_MakeBinary(OP_MULT, v, du), x))));
+    return "integration by parts";
+}
+
 /*one rule on the integral node e, in place. its name, NULL when nothing fits*/
 static const char *one_rule(pcas_ast_t *e, subs_t *subs) {
     pcas_ast_t *f = ast_ChildGet(e, 0), *x = ast_ChildGet(e, 1), *n, *c, *rest;
@@ -353,7 +436,9 @@ static const char *one_rule(pcas_ast_t *e, subs_t *subs) {
         replace_node(e, n);
         return name;
     }
-    return usub(e, subs);
+    if((name = usub(e, subs)) != NULL)
+        return name;
+    return by_parts(e, subs);
 }
 
 /*F for the integral node I, new. NULL when some piece has no rule. the lines go in s when it isn't NULL*/
@@ -365,6 +450,7 @@ static pcas_ast_t *integral_of(pcas_ast_t *I, steps_t *s) {
     int n = 0, i, had, rounds = 0;
 
     subs.n = 0;
+    subs.parts = 0;
     if((cur = integral(ast_Copy(ast_ChildGet(I, 0)), x)) == NULL)
         return NULL;
     subs.all = cur;
