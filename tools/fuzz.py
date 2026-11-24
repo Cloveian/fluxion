@@ -43,7 +43,7 @@ def gen(d):
     if k < 0.98: return f"({a})^({b})"
     return f"cos({a})"
 
-TOK = re.compile(r"(?:sqrt|ln|abs|asin|acos|atan|logb|sin|cos|tan|root|pi|e|i|X|Y|N)|\d+(?:\.\d+)?|[-+*/^()_]")
+TOK = re.compile(r"(?:sqrt|ln|abs|asin|acos|atan|logb|sin|cos|tan|root|pi|e|i|X|Y|N)|\d+(?:\.\d+)?|[-+*/^()_,]")
 ATOM = r"(?:[\w.]+(?:\((?:[^()]|\([^()]*\))*\))?|\((?:[^()]|\([^()]*\))*\))"
 
 def to_sympy(s):

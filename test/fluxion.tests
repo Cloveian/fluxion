@@ -765,6 +765,11 @@ solve; asin(X)=4; X; false
 solve; cos(X)=3/2; X; false
 solve; sin(X)^2=3/2; X; false
 solve; sin(3X)=-3/2; X; false
+#a polynomial in one function, sin / cos / e^x get solved as the letter first
+solve; cos(X)^2=cos(X); X; pi/2+Npi,2piN
+solve; 2sin(X)^2_sin(X)_1=0; X; (-pi)/6+2piN,2piN+(7pi)/6,pi/2+2piN
+solve; e^(2X)_3e^X+2=0; X; 0,ln(2)
+solve; e^(2X)_4e^X+5=0; X; false
 solve; asin(X)=pi/2; X; 1
 solve; acos(X)=-1; X; false
 solve; acos(X)=pi; X; -1

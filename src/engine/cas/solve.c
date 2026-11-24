@@ -1730,6 +1730,135 @@ static void clear_roots(pcas_ast_t **out) {
     }
 }
 
+/*Fluxion: the first sin / cos / tan or base^(var stuff) in e*/
+static pcas_ast_t *atom_of(pcas_ast_t *e, Symbol var) {
+    pcas_ast_t *c, *a;
+
+    if(e->type != NODE_OPERATOR)
+        return NULL;
+    if((isoptype(e, OP_SIN) || isoptype(e, OP_COS) || isoptype(e, OP_TAN)) && has_symbol(e, var))
+        return e;
+    if(isoptype(e, OP_POW) && !has_symbol(ast_ChildGet(e, 0), var) && has_symbol(ast_ChildGet(e, 1), var))
+        return e;
+    for(c = ast_ChildGet(e, 0); c != NULL; c = c->next)
+        if((a = atom_of(c, var)) != NULL)
+            return a;
+    return NULL;
+}
+
+/*Fluxion: every g in e becomes u, e^(2x) is u^2 for g = e^x. false when a power of the base isn't a whole mutliple of g's*/
+static bool swap_atom(pcas_ast_t *e, pcas_ast_t *g, Symbol var, Symbol u) {
+    pcas_ast_t *c, *q;
+
+    if(ast_Compare(e, g)) {
+        replace_node(e, ast_MakeSymbol(u));
+        return true;
+    }
+    if(e->type != NODE_OPERATOR)
+        return true;
+    if(isoptype(g, OP_POW) && isoptype(e, OP_POW) && ast_Compare(ast_ChildGet(e, 0), ast_ChildGet(g, 0))
+       && has_symbol(ast_ChildGet(e, 1), var)) {
+        q = ast_MakeBinary(OP_DIV, ast_Copy(ast_ChildGet(e, 1)), ast_Copy(ast_ChildGet(g, 1)));
+        if(q == NULL)
+            return false;
+        simplify(q, SIMP_SOLVE);
+        fold_fraction(q);
+        if(q->type != NODE_NUMBER || !mp_rat_is_integer(q->op.num)) {
+            ast_Cleanup(q);
+            return false;
+        }
+        replace_node(e, ast_MakeBinary(OP_POW, ast_MakeSymbol(u), q));
+        return true;
+    }
+    for(c = ast_ChildGet(e, 0); c != NULL; c = c->next)
+        if(!swap_atom(c, g, var, u))
+            return false;
+    return true;
+}
+
+/*Fluxion: a polynomial in one sin / cos / tan / exponential, 2sin(x)^2 - sin(x) - 1 = 0 or e^(2x) - 3e^x + 2 = 0. solved for a letter u first, then each u = atom for var*/
+static int solve_atom(pcas_ast_t *e, Symbol var, pcas_ast_t **out, bool complex) {
+    static int depth = 0; /*u = sin(x^2 + x) would come straight back here*/
+    pcas_ast_t *a = atom_of(e, var), *g, *c, *us[SOLVE_MAX] = {NULL};
+    Symbol u;
+    int nu, n = 0, i, j;
+
+    if(a == NULL || depth > 0)
+        return SOLVE_UNKNOWN;
+    g = ast_Copy(a);
+    c = ast_Copy(e);
+    if(g == NULL || c == NULL) {
+        ast_Cleanup(g);
+        ast_Cleanup(c);
+        return SOLVE_UNKNOWN;
+    }
+    if(isoptype(g, OP_POW)) /*e^(2x) as e^x, the powers get measured in it*/
+        replace_node(ast_ChildGet(g, 1), ast_MakeSymbol(var));
+    for(u = SYM_Z; u > SYM_A && (u == var || has_symbol(e, u)); u--)
+        ;
+    if(!swap_atom(c, g, var, u) || has_symbol(c, var)) {
+        ast_Cleanup(g);
+        ast_Cleanup(c);
+        return SOLVE_UNKNOWN;
+    }
+    depth++;
+    nu = solve_ex(c, u, us, false);
+    ast_Cleanup(c);
+    if(nu < 0)
+        n = SOLVE_UNKNOWN;
+    for(i = 0; i < nu && n >= 0 && !pcas_cancelled; i++) {
+        pcas_ast_t *eq = ast_MakeBinary(OP_ADD, ast_Copy(g), ast_MakeBinary(OP_MULT, ast_MakeInt(-1), ast_Copy(us[i]))), *part[SOLVE_MAX] = {NULL};
+        int np = eq != NULL ? solve_ex(eq, var, part, complex) : SOLVE_UNKNOWN;
+
+        ast_Cleanup(eq);
+        if(np < 0 || n + np > SOLVE_MAX)
+            n = SOLVE_UNKNOWN;
+        for(j = 0; j < np && n >= 0; j++)
+            out[n++] = part[j];
+        for(; j < np; j++)
+            ast_Cleanup(part[j]);
+    }
+    depth--;
+    for(i = 0; i < nu; i++)
+        ast_Cleanup(us[i]);
+    ast_Cleanup(g);
+    if(n < 0)
+        clear_roots(out);
+    return n;
+}
+
+/*Fluxion: a root twice is once. sin(x) = 1 gives pi/2 + 2pi n and 2pi n + pi/2*/
+static int drop_repeats(pcas_ast_t **out, int n) {
+    int i, j, k;
+
+    for(i = 1; i < n; i++) {
+        pcas_ast_t *a = ast_Copy(out[i]);
+        bool same = false;
+
+        if(a == NULL)
+            break;
+        simplify_canonical_form(a, CANONICAL_ALL);
+        for(j = 0; j < i && !same; j++) {
+            pcas_ast_t *b = ast_Copy(out[j]);
+
+            if(b == NULL)
+                break;
+            simplify_canonical_form(b, CANONICAL_ALL);
+            same = ast_Compare(a, b);
+            ast_Cleanup(b);
+        }
+        ast_Cleanup(a);
+        if(same) {
+            ast_Cleanup(out[i]);
+            for(k = i; k < n - 1; k++)
+                out[k] = out[k + 1];
+            out[--n] = NULL;
+            i--;
+        }
+    }
+    return n;
+}
+
 int solve_ex(pcas_ast_t *expr, Symbol var, pcas_ast_t **out, bool complex) {
     pcas_ast_t *e = ast_Copy(expr);
     coefs_t p;
@@ -1782,6 +1911,10 @@ int solve_ex(pcas_ast_t *expr, Symbol var, pcas_ast_t **out, bool complex) {
         clear_roots(out);
         n = solve_root_away(e, expr, var, out, complex);
     }
+    if(n == SOLVE_UNKNOWN && !pcas_cancelled) { /*Fluxion*/
+        clear_roots(out);
+        n = solve_atom(e, var, out, complex);
+    }
     if(n > 0 && !pcas_cancelled && has_root_of(expr, var)) { /*Fluxion: sqrt(-x) = -2 got x = -4 off simplify's i sqrt(x)*/
         int i, k;
 
@@ -1803,6 +1936,7 @@ int solve_ex(pcas_ast_t *expr, Symbol var, pcas_ast_t **out, bool complex) {
         clear_roots(out); /*roots found before giving up aren't all of them*/
     else if(n > 0) {
         sort_roots(out, n);
+        n = drop_repeats(out, n);
     }
 
     ast_Cleanup(e);
