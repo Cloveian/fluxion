@@ -176,30 +176,40 @@ static box_t *slopes(pcas_ast_t *f, Symbol var, char shown, const char **message
     return col;
 }
 
-/* implicit(x^2+y^2=25, y, x): dy/dx = -(dF/dx)/(dF/dy) of F = left - right. y and x are the defaults */
-static void implicit(char **piece, int n, box_t *in) {
-    pcas_ast_t *l, *r = NULL, *f, *x, *y, *fx, *fy, *answer;
-    Symbol dep = SYM_Y, ind = SYM_X;
-    char label[12] = "dy/dx =", *eq = strchr(piece[0], '=');
+/* implicit(x^2+y^2=25, y, x): left - right in *f, y and x in dep and ind (defaults when missing), their letters go in label. what's wrong with it, or NULL */
+static const char *read_implicit(char **piece, int n, pcas_ast_t **f, Symbol *dep, Symbol *ind, char *label) {
+    pcas_ast_t *l, *r = NULL;
     pcas_error_t err = E_SUCCESS;
-    const char *message = NULL;
-    box_t *out = NULL;
+    char *eq = strchr(piece[0], '=');
 
-    if(eq == NULL || (n > 1 && !args_var(piece[1], &dep, &label[1])) || (n > 2 && !args_var(piece[2], &ind, &label[4]))
-       || dep == ind) {
-        push(in, NULL, cmds[C_IMPLICIT].usage, 0);
-        return;
-    }
+    *dep = SYM_Y;
+    *ind = SYM_X;
+    if(eq == NULL || (n > 1 && !args_var(piece[1], dep, &label[1])) || (n > 2 && !args_var(piece[2], ind, &label[4])) || *dep == *ind)
+        return cmds[C_IMPLICIT].usage;
     *eq = '\0';
     l = args_parse(piece[0], &err);
     if(l != NULL)
         r = args_parse(eq + 1, &err);
     if(l == NULL || r == NULL) {
         ast_Cleanup(l);
-        push(in, NULL, error_text[err], 0);
+        return error_text[err];
+    }
+    *f = ast_MakeBinary(OP_ADD, l, ast_MakeBinary(OP_MULT, ast_MakeInt(-1), r));
+    return NULL;
+}
+
+/* implicit(x^2+y^2=25, y, x): dy/dx = -(dF/dx)/(dF/dy) of F = left - right */
+static void implicit(char **piece, int n, box_t *in) {
+    pcas_ast_t *f = NULL, *x, *y, *fx, *fy, *answer;
+    Symbol dep, ind;
+    char label[12] = "dy/dx =";
+    const char *message = read_implicit(piece, n, &f, &dep, &ind, label);
+    box_t *out = NULL;
+
+    if(message != NULL) {
+        push(in, NULL, message, 0);
         return;
     }
-    f = ast_MakeBinary(OP_ADD, l, ast_MakeBinary(OP_MULT, ast_MakeInt(-1), r));
     x = ast_MakeSymbol((char)ind);
     y = ast_MakeSymbol((char)dep);
     fx = slope_of(f, x);
@@ -273,6 +283,8 @@ bool calc1_run(const char *cmd, char *src, box_t *in) {
     message = read_command(c, piece, n, a, &var, &shown);
     if(message != NULL) {
         push(in, NULL, message, 0);
+        for(i = 0; i < ARGS_MAX; i++)
+            ast_Cleanup(a[i]);
         return true;
     }
 
@@ -314,11 +326,24 @@ const char *calc1_work(const char *cmd, char *src) {
 
     for(c = 0; c < C_COUNT && strcmp(cmd, cmds[c].name) != 0; c++)
         ;
-    if(c == C_COUNT || c == C_IMPLICIT || c == C_INCREASING)
+    if(c == C_COUNT || c == C_INCREASING)
         return "no steps for that one yet";
     n = args_split(src, piece, ARGS_MAX);
     if(n < cmds[c].least || n > cmds[c].most)
         return cmds[c].usage;
+    if(c == C_IMPLICIT) {
+        char label[12];
+        Symbol dep, ind;
+
+        message = read_implicit(piece, n, &a[0], &dep, &ind, label);
+        if(message == NULL) {
+            a[1] = ast_MakeSymbol((char)dep); /*the y, for the steps*/
+            message = work_open_command(STEPS_IMPLICIT, a[0], a[1], ind);
+        }
+        for(i = 0; i < ARGS_MAX; i++)
+            ast_Cleanup(a[i]);
+        return message;
+    }
     message = read_command(c, piece, n, a, &var, &shown);
     if(message == NULL)
         message = work_open_command(c == C_TANGENT ? STEPS_TANGENT : c == C_CRITICAL ? STEPS_CRITICAL : c == C_EXTREMA ? STEPS_EXTREMA : STEPS_INFLECT,

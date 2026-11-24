@@ -1099,7 +1099,7 @@ static bool is_action(const item_t *it) {
     return strcmp(it->label, "clear history") == 0 || strcmp(it->label, "show steps") == 0;
 }
 
-/* the steps page for the answer highlighted when the menu opened, or the last one. solve(, system(, expand(, factor(, d/dx, limit( and integral( */
+/* the steps page for the answer highlighted when the menu opened, or the last one. solve(, system(, expand(, factor(, tangent( and its kin, d/dx, limit( and integral( */
 static void show_steps(void) {
     int at = menu_from >= 0 ? menu_from : history_len - 1;
     const char *cmd;
@@ -1125,7 +1125,7 @@ static void show_steps(void) {
         return;
     }
     if(cmd != NULL && (strcmp(cmd, "tangent") == 0 || strcmp(cmd, "critical") == 0 || strcmp(cmd, "extrema") == 0
-                       || strcmp(cmd, "inflect") == 0)) {
+                       || strcmp(cmd, "inflect") == 0 || strcmp(cmd, "implicit") == 0)) {
         src = ed_command_arg(&view);
         status = src != NULL ? calc1_work(cmd, src) : "nothing to show the work for";
         free(src);

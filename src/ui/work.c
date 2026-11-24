@@ -335,8 +335,13 @@ void work_close(void) {
     open = false;
 }
 
+/* a plain solve, the only page with the method soft keys */
+static bool has_methods(void) {
+    return calc == NULL && rel == 0 && sys_n == 0 && cmd_kind < 0;
+}
+
 bool work_act(action_t a) {
-    if(a.op == A_SOFT && calc == NULL && rel == 0 && sys_n == 0 && cmd_kind < 0) {
+    if(a.op == A_SOFT && has_methods()) {
         Method m = (Method)a.n;
 
         /* one that doesn't fit leaves the steps as they are */
@@ -392,10 +397,10 @@ void work_draw(void) {
         screen_color(COL_DIM);
         screen_vline(x0 + w - 2, y0 + (bottom - y0) * top / nrows, bar_h > 2 ? bar_h : 2);
     }
-    if(calc == NULL && rel == 0 && sys_n == 0 && cmd_kind < 0)
+    if(has_methods())
         draw_softkeys(&areas.keys, method_keys, (int)method, off);
 }
 
 const char *const *work_softkeys(void) {
-    return calc == NULL && rel == 0 && sys_n == 0 && cmd_kind < 0 ? method_keys : NULL;
+    return has_methods() ? method_keys : NULL;
 }

@@ -1,8 +1,8 @@
-/*Fluxion: steps for tangent(, critical(, extrema( and inflect(, built from the derivative and equation steps. not in upstream PineappleCAS.*/
+/*Fluxion: steps for tangent(, critical(, extrema(, inflect( and implicit(, built from the *dih*rivative and equation steps. not in upstream PineappleCAS.*/
 
 #include "steps.h"
 
-/*d/dvar of f (at the point at, or at var itself) as derivative steps, new lines on the end of out. the last line is the slope, as a tree: new. NULL when a rule doesn't fit*/
+/*d/dvar of f (at the point at, or at var itself) as *dih*rivative steps, new lines on the end of out. the last line is the slope, as a tree: new. NULL when a rule doesn't fit*/
 static pcas_ast_t *derive_lines(steps_t *out, pcas_ast_t *f, pcas_ast_t *at, Symbol var) {
     static steps_t t;
     pcas_ast_t *d = ast_MakeOperator(OP_DERIV), *slope;
@@ -81,7 +81,7 @@ done:
 
 /*y = m(x - a) + y0, worked out into y = mx + b*/
 static bool tangent_lines(steps_t *out, pcas_ast_t *f, pcas_ast_t *a, Symbol var) {
-    pcas_ast_t *m, *y0, *x = ast_MakeSymbol(var), *y, *line, *point, *sub;
+    pcas_ast_t *m, *y0, *x = ast_MakeSymbol(var), *y, *line, *sub;
     Symbol ys = var == SYM_Y ? SYM_Z : SYM_Y;
 
     if((m = derive_lines(out, f, a, var)) == NULL) {
@@ -92,16 +92,9 @@ static bool tangent_lines(steps_t *out, pcas_ast_t *f, pcas_ast_t *a, Symbol var
     steps_rule(&out->line[out->n - 1], "the point");
     sub = ast_Copy(f);
     substitute(sub, x, a);
-    point = ast_Copy(sub);
-    simplify(point, SIMP_ALL);
-    if(steps_expr(out, sub) == NULL) {
-        ast_Cleanup(m);
-        ast_Cleanup(point);
-        ast_Cleanup(x);
-        return false;
-    }
-    y0 = point;
-    if(steps_expr(out, ast_Copy(y0)) == NULL) {
+    y0 = ast_Copy(sub);
+    simplify(y0, SIMP_ALL);
+    if(steps_expr(out, sub) == NULL || steps_expr(out, ast_Copy(y0)) == NULL) {
         ast_Cleanup(m);
         ast_Cleanup(y0);
         ast_Cleanup(x);
@@ -158,12 +151,33 @@ static bool sign_lines(steps_t *out, pcas_ast_t *d1, pcas_ast_t *d2, Symbol var)
     return ok;
 }
 
+/*dy/dx = -(dF/dx)/(dF/dy): both partials with their steps (the other letter stays put), then the quotient*/
+static bool implicit_lines(steps_t *out, pcas_ast_t *f, Symbol y, Symbol x) {
+    pcas_ast_t *fx = derive_lines(out, f, NULL, x), *fy = NULL, *ans;
+
+    if(fx != NULL) {
+        steps_rule(&out->line[out->n - 1], "now with respect to y");
+        fy = derive_lines(out, f, NULL, y);
+    }
+    if(fx == NULL || fy == NULL || is_ast_int(fy, 0)) {
+        ast_Cleanup(fx);
+        ast_Cleanup(fy);
+        return false;
+    }
+    steps_rule(&out->line[out->n - 1], "dy/dx = -(dF/dx)/(dF/dy)");
+    ans = ast_MakeBinary(OP_DIV, ast_MakeBinary(OP_MULT, ast_MakeInt(-1), fx), fy);
+    simplify(ans, SIMP_ALL);
+    return steps_expr(out, ans) != NULL;
+}
+
 bool steps_command(int kind, pcas_ast_t *f, pcas_ast_t *a, Symbol var, steps_t *out) {
     pcas_ast_t *d1, *d2 = NULL;
     bool ok = false;
 
     out->n = 0;
-    if(kind == STEPS_TANGENT) {
+    if(kind == STEPS_IMPLICIT) {
+        ok = a != NULL && a->type == NODE_SYMBOL && implicit_lines(out, f, a->op.symbol, var);
+    } else if(kind == STEPS_TANGENT) {
         ok = tangent_lines(out, f, a, var);
     } else if((d1 = derive_lines(out, f, NULL, var)) != NULL) {
         if(kind == STEPS_CRITICAL) {

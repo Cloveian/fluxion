@@ -1243,6 +1243,8 @@ steps; factor:2X^3_6X^2; X; 2X^3_6X^2|factor|2X^2(X_3)
 steps; tangent:X^2,3; X; deriv(X^2,X,3)|powerrule|2X|plugin|2*3|6|thepoint|3^2|9|point-slopeform|Y_9=6(X_3)|solvefory|Y=6X_9
 steps; critical:X^3_3X; X; deriv(X^3_3X,X,X)|sumrule|deriv(X^3,X,X)_3|powerrule|3X^2_3|setitto0|3X^2_3=0|+3|3X^2=3|/3|X^2=1|r|X=+-1|X=1orX=-1
 steps; extrema:X^2_4X; X; deriv(X^2_4X,X,X)|sumrule|deriv(X^2,X,X)_4|powerrule|2X_4|setitto0|2X_4=0|+4|2X=4|/2|X=2|theslopeoftheslope|deriv(2X_4,X,X)|sumrule|2|f''there,under0isamaxandover0amin|2>0
+steps; implicit:X^2+Y^2_25,Y; X; deriv(X^2+Y^2_25,X,X)|sumrule|deriv(X^2,X,X)|powerrule|2X|nowwithrespecttoy|deriv(X^2+Y^2_25,Y,Y)|sumrule|deriv(Y^2,Y,Y)|powerrule|2Y|dy/dx=-(dF/dx)/(dF/dy)|(-X)/Y
+steps; implicit:X*Y_1,Y; X; deriv(XY_1,X,X)|sumrule|Y|nowwithrespecttoy|deriv(XY_1,Y,Y)|sumrule|X|dy/dx=-(dF/dx)/(dF/dy)|(-Y)/X
 steps; inflect:X^3; X; deriv(X^3,X,X)|powerrule|3X^2|theslopeofthat|deriv(3X^2,X,X)|constantmultiple|3deriv(X^2,X,X)|powerrule|6X|setitto0|6X=0|/6|X=0
 steps; critical:X*e^(2X); X; deriv(Xe^(2X),X,X)|productrule|Xderiv(e^(2X),X,X)+e^(2X)|exprule,chainrule|2Xe^(2X)+e^(2X)|setitto0|2Xe^(2X)+e^(2X)=0|solve|X=-1/2
 steps; tangent:sin(X),0; X; deriv(sin(X),X,0)|trigrule|cos(X)|plugin|cos(0)|1|thepoint|sin(0)|0|point-slopeform|Y_0=(X_0)|solvefory|Y=X

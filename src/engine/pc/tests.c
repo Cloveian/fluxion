@@ -385,9 +385,9 @@ static void steps_text(const steps_t *s, char *got, unsigned size) {
     }
 }
 
-/*Fluxion: steps; tangent:f,a or critical:f or extrema:f or inflect:f; X; the lines*/
+/*Fluxion: steps; tangent:f,a or critical:f or extrema:f or inflect:f or implicit:f,y (f is already left - right); X; the lines*/
 static bool test_cmd_steps(test_t *t) {
-    static const char *const names[] = { "tangent:", "critical:", "extrema:", "inflect:" };
+    static const char *const names[] = { "tangent:", "critical:", "extrema:", "inflect:", "implicit:" };
     int kind = 0;
     char *src, *comma;
     pcas_error_t err = E_SUCCESS;
@@ -396,10 +396,10 @@ static bool test_cmd_steps(test_t *t) {
     steps_t s;
     bool passed;
 
-    while(kind < 4 && strncmp(t->arg1, names[kind], strlen(names[kind])) != 0)
+    while(kind < (int)(sizeof names / sizeof names[0]) && strncmp(t->arg1, names[kind], strlen(names[kind])) != 0)
         kind++;
     src = t->arg1 + strlen(names[kind]);
-    comma = kind == STEPS_TANGENT ? strchr(src, ',') : NULL;
+    comma = kind == STEPS_TANGENT || kind == STEPS_IMPLICIT ? strchr(src, ',') : NULL;
     if(comma != NULL)
         *comma = '\0';
     f = parse((uint8_t*)src, strlen(src), str_table, &err);
@@ -623,7 +623,7 @@ static bool test_steps(test_t *t) {
     if(strncmp(t->arg1, "expand:", 7) == 0 || strncmp(t->arg1, "factor:", 7) == 0)
         return test_expr_steps(t);
     if(strncmp(t->arg1, "tangent:", 8) == 0 || strncmp(t->arg1, "critical:", 9) == 0 || strncmp(t->arg1, "extrema:", 8) == 0
-       || strncmp(t->arg1, "inflect:", 8) == 0)
+       || strncmp(t->arg1, "inflect:", 8) == 0 || strncmp(t->arg1, "implicit:", 9) == 0)
         return test_cmd_steps(t);
     if(eq != NULL && strchr(t->arg1, ',') != NULL && strpbrk(t->arg1, "<>") == NULL)
         return test_system_steps(t);

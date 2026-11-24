@@ -8,7 +8,7 @@
    was one of these, and then the answer (or a message) is already pushed. src is cut up at the commas */
 bool calc1_run(const char *cmd, char *src, box_t *in);
 
-/* the steps page for tangent(, critical(, extrema( or inflect(, src is what's inside. NULL when it opened, or what to say */
+/* the steps page for tangent(, critical(, extremma( or inflect(, src is what's inside. NULL when it opened, or what to say */
 const char *calc1_work(const char *cmd, char *src);
 
 #endif
