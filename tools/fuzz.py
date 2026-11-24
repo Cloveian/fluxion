@@ -1,5 +1,5 @@
-# random expressions through build-pc/fluxion simplify, checked numerically against sympy
-# usage: python3 tools/fuzz.py [count] [seed] [pos|any]   (pos = letters only get positive test points)
+# random expressions through build-pc/fluxion, checked numerically against sympy
+# usage: python3 tools/fuzz.py [count] [seed] [pos|any] [simplify|expand|factor|derivative] [-v]   (pos = letters only get positive test points)
 import random, re, subprocess, sys
 import sympy as sp
 from sympy.parsing.sympy_parser import parse_expr, standard_transformations, implicit_multiplication_application, convert_xor
@@ -7,12 +7,13 @@ from sympy.parsing.sympy_parser import parse_expr, standard_transformations, imp
 count = int(sys.argv[1]) if len(sys.argv) > 1 else 300
 seed = int(sys.argv[2]) if len(sys.argv) > 2 else 1
 mode = sys.argv[3] if len(sys.argv) > 3 else "any"
+cmd = sys.argv[4] if len(sys.argv) > 4 and sys.argv[4] != "-v" else "simplify"
 random.seed(seed)
 
 X, Y = sp.symbols("X Y")
 tr = standard_transformations + (implicit_multiplication_application, convert_xor)
 rootf = lambda n, v: v ** (1 / sp.sympify(n))
-names = {"rootf": rootf, "X": X, "Y": Y, "e": sp.E, "ln": sp.log, "abs": sp.Abs, "sqrt": sp.sqrt}
+names = {"rootf": rootf, "i": sp.I, "X": X, "Y": Y, "e": sp.E, "ln": sp.log, "abs": sp.Abs, "sqrt": sp.sqrt}
 
 def leaf():
     return random.choice(["X", "X", "Y", "2", "3", "5", "1/2", "3/4", "e", "pi"])
@@ -41,7 +42,7 @@ def gen(d):
     if k < 0.98: return f"({a})^({b})"
     return f"cos({a})"
 
-TOK = re.compile(r"(?:sqrt|ln|abs|sin|cos|tan|root|pi|e|X|Y)|\d+(?:\.\d+)?|[-+*/^()_]")
+TOK = re.compile(r"(?:sqrt|ln|abs|sin|cos|tan|root|pi|e|i|X|Y)|\d+(?:\.\d+)?|[-+*/^()_]")
 ATOM = r"(?:[\w.]+(?:\((?:[^()]|\([^()]*\))*\))?|\((?:[^()]|\([^()]*\))*\))"
 
 def to_sympy(s):
@@ -60,7 +61,7 @@ def to_sympy(s):
     return parse_expr(out, local_dict=names, transformations=tr)
 
 def run(expr):
-    p = subprocess.run(["build-pc/fluxion", "simplify", expr], capture_output=True, text=True, timeout=20)
+    p = subprocess.run(["build-pc/fluxion", cmd, expr] + (["X"] if cmd == "derivative" else []), capture_output=True, text=True, timeout=20)
     m = re.search(r"^Output: (.*)$", p.stdout, re.M)
     return m.group(1) if m else None
 
@@ -89,6 +90,8 @@ for i in range(count):
         skipped += 1; why.append((expr, "no output")); continue  # oom or parse failure
     try:
         fi, fo = to_sympy(expr), to_sympy(out)
+        if cmd == "derivative":
+            fi = sp.diff(fi, X)
     except Exception as ex:
         skipped += 1; why.append((expr, f"{out} ({ex})")); continue
     worst = None
