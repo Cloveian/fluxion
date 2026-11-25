@@ -1228,6 +1228,12 @@ steps; X^3_2X^2_X+2=0; X; X^3_2X^2_X+2=0|factor|(X_1)(X+1)(X_2)=0|onefactorhasto
 steps; X^4_5X^2+4=0; X; X^4_5X^2+4=0|factor|(X_1)(X+1)(X_2)(X+2)=0|onefactorhastobe0|X_1=0orX+1=0orX_2=0orX+2=0|solveeach|X=1orX=-1orX=2orX=-2|alltheroots|X=-2orX=-1orX=1orX=2
 steps; 2X^3_6X^2=0; X; 2X^3_6X^2=0|factor|2X^2(X_3)=0|onefactorhastobe0|X=0orX_3=0|solveeach|X=0orX=3|alltheroots|X=0orX=3
 steps; X^3+X=0; X; X^3+X=0|factor|X(X^2+1)=0|onefactorhastobe0|X=0orX^2+1=0|solveeach|X=0|thenextfactor|X^2+1=0|_1|X^2=-1|r|X=+-sqrt(-1)|X=+-i|X=iorX=-i|alltheroots|X=0orX=-iorX=i
+#a cubic with no rational root, by hand: the square term out, the discriminant, then three real roots by cos or one by cube roots
+steps; X^3_3X+1=0; X; X^3_3X+1=0|thediscriminant,(q/2)^2+(p/3)^3|(1/2)^2+(-3/3)^3|-3/4|under0:threerealroots,k=0,1,2|T=2*1^(1/2)*cos(acos(-1/21^(1/2))/3_(2piK)/3)|x=t-b/3|X=2cos((8pi)/9)orX=2cos((4pi)/9)orX=2cos((2pi)/9)
+steps; X^3+X+1=0; X; X^3+X+1=0|thediscriminant,(q/2)^2+(p/3)^3|(1/2)^2+(1/3)^3|31/108|over0:onerealrootandtwocomplex|T=3root(-1/2+(31/108)^(1/2))+3root(-1/2_(31/108)^(1/2))|x=t-b/3|X=3root(12sqrt(93)_108)/6_((3root(12sqrt(93)+108)))/6
+steps; X^3_2=0; X; X^3_2=0|thediscriminant,(q/2)^2+(p/3)^3|(-2/2)^2+(0/3)^3|1|over0:onerealrootandtwocomplex|T=3root(1+1^(1/2))+3root(1_1^(1/2))|x=t-b/3|X=3root2orX=(isqrt(3))/2^(2/3)_1/2^(2/3)orX=-1/2^(2/3)_(isqrt(3))/2^(2/3)
+steps; 2X^3_6X+2=0; X; 2X^3_6X+2=0|dividebythefirstnumber|X^3_3X+1=0|thediscriminant,(q/2)^2+(p/3)^3|(1/2)^2+(-3/3)^3|-3/4|under0:threerealroots,k=0,1,2|T=2*1^(1/2)*cos(acos(-1/21^(1/2))/3_(2piK)/3)|x=t-b/3|X=2cos((8pi)/9)orX=2cos((4pi)/9)orX=2cos((2pi)/9)
+steps; X^3_3X+1=5; X; X^3_3X+1=5|_5|X^3_3X_4=0|thediscriminant,(q/2)^2+(p/3)^3|(-4/2)^2+(-3/3)^3|3|over0:onerealrootandtwocomplex|T=3root(2+3^(1/2))+3root(2_3^(1/2))|x=t-b/3|X=3root(sqrt(3)+2)+3root(2_sqrt(3))
 steps; sqrt(X)=X^3; X; none
 #a linear system by elimination, every line is the whole system. the last line has to be what solve_system says
 steps; 2X+Y=5,X_Y=1; XY; 2X+Y=5,X_Y=1|swaptwoequations|X_Y=1,2X+Y=5|cancelaletterfromtheothers|X_Y=1,Y=1|cancelaletterfromtheothers|X=2,Y=1

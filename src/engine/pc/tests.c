@@ -717,6 +717,8 @@ static bool test_steps(test_t *t) {
     if(passed && last != NULL && last->eq[0].left->type == NODE_SYMBOL && last->eq[0].pm == NULL) {
         e = ast_MakeBinary(OP_ADD, ast_Copy(left), ast_MakeBinary(OP_MULT, ast_MakeInt(-1), ast_Copy(right)));
         n = solve_ex(e, (Symbol)t->arg2[0], roots, true);
+        if(n < 0) /*a cubic's complex pair isn't found, its real root is*/
+            n = solve_ex(e, (Symbol)t->arg2[0], roots, false);
         for(j = 0; j < last->eqs; j++) {
             for(i = 0; i < n && !same_value(roots[i], last->eq[j].right); i++);
             if(n < 0 || i == n) {
