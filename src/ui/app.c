@@ -995,6 +995,7 @@ static bool run(editor_t *line) {
     box_t *in;
     clock_t start;
     bool primes = false;
+    double number;
 
     if(ed_is_empty(line))
         return false;
@@ -1134,6 +1135,16 @@ static bool run(editor_t *line) {
     if(getenv("FLX_DUMP") != NULL)
         dbg_print_tree(e, 0);
 #endif
+
+    /* no antiderivative: the number, labelled (not in degrees, the trig inside is in radians there) */
+    if(!pcas_cancelled && setting_angle != ANGLE_DEGREES && integral_numeric(e, &number)) {
+        char text[40];
+
+        snprintf(text, sizeof text, "%.7g (numeric)", number);
+        push(in, word_box(text), NULL, (unsigned long)((clock() - start) * 1000 / CLOCKS_PER_SEC));
+        ast_Cleanup(e);
+        return true;
+    }
 
     /* cancelled (or out of memory): the tree is half simplified, nobody wants to see that lol */
     push(in, pcas_cancelled ? NULL : layout_build(e, &draw_font),

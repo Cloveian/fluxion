@@ -650,7 +650,7 @@ static bool test_truth(test_t *t) {
     return passed;
 }
 
-/*Fluxion: numeric; X^5_5X+1=0; X; -1.54165,0.200064,1.4405. what the solver gives up on, found by sign changes, to 1e-5*/
+/*Fluxion: numeric; X^5_5X+1=0; X; -1.54165,0.200064,1.4405. what the solver gives up on, found by sign changes, to 1e-5. or numeric; integral(e^(X^2),X,0,1); X; 1.462652 for the Romberg one*/
 static bool test_numeric(test_t *t) {
     pcas_ast_t *left, *right, *e;
     double got[8], want;
@@ -658,7 +658,16 @@ static bool test_numeric(test_t *t) {
     char rel;
     int n, i;
     bool passed = true;
+    pcas_error_t err;
 
+    if(strncmp(t->arg1, "integral(", 9) == 0) { /*a definite integral with no antiderivative, one value*/
+        e = parse((uint8_t*)t->arg1, strlen(t->arg1), str_table, &err);
+        passed = err == E_SUCCESS && e != NULL && integral_numeric(e, &want) && fabs(want - strtod(p, NULL)) <= 1e-5 * (1 + fabs(want));
+        if(!passed)
+            printf("Test failed on line %u. Expected %s for %s\n", t->line, t->arg3, t->arg1);
+        ast_Cleanup(e);
+        return passed;
+    }
     if(!parse_relation(t, "equation", &left, &right, &rel))
         return false;
     e = ast_MakeBinary(OP_ADD, left, ast_MakeBinary(OP_MULT, ast_MakeInt(-1), right));

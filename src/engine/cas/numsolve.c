@@ -1,4 +1,4 @@
-/*Fluxion: real roots of e = 0 by sign changes, the last resort when solve gives up. about 6 digits (approx is a float), double roots that only touch 0 are missed. not in upstream PineappleCAS.*/
+/*Fluxion: real roots of e = 0 by sign changes and a definite integral by Romberg, the last resorts when the exact ones give up. about 6 digits (approx is a float), double roots that only touch 0 are missed. not in upstream PineappleCAS.*/
 
 #include <math.h>
 
@@ -103,4 +103,47 @@ int solve_numeric(pcas_ast_t *e, Symbol var, double *out, int max) {
 done:
     ast_Cleanup(x);
     return found;
+}
+
+#define ROMBERG 10 /*levels, 2^9 intervals at most*/
+
+bool integral_numeric(pcas_ast_t *I, double *out) {
+    double r[ROMBERG][ROMBERG], a, b, h, sum, v, p;
+    pcas_ast_t *f, *x;
+    int i, j, k;
+
+    if(!isoptype(I, OP_INTEGRAL) || ast_ChildLength(I) != 4)
+        return false;
+    f = ast_ChildGet(I, 0);
+    x = ast_ChildGet(I, 1);
+    if(!approx_float(ast_ChildGet(I, 2), &a) || !approx_float(ast_ChildGet(I, 3), &b))
+        return false;
+    if(a == b) {
+        *out = 0;
+        return true;
+    }
+    h = b - a;
+    if(!value_at(f, x, a, &sum) || !value_at(f, x, b, &v)) /*an end that's a pole or a log of 0*/
+        return false;
+    r[0][0] = h * (sum + v) / 2;
+    for(i = 1; i < ROMBERG; i++) {
+        if(pcas_check())
+            return false;
+        h /= 2;
+        for(sum = 0, k = 1; k < (1 << i); k += 2) {
+            if(!value_at(f, x, a + k * h, &v))
+                return false;
+            sum += v;
+        }
+        r[i][0] = r[i - 1][0] / 2 + h * sum;
+        for(j = 1, p = 1; j <= i; j++) {
+            p *= 4;
+            r[i][j] = (p * r[i][j - 1] - r[i - 1][j - 1]) / (p - 1);
+        }
+        if(i >= 3 && fabs(r[i][i] - r[i - 1][i - 1]) <= 1e-6 * (1 + fabs(r[i][i]))) {
+            *out = r[i][i];
+            return true;
+        }
+    }
+    return false;
 }

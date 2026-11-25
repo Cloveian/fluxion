@@ -45,19 +45,20 @@ Everything Fluxion does right now, as tables. Yes / partly / no first, the other
 
 ### Calculus
 
-| Feature               |       |
-| --------------------- | ----- |
-| *Dih*rivatives        | yes\* |
-| Derivative at a value | yes\* |
-| Integrals             | yes\* |
-| Limits                | yes\* |
-| Tangent line          | yes   |
-| Implicit derivatives  | yes\* |
-| Critical points       | yes\* |
-| Max, min, inflections | yes\* |
-| Up and down intervals | yes   |
-| Taylor polynomials    | yes   |
-| Sums and products     | yes\* |
+| Feature                      |       |
+| ---------------------------- | ----- |
+| *Dih*rivatives               | yes\* |
+| Derivative at a value        | yes\* |
+| Integrals                    | yes\* |
+| Numeric integrals (6 digits) | yes\* |
+| Limits                       | yes\* |
+| Tangent line                 | yes   |
+| Implicit derivatives         | yes\* |
+| Critical points              | yes\* |
+| Max, min, inflections        | yes\* |
+| Up and down intervals        | yes   |
+| Taylor polynomials           | yes   |
+| Sums and products            | yes\* |
 
 ### Systems
 

@@ -236,6 +236,8 @@ int solve(pcas_ast_t *e, Symbol var, pcas_ast_t **out);
 int solve_ex(pcas_ast_t *e, Symbol var, pcas_ast_t **out, bool complex);
 /*Fluxion: real roots of e = 0 by sign changes, up to max in out, about 6 digits (numsolve.c). the last resort after solve gives up. -1 when e can't be worked out as numbers (another letter), 0 when it found none*/
 int solve_numeric(pcas_ast_t *e, Symbol var, double *out, int max);
+/*Fluxion: integral(f, x, a, b) with numbers for a and b, by Romberg to about 6 digits. false when an end or a point on the way isn't a real number, or it doesn't settle (numsolve.c)*/
+bool integral_numeric(pcas_ast_t *I, double *out);
 /*Fluxion: the other children of e, copied, as a sum or a product of op (solve.c, layers.c)*/
 pcas_ast_t *rest_of(pcas_ast_t *e, pcas_ast_t *skip, OperatorType op);
 /*Fluxion: e is a whole number that fits n*/

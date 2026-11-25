@@ -1369,6 +1369,11 @@ numeric; tan(X)=X; X; -4.493409,0,4.493409
 numeric; X*e^X=1; X; 0.5671433
 numeric; ln(X)+X^2=3; X; 1.592143
 numeric; 1/X=0; X;
+#definite integrals with no antiderivative, Romberg, 6 digits (values from scipy)
+numeric; integral(e^(X^2),X,0,1); X; 1.462652
+numeric; integral(sin(X)/X,X,1,3); X; 0.9025695
+numeric; integral(sqrt(1+X^3),X,0,2); X; 3.241309
+numeric; integral(e^(-X^2),X,-2,2); X; 1.764163
 #int / floor goes down for a negative fraction too. round is half away from 0 like the TI, mod has the sign of the second, min and max of numbers, and the complex parts
 simplify; int(0_1/2); -1
 simplify; int(0_7/2); -4
