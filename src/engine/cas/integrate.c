@@ -285,7 +285,7 @@ static const char *table(pcas_ast_t *f, pcas_ast_t *x, pcas_ast_t **F) {
     }
 }
 
-/*∫f dx, f taken*/
+/*integral of f dx, f taken*/
 static pcas_ast_t *integral(pcas_ast_t *f, pcas_ast_t *x) {
     pcas_ast_t *i = ast_MakeOperator(OP_INTEGRAL);
 
@@ -404,7 +404,7 @@ static bool high_even_power(pcas_ast_t *e, pcas_ast_t *x) {
     return false;
 }
 
-/*u = some piece g where f/g' is all g, 2x cos(x^2) is cos(u) with u = x^2. ∫f dx becomes ∫(f/g') du*/
+/*u = some piece g where f/g' is all g, 2x cos(x^2) is cos(u) with u = x^2. the integral of f dx becomes the one of f/g' du*/
 static const char *usub(pcas_ast_t *e, subs_t *subs) {
     pcas_ast_t *f = ast_ChildGet(e, 0), *x = ast_ChildGet(e, 1), *cand[CANDS_MAX], *g, *q, *u, *sq = NULL;
     unsigned short how = SIMP_ALL; /*the identity passes were most of the time on a plain fraction, nothing in it for them*/
@@ -476,7 +476,7 @@ static int liate(pcas_ast_t *p, pcas_ast_t *x) {
     }
 }
 
-/*∫u dv = u v - ∫v du. u is the higest of LIATE in a product, or the whole of a log or inverse trig with dv = 1. v has to come out whole (no integral left in it), the new integral goes round the rules again*/
+/*integral u dv = u v - integral v du. u is the higest of LIATE in a product, or the whole of a log or inverse trig with dv = 1. v has to come out whole (no integral left in it), the new integral goes round the rules again*/
 static const char *by_parts(pcas_ast_t *e, subs_t *subs) {
     static int depth; /*v is worked out by integral_of, which can want its own parts*/
     pcas_ast_t *f = ast_ChildGet(e, 0), *x = ast_ChildGet(e, 1), *u = NULL, *dv, *c, *v, *du, *I;
