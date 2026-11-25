@@ -2,6 +2,7 @@
 
 #include "app.h"
 #include "args.h"
+#include "calc1.h"
 #include "settings.h"
 
 #include <string.h>
@@ -12,15 +13,12 @@
 #include "engine/cas/derivative.h"
 #include "render/draw.h"
 
-/*
-    sum(f, k, a, b) and product(f, k, a, b). numbers at both ends are added or multiplied out, up to TERMS_MAX terms.
-    a letter or an expression on top gives a formula for a term that's a polynomial (k, k^2, k^3) or r^k, and for product(k, k, 1, n)
-*/
+/* sum(f, k, a, b) and product(f, k, a, b) */
 
-#define TERMS_MAX 100 /*each one is a substitute and a simplify*/
-#define DEGREE_MAX 3 /*k^3 is the highest power sum there's a formula for here*/
+#define TERMS_MAX 100 /* each one is a substitute and a simplify */
+#define DEGREE_MAX 3 /* highest power with a sum formula */
 
-/* the whole number e is after simplify, false for anything else */
+/* e as a whole number once simplified, false when it isn't one */
 static bool whole_value(pcas_ast_t *e, mp_small *n) {
     pcas_ast_t *c = ast_Copy(e);
     bool ok;
@@ -31,23 +29,15 @@ static bool whole_value(pcas_ast_t *e, mp_small *n) {
     return ok;
 }
 
-/* f with k a number, worked out */
-static pcas_ast_t *term_at(pcas_ast_t *f, pcas_ast_t *k, mp_small i) {
-    pcas_ast_t *t = ast_Copy(f), *v = ast_MakeInt(i);
-
-    substitute(t, k, v);
-    ast_Cleanup(v);
-    simplify(t, SIMP_ALL);
-    return t;
-}
-
-/* a + (a+1) + ... + b, or the product, each term worked out. NULL when cancelled */
+/* lo + (lo+1) + ... + hi, or the product, each term worked out. NULL when cancelled */
 static pcas_ast_t *run_terms(pcas_ast_t *f, pcas_ast_t *k, mp_small lo, mp_small hi, bool product) {
-    pcas_ast_t *acc = ast_MakeInt(product ? 1 : 0), *t;
+    pcas_ast_t *acc = ast_MakeInt(product ? 1 : 0), *v, *t;
     mp_small i;
 
     for(i = lo; i <= hi && !pcas_cancelled; i++) {
-        t = term_at(f, k, i);
+        v = ast_MakeInt(i);
+        t = value_at(f, k->op.symbol, v);
+        ast_Cleanup(v);
         acc = ast_MakeBinary(product ? OP_MULT : OP_ADD, acc, t);
         simplify(acc, SIMP_ALL);
     }
@@ -58,7 +48,7 @@ static pcas_ast_t *run_terms(pcas_ast_t *f, pcas_ast_t *k, mp_small lo, mp_small
     return acc;
 }
 
-/* 1^j + 2^j + ... + n^j for j 0 to 3, n copied */
+/* 1^j + 2^j + ... + n^j for j up to DEGREE_MAX */
 static pcas_ast_t *power_sum(int j, pcas_ast_t *n) {
     pcas_ast_t *half = ast_MakeBinary(OP_DIV, ast_MakeBinary(OP_MULT, ast_Copy(n), ast_MakeBinary(OP_ADD, ast_Copy(n), ast_MakeInt(1))), ast_MakeInt(2));
 
@@ -77,7 +67,7 @@ static pcas_ast_t *power_sum(int j, pcas_ast_t *n) {
     }
 }
 
-/* f as c0 + c1 k + c2 k^2 + c3 k^3 in c[], from the derivatives at 0. the degree, -1 when it's not a polynomial that small */
+/* f as c0 + c1 k + c2 k^2 + c3 k^3 in c[], from the derivatives at 0. returns the degree, -1 when it's not a polynomial that small */
 static int coefficients(pcas_ast_t *f, pcas_ast_t *k, pcas_ast_t **c) {
     pcas_ast_t *d = ast_Copy(f), *z = ast_MakeInt(0), *next;
     int j, fact = 1;
@@ -107,12 +97,12 @@ static int coefficients(pcas_ast_t *f, pcas_ast_t *k, pcas_ast_t **c) {
     return -1;
 }
 
-/* the formula for a sum with k from a to the b that has a letter in it. NULL when f isn't a polynomial or c r^k */
+/* formula for the sum with k from a to b, b having a letter in it. NULL when f isn't a polynomial or r^k */
 static pcas_ast_t *sum_formula(pcas_ast_t *f, pcas_ast_t *k, pcas_ast_t *a, pcas_ast_t *b) {
     pcas_ast_t *c[DEGREE_MAX + 1] = { NULL }, *total = NULL, *below, *r, *part, *base;
     int deg, j;
 
-    /* c r^k: (r^(b+1) - r^a)/(r-1) */
+    /* r^k: (r^(b+1) - r^a)/(r-1) */
     if(isoptype(f, OP_POW) && !has_symbol(ast_ChildGet(f, 0), k->op.symbol) && ast_Compare(ast_ChildGet(f, 1), k)) {
         base = ast_ChildGet(f, 0);
         return ast_MakeBinary(OP_DIV,
@@ -167,7 +157,7 @@ bool series_run(const char *cmd, char *src, box_t *in) {
         else
             e = run_terms(a[0], a[1], lo, hi, product);
     } else if(product) {
-        /* k from 1 to n is n factorial */
+        /* k from 1 to n */
         if(ast_Compare(a[0], a[1]) && is_ast_int(a[2], 1))
             e = ast_MakeUnary(OP_FACTORIAL, ast_Copy(a[3]));
         else

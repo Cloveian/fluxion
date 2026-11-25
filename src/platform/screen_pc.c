@@ -10,7 +10,30 @@
 #include <stdlib.h>
 #include <string.h>
 
+#ifdef SCREEN_RESIZABLE
+int screen_w = 320, screen_h = 240;
+void (*screen_resized)(void);
+static unsigned char *fb;
+#define FB(x, y) fb[(y) * screen_w + (x)]
+
+/* the framebuffer for the size it is now */
+static void fb_make(void) {
+    free(fb);
+    fb = calloc((size_t)screen_w * (size_t)screen_h, 1);
+}
+
+void screen_resize(int w, int h) {
+    screen_w = w < SCREEN_MIN_W ? SCREEN_MIN_W : w;
+    screen_h = h < SCREEN_MIN_H ? SCREEN_MIN_H : h;
+    fb_make();
+    if(screen_resized != NULL)
+        screen_resized();
+}
+#else
 static unsigned char fb[SCREEN_H][SCREEN_W];
+#define FB(x, y) fb[y][x]
+static void fb_make(void) {}
+#endif
 static unsigned char current = COL_FG;
 
 static unsigned char palette[COL_COUNT][3]; /* ui/theme.c fills it */
@@ -30,12 +53,20 @@ void screen_direct(bool on) {
         window_present();
 }
 
-void screen_clear(void) { memset(fb, COL_BG, sizeof fb); }
+void screen_clear(void) {
+#ifdef SCREEN_RESIZABLE
+    if(fb == NULL)
+        fb_make();
+    memset(fb, COL_BG, (size_t)screen_w * (size_t)screen_h);
+#else
+    memset(fb, COL_BG, sizeof fb);
+#endif
+}
 void screen_color(unsigned char color) { current = color; }
 
 static void pixel(int x, int y) {
     if(x >= 0 && x < SCREEN_W && y >= 0 && y < SCREEN_H)
-        fb[y][x] = current;
+        FB(x, y) = current;
 }
 
 void screen_fill(int x, int y, int w, int h) {
@@ -64,7 +95,15 @@ void screen_line(int x0, int y0, int x1, int y1) {
     }
 }
 
-const unsigned char *screen_pixels(void) { return &fb[0][0]; }
+const unsigned char *screen_pixels(void) {
+#ifdef SCREEN_RESIZABLE
+    if(fb == NULL)
+        fb_make();
+    return fb;
+#else
+    return &fb[0][0];
+#endif
+}
 
 void screen_rgb(unsigned char color, unsigned char rgb[3]) {
     memcpy(rgb, palette[color < COL_COUNT ? color : COL_FG], 3);
@@ -145,7 +184,7 @@ int screen_save_png(const char *path, int scale) {
         row = p;
         *p++ = 0;                   /* no filter */
         for(x = 0; x < w; x++) {
-            screen_rgb(fb[y / scale][x / scale], p);
+            screen_rgb(FB(x / scale, y / scale), p);
             p += 3;
         }
 

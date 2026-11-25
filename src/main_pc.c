@@ -4,7 +4,7 @@
    keypad (see platform/keys_pc.c for which key is which).
 
      ./build-pc/fluxion-app                          the window
-     ./build-pc/fluxion-app --png out.png [--scale 2] x x^2 + 2 enter ...
+     ./build-pc/fluxion-app --png out.png [--scale 2] [--size 640x480] x x^2 + 2 enter ...
         no window: press these keys (names from keys_pc.c, or single characters),
         then save the last screen */
 
@@ -26,6 +26,8 @@ int main(int argc, char **argv)
             png = argv[i + 1];
         else if(strcmp(argv[i], "--scale") == 0)
             scale = atoi(argv[i + 1]);
+        else if(strcmp(argv[i], "--size") == 0) /* 640x480, the framebuffer size */
+            screen_resize(atoi(argv[i + 1]), strchr(argv[i + 1], 'x') != NULL ? atoi(strchr(argv[i + 1], 'x') + 1) : 240);
     }
 
     if(png != NULL) {

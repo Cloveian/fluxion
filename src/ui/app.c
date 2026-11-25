@@ -2887,6 +2887,9 @@ void app_run(void) {
     settings_load();    /* after, a first run starts from the OS brightness screen_begin read */
     keys_begin();
     areas_init();
+#ifdef SCREEN_RESIZABLE
+    screen_resized = areas_init; /* the window got a new size */
+#endif
     draw_screen();
     pcas_poll = busy_poll;
     keys_on_sleep = on_sleep;

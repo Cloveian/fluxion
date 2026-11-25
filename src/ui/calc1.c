@@ -44,7 +44,7 @@ static pcas_ast_t *derive(pcas_ast_t *f, Symbol var, int times) {
 }
 
 /* f with v put in for var, worked out */
-static pcas_ast_t *at(pcas_ast_t *f, Symbol var, pcas_ast_t *v) {
+pcas_ast_t *value_at(pcas_ast_t *f, Symbol var, pcas_ast_t *v) {
     pcas_ast_t *e = ast_Copy(f), *x = ast_MakeSymbol((char)var);
 
     if(e->type == NODE_SYMBOL && e->op.symbol == var) {
@@ -62,7 +62,7 @@ static pcas_ast_t *at(pcas_ast_t *f, Symbol var, pcas_ast_t *v) {
 static int sign_beside(pcas_ast_t *f, Symbol var, pcas_ast_t *r, int side) {
     pcas_ast_t *p = ast_MakeBinary(OP_ADD, ast_Copy(r),
                                    ast_MakeBinary(OP_DIV, ast_MakeInt(side), ast_MakeInt(1000)));
-    pcas_ast_t *e = at(f, var, p);
+    pcas_ast_t *e = value_at(f, var, p);
     double v;
     int s = 2;
 
@@ -91,8 +91,8 @@ static box_t *tangent(pcas_ast_t *f, pcas_ast_t *a, Symbol var) {
 
     if(d == NULL)
         return NULL;
-    m = at(d, var, a);
-    fa = at(f, var, a);
+    m = value_at(d, var, a);
+    fa = value_at(f, var, a);
     /* fa - m a + m x */
     line = ast_MakeBinary(OP_ADD, ast_MakeBinary(OP_ADD, fa, ast_MakeBinary(OP_MULT, ast_MakeInt(-1),
                           ast_MakeBinary(OP_MULT, ast_Copy(m), ast_Copy(a)))),
@@ -127,7 +127,7 @@ static box_t *turning_points(pcas_ast_t *f, Symbol var, bool inflection, const c
             }
             if(before == 0 || after == 0 || before == after)
                 continue;
-            y = at(f, var, roots[i]);
+            y = value_at(f, var, roots[i]);
             layout_add(col, labelled(inflection ? "inflection" : before > 0 ? "max" : "min", point_box(roots[i], y)));
             ast_Cleanup(y);
             lines++;
@@ -190,7 +190,7 @@ static box_t *taylor(pcas_ast_t *f, pcas_ast_t *a, pcas_ast_t *order, Symbol var
         *message = "the order is a whole number from 0 to 8";
     } else {
         for(k = 0; k <= n && d != NULL && !pcas_cancelled; k++) {
-            c = ast_MakeBinary(OP_DIV, at(d, var, a), ast_MakeInt(fact));
+            c = ast_MakeBinary(OP_DIV, value_at(d, var, a), ast_MakeInt(fact));
             simplify(c, SIMP_ALL);
             if(!is_ast_int(c, 0)) {
                 if(k == 0) {

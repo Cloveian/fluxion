@@ -220,6 +220,11 @@ static void key_down(const SDL_KeyboardEvent *ev) {
         window_fullscreen_toggle();
         return;
     }
+    if(on && (ev->key == SDLK_EQUALS || ev->key == SDLK_PLUS || ev->key == SDLK_KP_PLUS || ev->key == SDLK_MINUS || ev->key == SDLK_KP_MINUS)) {
+        window_zoom(ev->key == SDLK_MINUS || ev->key == SDLK_KP_MINUS ? -1 : 1); /* Ctrl + and -, the pixel size */
+        push(K_NONE, false);
+        return;
+    }
 
     /* new keystroke, so whatever text comes next belongs to it */
     skip_text = false;
@@ -348,8 +353,12 @@ keypress_t keys_wait(void) {
             push(K_QUIT, false);
             break;
 
-        case SDL_EVENT_WINDOW_EXPOSED:
         case SDL_EVENT_WINDOW_RESIZED:
+            window_sync();
+            push(K_NONE, false); /* the app redraws at its new size */
+            break;
+
+        case SDL_EVENT_WINDOW_EXPOSED:
             window_present();
             break;
 

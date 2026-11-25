@@ -10,8 +10,22 @@
 
 #include <stdbool.h>
 
+/* the calculators and the web page are one fixed size. the PC window can be any: the size is a variable then, set by screen_resize() */
+#if defined(COMPILE_PC) && !defined(__EMSCRIPTEN__) && !defined(__TICE__) && !defined(_TINSPIRE)
+#define SCREEN_RESIZABLE
+extern int screen_w, screen_h;
+#define SCREEN_W screen_w
+#define SCREEN_H screen_h
+#define SCREEN_MIN_W 240 /* the soft key names stop fitting under that */
+#define SCREEN_MIN_H 160
+
+/* a new size (clamped to the minimum), the framebuffer starts over blank and screen_resized runs, the app sets that to redo its layout */
+void screen_resize(int w, int h);
+extern void (*screen_resized)(void);
+#else
 #define SCREEN_W 320
 #define SCREEN_H 240
+#endif
 
 /* palette indexes. the colours behind them are the same on both. */
 enum {
