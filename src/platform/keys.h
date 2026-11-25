@@ -45,6 +45,9 @@ typedef enum {
     K_LETTER_A, K_LETTER_Z = K_LETTER_A + 25,
     K_CAPITAL_A, K_CAPITAL_Z = K_CAPITAL_A + 25,
 
+    /* PC and the web page: typed characters the CE has no key for, and End (Home is the nspire's) */
+    K_LESS, K_GREATER, K_BANG, K_PERCENT, K_END,
+
     K_QUIT  /* the PC window got closed */
 } keycode_t;
 

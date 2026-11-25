@@ -45,6 +45,10 @@ keycode_t keys_from_char(char c) {
     case '=': return K_EQUALS;  /* the CE has no such key, its page types = as [2nd][math] */
     case '.': return K_DOT;
     case '~': return K_NEG;
+    case '<': return K_LESS;
+    case '>': return K_GREATER;
+    case '!': return K_BANG;
+    case '%': return K_PERCENT;
     default:  return K_NONE;
     }
 }

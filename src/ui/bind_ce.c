@@ -8,6 +8,7 @@
 #define CHAR(k, m, c)   { k, m, { A_CHAR, c, NULL } }
 #define FUNC(k, m, s)   { k, m, { A_FUNC, 0, s } }
 #define DO(k, m, op, n) { k, m, { op, n, NULL } }
+#define LETTER(c)       ((keycode_t)(K_LETTER_A + (c) - 'a'))
 
 static const char neg_one[] = { ED_NEG, '1', '\0' }, euler[] = { CH_EULER, '\0' };
 
@@ -31,6 +32,9 @@ static const bind_t binds[] = {
     DO(K_MATH, 0, A_POPUP, POPUP_MATH),
     DO(K_VARS, 0, A_VARS, 0), DO(K_MODE, 0, A_SETTINGS, 0), DO(K_QUIT, 0, A_QUIT, 0),
     DO(K_2ND, 0, A_MOD, M_2ND), DO(K_ALPHA, 0, A_MOD, M_ALPHA), DO(K_ON, 0, A_MOD, M_ON),
+    /* the PC's keyboard has these, the CE doesn't */
+    CHAR(K_LESS, 0, '<'), CHAR(K_GREATER, 0, '>'), CHAR(K_BANG, 0, '!'), CHAR(K_PERCENT, 0, '%'),
+    DO(K_HOME, 0, A_LINE_START, 0), DO(K_END, 0, A_LINE_END, 0),
     /* no such keys on a CE, the PC's scripts try the nspire's menu and popup with them */
     DO(K_MENU, 0, A_MENU, 0), DO(K_TRIG, 0, A_POPUP, POPUP_TRIG),
 
@@ -68,6 +72,9 @@ static const bind_t binds[] = {
     /* [on] is ctrl. 1 2 3 cut copy paste, next to each other like X C V */
     DO(K_1, M_ON, A_CUT, 0), DO(K_2, M_ON, A_COPY, 0), DO(K_3, M_ON, A_PASTE, 0),
     DO(K_STO, M_ON, A_UNDO, 0),
+    /* and on the PC's keyboard the usual ones. Ctrl + a letter */
+    DO(LETTER('x'), M_ON, A_CUT, 0), DO(LETTER('c'), M_ON, A_COPY, 0), DO(LETTER('v'), M_ON, A_PASTE, 0),
+    DO(LETTER('z'), M_ON, A_UNDO, 0), DO(LETTER('a'), M_ON, A_SELECT_ALL, 0),
     DO(K_CLEAR, M_ON, A_CLEAR_LINE, 1),     /* Ctrl+Backspace */
     DO(K_MODE, M_ON, A_CANCEL, 0),          /* plain [on] is the TI's own break key, dont */
     FUNC(K_SIN, M_ON, "csc"), FUNC(K_COS, M_ON, "sec"), FUNC(K_TAN, M_ON, "cot"),

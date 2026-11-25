@@ -23,7 +23,7 @@ typedef enum {
     A_BACKSPACE, A_DELETE,
     A_CLEAR,        /* the CE's [clear], backspace while typing, out of whatever's open */
     A_CLEAR_LINE,   /* n 1 and the line's empty: clears the screen */
-    A_CUT, A_COPY, A_PASTE, A_UNDO,
+    A_CUT, A_COPY, A_PASTE, A_UNDO, A_SELECT_ALL,
     A_ENTER, A_NEXT_FORM, A_DECIMAL,
 
     /* the rest of the app */

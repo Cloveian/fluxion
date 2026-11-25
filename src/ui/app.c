@@ -9,6 +9,7 @@
 #include "polyfn.h"
 #include "calc1.h"
 #include "series.h"
+#include "platform/clipboard.h"
 #include "tri.h"
 #include "ineq.h"
 #include "conic.h"
@@ -18,6 +19,7 @@
 #include "work.h"
 #include "bind.h"
 
+#include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -1975,7 +1977,70 @@ static void ans_first(void) {
         type_text(&ed, "ans");
 }
 
+/* what's on the system clipboard as a row, or NULL when it isn't math or there's nothing. text from other programs: - is a minus after something and a negative before it */
+static ed_row_t *row_from_text(const char *text) {
+    char *engine = malloc(strlen(text) + 1), prev = '\0';
+    ed_row_t *row = NULL;
+    pcas_error_t err;
+    pcas_ast_t *e;
+    box_t *b;
+    size_t n = 0;
+
+    if(engine == NULL)
+        return NULL;
+    for(; *text != '\0'; text++) {
+        if(*text == ' ' || *text == '\t' || *text == '\n' || *text == '\r')
+            continue;
+        if(isalpha((unsigned char)*text)) { /* a word: a function if a ( follows, pi, e and i stay, any other letter is a variable (capital in the engine) */
+            const char *end = text;
+            size_t len;
+
+            while(isalpha((unsigned char)*end))
+                end++;
+            len = (size_t)(end - text);
+            for(; text < end; text++)
+                engine[n++] = *end == '(' || (len == 2 && strncmp(end - 2, "pi", 2) == 0) || (len == 1 && (*text == 'e' || *text == 'i'))
+                              ? *text : (char)toupper((unsigned char)*text);
+            text--;
+            prev = 'a';
+            continue;
+        }
+        engine[n++] = *text == '-' && (isalnum((unsigned char)prev) || prev == ')' || prev == '.') ? '_' : *text;
+        prev = *text;
+    }
+    engine[n] = '\0';
+    e = n > 0 ? parse((const uint8_t *)engine, n, str_table, &err) : NULL;
+    free(engine);
+    if(e == NULL || err != E_SUCCESS) {
+        ast_Cleanup(e);
+        return NULL;
+    }
+    b = layout_build(e, &draw_font);
+    ast_Cleanup(e);
+    if(b == NULL)
+        return NULL;
+    layout_finish(b, &draw_font);
+    row = ed_from_box(b);
+    layout_free(b);
+    return row;
+}
+
+/* the copied row for other programs, in the engine's text with a plain minus */
+static void clipboard_share(const ed_row_t *row, char **shared) {
+    char *text = ed_row_to_engine(row), *c;
+
+    free(*shared);
+    *shared = text;
+    if(text == NULL)
+        return;
+    for(c = text; *c != '\0'; c++)
+        if(*c == '_')
+            *c = '-';
+    clipboard_put(text);
+}
+
 static ed_row_t *clipboard;
+static char *shared; /* what the last copy put on the system clipboard, so a paste of the same thing keeps the editor's own rows */
 
 static const popup_set_t *const popup_sets[] = { &math_set, &trig_set, &constants_set, &marks_set };
 
@@ -1983,7 +2048,7 @@ static const popup_set_t *const popup_sets[] = { &math_set, &trig_set, &constant
 static bool edit_act(action_t a) {
     switch(a.op) {
     case A_CHAR: case A_SELECT_LEFT: case A_SELECT_RIGHT: case A_NEXT_FORM: case A_DECIMAL:
-    case A_CUT: case A_COPY: case A_PASTE: case A_UNDO: case A_CLEAR_LINE: case A_ITEM:
+    case A_CUT: case A_COPY: case A_PASTE: case A_UNDO: case A_CLEAR_LINE: case A_ITEM: case A_SELECT_ALL:
         break;  /* they do their own */
     case A_FUNC: case A_TEMPLATE: case A_POWER: case A_TYPE:
     case A_BACKSPACE: case A_DELETE: case A_CLEAR:
@@ -2069,24 +2134,38 @@ static bool edit_act(action_t a) {
         }
         ed_row_free(clipboard);
         clipboard = copy;
+        clipboard_share(copy, &shared);
         if(a.op == A_CUT) {
             will_edit(false);
             ed_erase_selection(&ed);
         }
         break;
     }
-    case A_PASTE:
-        if(clipboard == NULL) {
+    case A_PASTE: {
+        char *outside = clipboard_get();
+        bool theirs = outside != NULL && (shared == NULL || strcmp(outside, shared) != 0); /* copied somewhere else since */
+        ed_row_t *row = theirs ? row_from_text(outside) : NULL;
+
+        if(theirs && row == NULL) {
+            status = "can't read that as math";
+        } else if(row == NULL && clipboard == NULL) {
             status = "nothing copied yet";
-            break;
+        } else {
+            will_edit(false);
+            ed_paste(&ed, row != NULL ? row : clipboard);
         }
-        will_edit(false);
-        ed_paste(&ed, clipboard);
+        ed_row_free(row);
+        free(outside);
         break;
+    }
     case A_UNDO:
         typing_run = false;
         if(!ed_undo(&ed))
             status = "nothing to undo";
+        break;
+    case A_SELECT_ALL:
+        typing_run = false;
+        ed_select_all(&ed);
         break;
 
     case A_ENTER:  evaluate(); break;

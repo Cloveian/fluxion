@@ -543,6 +543,11 @@ static void select_parent(editor_t *ed, bool leftwards) {
     ed->anchor = leftwards ? at + 1 : at;
 }
 
+void ed_select_all(editor_t *ed) {
+    ed->anchor = 0;
+    ed->pos = ed->row->len;
+}
+
 void ed_select_left(editor_t *ed) {
     if(ed->anchor < 0)
         ed->anchor = ed->pos;

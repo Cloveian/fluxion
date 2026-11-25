@@ -91,6 +91,7 @@ void ed_end(editor_t *ed);
 */
 void ed_select_left(editor_t *ed);
 void ed_select_right(editor_t *ed);
+void ed_select_all(editor_t *ed); /* the whole row the cursor is in */
 bool ed_has_selection(const editor_t *ed);
 void ed_deselect(editor_t *ed, bool to_start); /* cursor goes to the start or the end of it */
 void ed_erase_selection(editor_t *ed);

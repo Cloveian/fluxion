@@ -22,6 +22,7 @@
 */
 
 #include "keys.h"
+#include "clipboard.h"
 #include "screen.h"
 #include "window_pc.h"
 
@@ -46,6 +47,7 @@ void keys_script(char *const *presses, int count) {
     tokens that aren't presses, these get looked at mid-run too (keys_peek):
       wait:6        the next press waits 6 s
       png:out.png   the screen right then, at 2x
+      clip:3x+2     puts that on the clipboard, for a paste to find
       busy:on+mode  held down while the engine runs, skipped if it's done by then
 */
 static Uint64 wait_until; /* SDL ms, clock() is CPU time and stands still in a wait */
@@ -63,6 +65,8 @@ static bool script_hold(void) {
             wait_until = 0;
         } else if(strncmp(s, "png:", 4) == 0) {
             screen_save_png(s + 4, 2);
+        } else if(strncmp(s, "clip:", 5) == 0) {
+            clipboard_put(s + 5);
         } else {
             return false;
         }
@@ -120,6 +124,8 @@ static keycode_t from_key(SDL_Keycode k) {
     case SDLK_UP:        return K_UP;
     case SDLK_DOWN:      return K_DOWN;
     case SDLK_TAB:       return K_2ND;
+    case SDLK_HOME:      return K_HOME;
+    case SDLK_END:       return K_END;
     case SDLK_F1:        return K_YEQU;
     case SDLK_F2:        return K_WINDOW;
     case SDLK_F3:        return K_ZOOM;
@@ -262,6 +268,13 @@ static void key_down(const SDL_KeyboardEvent *ev) {
         if(shift && (key == K_LEFT || key == K_RIGHT || key == K_UP || key == K_DOWN))
             push(K_ALPHA, on);  /* [alpha] + arrow selects */
         push(key, on);
+        return;
+    }
+
+    /* Ctrl + C X V Z A, no text comes with those. bound to copy, cut, paste, undo and select all */
+    if(on && ev->key < 0x80 && (ev->key == 'c' || ev->key == 'x' || ev->key == 'v' || ev->key == 'z' || ev->key == 'a')) {
+        skip_text = true;
+        push(keys_from_char((char)ev->key), true);
         return;
     }
 
