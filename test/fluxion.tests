@@ -869,6 +869,8 @@ simplify; acot(X)+1; 1+acot(X)
 decimal; acot(1); 0.785398
 decimal; asec(2); 1.0472
 deriv; acot(X); X; -1/(1+X^2)
+#terms like (x pi)/3 and 5 pi sorted round forever, it took a minute
+deriv; ((e+pi)(5+X/3))^(1/2); X; e/(6(5pi+(piX)/3+5e+(eX)/3)^(1/2))+pi/(6(5pi+(piX)/3+5e+(eX)/3)^(1/2))
 #were in todo.tests, pass now (2026-10-17)
 cancel; (X^2_1)/(1_X); -X_1
 simplify; sqrt(18)+sqrt(8); 5sqrt(2)
@@ -1159,7 +1161,7 @@ steps; deriv(e^X,X,X); X; deriv(e^X, X, X) | exp rule | e^X
 steps; deriv(X^2/2,X,X); X; deriv(X^2/2, X, X) | constant multiple | deriv(X^2, X, X)/2 | power rule | X
 steps; deriv(sin(X)/3,X,X); X; deriv(sin(X)/3, X, X) | constant multiple | deriv(sin(X), X, X)/3 | trig rule | cos(X)/3
 steps; deriv(log(X),X,X); X; deriv(log(X), X, X) | log rule | deriv(ln(X)/ln(10), X, X) | constant multiple | deriv(ln(X), X, X)/ln(10) | log rule | 1/(Xln(10))
-steps; deriv(X^2sin(piX/180),X,X); X; deriv(X^2sin((Xpi)/180), X, X) | product rule | X^2deriv(sin((Xpi)/180), X, X)+deriv(X^2, X, X)sin((Xpi)/180) | power rule, trig rule, chain rule | 2Xsin((Xpi)/180)+(picos((Xpi)/180)X^2)/180
+steps; deriv(X^2sin(piX/180),X,X); X; deriv(X^2sin((Xpi)/180), X, X) | product rule | X^2deriv(sin((Xpi)/180), X, X)+deriv(X^2, X, X)sin((Xpi)/180) | power rule, trig rule, chain rule | (picos((Xpi)/180)X^2)/180+2Xsin((Xpi)/180)
 steps; deriv(3X^2+2X+1,X,X); X; deriv(3X^2+2X+1, X, X) | sum rule | deriv(3X^2, X, X)+2 | constant multiple | 3deriv(X^2, X, X)+2 | power rule | 6X+2
 steps; deriv(X^2sin(X),X,X); X; deriv(X^2sin(X), X, X) | product rule | X^2deriv(sin(X), X, X)+deriv(X^2, X, X)sin(X) | power rule, trig rule | X^2cos(X)+2Xsin(X)
 steps; deriv(sin(X^2),X,X); X; deriv(sin(X^2), X, X) | trig rule, chain rule | deriv(X^2, X, X)cos(X^2) | power rule | 2Xcos(X^2)
@@ -1221,7 +1223,7 @@ steps; sin(X)=1/2; X; sin(X)=1/2 | inverse sine | X=2Npi+pi/6 or X=2Npi+(5pi)/6
 steps; sin(2X)=1/2; X; sin(2X)=1/2 | inverse sine | 2X=2Npi+pi/6 or 2X=2Npi+(5pi)/6 | /2 | X=Npi+pi/12 or X=Npi+(5pi)/12
 steps; cos(X)=0; X; cos(X)=0 | inverse cosine | X=Npi+pi/2
 steps; 2cos(X)+1=0; X; 2cos(X)+1=0 | _1 | 2cos(X)=-1 | /2 | cos(X)=-1/2 | inverse cosine | X=2Npi+(2pi)/3 or X=2Npi_(2pi)/3
-steps; tan(3X)=1; X; tan(3X)=1 | inverse tangent | 3X=Npi+pi/4 | /3 | X=pi/12+(Npi)/3
+steps; tan(3X)=1; X; tan(3X)=1 | inverse tangent | 3X=Npi+pi/4 | /3 | X=(Npi)/3+pi/12
 steps; sin(X)=1; X; sin(X)=1 | inverse sine | X=2Npi+pi/2
 steps; sin(X)=0; X; sin(X)=0 | inverse sine | X=Npi
 #inequalities. a line carries the sign along and turns it for a negative, the rest is a sign chart: factor, the zeros, a test point in each gap (|t-3), the gaps that fit

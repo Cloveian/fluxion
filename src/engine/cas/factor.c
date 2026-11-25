@@ -424,10 +424,13 @@ typedef struct {
 } gm_split_t;
 
 static bool gm_split(gm_split_t *t, pcas_ast_t *e) {
-    pcas_ast_t *k = isoptype(e, OP_MULT) ? ast_ChildGet(e, 0) : e;
+    pcas_ast_t *k;
     gm_t one;
     int i;
 
+    if(isoptype(e, OP_DIV) && ast_ChildGet(e, 1)->type == NODE_NUMBER) /*Fluxion: (xpi)/3 sorts like xpi, as one lump against 5pi it went round*/
+        e = ast_ChildGet(e, 0);
+    k = isoptype(e, OP_MULT) ? ast_ChildGet(e, 0) : e;
     t->m.count = t->nrest = 0;
     for(; k != NULL; k = k == e ? NULL : k->next) {
         one.count = 0;
