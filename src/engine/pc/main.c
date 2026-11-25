@@ -33,6 +33,7 @@ void display_help() {
     printf("\texpand [expression]\t\tExpands expression\n");
     printf("\tderivative [expression] [respect to] [(optional) eval at]\n");
     printf("\tsolve [expression]\t\tReal roots of expression = 0 for X, one per Root line\n");
+    printf("\tsystem [expression]...\t\tEach expression = 0, 2 or 3 of them for X Y (Z), one Set: line per solution\n");
 }
 
 /*Trim null terminated string*/
@@ -594,6 +595,59 @@ int run_solve(int argc, char **argv) {
     return 0;
 }
 
+/*Fluxion: 2 or 3 expressions, each = 0, for X Y (Z). a Set: line per solution (or System: all / none / unknown)*/
+int run_system(int argc, char **argv) {
+    static const Symbol vars[3] = { SYM_X, SYM_Y, SYM_Z };
+    pcas_ast_t *eqs[SYSTEM_MAX] = {NULL}, *out[SYSTEM_SETS][SYSTEM_MAX] = {{NULL}};
+    pcas_error_t err;
+    uint8_t *trimmed, *text;
+    unsigned trimmed_len, text_len;
+    int n = argc - 2, i, k, got = SOLVE_UNKNOWN;
+    bool parsed = n == 2 || n == 3;
+
+    if(!parsed) {
+        display_help();
+        return -1;
+    }
+    for(i = 0; i < n && parsed; i++) {
+        trimmed = trim(argv[2 + i], &trimmed_len);
+        eqs[i] = parse(trimmed, trimmed_len, str_table, &err);
+        free(trimmed);
+        parsed = err == E_SUCCESS && eqs[i] != NULL;
+    }
+    if(parsed)
+        got = solve_system(eqs, n, vars, out);
+    if(!parsed)
+        printf("%s\n", error_text[err]);
+    else if(pcas_oom)
+        printf("Out of memory\n");
+    else if(got == SOLVE_ALL)
+        printf("System: all\n");
+    else if(got == SOLVE_UNKNOWN)
+        printf("System: unknown\n");
+    else if(got == 0)
+        printf("System: none\n");
+    for(i = 0; i < got && i < SYSTEM_SETS && !pcas_oom; i++) {
+        printf("Set:");
+        for(k = 0; k < n; k++) {
+            simplify(out[i][k], SIMP_NORMALIZE | SIMP_EVAL); /*rational as one number exports as a decmial*/
+            text = export_to_binary(out[i][k], &text_len, str_table, &err);
+            if(err == E_SUCCESS && text != NULL) {
+                printf(" %c=%.*s", 'X' + k, text_len, text);
+                free(text);
+            }
+        }
+        printf("\n");
+    }
+
+    for(i = 0; i < SYSTEM_SETS; i++)
+        for(k = 0; k < SYSTEM_MAX; k++)
+            ast_Cleanup(out[i][k]);
+    for(i = 0; i < SYSTEM_MAX; i++)
+        ast_Cleanup(eqs[i]);
+    return parsed ? 0 : -1;
+}
+
 int main(int argc, char **argv) {
     int ret;
 
@@ -607,6 +661,7 @@ int main(int argc, char **argv) {
         else if(!strcmp(argv[1], "expand"))     ret = run_expand(argc, argv);
         else if(!strcmp(argv[1], "derivative")) ret = run_derivative(argc, argv);
         else if(!strcmp(argv[1], "solve"))      ret = run_solve(argc, argv); /*Fluxion*/
+        else if(!strcmp(argv[1], "system"))     ret = run_system(argc, argv); /*Fluxion*/
         else {
             display_help();
             return -1;

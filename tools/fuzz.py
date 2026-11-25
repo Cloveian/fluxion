@@ -1,5 +1,5 @@
 # random expressions through build-pc/fluxion, checked numerically against sympy
-# usage: python3 tools/fuzz.py [count] [seed] [pos|any] [simplify|expand|factor|derivative|integral|solve|limit|critical] [-v]   (pos = letters only get positive test points)
+# usage: python3 tools/fuzz.py [count] [seed] [pos|any] [simplify|expand|factor|derivative|integral|solve|limit|critical|system] [-v]   (pos = letters only get positive test points)
 import random, re, subprocess, sys
 import sympy as sp
 from sympy.parsing.sympy_parser import parse_expr, standard_transformations, implicit_multiplication_application, convert_xor
@@ -131,6 +131,41 @@ def solve_check(expr, roots):
         return f"missed or extra: want {tv}"
     return None
 
+def gen_sys():
+    # two equations in X and Y (each is left minus right): lines, a line and a circle / hyperbola / parabola
+    a, b, c, d, e, f = nz(1, 4), nz(-4, 4), nz(-6, 6), nz(1, 4), nz(-4, 4), nz(-6, 6)
+    r = nz(2, 6)
+    return random.choice([
+        (f"{a}X+{b}Y_{c}", f"{d}X_{abs(e)}Y+{f}"), (f"X+{a}Y_{c}", f"{b}X+{b * a}Y_{f}"), (f"{a}X+{b}Y_{c}", f"X_{d}Y_{e}"),
+        (f"X^2+Y^2_{r * r}", f"X+{a}Y_{c}"), (f"X^2+Y^2_{r * r}", f"X_{d}Y"), (f"X^2+Y^2_{r * r}", f"{a}X+{d}Y_{abs(c)}"),
+        (f"X*Y_{c}", f"X_Y_{e}"), (f"X*Y_{c}", f"X+Y_{f}"), (f"Y_X^2_{c}", f"Y_{a}X_{b}"), (f"Y_X^2+{abs(c)}", f"X+Y_{f}"),
+        (f"X^2_Y^2_{r}", f"X+Y_{d}"), (f"{a}X^2+Y^2_{abs(c) + 4}", f"Y_{d}X"),
+        (f"X^2+Y^2_{r * r}", f"X^2_Y_{c}"), (f"{a}X^2+{d}Y^2_{abs(c) + 6}", f"X+Y_{e}"), (f"X*Y_{c}", f"X^2+Y^2_{abs(f) + 5}"),
+        (f"X^2+Y^2_{r * r}", f"X*Y_{c}"), (f"X^2_Y_{c}", f"Y^2_X_{f}"),
+    ])
+
+def sys_check(e1, e2, sets):
+    f1, f2 = to_sympy(e1), to_sympy(e2)
+    real = []
+    for sx, sy in sets:
+        vx, vy = to_sympy(sx), to_sympy(sy)
+        for f in (f1, f2):
+            v = complex(f.subs({X: vx, Y: vy}).evalf())
+            if abs(v) > 1e-6 or v != v:
+                return f"set X={sx} Y={sy} gives {v:.3g}"
+        cx, cy = complex(vx.evalf()), complex(vy.evalf())
+        if abs(cx.imag) < 1e-9 and abs(cy.imag) < 1e-9:
+            real.append((round(cx.real, 6), round(cy.real, 6)))
+    truth = set()
+    for s in sp.solve([f1, f2], [X, Y], dict=True):
+        if X in s and Y in s:
+            cx, cy = complex(s[X].evalf()), complex(s[Y].evalf())
+            if abs(cx.imag) < 1e-9 and abs(cy.imag) < 1e-9:
+                truth.add((round(cx.real, 6), round(cy.real, 6)))
+    if truth != set(real):
+        return f"missed or extra: want {sorted(truth)} got {sorted(set(real))}"
+    return None
+
 def gen_lim():
     # calc 1 limits: holes, sin(x)/x kinds at 0, rational / exp / root at inf, a few with no two-sided limit
     a, b, c = nz(1, 4), nz(-4, 4), nz(-4, 4)
@@ -243,6 +278,24 @@ def val(f, px, py):
 
 bad, why, fat, skipped, ok = [], [], [], 0, 0
 for i in range(count):
+    if cmd == "system":
+        e1, e2 = gen_sys()
+        try:
+            p = subprocess.run(["build-pc/fluxion", "system", e1, e2], capture_output=True, text=True, timeout=20)
+        except subprocess.TimeoutExpired:
+            bad.append((f"{e1}, {e2}", "TIMEOUT", None)); continue
+        if "System: unknown" in p.stdout:
+            skipped += 1; why.append((f"{e1}, {e2}", "can't solve")); continue
+        if "System: all" in p.stdout:
+            ok += 1; continue
+        sets = re.findall(r"^Set: X=(\S+) Y=(\S+)$", p.stdout, re.M)
+        try:
+            problem = sys_check(e1, e2, sets)
+        except Exception as ex:
+            skipped += 1; why.append((f"{e1}, {e2}", f"{sets} ({ex})")); continue
+        if problem: bad.append((f"{e1}, {e2}", sets, problem))
+        else: ok += 1
+        continue
     expr = gen_int() if cmd == "integral" else gen_eq() if cmd == "solve" else gen_lim() if cmd == "limit" else gen(random.choice([1, 2, 2, 3]))
     if cmd == "critical":
         f_str = gen_fn()
@@ -330,6 +383,6 @@ if fat:
 if "-v" in sys.argv:
     for expr, r in why: print(f"  skipped {expr} -> {r}")
 for expr, out, w in bad:
-    if cmd in ("solve", "limit", "critical"):
+    if cmd in ("solve", "limit", "critical", "system"):
         print(f"  {expr}\n    -> {out}\n    {w}"); continue
     print(f"  {expr}\n    -> {out}\n    at X={w[0]:.3f} Y={w[1]:.3f}: want {w[2]:.5g}, got {w[3]}" if w else f"  {expr} -> {out}")
