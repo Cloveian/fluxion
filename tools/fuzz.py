@@ -241,7 +241,7 @@ def val(f, px, py):
         return None
     return v
 
-bad, why, skipped, ok = [], [], 0, 0
+bad, why, fat, skipped, ok = [], [], [], 0, 0
 for i in range(count):
     expr = gen_int() if cmd == "integral" else gen_eq() if cmd == "solve" else gen_lim() if cmd == "limit" else gen(random.choice([1, 2, 2, 3]))
     if cmd == "critical":
@@ -318,9 +318,15 @@ for i in range(count):
         if b is None or abs(a - b) > 1e-4 * max(1, abs(a)):
             worst = (px, py, a, b); break
     if worst: bad.append((expr, out, worst))
-    else: ok += 1
+    else:
+        ok += 1
+        if cmd in ("simplify", "expand", "factor") and len(out) > 2 * len(expr) + 60: fat.append((expr, out))  # right, just huge
 
 print(f"{ok} ok, {len(bad)} wrong, {skipped} skipped of {count} (seed {seed}, {mode})")
+if fat:
+    print(f"{len(fat)} bloated (output over twice the input and 60 characters more)")
+    shown = fat if "-v" in sys.argv else fat[:5]
+    for expr, out in shown: print(f"  bloat {expr}\n    -> {out}")
 if "-v" in sys.argv:
     for expr, r in why: print(f"  skipped {expr} -> {r}")
 for expr, out, w in bad:
