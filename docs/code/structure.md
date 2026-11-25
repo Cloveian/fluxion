@@ -54,6 +54,7 @@ only `src/platform/` is allowed to touch graphx, keypadc or SDL. everything else
 - `python3 tools/fuzz.py [count] [seed] [pos|any] [mode]`: random expressions through `build-pc/fluxion`, checked at random points against sympy. modes are simplify (the default), expand, factor, derivative, integral, solve, limit, critical and system (2 equations, the sets have to satisfy both and match sympy's real ones). `any` tests negative letters too. a point where the input isn't real is skipped (Y^pi at a negative Y is noise), a point right next to a pole can show as wrong from the finite difference, simplify / expand / factor also report answers that are right but huge
 - `python3 tools/golden.py seed count old-app new-app`: the same random key scripts through two `fluxion-app` builds, which PNGs differ. for refactors that must not change a pixel (keep a copy of the old binary first)
 - `python3 tools/uifuzz.py seed count [fluxion-app]`: random key and click scripts through `fluxion-app --png`, prints the ones that crash, time out or trip a sanitizer. an asan build finds the most
+- `tools/uikeys.py`: the key / click tokens and pasted commands that uifuzz.py and golden.py both build their scripts from, so a new key goes in one place
 - CEmu: by hand. `cemu-autotester` comes with CEdev if i ever want scripted key presses
 
 ## Gotchas
