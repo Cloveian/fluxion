@@ -165,12 +165,15 @@ static bool pieces(step_t *l, Symbol var, const edge_t *edges, int n, const bool
             hi = edges[q / 2].at;
             hi_in = q % 2 == 1;
         }
-        if(lo == NULL && hi == NULL)
-            return false;
         if(k == STEP_EQS_MAX)
             return false;
         e->left = ast_MakeSymbol(var);
-        if(lo != NULL && lo == hi) {
+        if(lo == NULL && hi == NULL) { /*every gap and edge fits*/
+            e->rel = '<';
+            e->right = ast_MakeSymbol(SYM_INF);
+            e->low = ast_MakeBinary(OP_MULT, ast_MakeInt(-1), ast_MakeSymbol(SYM_INF));
+            e->low_rel = '<';
+        } else if(lo != NULL && lo == hi) {
             e->right = ast_Copy(lo);
         } else if(hi == NULL) {
             e->rel = lo_in ? 'g' : '>';
@@ -221,7 +224,7 @@ static bool chart(pcas_ast_t *left, pcas_ast_t *right, char rel, Symbol var, ste
     pcas_ast_t *f = NULL, *g = NULL, *top, *bottom = NULL;
     step_t *l;
     int n = 0, i;
-    bool ok = false;
+    bool ok = false, any;
 
     l = steps_eq(out, ast_Copy(left), ast_Copy(right));
     if(l == NULL)
@@ -319,6 +322,12 @@ static bool chart(pcas_ast_t *left, pcas_ast_t *right, char rel, Symbol var, ste
     }
     for(i = 0; i < n; i++)
         edge[i] = closed(rel) && !edges[i].hole;
+    for(i = 0, any = gap[n]; i < n; i++)
+        any = any || gap[i] || edge[i];
+    if(!any) { /*nothing fits, the test lines say it*/
+        ok = !pcas_cancelled;
+        goto done;
+    }
 
     steps_rule(l, "keep the gaps that fit");
     l = steps_expr(out, ast_MakeSymbol(var));
