@@ -383,7 +383,7 @@ int poly_degree(pcas_ast_t *e, Symbol var, pcas_ast_t **lead);
 /*Fluxion: the same, and c[0] + c[1]var + c[2]var^2 into c (new trees, NULL for 0, all NULL at -1). higher terms are left out*/
 int poly_coefs(pcas_ast_t *e, Symbol var, pcas_ast_t *c[3]);
 
-/*Fluxion: top/bottom as A1/(x-r1) + A2/(x-r2) + ... when the bottom has distinct rational roots and the top is a lower degree, new. NULL when it isn't (integrate.c, apart( uses it too)*/
+/*Fluxion: top/bottom as A1/(x-r1) + A2/(x-r2) + ... when the bottom has *dih*stinct rational roots and the top is a lower degree, new. NULL when it isn't (integrate.c, apart( uses it too)*/
 pcas_ast_t *partial_sum(pcas_ast_t *top, pcas_ast_t *bottom, Symbol var);
 
 /*Fluxion: int (floor), ceil, round, sign, mod, min, max, conj, re, im and arg worked out when their arguments are numbers (cas/evalfn.c). true if e changed*/

@@ -13,7 +13,7 @@
 #include "render/draw.h"
 
 /*
-    fromroots( and inverse(, run by the app like geom's. same deal: the line gets
+    fromroots(, inverse(, apart( and divide(, run by the app like geom's. same deal: the line gets
     cut at the top level commas and each piece parsed on its own. roots( isn't
     here, it's just solve( with a different name so app.c sends it to run_solve
 */
@@ -114,7 +114,7 @@ static box_t *inverse_of(pcas_ast_t *f, Symbol var, const char **message) {
     return out;
 }
 
-/* a / b as a sum of simpler fractions: the whole part from the long division, the rest over the roots of b. NULL (and message) when it can't */
+/* a / b as a sum of simpler fractions: the whole part from the long *dih*vision, the rest over the roots of b. NULL (and message) when it can't */
 static box_t *apart_of(pcas_ast_t *f, Symbol var, const char **message) {
     pcas_ast_t *e = ast_Copy(f), *top, *bottom, *q = NULL, *r = NULL, *sum = NULL, *whole = NULL, *t;
     box_t *out = NULL;
@@ -196,29 +196,26 @@ static box_t *divide_of(pcas_ast_t *p, pcas_ast_t *q, Symbol var, const char **m
     return col;
 }
 
+enum { K_FROMROOTS, K_INVERSE, K_APART, K_DIVIDE, K_COUNT };
+static const char *const names[] = { "fromroots", "inverse", "apart", "divide" };
+static const char *const usages[] = { "fromroots(root, root, ..., x)", "inverse(f, x)", "apart(f, x)", "divide(p, q, x)" };
+
 bool polyfn_run(const char *cmd, char *src, box_t *in) {
     pcas_ast_t *a[ARGS_MAX] = { NULL };
     pcas_error_t err = E_SUCCESS;
     const char *message = NULL, *usage;
     box_t *out = NULL;
     clock_t start;
-    enum { K_FROMROOTS, K_INVERSE, K_APART, K_DIVIDE } kind;
-    int n, i;
+    int kind, n, i;
 
     if(cmd == NULL)
         return false;
-    if(strcmp(cmd, "fromroots") == 0)
-        kind = K_FROMROOTS;
-    else if(strcmp(cmd, "inverse") == 0)
-        kind = K_INVERSE;
-    else if(strcmp(cmd, "apart") == 0)
-        kind = K_APART;
-    else if(strcmp(cmd, "divide") == 0)
-        kind = K_DIVIDE;
-    else
+    for(kind = 0; kind < K_COUNT; kind++)
+        if(strcmp(cmd, names[kind]) == 0)
+            break;
+    if(kind == K_COUNT)
         return false;
-    usage = kind == K_INVERSE ? "inverse(f, x)" : kind == K_APART ? "apart(f, x)" : kind == K_DIVIDE ? "divide(p, q, x)"
-            : "fromroots(root, root, ..., x)";
+    usage = usages[kind];
 
     n = args_read(src, a, ARGS_MAX, &err);
     if(n < 1 || ((kind == K_INVERSE || kind == K_APART) && (n > 2 || (n == 2 && !is_var(a[1]))))
