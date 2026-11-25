@@ -1158,15 +1158,39 @@ static pcas_ast_t *quad_root(pcas_ast_t *f, pcas_ast_t *x, pcas_ast_t **cq) {
     return NULL;
 }
 
-/*root of a x^2 + b x + c with b not 0 goes to u = x + b/2a, only the square term left*/
+/*P/(a x^2 + b x + c)^2 with P a polynomial of degree 0 or 1, the quadratic's coefficients go in cq (copies, a missing term stays NULL)*/
+static bool squared_bottom(pcas_ast_t *f, pcas_ast_t *x, pcas_ast_t **cq) {
+    pcas_ast_t *bottom, *Q;
+    int dv_top;
+
+    if(!isoptype(f, OP_DIV))
+        return false;
+    bottom = ast_ChildGet(f, 1);
+    if(!isoptype(bottom, OP_POW) || !is_value(ast_ChildGet(bottom, 1), 2, 1))
+        return false;
+    Q = ast_ChildGet(bottom, 0);
+    dv_top = poly_degree(ast_ChildGet(f, 0), x->op.symbol, NULL);
+    if(poly_degree(Q, x->op.symbol, NULL) != 2 || dv_top < 0 || dv_top > 1)
+        return false;
+    poly_coefs(Q, x->op.symbol, cq);
+    return true;
+}
+
+/*root of a x^2 + b x + c, or the quadratic squared under a line, with b not 0 goes to u = x + b/2a, only the square term left*/
 static const char *shift_square(pcas_ast_t *e, subs_t *subs) {
     pcas_ast_t *f = ast_ChildGet(e, 0), *x = ast_ChildGet(e, 1), *cq[3] = {NULL}, *u, *h, *g, *q, *back;
     const char *name = NULL;
     double a, b;
     int i;
+    bool squared = false;
 
-    if(subs->n >= SUBS_MAX || quad_root(f, x, cq) == NULL)
+    if(subs->n >= SUBS_MAX)
         return NULL;
+    if(quad_root(f, x, cq) == NULL) {
+        if(!squared_bottom(f, x, cq))
+            return NULL;
+        squared = true;
+    }
     if(approx_double(cq[2], &a) && approx_double(cq[1], &b) && a != 0 && b != 0 && (u = fresh(subs)) != NULL) {
         h = ast_MakeBinary(OP_DIV, ast_Copy(cq[1]), ast_MakeBinary(OP_MULT, ast_MakeInt(2), ast_Copy(cq[2])));
         simplify(h, SIMP_ALL);
@@ -1174,8 +1198,17 @@ static const char *shift_square(pcas_ast_t *e, subs_t *subs) {
         back = ast_MakeBinary(OP_ADD, ast_Copy(u), ast_MakeBinary(OP_MULT, ast_MakeInt(-1), h));
         q = ast_Copy(f);
         substitute(q, x, back);
-        expand(q, EXP_ALL);
-        simplify(q, SIMP_ALL);
+        if(squared) { /*top and the quadratic each on their own, the fraction stays the shape quadratic_squared reads*/
+            pcas_ast_t *base = ast_ChildGet(ast_ChildGet(q, 1), 0);
+
+            expand(ast_ChildGet(q, 0), EXP_ALL);
+            simplify(ast_ChildGet(q, 0), SIMP_ALL);
+            expand(base, EXP_ALL);
+            simplify(base, SIMP_ALL);
+        } else {
+            expand(q, EXP_ALL);
+            simplify(q, SIMP_ALL);
+        }
         if(!pcas_cancelled && !has_symbol(q, x->op.symbol)) {
             subs->u[subs->n] = u;
             subs->g[subs->n++] = g;
@@ -1411,20 +1444,13 @@ static const char *reciprocal_trig(pcas_ast_t *e) {
 
 /*(p x + q)/(A x^2 + C)^2 with A and C over 0: -p/(2(x^2+k)) and q (x/(2k(x^2+k)) + atan(x/a)/(2k a)) all over A^2, k = C/A and a = sqrt(k)*/
 static const char *quadratic_squared(pcas_ast_t *e) {
-    pcas_ast_t *f = ast_ChildGet(e, 0), *x = ast_ChildGet(e, 1), *bottom, *Q, *cq[3] = { NULL }, *cn[3] = { NULL };
+    pcas_ast_t *f = ast_ChildGet(e, 0), *x = ast_ChildGet(e, 1), *cq[3] = { NULL }, *cn[3] = { NULL };
     pcas_ast_t *k, *a, *Qk, *res = NULL, *px, *qq;
     double av, cv;
-    int i, dv_top;
+    int i;
 
-    if(!isoptype(f, OP_DIV))
+    if(!squared_bottom(f, x, cq))
         return NULL;
-    bottom = ast_ChildGet(f, 1);
-    if(!isoptype(bottom, OP_POW) || !is_value(ast_ChildGet(bottom, 1), 2, 1))
-        return NULL;
-    Q = ast_ChildGet(bottom, 0);
-    if(poly_degree(Q, x->op.symbol, NULL) != 2 || (dv_top = poly_degree(ast_ChildGet(f, 0), x->op.symbol, NULL)) < 0 || dv_top > 1)
-        return NULL;
-    poly_coefs(Q, x->op.symbol, cq);
     poly_coefs(ast_ChildGet(f, 0), x->op.symbol, cn);
     if(cq[2] != NULL && cq[0] != NULL && (cq[1] == NULL || is_ast_int(cq[1], 0)) && approx_double(cq[2], &av) && approx_double(cq[0], &cv) && av > 0 && cv > 0) {
         k = ast_MakeBinary(OP_DIV, ast_Copy(cq[0]), ast_Copy(cq[2]));
