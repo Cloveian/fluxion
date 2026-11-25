@@ -1119,6 +1119,13 @@ simplify; integral(1/(2+cos(2X)),X); (sqrt(3)atan((sqrt(3)tan(X))/3))/3
 simplify; integral(1/(5+3cos(X)),X); atan(tan(X/2)/2)/2
 simplify; integral(1/(1+2cos(X)),X); (sqrt(3)ln(abs(sqrt(3)+tan(X/2))/abs(sqrt(3)_tan(X/2))))/3
 simplify; integral(1/(sin(X)+cos(X)),X); ln(abs(2_2tan(X/2)_2*2^(1/2))/abs(2_2tan(X/2)+2^(3/2)))/2^(1/2)
+#tan and sec (cot and csc) powers together go to sin and cos when u-substitution has nothing
+simplify; integral(tan(X)^3*sec(X),X); 1/(3cos(X)^3)_1/cos(X)
+simplify; integral(tan(X)^2*sec(X)^2,X); (sec(X)^2tan(X))/3_(tan(X))/3
+simplify; integral(cot(X)^3*csc(X),X); 1/sin(X)_1/(3sin(X)^3)
+#a power of a sum with trig in it is multiplied out
+simplify; integral((sin(X)+cos(X))^2,X); X+sin(X)^2
+simplify; integral((1+sec(X))^2,X); X+2ln(abs(tan(X)+sec(X)))+tan(X)
 #product to sum, sin(3x)cos(2x) is (sin(5x) + sin(x))/2
 simplify; integral(sin(3X)*cos(2X),X); (-cos(5X))/10_(cos(X))/2
 simplify; integral(sin(3X)*sin(2X),X); sin(X)/2_(sin(5X))/10

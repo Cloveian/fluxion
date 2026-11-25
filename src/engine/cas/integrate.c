@@ -799,14 +799,65 @@ static const char *one_plus_trig(pcas_ast_t *e) {
     return "half angle";
 }
 
-/*polynomial left as a power or product of sums, (u^2-1)^2 from a substitution, multiplied out for the sum rule*/
+/*polynomial left as a power or product of sums, (u^2-1)^2 from a substitution, multiplied out for the sum rule. so is (sin(x)+cos(x))^2*/
 static const char *multiply_out(pcas_ast_t *e) {
     pcas_ast_t *f = ast_ChildGet(e, 0), *x = ast_ChildGet(e, 1);
+    mp_small n;
+    bool sum_power = isoptype(f, OP_POW) && isoptype(ast_ChildGet(f, 0), OP_ADD) && whole_number(ast_ChildGet(f, 1), &n) && n >= 2 && n <= 6;
 
-    if(poly_degree(f, x->op.symbol, NULL) < 2)
+    if(poly_degree(f, x->op.symbol, NULL) < 2 && !sum_power)
         return NULL;
     split_terms(e, ast_Copy(f), x);
     return "multiply out";
+}
+
+static bool is_tan_family(OperatorType op) {
+    return op == OP_TAN || op == OP_SEC || op == OP_CSC || op == OP_COT;
+}
+
+/*tan, sec, csc and cot to powers and nothing else, multiplied*/
+static bool reciprocal_powers(pcas_ast_t *f) {
+    pcas_ast_t *c;
+
+    if(isoptype(f, OP_MULT)) {
+        for(c = ast_ChildGet(f, 0); c != NULL; c = c->next)
+            if(!reciprocal_powers(c))
+                return false;
+        return true;
+    }
+    if(isoptype(f, OP_POW) && ast_ChildGet(f, 1)->type == NODE_NUMBER)
+        f = ast_ChildGet(f, 0);
+    return f->type == NODE_OPERATOR && is_tan_family(optype(f));
+}
+
+/*tan(u) is sin(u)/cos(u) and so on, in e*/
+static void to_sin_cos(pcas_ast_t *e) {
+    pcas_ast_t *c, *u, *top, *bot;
+    OperatorType op = optype(e);
+
+    if(e->type != NODE_OPERATOR)
+        return;
+    for(c = ast_ChildGet(e, 0); c != NULL; c = c->next)
+        to_sin_cos(c);
+    if(!is_tan_family(op))
+        return;
+    u = ast_ChildGet(e, 0);
+    top = op == OP_TAN || op == OP_COT ? ast_MakeUnary(op == OP_TAN ? OP_SIN : OP_COS, ast_Copy(u)) : ast_MakeInt(1);
+    bot = ast_MakeUnary(op == OP_TAN || op == OP_SEC ? OP_COS : OP_SIN, ast_Copy(u));
+    replace_node(e, ast_MakeBinary(OP_DIV, top, bot));
+}
+
+/*tan(x)^3 sec(x)^2 and the like, all sin and cos for the rules that take those*/
+static const char *sin_cos_form(pcas_ast_t *e) {
+    pcas_ast_t *f = ast_ChildGet(e, 0), *x = ast_ChildGet(e, 1), *g;
+
+    if(!reciprocal_powers(f) || (!isoptype(f, OP_MULT) && !isoptype(f, OP_POW)))
+        return NULL;
+    g = ast_Copy(f);
+    to_sin_cos(g);
+    simplify(g, SIMP_LIGHT | SIMP_LIKE_TERMS);
+    replace_node(e, integral(g, x));
+    return "sin and cos";
 }
 
 /*P/Q with P as big as Q or bigger, long *dih*vision: the quotient plus the remainder over Q*/
@@ -1298,23 +1349,23 @@ static bool has_trig_pow(pcas_ast_t *e, pcas_ast_t *t, int sign, bool bottom) {
     return false;
 }
 
-/*the first sin or cos of something with x in it*/
-static pcas_ast_t *first_sin_cos(pcas_ast_t *e, pcas_ast_t *x) {
+/*the first sin or cos of something with x in it, or any of the six when all is set*/
+static pcas_ast_t *first_sin_cos(pcas_ast_t *e, pcas_ast_t *x, bool all) {
     pcas_ast_t *c, *r;
 
     if(e->type != NODE_OPERATOR)
         return NULL;
-    if((isoptype(e, OP_SIN) || isoptype(e, OP_COS)) && has_symbol(e, x->op.symbol))
+    if((isoptype(e, OP_SIN) || isoptype(e, OP_COS) || (all && is_tan_family(optype(e)))) && has_symbol(e, x->op.symbol))
         return e;
     for(c = ast_ChildGet(e, 0); c != NULL; c = c->next)
-        if((r = first_sin_cos(c, x)) != NULL)
+        if((r = first_sin_cos(c, x, all)) != NULL)
             return r;
     return NULL;
 }
 
 /*cos^2/sin^2, the even power of one goes to 1 minus the other squared and what's left is powers of the other (cot^2 is csc^2 - 1)*/
 static const char *pyth_rule(pcas_ast_t *e) {
-    pcas_ast_t *f = ast_ChildGet(e, 0), *x = ast_ChildGet(e, 1), *t = first_sin_cos(f, x), *s, *c, *q;
+    pcas_ast_t *f = ast_ChildGet(e, 0), *x = ast_ChildGet(e, 1), *t = first_sin_cos(f, x, false), *s, *c, *q;
     int pass;
 
     if(t == NULL)
@@ -1441,7 +1492,7 @@ static bool half_tangent(pcas_ast_t *e, pcas_ast_t *g, pcas_ast_t *t, pcas_ast_t
 
 /*a fraction in sin and cos of one angle g, t = tan(g/2) turns it into one in t. 1/(2+cos(x)) is 2/(t^2+3) dt. the last thing tried*/
 static const char *tangent_half(pcas_ast_t *e, subs_t *subs) {
-    pcas_ast_t *f = ast_ChildGet(e, 0), *x = ast_ChildGet(e, 1), *tr = first_sin_cos(f, x), *u, *a, *q, *dx;
+    pcas_ast_t *f = ast_ChildGet(e, 0), *x = ast_ChildGet(e, 1), *tr = first_sin_cos(f, x, true), *u, *a, *q, *dx;
 
     if(tr == NULL || subs->n >= SUBS_MAX || (u = fresh(subs)) == NULL)
         return NULL;
@@ -1530,6 +1581,8 @@ static const char *one_rule(pcas_ast_t *e, subs_t *subs) {
     if((name = usub(e, subs)) != NULL)
         return name;
     if((name = multiply_out(e)) != NULL)
+        return name;
+    if((name = sin_cos_form(e)) != NULL)
         return name;
     if((name = shift_square(e, subs)) != NULL)
         return name;
