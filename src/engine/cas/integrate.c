@@ -389,6 +389,25 @@ static bool algebraic_only(pcas_ast_t *e) {
     return true;
 }
 
+/*u = sqrt(a x + b), q still has an x (x/sqrt(x+1)) so x = (u^2 - b)/a goes in*/
+static void x_from_root(pcas_ast_t *q, pcas_ast_t *cand, pcas_ast_t *u, pcas_ast_t *x, unsigned short how) {
+    pcas_ast_t *a, *b, *zero, *back;
+
+    if(!isoptype(cand, OP_POW) || !has_symbol(ast_ChildGet(cand, 0), x->op.symbol) || !is_value(ast_ChildGet(cand, 1), 1, 2))
+        return;
+    if((a = linear(ast_ChildGet(cand, 0), x)) == NULL)
+        return;
+    zero = ast_MakeInt(0);
+    b = ast_Copy(ast_ChildGet(cand, 0));
+    substitute(b, x, zero);
+    back = ast_MakeBinary(OP_DIV, ast_MakeBinary(OP_ADD, ast_MakeBinary(OP_POW, ast_Copy(u), ast_MakeInt(2)), ast_MakeBinary(OP_MULT, ast_MakeInt(-1), b)), a);
+    substitute(q, x, back);
+    expand(q, EXP_DISTRIB_NUMBERS | EXP_DISTRIB_MULTIPLICATION | EXP_EXPAND_POWERS | EXP_COLLECT_TERMS); /*x^2 comes out as (u^2-1)^2, multiplied out*/
+    simplify(q, how);
+    ast_Cleanup(back);
+    ast_Cleanup(zero);
+}
+
 /*x^4, x^6 and so on somewhere in e. x/(x^4+1) wants u = x^2, which isn't a piece of it*/
 static bool high_even_power(pcas_ast_t *e, pcas_ast_t *x) {
     pcas_ast_t *c;
@@ -439,6 +458,8 @@ static const char *usub(pcas_ast_t *e, subs_t *subs) {
             simplify(q, SIMP_ALL);
             ast_Cleanup(g);
         }
+        if(q != NULL && has_symbol(q, x->op.symbol))
+            x_from_root(q, cand[i], u, x, how);
         if(q != NULL && !pcas_cancelled && !has_symbol(q, x->op.symbol)) {
             subs->u[subs->n] = u; /*not a copy, an oom one is NULL and fresh() reads it*/
             subs->g[subs->n++] = ast_Copy(cand[i]);
