@@ -22,7 +22,8 @@ const char *operators[AMOUNT_OPS] = {
     "acot", "asec", "acsc",
     "sinh", "asinh", "cosh", "acosh", "tanh", "atanh",
     "gcd", "lcm", "nCr", "nPr",
-    "limit", "integral"
+    "limit", "integral",
+    "mod", "min", "max", "ceil", "round", "sign", "conj", "re", "im", "arg"
 };
 
 const char *symbols[SYM_INF - SYM_IMAG + 1] = {

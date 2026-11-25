@@ -2,6 +2,8 @@
 
 #include "stack.h"
 
+#include <string.h>
+
 /*http://tibasicdev.wikidot.com/one-byte-tokens*/
 struct Identifier ti_table[AMOUNT_TOKENS] = {
     {0, {0}}, {0, {0}},         /*TOK_NUMBER, TOK_SYMBOL*/
@@ -25,8 +27,11 @@ struct Identifier ti_table[AMOUNT_TOKENS] = {
     {2, {0xBB, 0xF3}}, {2, {0xBB, 0xF4}},   /*TOK_NCR, TOK_NPR. Fluxion: made up, the TI's nCr and nPr go between the numbers*/
     {2, {0xBB, 0xF5}},          /*TOK_LIMIT. Fluxion: made up, the TI has no limit*/
     {2, {0xBB, 0xF7}},          /*TOK_INTEGRAL. Fluxion: made up too, fnInt( is numeric*/
+    {2, {0xBB, 0xE0}}, {2, {0xBB, 0xE1}}, {2, {0xBB, 0xE2}},   /*TOK_MOD, TOK_MIN, TOK_MAX. Fluxion: made up too*/
 
     {1, {0xB1}}, {1, {0xB2}},   /*TOK_INT, TOK_ABS*/
+    {2, {0xBB, 0xE3}}, {2, {0xBB, 0xE4}}, {2, {0xBB, 0xE5}}, {2, {0xBB, 0xE6}},   /*TOK_CEIL, TOK_ROUND, TOK_SIGN, TOK_CONJ. Fluxion: made up*/
+    {2, {0xBB, 0xE7}}, {2, {0xBB, 0xE8}}, {2, {0xBB, 0xE9}},   /*TOK_RE, TOK_IM, TOK_ARG*/
     {1, {0xBC}}, {1, {0xBD}},   /*TOK_SQRT, TOK_CUBED_ROOT*/
     {1, {0xBE}}, {1, {0xBF}},   /*TOK_LN, TOK_E_TO_POWER*/
     {1, {0xC0}}, {1, {0xC1}},   /*TOK_LOG, TOK_10_TO_POWER*/
@@ -72,8 +77,11 @@ struct Identifier str_table[AMOUNT_TOKENS] = {
     {4, "nCr("}, {4, "nPr("},       /*TOK_NCR, TOK_NPR*/
     {6, "limit("},                  /*TOK_LIMIT*/
     {9, "integral("},               /*TOK_INTEGRAL*/
+    {4, "mod("}, {4, "min("}, {4, "max("},   /*TOK_MOD, TOK_MIN, TOK_MAX*/
 
     {4, "int("}, {4, "abs("},       /*TOK_INT, TOK_ABS*/
+    {5, "ceil("}, {6, "round("}, {5, "sign("}, {5, "conj("},   /*TOK_CEIL, TOK_ROUND, TOK_SIGN, TOK_CONJ*/
+    {3, "re("}, {3, "im("}, {4, "arg("},   /*TOK_RE, TOK_IM, TOK_ARG*/
     {5, "sqrt("}, {5, "cbrt("},     /*TOK_SQRT, TOK_CUBED_ROOT. Fluxion: 7 upstream, cbrt( never matched*/
     {3, "ln("}, {3, "e^("},         /*TOK_LN, TOK_E_TO_POWER*/
     {4, "log("}, {4, "10^("},       /*TOK_LOG, TOK_10_TO_POWER*/
@@ -156,8 +164,22 @@ mp_rat read_num(const uint8_t *equation, unsigned index, unsigned length, struct
     return num;
 }
 
+/*Fluxion: other names in text that parse as a token already there, they show as that one's name afterwards*/
+static const struct { const char *text; TokenType type; } aliases[] = {
+    {"floor(", TOK_INT}, {"binomial(", TOK_NCR}
+};
+
 TokenType read_type(const uint8_t *equation, unsigned index, unsigned length, struct Identifier *lookup, unsigned *consumed) {
-    unsigned identifier_index;
+    unsigned identifier_index, a, n;
+
+    if(lookup == str_table)
+        for(a = 0; a < sizeof aliases / sizeof aliases[0]; a++) {
+            n = (unsigned)strlen(aliases[a].text);
+            if(length - index >= n && memcmp(equation + index, aliases[a].text, n) == 0) {
+                *consumed = n;
+                return aliases[a].type;
+            }
+        }
 
     for(identifier_index = TOK_PLUS; identifier_index < AMOUNT_TOKENS; identifier_index++) {
         struct Identifier current = lookup[identifier_index];
@@ -325,7 +347,7 @@ uint8_t operand_count(TokenType type) {
     if(type == TOK_LOG_BASE)
         return 2;
 
-    if(type >= TOK_GCD && type <= TOK_NPR)
+    if((type >= TOK_GCD && type <= TOK_NPR) || (type >= TOK_MOD && type <= TOK_MAX))
         return 2;
 
     if(type == TOK_DERIV)
@@ -397,8 +419,18 @@ void translate(pcas_ast_t *e) {
     case TOK_NPR:        optype(e) = OP_NPR; break;
     case TOK_LIMIT:      optype(e) = OP_LIMIT; break; /*Fluxion*/
     case TOK_INTEGRAL:   optype(e) = OP_INTEGRAL; break; /*Fluxion*/
+    case TOK_MOD:        optype(e) = OP_MOD; break; /*Fluxion*/
+    case TOK_MIN:        optype(e) = OP_MIN; break;
+    case TOK_MAX:        optype(e) = OP_MAX; break;
     case TOK_INT:        optype(e) = OP_INT; break;
     case TOK_ABS:        optype(e) = OP_ABS; break;
+    case TOK_CEIL:       optype(e) = OP_CEIL; break; /*Fluxion*/
+    case TOK_ROUND:      optype(e) = OP_ROUND; break;
+    case TOK_SIGN:       optype(e) = OP_SIGN; break;
+    case TOK_CONJ:       optype(e) = OP_CONJ; break;
+    case TOK_RE:         optype(e) = OP_RE; break;
+    case TOK_IM:         optype(e) = OP_IM; break;
+    case TOK_ARG:        optype(e) = OP_ARG; break;
     case TOK_SQRT:
         optype(e) = OP_ROOT;
         ast_ChildInsert(e, ast_MakeNumber(num_FromInt(2)), 0);

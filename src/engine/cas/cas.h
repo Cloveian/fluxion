@@ -383,6 +383,9 @@ int poly_degree(pcas_ast_t *e, Symbol var, pcas_ast_t **lead);
 /*Fluxion: the same, and c[0] + c[1]var + c[2]var^2 into c (new trees, NULL for 0, all NULL at -1). higher terms are left out*/
 int poly_coefs(pcas_ast_t *e, Symbol var, pcas_ast_t *c[3]);
 
+/*Fluxion: int (floor), ceil, round, sign, mod, min, max, conj, re, im and arg worked out when their arguments are numbers (cas/evalfn.c). true if e changed*/
+bool eval_function(pcas_ast_t *e, unsigned short flags);
+
 /*Fluxion: left rel right (rel is = < > l for <= and g for >=) true for every value of its letters (truth.c). algebra first, then a counterexample for false, and all the sample points agreeing is only a numeric yes (route says so). TRUTH_UNKNOWN when neither works*/
 #define TRUTH_TRUE 1
 #define TRUTH_FALSE 0

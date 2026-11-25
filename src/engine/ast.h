@@ -54,6 +54,10 @@ typedef enum {
     OP_LIMIT,
     /*Fluxion: integral of the 1st child in the 2nd, from the 3rd to the 4th when those are there*/
     OP_INTEGRAL,
+    /*Fluxion: after the identity masks' 32 bits on purpose, they're never in an identity. mod(a, b), min and max take two*/
+    OP_MOD, OP_MIN, OP_MAX,
+    /*one argument*/
+    OP_CEIL, OP_ROUND, OP_SIGN, OP_CONJ, OP_RE, OP_IM, OP_ARG,
 
     AMOUNT_OPS
 } OperatorType;

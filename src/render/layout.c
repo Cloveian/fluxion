@@ -588,15 +588,22 @@ static box_t *build_operator(pcas_ast_t *e, unsigned char level) {
     case OP_COSH_INV: return build_call("cosh", true,  build(a, level), level);
     case OP_TANH:     return build_call("tanh", false, build(a, level), level);
     case OP_TANH_INV: return build_call("tanh", true,  build(a, level), level);
-    case OP_GCD: case OP_LCM: case OP_NCR: case OP_NPR: {
+    case OP_CEIL:     return build_call("ceil", false, build(a, level), level);
+    case OP_ROUND:    return build_call("round", false, build(a, level), level);
+    case OP_SIGN:     return build_call("sign", false, build(a, level), level);
+    case OP_CONJ:     return build_call("conj", false, build(a, level), level);
+    case OP_RE:       return build_call("re", false, build(a, level), level);
+    case OP_IM:       return build_call("im", false, build(a, level), level);
+    case OP_ARG:      return build_call("arg", false, build(a, level), level);
+    case OP_GCD: case OP_LCM: case OP_NCR: case OP_NPR: case OP_MOD: case OP_MIN: case OP_MAX: {
         /* left alone when they had letters in, gcd(x,6). shown how they're typed */
-        static const char *const two[] = { "gcd", "lcm", "nCr", "nPr" };
+        static const char *const two[] = { "gcd", "lcm", "nCr", "nPr", "mod", "min", "max" };
         box_t *args = new_box(BOX_ROW, level);
 
         add(args, build(a, level));
         add(args, new_text(",", level));
         add(args, build(b, level));
-        return build_call(two[optype(e) - OP_GCD], false, args, level);
+        return build_call(two[optype(e) >= OP_MOD ? optype(e) - OP_MOD + 4 : optype(e) - OP_GCD], false, args, level);
     }
     default:
         return new_text("?", level);

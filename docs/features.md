@@ -150,13 +150,16 @@ Everything Fluxion does right now, as tables. Yes / partly / no first, the other
 
 ### Numbers
 
-| Feature         |       |
-| --------------- | ----- |
-| Factorials      | yes   |
-| Percent         | yes   |
-| GCD and LCM     | yes\* |
-| Complex numbers | yes\* |
-| Big integers    | yes   |
+| Feature                  |       |
+| ------------------------ | ----- |
+| Factorials               | yes   |
+| Percent                  | yes   |
+| GCD and LCM              | yes\* |
+| Complex numbers          | yes\* |
+| Floor, ceil, round, sign | yes   |
+| Mod, min, max            | yes\* |
+| Conjugate, re, im, arg   | yes\* |
+| Big integers             | yes   |
 
 ### Geometry and lines
 

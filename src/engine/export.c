@@ -313,12 +313,15 @@ static unsigned _to_binary(pcas_ast_t *e, uint8_t *data, unsigned index, struct 
             add_token(TOK_CLOSE_PAR);
 
             break;
-        } case OP_GCD: case OP_LCM: case OP_NCR: case OP_NPR: {
+        } case OP_GCD: case OP_LCM: case OP_NCR: case OP_NPR: case OP_MOD: case OP_MIN: case OP_MAX: {
             /*Fluxion: same order in and out, nothing to swap like logb*/
             switch(optype(e)) {
                 case OP_GCD:        add_token(TOK_GCD);      break;
                 case OP_LCM:        add_token(TOK_LCM);      break;
                 case OP_NCR:        add_token(TOK_NCR);      break;
+                case OP_MOD:        add_token(TOK_MOD);      break;
+                case OP_MIN:        add_token(TOK_MIN);      break;
+                case OP_MAX:        add_token(TOK_MAX);      break;
                 default:            add_token(TOK_NPR);      break;
             }
 
@@ -349,6 +352,13 @@ static unsigned _to_binary(pcas_ast_t *e, uint8_t *data, unsigned index, struct 
             switch(optype(e)) {
                 case OP_INT:        add_token(TOK_INT);      break;
                 case OP_ABS:        add_token(TOK_ABS);      break;
+                case OP_CEIL:       add_token(TOK_CEIL);     break; /*Fluxion*/
+                case OP_ROUND:      add_token(TOK_ROUND);    break;
+                case OP_SIGN:       add_token(TOK_SIGN);     break;
+                case OP_CONJ:       add_token(TOK_CONJ);     break;
+                case OP_RE:         add_token(TOK_RE);       break;
+                case OP_IM:         add_token(TOK_IM);       break;
+                case OP_ARG:        add_token(TOK_ARG);      break;
                 case OP_SIN:        add_token(TOK_SIN);      break;
                 case OP_SIN_INV:    add_token(TOK_SIN_INV);  break;
                 case OP_COS:        add_token(TOK_COS);      break;

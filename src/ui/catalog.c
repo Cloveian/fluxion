@@ -138,6 +138,30 @@ ITEM(it_ncr,      "nCr",   NULL, ITEM_FUNCTION, "nCr($,$)", HAVE_YES, "n first, 
      "combinations: ways to pick r things out of n when order doesn't matter. nCr(5,2) -> 10")
 ITEM(it_npr,      "nPr",   NULL, ITEM_FUNCTION, "nPr($,$)", HAVE_YES, "n first, then r. menu only, typed letters come out lowercase",
      "permutations: ways to line up r things out of n. nPr(5,2) -> 20")
+ITEM(it_floor,    "floor", "floor", ITEM_FUNCTION, "floor($)", HAVE_YES, "the same as int(, it shows as int(",
+     "rounds down to a whole number, toward minus infinity. floor(-7/2) -> -4")
+ITEM(it_ceil,     "ceil",  "ceil", ITEM_FUNCTION, "ceil($)", HAVE_YES, NULL,
+     "rounds up to a whole number. ceil(7/2) -> 4")
+ITEM(it_round,    "round", "round", ITEM_FUNCTION, "round($)", HAVE_YES, "halves go away from 0 like the TI's",
+     "the nearest whole number. round(7/2) -> 4, round(-5/2) -> -3")
+ITEM(it_sign,     "sign",  "sign", ITEM_FUNCTION, "sign($)", HAVE_YES, "numbers only, sign(x) stays",
+     "-1, 0 or 1 by which side of 0 it's on. sign(-4) -> -1")
+ITEM(it_mod,      "mod",   "mod", ITEM_FUNCTION, "mod($,$)", HAVE_YES, "the answer has the sign of the second one",
+     "the remainder, a - b floor(a/b). mod(7,3) -> 1, mod(-7,3) -> 2")
+ITEM(it_min,      "min",   "min", ITEM_FUNCTION, "min($,$)", HAVE_YES, "numbers only, min(x,2) stays",
+     "the smaller of two. min(2,3) -> 2")
+ITEM(it_max,      "max",   "max", ITEM_FUNCTION, "max($,$)", HAVE_YES, "numbers only, max(x,2) stays",
+     "the bigger of two. max(2,3) -> 3")
+ITEM(it_binomial, "binomial", "binomial", ITEM_FUNCTION, "binomial($,$)", HAVE_YES, "the same as nCr, it shows as nCr(",
+     "ways to pick r things out of n. binomial(5,2) -> 10")
+ITEM(it_conj,     "conj",  "conj", ITEM_FUNCTION, "conj($)", HAVE_YES, "letters count as real",
+     "the complex conjugate, i turned into -i. conj(3+4i) -> 3-4i")
+ITEM(it_re,       "re",    "re", ITEM_FUNCTION, "re($)", HAVE_YES, "letters count as real",
+     "the real part. re(3+4i) -> 3")
+ITEM(it_im,       "im",    "im", ITEM_FUNCTION, "im($)", HAVE_YES, "letters count as real",
+     "the imaginary part, without the i. im(3+4i) -> 4")
+ITEM(it_arg,      "arg",   "arg", ITEM_FUNCTION, "arg($)", HAVE_YES, "radians, -pi to pi",
+     "the angle of a complex number. arg(1+i) -> pi/4")
 ITEM(it_amplitude, "amplitude", "amplitude", ITEM_COMMAND, "amplitude($)", HAVE_PARTLY,
      "amplitude(f,x): |A| of A*sin(Bx+C)+D or cos, sqrt(a^2+b^2) for a*sin(u)+b*cos(u). anything else is a message",
      "how far a sine or cosine wave goes from its middle. amplitude(3sin(2x)+1,x) -> 3")
@@ -301,6 +325,7 @@ const item_t *const catalog[] = {
     &it_sin, &it_cos, &it_tan, &it_asin, &it_acos, &it_atan, &it_cot, &it_sec, &it_csc, &it_acot, &it_asec, &it_acsc, &it_ln, &it_exp, &it_log, &it_pow10,
     &it_sinh, &it_cosh, &it_tanh, &it_asinh, &it_acosh, &it_atanh, &it_logb, &it_abs, &it_percent, &it_fact, &it_int,
     &it_gcd, &it_lcm, &it_ncr, &it_npr, &it_amplitude,
+    &it_floor, &it_ceil, &it_round, &it_sign, &it_mod, &it_min, &it_max, &it_binomial, &it_conj, &it_re, &it_im, &it_arg,
     &it_frac, &it_parens, &it_piecewise,
     &it_simplify, &it_expand, &it_subst, &it_evaluate, &it_factor, &it_solve, &it_asym, &it_domain, &it_range, &it_system,
     &it_slope, &it_dist, &it_mid, &it_par, &it_perp, &it_roots, &it_fromroots, &it_inverse,
@@ -342,7 +367,8 @@ static const item_t *const functions[] = {
     &it_sin, &it_cos, &it_tan, &it_asin, &it_acos, &it_atan, &it_cot, &it_sec, &it_csc, &it_acot, &it_asec, &it_acsc,
     &it_sinh, &it_cosh, &it_tanh, &it_asinh, &it_acosh, &it_atanh,
     &it_ln, &it_log, &it_logb, &it_exp, &it_pow10, &it_abs, &it_fact, &it_int,
-    &it_gcd, &it_lcm, &it_ncr, &it_npr, &it_amplitude
+    &it_gcd, &it_lcm, &it_ncr, &it_npr, &it_amplitude,
+    &it_floor, &it_ceil, &it_round, &it_sign, &it_mod, &it_min, &it_max, &it_binomial, &it_conj, &it_re, &it_im, &it_arg
 };
 static const item_t *const templates[] = {
     &it_frac, &it_power, &it_sqrt, &it_cbrt, &it_nroot, &it_abs, &it_logb, &it_parens,

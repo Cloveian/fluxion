@@ -95,6 +95,19 @@ static bool value(pcas_ast_t *e, real *x) {
         break;
     case OP_INT:      *x = floorf(a); break;
     case OP_ABS:      *x = fabsf(a); break;
+    case OP_CEIL:     *x = ceilf(a); break; /*Fluxion*/
+    case OP_ROUND:    *x = a < 0 ? -floorf(-a + 0.5F) : floorf(a + 0.5F); break; /*half away from 0, like the TI*/
+    case OP_SIGN:     *x = a > 0 ? 1 : a < 0 ? -1 : 0; break;
+    case OP_CONJ:     *x = a; break; /*a real is its own conjugate*/
+    case OP_RE:       *x = a; break;
+    case OP_IM:       *x = 0; break;
+    case OP_ARG:      if(a == 0) return false; *x = a > 0 ? 0 : 3.14159265358979F; break;
+    case OP_MOD:
+        if(b == 0) return false;
+        *x = a - b * floorf(a / b);
+        break;
+    case OP_MIN:      *x = a < b ? a : b; break;
+    case OP_MAX:      *x = a > b ? a : b; break;
     case OP_SIN:      *x = sinf(a); break;
     case OP_COS:      *x = cosf(a); break;
     case OP_TAN:      *x = tanf(a); break;

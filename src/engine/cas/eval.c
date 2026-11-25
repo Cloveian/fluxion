@@ -726,58 +726,6 @@ static bool eval_pow(pcas_ast_t *e, unsigned short flags) {
     return changed;
 }
 
-static bool eval_int(pcas_ast_t *e, unsigned short flags) {
-    bool changed = false;
-    mp_rat res;
-    pcas_ast_t *a;
-    mp_int remainder;
-
-    if(!(flags & EVAL_INT))
-        return false;
-
-    a = ast_ChildGet(e, 0);
-
-    remainder = mp_int_alloc();
-    mp_int_init(remainder);
-
-    if(a->type == NODE_NUMBER) {
-
-        res = num_FromInt(1);
-
-        mp_int_div(&a->op.num->num, &a->op.num->den, &res->num, remainder);
-
-        if(mp_int_compare_zero(remainder) != 0 && mp_int_compare_zero(&res->num) < 0)
-            mp_int_sub_value(&res->num, 1, &res->num);
-
-        replace_node(e, ast_MakeNumber(res));
-
-        changed = true;
-    } else if(isoptype(a, OP_DIV)) {
-        pcas_ast_t *num, *den;
-
-        num = ast_ChildGet(a, 0);
-        den = ast_ChildGet(a, 1);
-
-        if(num->type == NODE_NUMBER && den->type == NODE_NUMBER) {
-            res = num_FromInt(1);
-
-            /*That is a lot of num lol*/
-            mp_int_div(&num->op.num->num, &den->op.num->num, &res->num, remainder);
-
-            if(mp_int_compare_zero(remainder) != 0 && mp_int_compare_zero(&res->num) < 0)
-                mp_int_sub_value(&res->num, 1, &res->num);
-
-            replace_node(e, ast_MakeNumber(res));
-
-            changed = true;
-        }
-    }
-
-    mp_int_free(remainder);
-
-    return changed;
-}
-
 /*Fluxion: pi, e, and those or a number above 0 to a number's power (sqrt(2), e^2)*/
 bool known_positive(pcas_ast_t *c) {
     pcas_ast_t *b, *p;
@@ -1088,7 +1036,8 @@ bool eval(pcas_ast_t *e, unsigned short flags) {
         switch(optype(e)) {
             case OP_DIV: changed |= eval_div(e, flags); break;
             case OP_POW: changed |= eval_pow(e, flags); break;
-            case OP_INT: changed |= eval_int(e, flags); break;
+            case OP_INT: case OP_CEIL: case OP_ROUND: case OP_SIGN: case OP_MOD: case OP_MIN: case OP_MAX:
+            case OP_CONJ: case OP_RE: case OP_IM: case OP_ARG: changed |= eval_function(e, flags); break; /*evalfn.c*/
             case OP_ABS: changed |= eval_abs(e, flags); break;
             case OP_FACTORIAL: changed |= eval_factorial(e, flags); break;
             case OP_GCD: case OP_LCM: changed |= eval_gcd(e); break;
