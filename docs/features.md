@@ -53,6 +53,8 @@ Everything Fluxion does right now, as tables. Yes / partly / no first, the other
 | Critical points       | yes\* |
 | Max, min, inflections | yes\* |
 | Up and down intervals | yes   |
+| Taylor polynomials    | yes   |
+| Sums and products     | yes\*  |
 
 ### Systems
 

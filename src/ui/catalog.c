@@ -168,6 +168,12 @@ ITEM(it_apart,    "apart",  "apart", ITEM_COMMAND, "apart($)", HAVE_PARTLY,
 ITEM(it_polydiv,  "divide", "divide", ITEM_COMMAND, "divide($)", HAVE_YES,
      "divide(p,q,x): polynomial long division, the quotient and the remainder. numbers for coefficients",
      "p = quotient q + remainder. divide(x^3+1,x+2,x) -> quotient x^2-2x+4, remainder -7")
+ITEM(it_sum,      "sum",    "sum", ITEM_COMMAND, "sum($)", HAVE_PARTLY,
+     "sum(f,k,from,to): numbers at both ends are added up (100 terms at most), a letter on top gives a formula for polynomial terms up to k^3 and r^k",
+     "adds f up for k from one number to another. sum(k^2,k,1,4) -> 30, sum(k,k,1,n) -> n^2/2+n/2")
+ITEM(it_product,  "product", "product", ITEM_COMMAND, "product($)", HAVE_PARTLY,
+     "product(f,k,from,to): multiplied out for numbers at both ends, and product(k,k,1,n) is n!",
+     "multiplies f for k from one number to another. product(k,k,1,5) -> 120")
 ITEM(it_amplitude, "amplitude", "amplitude", ITEM_COMMAND, "amplitude($)", HAVE_PARTLY,
      "amplitude(f,x): |A| of A*sin(Bx+C)+D or cos, sqrt(a^2+b^2) for a*sin(u)+b*cos(u). anything else is a message",
      "how far a sine or cosine wave goes from its middle. amplitude(3sin(2x)+1,x) -> 3")
@@ -188,6 +194,9 @@ ITEM(it_increasing, "increasing", "increasing", ITEM_COMMAND, "increasing($)", H
      "increasing(f,x): where f' is over 0 and where it's under, as intervals",
      "where the curve goes up and where it goes down. increasing(x^3-3x,x) -> increasing x < -1 or x > 1, decreasing -1 < x < 1")
 
+ITEM(it_taylor,   "taylor", "taylor", ITEM_COMMAND, "taylor($)", HAVE_YES,
+     "taylor(f,a,n,x): f(a) + f'(a)(x-a) + ... up to the nth power, the x is optional. n up to 8",
+     "a polynomial that matches f near x = a. taylor(e^x,0,3) -> 1+x+x^2/2+x^3/6")
 ITEM(it_implicit, "implicit", "implicit", ITEM_COMMAND, "implicit($)", HAVE_PARTLY,
      "implicit(equation,y,x): dy/dx as -(dF/dx)/(dF/dy) of left - right. y and x are the defaults",
      "the slope of a curve that isn't a function of x. implicit(x^2+y^2=25) -> dy/dx = -x/y")
@@ -331,14 +340,14 @@ const item_t *const catalog[] = {
     &it_sin, &it_cos, &it_tan, &it_asin, &it_acos, &it_atan, &it_cot, &it_sec, &it_csc, &it_acot, &it_asec, &it_acsc, &it_ln, &it_exp, &it_log, &it_pow10,
     &it_sinh, &it_cosh, &it_tanh, &it_asinh, &it_acosh, &it_atanh, &it_logb, &it_abs, &it_percent, &it_fact, &it_int,
     &it_gcd, &it_lcm, &it_ncr, &it_npr, &it_amplitude,
-    &it_apart, &it_polydiv, &it_floor, &it_ceil, &it_round, &it_sign, &it_mod, &it_min, &it_max, &it_binomial, &it_conj, &it_re, &it_im, &it_arg,
+    &it_apart, &it_polydiv, &it_sum, &it_product, &it_floor, &it_ceil, &it_round, &it_sign, &it_mod, &it_min, &it_max, &it_binomial, &it_conj, &it_re, &it_im, &it_arg,
     &it_frac, &it_parens, &it_piecewise,
     &it_simplify, &it_expand, &it_subst, &it_evaluate, &it_factor, &it_solve, &it_asym, &it_domain, &it_range, &it_system,
     &it_slope, &it_dist, &it_mid, &it_par, &it_perp, &it_roots, &it_fromroots, &it_inverse,
     &it_triangle, &it_circle, &it_rect, &it_squareshape, &it_trap, &it_sphere, &it_cyl, &it_cone,
     &it_cube, &it_box, &it_polygon, &it_pand, &it_por,
     &it_ellipse, &it_hyperbola,
-    &it_deriv, &it_deriv_at, &it_integral, &it_limit, &it_tangent, &it_critical, &it_extrema, &it_inflect, &it_implicit, &it_increasing,
+    &it_deriv, &it_deriv_at, &it_integral, &it_limit, &it_tangent, &it_critical, &it_extrema, &it_inflect, &it_implicit, &it_increasing, &it_taylor,
     &it_id_basic, &it_id_trig, &it_id_hyp, &it_id_cplx, &it_id_tconst, &it_id_iconst, &it_clear, &it_steps
 };
 const unsigned catalog_count = sizeof catalog / sizeof catalog[0];
@@ -363,11 +372,11 @@ SUBFOLDER(it_conics, conics_folder, "Conics", conics)
 SUBFOLDER(it_prob, prob_folder, "Probability", prob)
 
 static const item_t *const algebra[] = {
-    &it_expand, &it_factor, &it_solve, &it_system, &it_roots, &it_fromroots, &it_inverse, &it_apart, &it_polydiv, &it_subst, &it_evaluate,
+    &it_expand, &it_factor, &it_solve, &it_system, &it_roots, &it_fromroots, &it_inverse, &it_apart, &it_polydiv, &it_sum, &it_product, &it_subst, &it_evaluate,
     &it_fn_info, &it_lines, &it_shapes, &it_solids, &it_conics, &it_prob
 };
 static const item_t *const calculus[] = {
-    &it_deriv, &it_deriv_at, &it_integral, &it_limit, &it_tangent, &it_critical, &it_extrema, &it_inflect, &it_implicit, &it_increasing
+    &it_deriv, &it_deriv_at, &it_integral, &it_limit, &it_tangent, &it_critical, &it_extrema, &it_inflect, &it_implicit, &it_increasing, &it_taylor
 };
 static const item_t *const functions[] = {
     &it_sin, &it_cos, &it_tan, &it_asin, &it_acos, &it_atan, &it_cot, &it_sec, &it_csc, &it_acot, &it_asec, &it_acsc,

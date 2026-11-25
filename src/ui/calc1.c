@@ -15,7 +15,7 @@
 
 #define ARGS_MAX 4
 
-enum { C_TANGENT, C_CRITICAL, C_EXTREMA, C_INFLECT, C_IMPLICIT, C_INCREASING, C_COUNT };
+enum { C_TANGENT, C_CRITICAL, C_EXTREMA, C_INFLECT, C_IMPLICIT, C_INCREASING, C_TAYLOR, C_COUNT };
 
 static const struct {
     const char *name, *usage;
@@ -27,6 +27,7 @@ static const struct {
     { "inflect", "inflect(f, x)", 1, 2 },
     { "implicit", "implicit(equation, y, x)", 1, 3 },
     { "increasing", "increasing(f, x)", 1, 2 },
+    { "taylor", "taylor(f, a, n, x)", 3, 4 },
 };
 
 /* d/dvar of f, times over. NULL on oom or cancelled */
@@ -176,6 +177,56 @@ static box_t *slopes(pcas_ast_t *f, Symbol var, char shown, const char **message
     return col;
 }
 
+#define ORDER_MAX 8 /*terms of a Taylor polynomial, each a derivative and a simplify*/
+
+/* f(a) + f'(a)(x-a) + f''(a)/2 (x-a)^2 + ... up to the order, the zero terms left out. NULL (and message) when it doesn't work */
+static box_t *taylor(pcas_ast_t *f, pcas_ast_t *a, pcas_ast_t *order, Symbol var, const char **message) {
+    pcas_ast_t *d = ast_Copy(f), *sum = ast_MakeOperator(OP_ADD), *o = ast_Copy(order), *x = ast_MakeSymbol((char)var), *c, *base, *next;
+    box_t *out = NULL;
+    mp_small n, k;
+    int fact = 1;
+
+    simplify(o, SIMP_ALL);
+    if(!whole_number(o, &n) || n < 0 || n > ORDER_MAX) {
+        *message = "the order is a whole number from 0 to 8";
+    } else {
+        for(k = 0; k <= n && d != NULL && !pcas_cancelled; k++) {
+            c = ast_MakeBinary(OP_DIV, at(d, var, a), ast_MakeInt(fact));
+            simplify(c, SIMP_ALL);
+            if(!is_ast_int(c, 0)) {
+                if(k == 0) {
+                    ast_ChildAppend(sum, c);
+                } else {
+                    base = is_ast_int(a, 0) ? ast_Copy(x) : ast_MakeBinary(OP_ADD, ast_Copy(x), ast_MakeBinary(OP_MULT, ast_MakeInt(-1), ast_Copy(a)));
+                    c = ast_MakeBinary(OP_MULT, c, k == 1 ? base : ast_MakeBinary(OP_POW, base, ast_MakeInt(k)));
+                    simplify(c, SIMP_ALL);
+                    ast_ChildAppend(sum, c);
+                }
+            } else {
+                ast_Cleanup(c);
+            }
+            next = derive(d, var, 1);
+            ast_Cleanup(d);
+            d = next;
+            fact *= (int)k + 1;
+        }
+        if(pcas_cancelled) {
+            *message = pcas_oom ? "out of memory" : "cancelled";
+        } else if(ast_ChildLength(sum) == 0) {
+            out = layout_text("0", 0);
+        } else {
+            simplify(sum, SIMP_NORMALIZE | SIMP_COMMUTATIVE);
+            simplify_canonical_form(sum, CANONICAL_ALL);
+            out = layout_build(sum, &draw_font);
+        }
+    }
+    ast_Cleanup(d);
+    ast_Cleanup(sum);
+    ast_Cleanup(o);
+    ast_Cleanup(x);
+    return out;
+}
+
 /* implicit(x^2+y^2=25, y, x): left - right in *f, y and x in dep and ind (defaults when missing), their letters go in label. what's wrong with it, or NULL */
 static const char *read_implicit(char **piece, int n, pcas_ast_t **f, Symbol *dep, Symbol *ind, char *label) {
     pcas_ast_t *l, *r = NULL;
@@ -247,7 +298,7 @@ static const char *read_command(int c, char **piece, int n, pcas_ast_t **a, Symb
     *shown = 'x';
     if(n == cmds[c].most && !args_var(piece[n - 1], var, shown))
         return cmds[c].usage;
-    for(i = 0; i < (c == C_TANGENT ? 2 : 1); i++)
+    for(i = 0; i < (c == C_TAYLOR ? 3 : c == C_TANGENT ? 2 : 1); i++)
         if((a[i] = args_parse(piece[i], &err)) == NULL)
             return error_text[err];
     return NULL;
@@ -305,6 +356,9 @@ bool calc1_run(const char *cmd, char *src, box_t *in) {
             ast_Cleanup(roots[i]);
     } else if(c == C_INCREASING) {
         out = slopes(a[0], var, shown, &message);
+    } else if(c == C_TAYLOR) {
+        simplify(a[1], SIMP_ALL);
+        out = taylor(a[0], a[1], a[2], var, &message);
     } else {
         out = turning_points(a[0], var, c == C_INFLECT, &message);
     }
@@ -326,7 +380,7 @@ const char *calc1_work(const char *cmd, char *src) {
 
     for(c = 0; c < C_COUNT && strcmp(cmd, cmds[c].name) != 0; c++)
         ;
-    if(c == C_COUNT || c == C_INCREASING)
+    if(c == C_COUNT || c == C_INCREASING || c == C_TAYLOR)
         return "no steps for that one yet";
     n = args_split(src, piece, ARGS_MAX);
     if(n < cmds[c].least || n > cmds[c].most)
