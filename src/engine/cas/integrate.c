@@ -477,9 +477,9 @@ static int liate(pcas_ast_t *p, pcas_ast_t *x) {
 }
 
 /*integral u dv = u v - integral v du. u is the higest of LIATE in a product, or the whole of a log or inverse trig with dv = 1. v has to come out whole (no integral left in it), the new integral goes round the rules again*/
-static const char *by_parts(pcas_ast_t *e, subs_t *subs) {
+static const char *by_parts_of(pcas_ast_t *e, pcas_ast_t *f, subs_t *subs) {
     static int depth; /*v is worked out by integral_of, which can want its own parts*/
-    pcas_ast_t *f = ast_ChildGet(e, 0), *x = ast_ChildGet(e, 1), *u = NULL, *dv, *c, *v, *du, *I;
+    pcas_ast_t *x = ast_ChildGet(e, 1), *u = NULL, *dv, *c, *v, *du, *I;
     int rank = 0, best = 0, tie = 0;
 
     if(subs->parts >= PARTS_MAX || depth > 1)
@@ -531,6 +531,22 @@ static const char *by_parts(pcas_ast_t *e, subs_t *subs) {
         ast_MakeBinary(OP_MULT, ast_Copy(u), ast_Copy(v)),
         ast_MakeBinary(OP_MULT, ast_MakeInt(-1), integral(ast_MakeBinary(OP_MULT, v, du), x))));
     return "integration by parts";
+}
+
+/*by_parts_of on the integrand as it is, or as a product when the bottom is just a power of x: atan(x)/x^2 is atan(x) times x^-2. any other bottom sends it round in circles (sin(x)/(x^2-1))*/
+static const char *by_parts(pcas_ast_t *e, subs_t *subs) {
+    pcas_ast_t *f = ast_ChildGet(e, 0), *x = ast_ChildGet(e, 1), *own = NULL, *den;
+    const char *name;
+
+    den = isoptype(f, OP_DIV) ? ast_ChildGet(f, 1) : NULL;
+    if(den != NULL && (ast_Compare(den, x) || (isoptype(den, OP_POW) && ast_Compare(ast_ChildGet(den, 0), x) && !has_symbol(ast_ChildGet(den, 1), x->op.symbol)))) {
+        own = ast_MakeBinary(OP_MULT, ast_Copy(ast_ChildGet(f, 0)), ast_MakeBinary(OP_POW, ast_Copy(ast_ChildGet(f, 1)), ast_MakeInt(-1)));
+        simplify(own, SIMP_NORMALIZE | SIMP_COMMUTATIVE); /*not eval, that writes x^-2 back as a bottom*/
+        f = own;
+    }
+    name = by_parts_of(e, f, subs);
+    ast_Cleanup(own);
+    return name;
 }
 
 /*e becomes the integrals of the terms of g multiplied out. g taken*/

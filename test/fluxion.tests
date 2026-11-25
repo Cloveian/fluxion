@@ -1133,6 +1133,10 @@ simplify; integral(1/((X_1)^2*(X+2)),X); -1/(-3+3X)+ln(abs(2+X)/abs(-1+X))/9
 simplify; integral(X/((X+1)^3),X); -1/(1+X)+1/(2(1+X)^2)
 simplify; integral(1/(X^2*(X^2+1)),X); -1/X_atan(X)
 simplify; integral(1/((X+1)^2*(X^2+1)),X); ln(abs(1+X))/2_1/(2+2X)_(ln(abs(1+X^2)))/4
+#by parts with a bottom that's a power of x, atan(x)/x^2 is atan(x) times x^-2
+simplify; integral(atan(X)/X^2,X); ln(abs(X^2)/abs(X^2+1))/2_(atan(X))/X
+simplify; integral(ln(X)/X^2,X); -1/X_(ln(X))/X
+simplify; integral(sin(X)/(X^2_1),X); integral(sin(X)/(X^2_1),X)
 #u = x^2 when only x^4 shows (an extra try in u-substitution), x^4 is u^2
 simplify; integral(X/(X^4+1),X); atan(X^2)/2
 simplify; integral(X^3/(X^8+1),X); atan(X^4)/4
