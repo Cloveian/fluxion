@@ -214,14 +214,17 @@ static void key_down(const SDL_KeyboardEvent *ev) {
     bool on = (ev->mod & SDL_KMOD_CTRL) != 0;
     bool alt = (ev->mod & SDL_KMOD_ALT) != 0;
     bool shift = (ev->mod & SDL_KMOD_SHIFT) != 0;
+    bool bigger, smaller;
     keycode_t key;
 
     if(ev->key == SDLK_F11) { /* fullscreen, not a calculator key */
         window_fullscreen_toggle();
         return;
     }
-    if(on && (ev->key == SDLK_EQUALS || ev->key == SDLK_PLUS || ev->key == SDLK_KP_PLUS || ev->key == SDLK_MINUS || ev->key == SDLK_KP_MINUS)) {
-        window_zoom(ev->key == SDLK_MINUS || ev->key == SDLK_KP_MINUS ? -1 : 1); /* Ctrl + and -, the pixel size */
+    bigger = ev->key == SDLK_EQUALS || ev->key == SDLK_PLUS || ev->key == SDLK_KP_PLUS;
+    smaller = ev->key == SDLK_MINUS || ev->key == SDLK_KP_MINUS;
+    if(on && (bigger || smaller)) {
+        window_zoom(bigger ? 1 : -1); /* the pixel size */
         push(K_NONE, false);
         return;
     }

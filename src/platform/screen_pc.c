@@ -1,7 +1,7 @@
 #ifndef __TICE__
 
-/* PC version of screen.h. draws into a framebuffer of palette indexes (320x240 till
-   the window or --size says otherwise), which the SDL window shows or screen_save_png() writes out. */
+/* PC version of screen.h. draws into a framebuffer of palette indexes, 320x240 unless the
+   window or --size changed it, which the SDL window shows or screen_save_png() writes out. */
 
 #include "screen.h"
 #include "window_pc.h"

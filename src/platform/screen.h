@@ -10,7 +10,7 @@
 
 #include <stdbool.h>
 
-/* the calculators and the web page are one fixed size. the PC window can be any: the size is a variable then, set by screen_resize() */
+/* calculators and the web page are one fixed size, the PC window is any */
 #if defined(COMPILE_PC) && !defined(__EMSCRIPTEN__) && !defined(__TICE__) && !defined(_TINSPIRE)
 #define SCREEN_RESIZABLE
 extern int screen_w, screen_h;
@@ -19,7 +19,7 @@ extern int screen_w, screen_h;
 #define SCREEN_MIN_W 240 /* the soft key names stop fitting under that */
 #define SCREEN_MIN_H 160
 
-/* a new size (clamped to the minimum), the framebuffer starts over blank and screen_resized runs, the app sets that to redo its layout */
+/* new size, clamped to the minumum. the framebuffer starts blank, then screen_resized runs */
 void screen_resize(int w, int h);
 extern void (*screen_resized)(void);
 #else

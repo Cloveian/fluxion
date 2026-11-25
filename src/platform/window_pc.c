@@ -1,6 +1,6 @@
 #ifndef __TICE__
 
-/* PC only. shows screen_pc.c's framebuffer in an SDL3 window, scaled up by a whole number that fits, black around it. resizable, the framebuffer follows the window size. F11 for fullscreen, Ctrl + and - for the scale */
+/* PC only. shows screen_pc.c's framebuffer in an SDL3 window, scaled up by a whole number, black around what's left. the framebuffer follows the window size. F11 fullscreen, Ctrl + and - for the scale */
 
 #include "window_pc.h"
 #include "screen.h"
@@ -18,7 +18,7 @@ static int scale = SCALE_START; /* window pixels to a framebuffer pixel, whole n
 static int tex_w, tex_h; /* what the texture was made for */
 static unsigned char *rgb;
 
-/* the texture and the rgb buffer for the framebuffer size now */
+/* texture and rgb buffer for the size now */
 static void make_texture(void) {
     if(texture != NULL)
         SDL_DestroyTexture(texture);
@@ -81,7 +81,7 @@ void window_present(void) {
         screen_rgb(px[i], &rgb[i * 3]);
     SDL_UpdateTexture(texture, NULL, rgb, SCREEN_W * 3);
 
-    to.w = (float)(SCREEN_W * scale); /* whole pixels from the corner, what's left over is black */
+    to.w = (float)(SCREEN_W * scale); /* from the corner, the rest stays black */
     to.h = (float)(SCREEN_H * scale);
     SDL_RenderClear(renderer);
     SDL_RenderTexture(renderer, texture, NULL, &to);
