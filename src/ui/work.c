@@ -24,7 +24,7 @@ static Symbol sys_vars[SYSTEM_MAX];
 static int sys_n;
 static int cmd_kind = -1; /* a STEPS_ kind when the page is for tangent(, critical( and the like */
 static pcas_ast_t *cmd_f, *cmd_a;
-static char expr_kind; /* 'e' for expand, 'f' factor, 0 when calc is a d/dx, limit or integral */
+static char expr_kind; /* 'e' for expand, 'f' factor, 's' simplify, 0 when calc is a d/dx, limit or integral */
 static pcas_ast_t *calc; /* the d/dx, limit or integral node for those steps, else NULL */
 static Symbol var;
 static char rel; /* 0 for an equation, else < > or l g (<= >=) */
@@ -211,7 +211,7 @@ static bool build(void) {
     else if(calc == NULL)
         ok = steps_solve(lhs, rhs, var, method, &s);
     else if(expr_kind != 0)
-        ok = expr_kind == 'e' ? steps_expand(calc, &s) : steps_factor(calc, &s);
+        ok = expr_kind == 'e' ? steps_expand(calc, &s) : expr_kind == 's' ? steps_simplify(calc, &s) : steps_factor(calc, &s);
     else
         ok = steps_calc(calc, &s);
     if(!ok)
@@ -303,8 +303,14 @@ const char *work_open_command(int kind, pcas_ast_t *f, pcas_ast_t *a, Symbol v) 
     return NULL;
 }
 
-const char *work_open_expr(bool expand, pcas_ast_t *e) {
-    return open_node(e, expand ? 'e' : 'f', expand ? "nothing to open up" : "no steps for this one yet");
+const char *work_open_expr(char kind, pcas_ast_t *e) {
+    const char *why = "no steps for this one yet";
+
+    if(kind == 'e')
+        why = "nothing to open up";
+    else if(kind == 's')
+        why = "nothing to simplify";
+    return open_node(e, kind, why);
 }
 
 const char *work_open_calc(pcas_ast_t *e) {

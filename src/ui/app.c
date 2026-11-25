@@ -30,6 +30,7 @@
 #include "engine/parser.h"
 #include "engine/cas/cas.h"
 #include "engine/cas/identities.h"
+#include "engine/cas/steps.h"
 #include "editor/editor.h"
 #include "render/draw.h"
 #include "platform/screen.h"
@@ -292,17 +293,6 @@ static void line_done(void) {
 
 #define SIMP_BASIC (SIMP_NORMALIZE | SIMP_COMMUTATIVE | SIMP_RATIONAL)
 
-/* how big a tree is, for "did that get simpler" */
-static int nodes(const pcas_ast_t *e) {
-    const pcas_ast_t *k;
-    int n = 1;
-
-    if(e->type == NODE_OPERATOR)
-        for(k = e->op.operator.base; k != NULL; k = k->next)
-            n += nodes(k);
-    return n;
-}
-
 /* would anyone multiply this out by hand. a cube at most, and not a page of it.
    (x+1)^7 was minutes on the calculator before expand collected as it went,
    and it'd be silly to pay that just to find out it didn't get smaller */
@@ -367,14 +357,14 @@ static void apply_form(pcas_ast_t *e) {
            nspire does about the same thing */
         pcas_ast_t *x;
 
-        if(nodes(e) > 60 || !worth_expanding(e))
+        if(steps_size(e) > 60 || !worth_expanding(e))
             break;
         x = ast_Copy(e);
         if(x == NULL)
             break;
         expand(x, EXP_ALL);
         simplify(x, SIMP_BASIC | SIMP_EVAL | SIMP_LIKE_TERMS);
-        if(!pcas_cancelled && nodes(x) < nodes(e))
+        if(!pcas_cancelled && steps_size(x) < steps_size(e))
             replace_node(e, x);
         else
             ast_Cleanup(x);
@@ -396,7 +386,7 @@ static void apply_form(pcas_ast_t *e) {
             expand(ast_ChildGet(x, 0), EXP_ALL);
             simplify(ast_ChildGet(x, 0), SIMP_BASIC | SIMP_EVAL | SIMP_LIKE_TERMS);
         }
-        if(!pcas_cancelled && (nodes(x) <= nodes(e) || !has_root(x)))
+        if(!pcas_cancelled && (steps_size(x) <= steps_size(e) || !has_root(x)))
             replace_node(e, x);
         else
             ast_Cleanup(x);
@@ -1175,7 +1165,7 @@ static void show_steps(void) {
             status = "nothing to show the work for";
             return;
         }
-        status = work_open_expr(strcmp(cmd, "expand") == 0, e);
+        status = work_open_expr(strcmp(cmd, "expand") == 0 ? 'e' : 'f', e);
         return;
     }
     if(cmd != NULL && (strcmp(cmd, "tangent") == 0 || strcmp(cmd, "critical") == 0 || strcmp(cmd, "extrema") == 0
@@ -1193,11 +1183,10 @@ static void show_steps(void) {
         src = ed_to_engine(&view);
         e = src != NULL ? args_parse_deg(src, &err) : NULL; /* like run(), so the steps end at its answer */
         free(src);
-        if(e != NULL && (isoptype(e, OP_DERIV) || isoptype(e, OP_LIMIT) || isoptype(e, OP_INTEGRAL))) {
-            status = work_open_calc(e);
+        if(e != NULL) { /* anything but those 3 gets simplified a phase at a time */
+            status = isoptype(e, OP_DERIV) || isoptype(e, OP_LIMIT) || isoptype(e, OP_INTEGRAL) ? work_open_calc(e) : work_open_expr('s', e);
             return;
         }
-        ast_Cleanup(e);
     }
     if(cmd == NULL || (strcmp(cmd, "solve") != 0 && strcmp(cmd, "roots") != 0 && strcmp(cmd, "system") != 0)) {
         status = "steps are for solve(, system(, expand(, factor(, d/dx, limit( and integral(";

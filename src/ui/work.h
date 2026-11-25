@@ -17,7 +17,7 @@ const char *work_open_system(char *src);
 /* tangent(, critical(, extrema( or inflect( (a STEPS_ kind from steps.h): f, and the point a for a tangent. copies what it keeps */
 const char *work_open_command(int kind, pcas_ast_t *f, pcas_ast_t *a, Symbol var);
 /* the steps for expand( or factor( on e (the page keeps it) */
-const char *work_open_expr(bool expand, pcas_ast_t *e);
+const char *work_open_expr(char kind, pcas_ast_t *e); /* 'e' expand, 'f' factor, 's' simplify */
 /* the steps for d/dx(...), a limit or an integral, e is that node and the page keeps it */
 const char *work_open_calc(pcas_ast_t *e);
 bool work_is_open(void);

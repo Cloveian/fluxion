@@ -1234,6 +1234,12 @@ steps; X^3+X+1=0; X; X^3+X+1=0|thediscriminant,(q/2)^2+(p/3)^3|(1/2)^2+(1/3)^3|3
 steps; X^3_2=0; X; X^3_2=0|thediscriminant,(q/2)^2+(p/3)^3|(-2/2)^2+(0/3)^3|1|over0:onerealrootandtwocomplex|T=3root(1+1^(1/2))+3root(1_1^(1/2))|x=t-b/3|X=3root2orX=(isqrt(3))/2^(2/3)_1/2^(2/3)orX=-1/2^(2/3)_(isqrt(3))/2^(2/3)
 steps; 2X^3_6X+2=0; X; 2X^3_6X+2=0|dividebythefirstnumber|X^3_3X+1=0|thediscriminant,(q/2)^2+(p/3)^3|(1/2)^2+(-3/3)^3|-3/4|under0:threerealroots,k=0,1,2|T=2*1^(1/2)*cos(acos(-1/21^(1/2))/3_(2piK)/3)|x=t-b/3|X=2cos((8pi)/9)orX=2cos((4pi)/9)orX=2cos((2pi)/9)
 steps; X^3_3X+1=5; X; X^3_3X+1=5|_5|X^3_3X_4=0|thediscriminant,(q/2)^2+(p/3)^3|(-4/2)^2+(-3/3)^3|3|over0:onerealrootandtwocomplex|T=3root(2+3^(1/2))+3root(2_3^(1/2))|x=t-b/3|X=3root(sqrt(3)+2)+3root(2_sqrt(3))
+#simplify a phase at a time: cancel, multiply out and add like terms, over one bottom
+steps; simplify:(X^2_1)/(X_1); X; (X^2_1)/(X_1)|cancelcommonfactors|X+1
+steps; simplify:(X+1)^2_(X_1)^2; X; (X+1)^2_(X_1)^2|multiplyoutandaddliketerms|4X
+steps; simplify:1/X+1/(X+1); X; 1/X+1/(X+1)|overonebottom|(2X+1)/(X^2+X)
+steps; simplify:(2X+2)/(X+1)+3; X; (2X+2)/(X+1)+3|cancelcommonfactors|2+3|multiplyoutandaddliketerms|5
+steps; simplify:X+X; X; X+X|multiplyoutandaddliketerms|2X
 steps; sqrt(X)=X^3; X; none
 #a linear system by elimination, every line is the whole system. the last line has to be what solve_system says
 steps; 2X+Y=5,X_Y=1; XY; 2X+Y=5,X_Y=1|swaptwoequations|X_Y=1,2X+Y=5|cancelaletterfromtheothers|X_Y=1,Y=1|cancelaletterfromtheothers|X=2,Y=1

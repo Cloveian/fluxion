@@ -426,10 +426,10 @@ static bool test_cmd_steps(test_t *t) {
     return passed;
 }
 
-/*Fluxion: steps; expand:(X+1)(X+2) or factor:X^2+5X+6; X; the lines. the last line of expand has to be what expand says*/
+/*Fluxion: steps; expand:(X+1)(X+2), factor:X^2+5X+6 or simplify:(X^2_1)/(X_1); X; the lines. the last line of expand has to be what expand says*/
 static bool test_expr_steps(test_t *t) {
-    bool expand_cmd = strncmp(t->arg1, "expand:", 7) == 0;
-    const char *src = t->arg1 + 7;
+    bool expand_cmd = strncmp(t->arg1, "expand:", 7) == 0, simplify_cmd = strncmp(t->arg1, "simplify:", 9) == 0;
+    const char *src = t->arg1 + (simplify_cmd ? 9 : 7);
     pcas_error_t err;
     pcas_ast_t *e = parse((uint8_t*)src, strlen(src), str_table, &err), *check = NULL;
     char got[MAX_PAR * 2] = "";
@@ -440,7 +440,7 @@ static bool test_expr_steps(test_t *t) {
         printf("Test failed on line %u. Unable to parse %s\n", t->line, src);
         return false;
     }
-    ok = expand_cmd ? steps_expand(e, &s) : steps_factor(e, &s);
+    ok = expand_cmd ? steps_expand(e, &s) : simplify_cmd ? steps_simplify(e, &s) : steps_factor(e, &s);
     if(!ok)
         strcpy(got, "none");
     else
@@ -456,6 +456,12 @@ static bool test_expr_steps(test_t *t) {
         passed = same_value(check, s.line[s.n - 1].eq[0].left);
         if(!passed)
             printf("Test failed on line %u. The steps end somewhere else than expand\n", t->line);
+    } else if(passed && ok && simplify_cmd) { /*the last line is the same function, no counterexample*/
+        truth_t tr;
+
+        passed = truth_of(e, s.line[s.n - 1].eq[0].left, '=', &tr) != TRUTH_FALSE;
+        if(!passed)
+            printf("Test failed on line %u. The last line isn't the same as the start\n", t->line);
     } else if(passed && ok) { /*the factored form multiplied out is the polynomial*/
         check = ast_MakeBinary(OP_ADD, ast_Copy(e), ast_MakeBinary(OP_MULT, ast_MakeInt(-1), ast_Copy(s.line[s.n - 1].eq[0].left)));
         simplify(check, SIMP_NORMALIZE | SIMP_COMMUTATIVE | SIMP_RATIONAL);
@@ -678,7 +684,7 @@ static bool test_steps(test_t *t) {
     int m, i, j, n;
     bool passed;
 
-    if(strncmp(t->arg1, "expand:", 7) == 0 || strncmp(t->arg1, "factor:", 7) == 0)
+    if(strncmp(t->arg1, "expand:", 7) == 0 || strncmp(t->arg1, "factor:", 7) == 0 || strncmp(t->arg1, "simplify:", 9) == 0)
         return test_expr_steps(t);
     if(strncmp(t->arg1, "tangent:", 8) == 0 || strncmp(t->arg1, "critical:", 9) == 0 || strncmp(t->arg1, "extrema:", 8) == 0
        || strncmp(t->arg1, "inflect:", 8) == 0 || strncmp(t->arg1, "implicit:", 9) == 0)

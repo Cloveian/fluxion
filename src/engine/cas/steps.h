@@ -58,6 +58,12 @@ enum { STEPS_TANGENT, STEPS_CRITICAL, STEPS_EXTREMA, STEPS_INFLECT, STEPS_IMPLIC
 bool steps_command(int kind, pcas_ast_t *f, pcas_ast_t *a, Symbol var, steps_t *out);
 /*t's lines on the end of s. t's first line is the one s ends on, so only its move comes over. false (t freed) when they don't fit*/
 bool steps_append(steps_t *s, steps_t *t);
+/*a and b are the same as shown, 2x+4 and 4+2x aren't two lines*/
+bool steps_same(pcas_ast_t *a, pcas_ast_t *b);
+/*how big a tree is, for "did that get simpler"*/
+int steps_size(const pcas_ast_t *e);
+/*simplify( a phase at a time: cancel, multiply out, over one bottom, the rest. only the phases that changed something. false if none did*/
+bool steps_simplify(pcas_ast_t *e, steps_t *out);
 /*a polynomial past x^2 that factors into lines and quadratics: factor, each factor = 0, each solved (polysteps.c). false if it doesn't*/
 bool steps_poly(pcas_ast_t *left, pcas_ast_t *right, Symbol var, steps_t *out);
 /*ax+b = cx+d the way steps_solve does it, false when a side isn't a line in var. steps_ineq's linear ones*/

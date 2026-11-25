@@ -71,7 +71,7 @@
 - [x] Ellipses and hyperbolas, equation to points and back. lined up with the axes only
 - [x] Piecewise functions. a command for now, no brace template
 - [x] Ghost parens, the fraction grabbing the last term, ans when a line starts with an operator
-- [ ] Show-the-work steps. quadratics, radicals, exp / log / abs, rational equations, trig equations, inequalities, polynomials that factor, expand and factor, tangent / critical / extrema / inflect / implicit, *dih*rivatives, limits and integrals have them. linear systems, a line with a curve and cubics without a rational root (cardano) have them too. simplify has none yet
+- [ ] Show-the-work steps. quadratics, radicals, exp / log / abs, rational equations, trig equations, inequalities, polynomials that factor, expand and factor, tangent / critical / extrema / inflect / implicit, *dih*rivatives, limits and integrals have them. linear systems, a line with a curve and cubics without a rational root (cardano) have them too. and simplify a phase at a time (cancel, multiply out, over one bottom)
 
 ## more-later
 

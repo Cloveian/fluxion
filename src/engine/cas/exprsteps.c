@@ -132,6 +132,59 @@ bool steps_expand(pcas_ast_t *e, steps_t *out) {
     return true;
 }
 
+/*a copy of e through one phase, 1 cancel common factors, 2 multiply out, 3 over one bottom, anything else the full simplify*/
+static pcas_ast_t *phase(pcas_ast_t *e, int which) {
+    pcas_ast_t *t = ast_Copy(e);
+
+    if(t == NULL)
+        return NULL;
+    if(which == 1) {
+        cancel_fractions(t);
+    } else if(which == 2) {
+        simplify(t, SIMP_NORMALIZE | SIMP_COMMUTATIVE | SIMP_RATIONAL);
+        expand(t, EXP_ALL);
+        simplify(t, SIMP_NORMALIZE | SIMP_COMMUTATIVE | SIMP_RATIONAL | SIMP_EVAL | SIMP_LIKE_TERMS);
+    } else if(which == 3) {
+        comdenom(t, false);
+    } else {
+        simplify(t, SIMP_ALL);
+    }
+    return t;
+}
+
+bool steps_simplify(pcas_ast_t *e, steps_t *out) {
+    static const char *const names[] = { "cancel common factors", "multiply out and add like terms", "over one bottom", "simplify" };
+    pcas_ast_t *cur = ast_Copy(e), *t;
+    step_t *l;
+    int which;
+
+    out->n = 0;
+    if(cur == NULL)
+        return false;
+    simplify(cur, SIMP_NORMALIZE | SIMP_COMMUTATIVE | SIMP_EVAL);
+    l = steps_expr(out, ast_Copy(cur));
+    for(which = 1; l != NULL && which <= 4 && !pcas_cancelled; which++) {
+        t = phase(cur, which);
+        if(t == NULL)
+            break;
+        if(steps_same(t, cur) || (which == 4 && steps_size(t) >= steps_size(cur))) { /*the last one only when it shrinks*/
+            ast_Cleanup(t);
+            continue;
+        }
+        steps_rule(l, names[which - 1]);
+        l = steps_expr(out, ast_Copy(t));
+        ast_Cleanup(cur);
+        cur = t;
+    }
+    ast_Cleanup(cur);
+    if(l == NULL || pcas_cancelled || out->n < 2) {
+        steps_free(out);
+        return false;
+    }
+    steps_shown(out);
+    return true;
+}
+
 /*the one letter e has, false for none or more than one*/
 static bool only_letter(pcas_ast_t *e, Symbol *var) {
     Symbol c;

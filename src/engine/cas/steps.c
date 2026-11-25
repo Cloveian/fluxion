@@ -993,6 +993,28 @@ bool steps_append(steps_t *s, steps_t *t) {
     return true;
 }
 
+int steps_size(const pcas_ast_t *e) {
+    const pcas_ast_t *k;
+    int n = 1;
+
+    if(e->type == NODE_OPERATOR)
+        for(k = e->op.operator.base; k != NULL; k = k->next)
+            n += steps_size(k);
+    return n;
+}
+
+bool steps_same(pcas_ast_t *a, pcas_ast_t *b) {
+    pcas_ast_t *x = ast_Copy(a), *y = ast_Copy(b);
+    bool same;
+
+    simplify_canonical_form(x, CANONICAL_ALL);
+    simplify_canonical_form(y, CANONICAL_ALL);
+    same = ast_Compare(x, y);
+    ast_Cleanup(x);
+    ast_Cleanup(y);
+    return same;
+}
+
 bool steps_linear(pcas_ast_t *left, pcas_ast_t *right, Symbol var, steps_t *out) {
     side_t side[2];
     bool ok = false;

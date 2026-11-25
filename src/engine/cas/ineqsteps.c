@@ -214,19 +214,6 @@ static step_t *zeros_line(steps_t *out, Symbol var, const edge_t *edges, int n, 
     return l;
 }
 
-/*a and b writen the same, 2x+4 and 4+2x aren't two lines*/
-static bool same_shown(pcas_ast_t *a, pcas_ast_t *b) {
-    pcas_ast_t *x = ast_Copy(a), *y = ast_Copy(b);
-    bool same;
-
-    simplify_canonical_form(x, CANONICAL_ALL);
-    simplify_canonical_form(y, CANONICAL_ALL);
-    same = ast_Compare(x, y);
-    ast_Cleanup(x);
-    ast_Cleanup(y);
-    return same;
-}
-
 /*f rel 0 factored, where its top and bottom are 0, a test point in every gap, the pieces that come out*/
 static bool chart(pcas_ast_t *left, pcas_ast_t *right, char rel, Symbol var, steps_t *out) {
     edge_t edges[EDGES_MAX];
@@ -265,7 +252,7 @@ static bool chart(pcas_ast_t *left, pcas_ast_t *right, char rel, Symbol var, ste
     comdenom(g, true);
     if(!isoptype(g, OP_DIV))
         factor(g, FAC_POLYNOMIAL);
-    if(!same_shown(g, l->eq[0].left)) { /*what the last line shows*/
+    if(!steps_same(g, l->eq[0].left)) { /*what the last line shows*/
         steps_rule(l, isoptype(g, OP_DIV) ? "one bottom, factored" : "factor");
         l = steps_eq(out, ast_Copy(g), ast_MakeInt(0));
         if(l == NULL)
