@@ -904,6 +904,88 @@ box_t *layout_text(const char *text, unsigned char level) { return new_text(text
 box_t *layout_space(int width) { return new_space(width); }
 void layout_add(box_t *parent, box_t *child) { add(parent, child); }
 
+/* a copy of b and what's inside it, no siblings. NULL when out of memory */
+static box_t *box_copy(const box_t *b) {
+    box_t *c = malloc(sizeof(box_t)), *last = NULL, *k;
+    const box_t *src;
+
+    if(c == NULL)
+        return NULL;
+    *c = *b;
+    c->next = NULL;
+    c->child = NULL;
+    c->text = NULL;
+    if(b->text != NULL) {
+        if((c->text = malloc(strlen(b->text) + 1)) == NULL) {
+            free(c);
+            return NULL;
+        }
+        strcpy(c->text, b->text);
+    }
+    for(src = b->child; src != NULL; src = src->next) {
+        if((k = box_copy(src)) == NULL) {
+            layout_free(c);
+            return NULL;
+        }
+        if(last == NULL)
+            c->child = k;
+        else
+            last->next = k;
+        last = k;
+    }
+    return c;
+}
+
+/* a gap then + or - */
+static bool breaks_before(const box_t *c) {
+    return c->kind == BOX_SPACE && c->next != NULL && c->next->kind == BOX_TEXT && c->next->text != NULL
+           && (c->next->text[0] == '+' || c->next->text[0] == CH_MINUS) && c->next->text[1] == '\0';
+}
+
+box_t *layout_wrapped(const box_t *b, int max, const layout_font_t *font) {
+    const box_t *c, *from, *to;
+    box_t *col, *line = NULL, *k;
+    int line_w = 0, w;
+
+    if(b->kind != BOX_ROW || b->width <= max || max <= 0)
+        return NULL;
+    if((col = layout_box(BOX_COL, b->level)) == NULL)
+        return NULL;
+    /* a term and the + or - before it go together, a line only breaks between those */
+    for(from = b->child; from != NULL; from = to) {
+        for(to = from->next; to != NULL && !breaks_before(to); to = to->next)
+            ;
+        w = (to != NULL ? to->x : b->width) - from->x;
+        if(line != NULL && line_w + w > max) {
+            layout_add(col, line);
+            line = NULL;
+            line_w = 0;
+        }
+        if(line == NULL && (line = layout_box(BOX_ROW, b->level)) == NULL)
+            goto oom;
+        for(c = from; c != to; c = c->next) {
+            if(line_w == 0 && breaks_before(c)) /* the gap goes, a line starts with its + or - */
+                continue;
+            if((k = box_copy(c)) == NULL)
+                goto oom;
+            layout_add(line, k);
+        }
+        line_w += w;
+    }
+    if(line != NULL)
+        layout_add(col, line);
+    if(col->child == NULL || col->child->next == NULL) { /* it didn't come to two lines */
+        layout_free(col);
+        return NULL;
+    }
+    layout_finish(col, font);
+    return col;
+oom:
+    layout_free(line);
+    layout_free(col);
+    return NULL;
+}
+
 bool layout_cursor(const box_t *b, int x, int y, int *cx, int *cy) {
     const box_t *k;
 

@@ -114,6 +114,9 @@ void layout_decimal(bool on);
 
 void layout_free(box_t *b);
 
+/* a sum wider than max as lines, a copy with the break before a + or -, right aligned. NULL when it fits or isn't a sum. caller frees */
+box_t *layout_wrapped(const box_t *b, int max, const layout_font_t *font);
+
 /* x and midle height of the cursor box in b, drawn with its left edge and baseline at (x, y). false with no cursor in it */
 bool layout_cursor(const box_t *b, int x, int y, int *cx, int *cy);
 

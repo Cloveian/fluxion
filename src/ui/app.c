@@ -2841,10 +2841,19 @@ static void highlight(int x, int base, const box_t *b) {
     }
 }
 
+/* an answer wider than the screen as lines, NULL when it fits. caller frees */
+static box_t *fit(const box_t *out) {
+    return out != NULL ? layout_wrapped(out, areas.body.w - 2 * MARGIN, &draw_font) : NULL;
+}
+
 /* how far up one history entry goes, the same steps draw_screen takes */
 static int entry_h(const entry_t *h) {
     const font_t *small = draw_label_font();
-    int n = h->out != NULL ? h->out->ascent + h->out->descent + 2 : small->ascent + small->descent + 2;
+    box_t *lines = fit(h->out);
+    const box_t *shown = lines != NULL ? lines : h->out;
+    int n = shown != NULL ? shown->ascent + shown->descent + 2 : small->ascent + small->descent + 2;
+
+    layout_free(lines);
 
     if(h->in != NULL)
         n += h->in->ascent + h->in->descent + GAP;
@@ -2937,7 +2946,7 @@ static void draw_screen(void) {
     first = hist >= 0 && hist < cleared ? 0 : cleared;
     for(; i >= first && y > top; i--) {
         entry_t *h = &history[i];
-        box_t *out = h->out, *inb = h->in, *browse = NULL;
+        box_t *out = h->out, *inb = h->in, *browse = NULL, *lines = NULL;
 
         /* when browsing, the editor's version (cursor, selection and all) goes in
            place of the highlighted half */
@@ -2948,6 +2957,8 @@ static void draw_screen(void) {
                 inb = browse;
         }
 
+        if(out == h->out && (lines = fit(out)) != NULL)
+            out = lines;
         if(out != NULL) {
             int base = y - out->descent, x = right - out->width;
 
@@ -2980,6 +2991,7 @@ static void draw_screen(void) {
             y -= inb->ascent + inb->descent + GAP;
         }
         layout_free(browse);
+        layout_free(lines);
 
         screen_color(COL_DIM);
         screen_hline(left + 20, y + 1, right - left - 40);

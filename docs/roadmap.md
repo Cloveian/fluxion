@@ -46,7 +46,7 @@
 
 ## later
 
-- [ ] Display mode option for wrap/scroll (for long answers)
+- [x] Long answers wrap at the + and - onto lines (layout_wrapped). still open: an option for scroll, and wide answers that aren't a sum (a long fraction)
 - [x] Inequalities. solve with < > ≤ ≥, sign chart. no trig ones yet
 - [x] Slope, distance and midpoint commands
 - [x] Parallel and perpendicular lines
