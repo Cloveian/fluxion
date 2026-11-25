@@ -293,11 +293,9 @@ static bool chart(pcas_ast_t *left, pcas_ast_t *right, char rel, Symbol var, ste
                 goto done;
         }
     }
-    if(n == 0)
-        goto done;
 
-    for(i = 0; i <= n; i++) { /*a test point in each gap*/
-        pcas_ast_t *t = test_point(edges, n, i), *v = ast_Copy(g), *at = ast_MakeSymbol(var), *shown;
+    for(i = 0; i <= n; i++) { /*a test point in each gap, with no edges it's one point for the whole line*/
+        pcas_ast_t *t = n == 0 ? ast_MakeInt(0) : test_point(edges, n, i), *v = ast_Copy(g), *at = ast_MakeSymbol(var), *shown;
         int s;
 
         l->move = 't';
@@ -314,6 +312,10 @@ static bool chart(pcas_ast_t *left, pcas_ast_t *right, char rel, Symbol var, ste
             goto done;
         l->as_is = true;
         gap[i] = wanted(s, rel);
+    }
+    if(n == 0) { /*no gaps to keep, the test line is the answer*/
+        ok = !pcas_cancelled;
+        goto done;
     }
     for(i = 0; i < n; i++)
         edge[i] = closed(rel) && !edges[i].hole;

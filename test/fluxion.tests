@@ -1293,6 +1293,9 @@ steps; X^2_4<0; X; X^2_4<0|factor|(X_2)(X+2)<0|wherethetopis0|X=-2,X=2|t-3|(-3_2
 steps; (X_1)/(X+2)>0; X; (X_1)/(X+2)>0|wherethetopis0|X=1|wherethebottomis0,leftout|X=-2|t-3|(-3_1)/(-3+2)=4|t0|(0_1)/(0+2)=-1/2|t2|(2_1)/(2+2)=1/4|keepthegapsthatfit|X<-2orX>1
 steps; X^2_3X+2<=0; X; X^2_3X+2<=0|factor|(X_1)(X_2)<=0|wherethetopis0|X=1,X=2|t0|(0_1)(0_2)=2|t3/2|(3/2_1)(3/2_2)=-1/4|t3|(3_1)(3_2)=2|keepthegapsthatfit|1<=X<=2
 steps; X^2>100000000000000; X; none
+#no zeros on the real line: one test point, the line it ends on says always or never
+steps; X^2+1>0; X; X^2+1>0|t0|0^2+1=1
+steps; X^2+1<0; X; X^2+1<0|t0|0^2+1=1
 steps; X^2<=1000000; X; X^2<=1000000|_1000000|X^2_1000000<=0|factor|(X_1000)(X+1000)<=0|wherethetopis0|X=-1000,X=1000|t-1001|(-1001_1000)(-1001+1000)=2001|t0|(0_1000)(0+1000)=-1000000|t1001|(1001_1000)(1001+1000)=2001|keepthegapsthatfit|-1000<=X<=1000
 #a polynomial past x^2 that factors: factor, each factor = 0, the lines first then each quadratic with its own steps, then every root together
 steps; X^3_2X^2_X+2=0; X; X^3_2X^2_X+2=0|factor|(X_1)(X+1)(X_2)=0|onefactorhastobe0|X_1=0orX+1=0orX_2=0|solveeach|X=1orX=-1orX=2|alltheroots|X=-1orX=1orX=2
