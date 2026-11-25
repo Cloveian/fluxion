@@ -1,7 +1,7 @@
 #ifndef __TICE__
 
-/* PC version of screen.h. draws into a 320x240 framebuffer of palette indexes,
-   which the SDL window shows or screen_save_png() writes out. */
+/* PC version of screen.h. draws into a framebuffer of palette indexes (320x240 till
+   the window or --size says otherwise), which the SDL window shows or screen_save_png() writes out. */
 
 #include "screen.h"
 #include "window_pc.h"
@@ -16,7 +16,7 @@ void (*screen_resized)(void);
 static unsigned char *fb;
 #define FB(x, y) fb[(y) * screen_w + (x)]
 
-/* the framebuffer for the size it is now */
+/* blank framebuffer for the size now */
 static void fb_make(void) {
     free(fb);
     fb = calloc((size_t)screen_w * (size_t)screen_h, 1);
@@ -31,8 +31,7 @@ void screen_resize(int w, int h) {
 }
 #else
 static unsigned char fb[SCREEN_H][SCREEN_W];
-#define FB(x, y) fb[y][x]
-static void fb_make(void) {}
+#define FB(x, y) fb[(y)][(x)]
 #endif
 static unsigned char current = COL_FG;
 

@@ -8,6 +8,7 @@
         no window: press these keys (names from keys_pc.c, or single characters),
         then save the last screen */
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -19,15 +20,17 @@
 int main(int argc, char **argv)
 {
     const char *png = NULL;
-    int i = 1, scale = 2;
+    int i = 1, scale = 2, w = 320, h = 240;
 
     for(; i + 1 < argc && strncmp(argv[i], "--", 2) == 0; i += 2) {
         if(strcmp(argv[i], "--png") == 0)
             png = argv[i + 1];
         else if(strcmp(argv[i], "--scale") == 0)
             scale = atoi(argv[i + 1]);
-        else if(strcmp(argv[i], "--size") == 0) /* 640x480, the framebuffer size */
-            screen_resize(atoi(argv[i + 1]), strchr(argv[i + 1], 'x') != NULL ? atoi(strchr(argv[i + 1], 'x') + 1) : 240);
+        else if(strcmp(argv[i], "--size") == 0) { /* 640x480, framebuffer pixels */
+            sscanf(argv[i + 1], "%dx%d", &w, &h);
+            screen_resize(w, h);
+        }
     }
 
     if(png != NULL) {

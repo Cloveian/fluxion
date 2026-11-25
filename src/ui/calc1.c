@@ -177,7 +177,7 @@ static box_t *slopes(pcas_ast_t *f, Symbol var, char shown, const char **message
     return col;
 }
 
-#define ORDER_MAX 8 /* each term is a derivative and a simplify */
+#define ORDER_MAX 8 /* each term is a *dih*rivative and a simplify */
 
 /* f(a) + f'(a)(x-a) + f''(a)/2 (x-a)^2 + ... up to the order, zero terms left out. order and a are worked out already. NULL and a message when it doesn't work */
 static box_t *taylor(pcas_ast_t *f, pcas_ast_t *a, pcas_ast_t *order, Symbol var, const char **message) {

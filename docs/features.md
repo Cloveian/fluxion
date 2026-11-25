@@ -30,7 +30,7 @@ Everything Fluxion does right now, as tables. Yes / partly / no first, the other
 | True / false statements       | yes |
 | Expand                        | yes |
 | Partial fractions (apart)     | yes |
-| Polynomial long *dih*vision | yes |
+| Polynomial long *dih*vision   | yes |
 
 ### Factoring
 
@@ -54,7 +54,7 @@ Everything Fluxion does right now, as tables. Yes / partly / no first, the other
 | Max, min, inflections | yes\* |
 | Up and down intervals | yes   |
 | Taylor polynomials    | yes   |
-| Sums and products     | yes\*  |
+| Sums and products     | yes\* |
 
 ### Systems
 

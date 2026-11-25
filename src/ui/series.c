@@ -157,7 +157,6 @@ bool series_run(const char *cmd, char *src, box_t *in) {
         else
             e = run_terms(a[0], a[1], lo, hi, product);
     } else if(product) {
-        /* k from 1 to n */
         if(ast_Compare(a[0], a[1]) && is_ast_int(a[2], 1))
             e = ast_MakeUnary(OP_FACTORIAL, ast_Copy(a[3]));
         else
