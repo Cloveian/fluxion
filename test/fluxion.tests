@@ -1137,6 +1137,11 @@ simplify; integral(1/((X+1)^2*(X^2+1)),X); ln(abs(1+X))/2_1/(2+2X)_(ln(abs(1+X^2
 simplify; integral(atan(X)/X^2,X); ln(abs(X^2)/abs(X^2+1))/2_(atan(X))/X
 simplify; integral(ln(X)/X^2,X); -1/X_(ln(X))/X
 simplify; integral(sin(X)/(X^2_1),X); integral(sin(X)/(X^2_1),X)
+#inverse trig powers go first in by parts too, x^2 asin(x) leaves x^3/sqrt(1-x^2) so it gets the trig substitution retry, and acos(sin(u)) doesn't simplify so trig substitution waits for it
+simplify; integral(asin(X)^2,X); Xasin(X)^2_2X+2sqrt((-X^2+1))asin(X)
+simplify; integral(asin(X)*X^2,X); (asin(X)X^3)/3+(X^2sqrt((-X^2+1)))/9+(2sqrt((-X^2+1)))/9
+simplify; integral(acos(X)*X^2,X); (acos(X)X^3)/3_(X^2sqrt((-X^2+1)))/9_(2sqrt((-X^2+1)))/9
+simplify; integral(X*acos(X)*sqrt(1_X^2),X); X^3/9_(X)/3_(acos(X)(-X^2+1)^(3/2))/3
 #u = x^2 when only x^4 shows (an extra try in u-substitution), x^4 is u^2
 simplify; integral(X/(X^4+1),X); atan(X^2)/2
 simplify; integral(X^3/(X^8+1),X); atan(X^4)/4

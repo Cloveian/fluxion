@@ -453,6 +453,10 @@ static const char *usub(pcas_ast_t *e, subs_t *subs) {
     return NULL;
 }
 
+static bool is_inverse_trig(pcas_ast_t *e) {
+    return isoptype(e, OP_SIN_INV) || isoptype(e, OP_COS_INV) || isoptype(e, OP_TAN_INV);
+}
+
 /*which piece goes first as u in by parts (LIATE), 0 when it isn't one of those: 5 log, 4 inverse trig, 3 a power of x, 2 sin or cos, 1 a number to the x*/
 static int liate(pcas_ast_t *p, pcas_ast_t *x) {
     Symbol s = x->op.symbol;
@@ -470,6 +474,8 @@ static int liate(pcas_ast_t *p, pcas_ast_t *x) {
             return 3;
         if(isoptype(ast_ChildGet(p, 0), OP_LOG) && !has_symbol(ast_ChildGet(p, 1), s)) /*ln(x)^2 goes first like ln(x)*/
             return 5;
+        if(is_inverse_trig(ast_ChildGet(p, 0)) && !has_symbol(ast_ChildGet(p, 1), s))
+            return 4; /*asin(x)^2 too*/
         return !has_symbol(ast_ChildGet(p, 0), s) ? 1 : 0;
     default:
         return 0;
@@ -1067,6 +1073,20 @@ static pcas_ast_t *tan_parts(pcas_ast_t *u) {
     return ast_MakeBinary(OP_MULT, ast_MakeUnary(OP_SIN, ast_Copy(u)), trig_pow(OP_COS, u, -1));
 }
 
+/*asin or acos anywhere in e, their slope has a root of a quadratic (atan's doesn't)*/
+static bool has_inverse_trig(pcas_ast_t *e) {
+    pcas_ast_t *c;
+
+    if(e->type != NODE_OPERATOR)
+        return false;
+    if(isoptype(e, OP_SIN_INV) || isoptype(e, OP_COS_INV))
+        return true;
+    for(c = ast_ChildGet(e, 0); c != NULL; c = c->next)
+        if(has_inverse_trig(c))
+            return true;
+    return false;
+}
+
 /*sqrt(c - k x^2) is x = a sin(u), sqrt(c + k x^2) x = a tan(u), sqrt(k x^2 - c) x = a sec(u), a = sqrt(c/k). the power of that root is c^n times a power of cos or tan, u in the range where those are over 0*/
 static const char *trig_sub(pcas_ast_t *e, subs_t *subs) {
     pcas_ast_t *f = ast_ChildGet(e, 0), *x = ast_ChildGet(e, 1), *cq[3] = {NULL}, *P, *u, *a = NULL, *c = NULL, *k = NULL;
@@ -1075,7 +1095,7 @@ static const char *trig_sub(pcas_ast_t *e, subs_t *subs) {
     double av, cv;
     int kind, i, par = 1;
 
-    if(subs->n >= SUBS_MAX || (P = quad_root(f, x, cq)) == NULL)
+    if(subs->n >= SUBS_MAX || (has_inverse_trig(f) && !trig_first) || (P = quad_root(f, x, cq)) == NULL) /*acos(sin(u)) doesn't simplify, by parts goes first and this is the second try*/
         return NULL;
     if(approx_double(cq[2], &av) && approx_double(cq[0], &cv) && is_ast_int(cq[1], 0) && (u = fresh(subs)) != NULL) {
         kind = av < 0 && cv > 0 ? 1 : av > 0 && cv > 0 ? 2 : av > 0 && cv < 0 ? 3 : 0;
@@ -1414,7 +1434,7 @@ static pcas_ast_t *integral_run(pcas_ast_t *I, steps_t *s) {
     if(pcas_cancelled || steps_find(cur, OP_INTEGRAL, found, 0) > 0) /*a piece with no rule*/
         n = -1;
     for(i = subs.n - 1; i >= 0 && n >= 0; i--) { /*the u's go back the other way round, a later u can have earlier one in it*/
-        if(isoptype(subs.g[i], OP_SIN_INV) || isoptype(subs.g[i], OP_TAN_INV) || isoptype(subs.g[i], OP_COS_INV))
+        if(is_inverse_trig(subs.g[i]))
             trig_basic(cur);
         substitute(cur, subs.u[i], subs.g[i]);
     }
@@ -1443,7 +1463,7 @@ static pcas_ast_t *integral_of(pcas_ast_t *I, steps_t *s) {
     F = integral_run(I, s);
     if(F != NULL || trig_first || pcas_cancelled)
         return F;
-    retry = quad_root(ast_ChildGet(I, 0), x, cq) != NULL;
+    retry = quad_root(ast_ChildGet(I, 0), x, cq) != NULL || has_inverse_trig(ast_ChildGet(I, 0)); /*x^2 asin(x) by parts leaves x^3/sqrt(1-x^2)*/
     for(i = 0; i < 3; i++)
         ast_Cleanup(cq[i]);
     if(!retry)
