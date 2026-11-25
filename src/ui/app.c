@@ -2576,6 +2576,19 @@ static int cursor_x(const box_t *b, int x) {
     return -1;
 }
 
+/* x shifted so the cursor stays 8 px inside the edges, only for a browsed box wider than the screen */
+static int keep_cursor(const box_t *b, int x, int left, int right) {
+    int cx = b->width > right - left ? cursor_x(b, 0) : -1;
+
+    if(cx < 0)
+        return x;
+    if(x + cx < left + 8)
+        return left + 8 - cx;
+    if(x + cx > right - 8)
+        return right - 8 - cx;
+    return x;
+}
+
 /* the nspire's main screen gets the bar's rows too */
 static int body_bottom(void) {
     return NSPIRE ? areas.keys.y + areas.keys.h : areas.body.y + areas.body.h;
@@ -2972,6 +2985,8 @@ static void draw_screen(void) {
         if(out != NULL) {
             int base = y - out->descent, x = right - out->width;
 
+            if(out == browse)
+                x = keep_cursor(out, x, left, right);
             if(i == hist && hist_out)
                 highlight(x, base, out);
             screen_color(COL_FG);
@@ -2993,10 +3008,12 @@ static void draw_screen(void) {
         }
 
         if(inb != NULL) {
+            int x = inb == browse ? keep_cursor(inb, left, left, right) : left;
+
             if(i == hist && !hist_out)
-                highlight(left, y - inb->descent, inb);
+                highlight(x, y - inb->descent, inb);
             screen_color(COL_FG);
-            draw_box(inb, left, y - inb->descent);
+            draw_box(inb, x, y - inb->descent);
             add_hit(y - inb->ascent - inb->descent - GAP, y, i * 2);
             y -= inb->ascent + inb->descent + GAP;
         }
