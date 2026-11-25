@@ -1839,45 +1839,70 @@ static int solve_product(pcas_ast_t *e, Symbol var, pcas_ast_t **out, bool compl
     return n;
 }
 
+/*Fluxion: b with var as root, is it 0. light way first, a 0 there is real. the full simplify only when its identities could still find one*/
+static bool zero_at(pcas_ast_t *b, Symbol var, pcas_ast_t *root) {
+    pcas_ast_t *c = ast_Copy(b), *sym = ast_MakeSymbol(var);
+    bool zero;
+
+    substitute(c, sym, root);
+    simplify(c, SIMP_SOLVE);
+    expand(c, EXP_ALL);
+    simplify(c, SIMP_SOLVE);
+    if(!is_zero(c) && !algebraic(c))
+        simplify(c, SIMP_ALL);
+    zero = is_zero(c);
+    ast_Cleanup(c);
+    ast_Cleanup(sym);
+    return zero;
+}
+
+/*Fluxion: some bottom in e (a/b or b^-k with var in it) is 0 at root. root NULL, any bottom with var in it*/
+static bool bottom_zero(pcas_ast_t *e, Symbol var, pcas_ast_t *root) {
+    pcas_ast_t *k, *b = NULL;
+
+    if(e->type != NODE_OPERATOR)
+        return false;
+    if(isoptype(e, OP_DIV))
+        b = ast_ChildGet(e, 1);
+    else if(isoptype(e, OP_POW) && ast_ChildGet(e, 1)->type == NODE_NUMBER && mp_rat_compare_zero(ast_ChildGet(e, 1)->op.num) < 0)
+        b = ast_ChildGet(e, 0);
+    if(b != NULL && has_symbol(b, var) && (root == NULL || zero_at(b, var, root)))
+        return true;
+    for(k = ast_ChildGet(e, 0); k != NULL; k = k->next)
+        if(bottom_zero(k, var, root))
+            return true;
+    return false;
+}
+
 /*Fluxion: var under a fraction bar, (3x-y)/(x+y) = 5/8. clear_denominators only takes numbers off,
-so it goes over one denominator here and the top gets solved. a root that makes the bottom 0
-was never a root (x/x = 0 has none)*/
+so it goes over one denominator here and the top gets solved. a root that makes a bottom 0
+was never a root (x/x = 0 has none), cancelled ones too ((x^2-1)/(x-1) = 2 ends up x = 1)*/
 static int solve_over(pcas_ast_t *expr, Symbol var, pcas_ast_t **out, bool complex) {
-    pcas_ast_t *c = ast_Copy(expr), *bottom, *sym;
+    pcas_ast_t *c = ast_Copy(expr);
     int n = SOLVE_UNKNOWN, i, k;
 
     if(c == NULL)
         return SOLVE_UNKNOWN;
     simplify(c, SIMP_SOLVE);
     comdenom(c, false);
+    fold_fraction(c); /*-3/2 is a number too*/
     if(!pcas_cancelled && !has_symbol(c, var)) {
         /*nothing with var left, x/(x-1) = 1/(x-1) ends up 1 = 0. the x = 1 that made it cancel is out anyway*/
         n = is_zero(c) ? SOLVE_ALL : c->type == NODE_NUMBER ? 0 : SOLVE_UNKNOWN;
         ast_Cleanup(c);
         return n;
     }
-    if(pcas_cancelled || !isoptype(c, OP_DIV) || !has_symbol(ast_ChildGet(c, 1), var)) {
+    if(pcas_cancelled || !bottom_zero(expr, var, NULL)) {
         ast_Cleanup(c);
         return SOLVE_UNKNOWN;
     }
-    bottom = ast_ChildGet(c, 1);
-    n = solve_ex(ast_ChildGet(c, 0), var, out, complex);
+    if(isoptype(c, OP_DIV) && has_symbol(ast_ChildGet(c, 1), var))
+        n = solve_ex(ast_ChildGet(c, 0), var, out, complex);
+    else if(!bottom_zero(c, var, NULL)) /*it all cancelled, what's left has no fraction in it*/
+        n = solve_ex(c, var, out, complex);
 
-    sym = ast_MakeSymbol(var);
     for(i = k = 0; n > 0 && i < n; i++) {
-        pcas_ast_t *b = ast_Copy(bottom);
-        bool zero;
-
-        substitute(b, sym, out[i]);
-        /*light way first, a 0 there is real. the full one only when its identities could still find one*/
-        simplify(b, SIMP_SOLVE);
-        expand(b, EXP_ALL);
-        simplify(b, SIMP_SOLVE);
-        if(!is_zero(b) && !algebraic(b))
-            simplify(b, SIMP_ALL);
-        zero = is_zero(b);
-        ast_Cleanup(b);
-        if(zero)
+        if(bottom_zero(expr, var, out[i]))
             ast_Cleanup(out[i]);
         else
             out[k++] = out[i];
@@ -1887,7 +1912,6 @@ static int solve_over(pcas_ast_t *expr, Symbol var, pcas_ast_t **out, bool compl
             out[i] = NULL;
         n = k;
     }
-    ast_Cleanup(sym);
     ast_Cleanup(c);
     return n;
 }

@@ -294,6 +294,10 @@ solve; 0=0; X; true
 solve; 1=2; X; false
 solve; X^2=X^2+1; X; false
 solve; X/X=1; X; true
+#a factor that cancelled is still a bottom, so x = 1 is out
+solve; (3X+3)/(2X+2)=3; X; false
+solve; (X^2_1)/(X_1)=2; X; false
+solve; (X^2_X)/(X_1)=3; X; 3
 
 #Polynomials: rational roots, then quadratics by the formula
 solve; X^2_X_30=0; X; -5,6
