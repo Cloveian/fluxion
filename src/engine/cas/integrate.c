@@ -20,6 +20,7 @@ typedef struct {
 #define PARTS_MAX 6 /*x^5 e^x needs 5*/
 
 static pcas_ast_t *integral_of(pcas_ast_t *I, steps_t *s);
+static bool trig_first; /*second try, completing the square and trig substitution go before u-substitution*/
 
 /*u is a*x + b: a, new. NULL for anything else (or a = 0)*/
 static pcas_ast_t *linear(pcas_ast_t *u, pcas_ast_t *x) {
@@ -339,6 +340,23 @@ static pcas_ast_t *fresh(subs_t *subs) {
     return NULL;
 }
 
+/*cos(g)^2 is 1 - u^2 when u stands for sin(g), and the other way round. even powers only*/
+static void pythagoras(pcas_ast_t *e, pcas_ast_t *other, pcas_ast_t *u) {
+    pcas_ast_t *c, *k;
+    double kv;
+
+    if(e->type != NODE_OPERATOR)
+        return;
+    for(c = ast_ChildGet(e, 0); c != NULL; c = c->next)
+        pythagoras(c, other, u);
+    if(isoptype(e, OP_POW) && ast_Compare(ast_ChildGet(e, 0), other)) {
+        k = ast_ChildGet(e, 1);
+        if(approx_double(k, &kv) && kv >= 2 && kv == floor(kv) && (long)kv % 2 == 0)
+            replace_node(e, ast_MakeBinary(OP_POW, ast_MakeBinary(OP_ADD, ast_MakeInt(1), ast_MakeBinary(OP_MULT, ast_MakeInt(-1),
+                                           ast_MakeBinary(OP_POW, ast_Copy(u), ast_MakeInt(2)))), ast_MakeInt((long)kv / 2)));
+    }
+}
+
 /*u = some piece g where f/g' is all g, 2x cos(x^2) is cos(u) with u = x^2. ∫f dx becomes ∫(f/g') du*/
 static const char *usub(pcas_ast_t *e, subs_t *subs) {
     pcas_ast_t *f = ast_ChildGet(e, 0), *x = ast_ChildGet(e, 1), *cand[CANDS_MAX], *g, *q, *u;
@@ -357,6 +375,12 @@ static const char *usub(pcas_ast_t *e, subs_t *subs) {
             substitute(q, g, u);
         }
         ast_Cleanup(g);
+        if(q != NULL && has_symbol(q, x->op.symbol) && (isoptype(cand[i], OP_SIN) || isoptype(cand[i], OP_COS))) {
+            g = ast_MakeUnary(isoptype(cand[i], OP_SIN) ? OP_COS : OP_SIN, ast_Copy(ast_ChildGet(cand[i], 0)));
+            pythagoras(q, g, u);
+            simplify(q, SIMP_ALL);
+            ast_Cleanup(g);
+        }
         if(q != NULL && !pcas_cancelled && !has_symbol(q, x->op.symbol)) {
             subs->u[subs->n] = u; /*not a copy, an oom one is NULL and fresh() reads it*/
             subs->g[subs->n++] = ast_Copy(cand[i]);
@@ -754,6 +778,248 @@ static const char *quadratic_bottom(pcas_ast_t *e) {
     return res != NULL ? "complete the square" : NULL;
 }
 
+/*half-odd power of a quadratic in x, (x^2+2x+5)^(-1/2). that node, NULL if none. cq gets the coeficients, copies*/
+static pcas_ast_t *quad_root(pcas_ast_t *f, pcas_ast_t *x, pcas_ast_t **cq) {
+    pcas_ast_t *c, *p;
+    double nv;
+    int i;
+
+    if(f->type != NODE_OPERATOR)
+        return NULL;
+    if(isoptype(f, OP_POW) && !has_symbol(ast_ChildGet(f, 1), x->op.symbol) && approx_double(ast_ChildGet(f, 1), &nv)
+       && fabs(2 * nv - floor(2 * nv + 0.5)) < 1e-9 && (long)floor(2 * nv + 0.5) % 2 != 0
+       && poly_degree(ast_ChildGet(f, 0), x->op.symbol, NULL) == 2) {
+        poly_coefs(ast_ChildGet(f, 0), x->op.symbol, cq);
+        for(i = 0; i < 3; i++)
+            if(cq[i] == NULL)
+                cq[i] = ast_MakeInt(0); /*a missing term is 0*/
+        return f;
+    }
+    for(c = ast_ChildGet(f, 0); c != NULL; c = c->next)
+        if((p = quad_root(c, x, cq)) != NULL)
+            return p;
+    return NULL;
+}
+
+/*root of a x^2 + b x + c with b not 0 goes to u = x + b/2a, only the square term left*/
+static const char *shift_square(pcas_ast_t *e, subs_t *subs) {
+    pcas_ast_t *f = ast_ChildGet(e, 0), *x = ast_ChildGet(e, 1), *cq[3] = {NULL}, *u, *h, *g, *q, *back;
+    const char *name = NULL;
+    double a, b;
+    int i;
+
+    if(subs->n >= SUBS_MAX || quad_root(f, x, cq) == NULL)
+        return NULL;
+    if(approx_double(cq[2], &a) && approx_double(cq[1], &b) && a != 0 && b != 0 && (u = fresh(subs)) != NULL) {
+        h = ast_MakeBinary(OP_DIV, ast_Copy(cq[1]), ast_MakeBinary(OP_MULT, ast_MakeInt(2), ast_Copy(cq[2])));
+        simplify(h, SIMP_ALL);
+        g = ast_MakeBinary(OP_ADD, ast_Copy(x), ast_Copy(h));
+        back = ast_MakeBinary(OP_ADD, ast_Copy(u), ast_MakeBinary(OP_MULT, ast_MakeInt(-1), h));
+        q = ast_Copy(f);
+        substitute(q, x, back);
+        expand(q, EXP_ALL);
+        simplify(q, SIMP_ALL);
+        if(!pcas_cancelled && !has_symbol(q, x->op.symbol)) {
+            subs->u[subs->n] = u;
+            subs->g[subs->n++] = g;
+            replace_node(e, integral(q, u));
+            name = "complete the square";
+        } else {
+            ast_Cleanup(q);
+            ast_Cleanup(g);
+            ast_Cleanup(u);
+        }
+        ast_Cleanup(back);
+    }
+    for(i = 0; i < 3; i++)
+        ast_Cleanup(cq[i]);
+    return name;
+}
+
+/*1 when f(-x) is f(x), -1 when it's -f(x), 0 for neither*/
+static int parity(pcas_ast_t *f, pcas_ast_t *x) {
+    pcas_ast_t *m = ast_Copy(f), *neg = ast_MakeBinary(OP_MULT, ast_MakeInt(-1), ast_Copy(x)), *d;
+    int r = 0, pass;
+
+    substitute(m, x, neg);
+    for(pass = 0; pass < 2 && r == 0 && !pcas_cancelled; pass++) {
+        d = ast_MakeBinary(OP_ADD, ast_Copy(m), ast_MakeBinary(OP_MULT, ast_MakeInt(pass == 0 ? -1 : 1), ast_Copy(f)));
+        simplify(d, SIMP_ALL);
+        if(is_ast_int(d, 0))
+            r = pass == 0 ? 1 : -1;
+        ast_Cleanup(d);
+    }
+    ast_Cleanup(m);
+    ast_Cleanup(neg);
+    return r;
+}
+
+/*sin(u)^n or cos(u)^n, op is OP_SIN or OP_COS*/
+static pcas_ast_t *trig_pow(int op, pcas_ast_t *u, long n) {
+    return ast_MakeBinary(OP_POW, ast_MakeUnary(op, ast_Copy(u)), ast_MakeInt(n));
+}
+
+/*tan(u) as sin(u) cos(u)^-1, so the powers collect with the other cos ones*/
+static pcas_ast_t *tan_parts(pcas_ast_t *u) {
+    return ast_MakeBinary(OP_MULT, ast_MakeUnary(OP_SIN, ast_Copy(u)), trig_pow(OP_COS, u, -1));
+}
+
+/*sqrt(c - k x^2) is x = a sin(u), sqrt(c + k x^2) x = a tan(u), sqrt(k x^2 - c) x = a sec(u), a = sqrt(c/k). the power of that root is c^n times a power of cos or tan, u in the range where those are over 0*/
+static const char *trig_sub(pcas_ast_t *e, subs_t *subs) {
+    pcas_ast_t *f = ast_ChildGet(e, 0), *x = ast_ChildGet(e, 1), *cq[3] = {NULL}, *P, *u, *a = NULL, *c = NULL, *k = NULL;
+    pcas_ast_t *R, *Rb, *T, *xr, *dx, *q, *g, *two_n;
+    const char *name = NULL;
+    double av, cv;
+    int kind, i, par = 1;
+
+    if(subs->n >= SUBS_MAX || (P = quad_root(f, x, cq)) == NULL)
+        return NULL;
+    if(approx_double(cq[2], &av) && approx_double(cq[0], &cv) && is_ast_int(cq[1], 0) && (u = fresh(subs)) != NULL) {
+        kind = av < 0 && cv > 0 ? 1 : av > 0 && cv > 0 ? 2 : av > 0 && cv < 0 ? 3 : 0;
+        if(kind == 3)
+            par = parity(f, x); /*x = a sec(u) is the x over a side, the other one needs |x| in the answer and a sign for an even f*/
+        if(kind == 0 || par == 0) {
+            ast_Cleanup(u);
+        } else {
+            k = kind == 1 ? ast_MakeBinary(OP_MULT, ast_MakeInt(-1), ast_Copy(cq[2])) : ast_Copy(cq[2]);
+            c = kind == 3 ? ast_MakeBinary(OP_MULT, ast_MakeInt(-1), ast_Copy(cq[0])) : ast_Copy(cq[0]);
+            a = sqrt_of(ast_MakeBinary(OP_DIV, ast_Copy(c), ast_Copy(k)));
+            simplify(a, SIMP_ALL);
+            /*x, dx and the quadradic itself, all in u. sec is cos^-1 so the powers collect*/
+            if(kind == 1) {
+                xr = ast_MakeUnary(OP_SIN, ast_Copy(u));
+                dx = ast_MakeUnary(OP_COS, ast_Copy(u));
+                T = ast_MakeUnary(OP_COS, ast_Copy(u));
+            } else if(kind == 2) {
+                xr = tan_parts(u);
+                dx = trig_pow(OP_COS, u, -2);
+                T = ast_MakeUnary(OP_COS, ast_Copy(u));
+            } else {
+                xr = trig_pow(OP_COS, u, -1);
+                dx = ast_MakeBinary(OP_MULT, ast_MakeUnary(OP_SIN, ast_Copy(u)), trig_pow(OP_COS, u, -2));
+                T = tan_parts(u);
+            }
+            xr = ast_MakeBinary(OP_MULT, ast_Copy(a), xr);
+            dx = ast_MakeBinary(OP_MULT, ast_Copy(a), dx);
+            two_n = ast_MakeBinary(OP_MULT, ast_MakeInt(kind == 2 ? -2 : 2), ast_Copy(ast_ChildGet(P, 1)));
+            R = ast_MakeBinary(OP_MULT, ast_MakeBinary(OP_POW, ast_Copy(c), ast_Copy(ast_ChildGet(P, 1))), ast_MakeBinary(OP_POW, ast_Copy(T), two_n));
+            Rb = ast_MakeBinary(OP_MULT, ast_Copy(c), ast_MakeBinary(OP_POW, T, ast_MakeInt(kind == 2 ? -2 : 2))); /*the base on its own, rationalized roots leave one*/
+            q = ast_Copy(f);
+            substitute(q, P, R);
+            substitute(q, ast_ChildGet(P, 0), Rb);
+            substitute(q, x, xr);
+            q = ast_MakeBinary(OP_MULT, q, dx);
+            simplify(q, SIMP_ALL);
+            g = kind == 1 ? ast_MakeUnary(OP_SIN_INV, ast_MakeBinary(OP_DIV, ast_Copy(x), ast_Copy(a)))
+                : kind == 2 ? ast_MakeUnary(OP_TAN_INV, ast_MakeBinary(OP_DIV, ast_Copy(x), ast_Copy(a)))
+                : ast_MakeUnary(OP_COS_INV, ast_MakeBinary(OP_DIV, ast_Copy(a), ast_MakeUnary(OP_ABS, ast_Copy(x))));
+            if(!pcas_cancelled && !has_symbol(q, x->op.symbol)) {
+                subs->u[subs->n] = u;
+                subs->g[subs->n++] = g;
+                if(kind == 3 && par > 0)
+                    replace_node(e, ast_MakeBinary(OP_MULT, ast_MakeUnary(OP_SIGN, ast_Copy(x)), integral(q, u)));
+                else
+                    replace_node(e, integral(q, u));
+                name = "trig substitution";
+            } else {
+                ast_Cleanup(q);
+                ast_Cleanup(g);
+                ast_Cleanup(u);
+            }
+            ast_Cleanup(R);
+            ast_Cleanup(Rb);
+            ast_Cleanup(xr);
+        }
+    }
+    ast_Cleanup(a);
+    ast_Cleanup(c);
+    ast_Cleanup(k);
+    for(i = 0; i < 3; i++)
+        ast_Cleanup(cq[i]);
+    return name;
+}
+
+/*t to an even power over 1 on top (sign 1), or t under the bar (sign -1, a negative power, a power in a bottom, or t itself there)*/
+static bool has_trig_pow(pcas_ast_t *e, pcas_ast_t *t, int sign, bool bottom) {
+    pcas_ast_t *c;
+    double kv = 1;
+
+    if(e->type != NODE_OPERATOR)
+        return false;
+    if(sign < 0 && bottom && ast_Compare(e, t))
+        return true;
+    if(isoptype(e, OP_POW) && ast_Compare(ast_ChildGet(e, 0), t) && approx_double(ast_ChildGet(e, 1), &kv) && kv == floor(kv)) {
+        if(sign > 0 && !bottom && kv >= 2 && (long)kv % 2 == 0)
+            return true;
+        if(sign < 0 && (bottom ? kv >= 1 : kv < 0))
+            return true;
+    }
+    for(c = ast_ChildGet(e, 0); c != NULL; c = c->next)
+        if(has_trig_pow(c, t, sign, bottom || (isoptype(e, OP_DIV) && c != ast_ChildGet(e, 0))))
+            return true;
+    return false;
+}
+
+/*the first sin or cos of something with x in it*/
+static pcas_ast_t *first_sin_cos(pcas_ast_t *e, pcas_ast_t *x) {
+    pcas_ast_t *c, *r;
+
+    if(e->type != NODE_OPERATOR)
+        return NULL;
+    if((isoptype(e, OP_SIN) || isoptype(e, OP_COS)) && has_symbol(e, x->op.symbol))
+        return e;
+    for(c = ast_ChildGet(e, 0); c != NULL; c = c->next)
+        if((r = first_sin_cos(c, x)) != NULL)
+            return r;
+    return NULL;
+}
+
+/*cos^2/sin^2, the even power of one goes to 1 minus the other squared and what's left is powers of the other (cot^2 is csc^2 - 1)*/
+static const char *pyth_rule(pcas_ast_t *e) {
+    pcas_ast_t *f = ast_ChildGet(e, 0), *x = ast_ChildGet(e, 1), *t = first_sin_cos(f, x), *s, *c, *q;
+    int pass;
+
+    if(t == NULL)
+        return NULL;
+    s = ast_MakeUnary(OP_SIN, ast_Copy(ast_ChildGet(t, 0)));
+    c = ast_MakeUnary(OP_COS, ast_Copy(ast_ChildGet(t, 0)));
+    for(pass = 0; pass < 2; pass++) {
+        pcas_ast_t *num = pass == 0 ? c : s, *den = pass == 0 ? s : c;
+
+        if(!has_trig_pow(f, num, 1, false) || !has_trig_pow(f, den, -1, false))
+            continue;
+        q = ast_Copy(f);
+        pythagoras(q, num, den);
+        expand(q, EXP_ALL);
+        simplify(q, SIMP_ALL);
+        if(!pcas_cancelled) {
+            replace_node(e, integral(q, x));
+            ast_Cleanup(s);
+            ast_Cleanup(c);
+            return "pythagorean identity";
+        }
+        ast_Cleanup(q);
+    }
+    ast_Cleanup(s);
+    ast_Cleanup(c);
+    return NULL;
+}
+
+/*1/cos(u)^n is sec(u)^n and 1/sin(u)^n is csc(u)^n for the rules that know those, n over 1*/
+static const char *reciprocal_trig(pcas_ast_t *e) {
+    pcas_ast_t *f = ast_ChildGet(e, 0), *x = ast_ChildGet(e, 1), *b, *t;
+    double kv;
+
+    if(!isoptype(f, OP_DIV) || !is_ast_int(ast_ChildGet(f, 0), 1) || !isoptype(ast_ChildGet(f, 1), OP_POW))
+        return NULL;
+    b = ast_ChildGet(f, 1);
+    t = ast_ChildGet(b, 0);
+    if(!(isoptype(t, OP_COS) || isoptype(t, OP_SIN)) || !approx_double(ast_ChildGet(b, 1), &kv) || kv < 2 || kv != floor(kv))
+        return NULL;
+    replace_node(e, integral(ast_MakeBinary(OP_POW, ast_MakeUnary(isoptype(t, OP_COS) ? OP_SEC : OP_CSC, ast_Copy(ast_ChildGet(t, 0))), ast_Copy(ast_ChildGet(b, 1))), x));
+    return "1/cos is sec";
+}
+
 /*one rule on the integral node e, in place. its name, NULL when nothing fits*/
 static const char *one_rule(pcas_ast_t *e, subs_t *subs) {
     pcas_ast_t *f = ast_ChildGet(e, 0), *x = ast_ChildGet(e, 1), *n, *c, *rest;
@@ -791,13 +1057,27 @@ static const char *one_rule(pcas_ast_t *e, subs_t *subs) {
         replace_node(e, n);
         return name;
     }
+    if((name = reciprocal_trig(e)) != NULL)
+        return name;
     if((name = trig_power(e)) != NULL)
         return name;
     if((name = trig_reduce(e)) != NULL)
         return name;
     if((name = trig_product(e)) != NULL)
         return name;
+    if((name = pyth_rule(e)) != NULL)
+        return name;
+    if(trig_first) {
+        if((name = shift_square(e, subs)) != NULL)
+            return name;
+        if((name = trig_sub(e, subs)) != NULL)
+            return name;
+    }
     if((name = usub(e, subs)) != NULL)
+        return name;
+    if((name = shift_square(e, subs)) != NULL)
+        return name;
+    if((name = trig_sub(e, subs)) != NULL)
         return name;
     if((name = exp_trig(e)) != NULL)
         return name;
@@ -824,8 +1104,36 @@ static const char *one_rule(pcas_ast_t *e, subs_t *subs) {
     return NULL;
 }
 
+/*sec, csc and cot as sin and cos, sin(2w) and cos(2w) as w, so the answer of a trig substitution goes back to x*/
+static void trig_basic(pcas_ast_t *e) {
+    pcas_ast_t *c, *w, *r;
+
+    if(e->type != NODE_OPERATOR)
+        return;
+    for(c = ast_ChildGet(e, 0); c != NULL; c = c->next)
+        trig_basic(c);
+    w = ast_ChildGet(e, 0);
+    r = NULL;
+    if(isoptype(e, OP_SEC))
+        r = trig_pow(OP_COS, w, -1);
+    else if(isoptype(e, OP_CSC))
+        r = trig_pow(OP_SIN, w, -1);
+    else if(isoptype(e, OP_COT))
+        r = ast_MakeBinary(OP_DIV, ast_MakeUnary(OP_COS, ast_Copy(w)), ast_MakeUnary(OP_SIN, ast_Copy(w)));
+    else if((isoptype(e, OP_SIN) || isoptype(e, OP_COS)) && isoptype(w, OP_MULT) && ast_ChildLength(w) == 2 && is_ast_int(ast_ChildGet(w, 0), 2)) {
+        pcas_ast_t *h = ast_ChildGet(w, 1);
+
+        if(isoptype(e, OP_SIN))
+            r = ast_MakeBinary(OP_MULT, ast_MakeInt(2), ast_MakeBinary(OP_MULT, ast_MakeUnary(OP_SIN, ast_Copy(h)), ast_MakeUnary(OP_COS, ast_Copy(h))));
+        else
+            r = ast_MakeBinary(OP_ADD, ast_MakeBinary(OP_MULT, ast_MakeInt(2), trig_pow(OP_COS, h, 2)), ast_MakeInt(-1));
+    }
+    if(r != NULL)
+        replace_node(e, r);
+}
+
 /*F for the integral node I, new. NULL when some piece has no rule. the lines go in s when it isn't NULL*/
-static pcas_ast_t *integral_of(pcas_ast_t *I, steps_t *s) {
+static pcas_ast_t *integral_run(pcas_ast_t *I, steps_t *s) {
     pcas_ast_t *cur, *found[STEPS_FOUND_MAX], *x = ast_ChildGet(I, 1), *t;
     const char *name;
     step_t *l = NULL;
@@ -859,8 +1167,11 @@ static pcas_ast_t *integral_of(pcas_ast_t *I, steps_t *s) {
     }
     if(pcas_cancelled || steps_find(cur, OP_INTEGRAL, found, 0) > 0) /*a piece with no rule*/
         n = -1;
-    for(i = subs.n - 1; i >= 0 && n >= 0; i--) /*the u's go back the other way round, a later u can have earlier one in it*/
+    for(i = subs.n - 1; i >= 0 && n >= 0; i--) { /*the u's go back the other way round, a later u can have earlier one in it*/
+        if(isoptype(subs.g[i], OP_SIN_INV) || isoptype(subs.g[i], OP_TAN_INV) || isoptype(subs.g[i], OP_COS_INV))
+            trig_basic(cur);
         substitute(cur, subs.u[i], subs.g[i]);
+    }
     for(i = 0; i < subs.n; i++) {
         ast_Cleanup(subs.u[i]);
         ast_Cleanup(subs.g[i]);
@@ -875,6 +1186,28 @@ static pcas_ast_t *integral_of(pcas_ast_t *I, steps_t *s) {
             steps_expr(s, ast_Copy(cur));
     }
     return cur;
+}
+
+/*the first try is u-substitution first. sqrt(x^2-4)/x takes u = x^2 and then nothing fits, so the roots of quadratics get another go with the trig way first*/
+static pcas_ast_t *integral_of(pcas_ast_t *I, steps_t *s) {
+    pcas_ast_t *F, *cq[3] = {NULL}, *x = ast_ChildGet(I, 1);
+    int n0 = s != NULL ? s->n : 0, i;
+    bool retry;
+
+    F = integral_run(I, s);
+    if(F != NULL || trig_first || pcas_cancelled)
+        return F;
+    retry = quad_root(ast_ChildGet(I, 0), x, cq) != NULL;
+    for(i = 0; i < 3; i++)
+        ast_Cleanup(cq[i]);
+    if(!retry)
+        return NULL;
+    if(s != NULL)
+        steps_cut(s, n0);
+    trig_first = true;
+    F = integral_run(I, s);
+    trig_first = false;
+    return F;
 }
 
 /*e with x = pt, as a float*/

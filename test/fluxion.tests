@@ -1097,6 +1097,21 @@ simplify; integral(csc(X)^3,X); ln(abs(csc(X)_cot(X)))/2_(cot(X)csc(X))/2
 simplify; integral(cot(X)^2,X); -X_cot(X)
 simplify; integral(sin(X)^2*cos(X)^2,X); X/8_(sin(4X))/32
 simplify; integral(tan(3X)^2,X); -X+tan(3X)/3
+#roots of quadratics: complete the square, then x = a sin / tan / sec of u. the sec ones have abs(x) and sign(x) in them for x under -a. cos^2/sin^2 by the Pythagorean identity, 1/cos^n as sec^n
+simplify; integral(1/sqrt(X^2+2X+5),X); ln(abs(1+(4+(1+X)^2)^(1/2)+X))
+simplify; integral(sqrt(X^2+2X+5),X); 2ln(abs(1+(4+(1+X)^2)^(1/2)+X))+(4+(1+X)^2)^(1/2)/2+(X(4+(1+X)^2)^(1/2))/2
+simplify; integral(X^2/sqrt(1_X^2),X); asin(X)/2_(X(1_X^2)^(1/2))/2
+simplify; integral(1/(X^2*sqrt(4_X^2)),X); (-(1_(X^2)/4)^(1/2))/(2X)
+simplify; integral(sqrt(9_X^2)/X^2,X); -asin(X/3)_(3(1_(X^2)/9)^(1/2))/X
+simplify; integral(1/(X^2+1)^(3/2),X); X/(1+X^2)^(1/2)
+simplify; integral(1/(X^2*sqrt(X^2+1)),X); (-(1+X^2)^(1/2))/X
+simplify; integral(sqrt(X^2_4)/X,X); -2acos(2/abs(X))+abs(X)(1_4/X^2)^(1/2)
+simplify; integral(X^2/sqrt(X^2_9),X); (sign(X)X^2(1_9/X^2)^(1/2))/2+(9sign(X)ln(abs(abs(X)+(1_9/X^2)^(1/2)abs(X))/3))/2
+simplify; integral(1/(X^2_1)^(3/2),X); (-sign(X))/(1_1/X^2)^(1/2)
+simplify; integral(cos(X)^3/sin(X)^2,X); -sin(X)_1/sin(X)
+simplify; integral(cos(X)^2/sin(X)^2,X); -X_cot(X)
+simplify; integral(1/cos(X)^4,X); (2tan(X))/3+(sec(X)^2tan(X))/3
+simplify; integral(sin(X)^2/cos(X)^4,X); (-tan(X))/3+(sec(X)^2tan(X))/3
 #u-substitution: some piece of it is u and the rest is u' (up to a number)
 antideriv; 2Xcos(X^2); X
 antideriv; Xe^(X^2); X

@@ -35,7 +35,7 @@
 
 - [x] Derivatives, one rule a line (product, quotient, chain, trig), at a value too
 - [x] Limits. plug in, cancel, l'Hopital, and to ∞ / -∞
-- [x] Integrals. table, u-sub, by parts (LIATE), sin / cos powers, partial fractions over rational roots, with steps
+- [x] Integrals. table, u-sub, by parts (LIATE), sin / cos powers, partial fractions over rational roots, roots of quadratics (complete the square, trig substitution), with steps
 - [x] Tangent lines, critical points, max / min and inflections, implicit *dih*rivatives
 - [x] Increasing / decreasing intervals, increasing(f,x)
 - [x] One-sided limits, a 4th argument of 1 or -1, limit(abs(x)/x,x,0,1)

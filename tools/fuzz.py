@@ -14,7 +14,7 @@ X, Y = sp.symbols("X Y")
 tr = standard_transformations + (implicit_multiplication_application, convert_xor)
 rootf = lambda n, v: v ** (1 / sp.sympify(n))
 Nn = sp.Symbol("N", integer=True)
-names = {"N": Nn, "rootf": rootf, "i": sp.I, "X": X, "Y": Y, "e": sp.E, "ln": sp.log, "abs": sp.Abs, "sqrt": sp.sqrt, "asin": sp.asin, "acos": sp.acos, "atan": sp.atan, "sec": sp.sec, "csc": sp.csc, "cot": sp.cot, "logb": lambda v, b: sp.log(v, b)}
+names = {"N": Nn, "rootf": rootf, "i": sp.I, "X": X, "Y": Y, "e": sp.E, "ln": sp.log, "abs": sp.Abs, "sign": sp.sign, "sqrt": sp.sqrt, "asin": sp.asin, "acos": sp.acos, "atan": sp.atan, "sec": sp.sec, "csc": sp.csc, "cot": sp.cot, "logb": lambda v, b: sp.log(v, b)}
 
 def leaf():
     return random.choice(["X", "X", "Y", "2", "3", "5", "1/2", "3/4", "e", "pi"])
@@ -43,7 +43,7 @@ def gen(d):
     if k < 0.98: return f"({a})^({b})"
     return f"cos({a})"
 
-TOK = re.compile(r"(?:sqrt|ln|abs|asin|acos|atan|logb|sec|csc|cot|sin|cos|tan|root|pi|e|i|X|Y|N)|\d+(?:\.\d+)?|[-+*/^()_,]")
+TOK = re.compile(r"(?:sqrt|ln|abs|sign|asin|acos|atan|logb|sec|csc|cot|sin|cos|tan|root|pi|e|i|X|Y|N)|\d+(?:\.\d+)?|[-+*/^()_,]")
 ATOM = r"(?:[\w.]+(?:\((?:[^()]|\([^()]*\))*\))?|\((?:[^()]|\([^()]*\))*\))"
 
 def to_sympy(s):
@@ -53,11 +53,11 @@ def to_sympy(s):
         raise ValueError("untokenized")
     out = ""
     for t in toks:
-        if t in ("sqrt", "ln", "abs", "asin", "acos", "atan", "logb", "sec", "csc", "cot", "sin", "cos", "tan"): out += t
+        if t in ("sqrt", "ln", "abs", "sign", "asin", "acos", "atan", "logb", "sec", "csc", "cot", "sin", "cos", "tan"): out += t
         elif t == "_": out += "-"
         elif t == "root": out += " root "
         else: out += " " + t + " "
-    out = re.sub(r"(sqrt|ln|abs|asin|acos|atan|logb|sec|csc|cot|sin|cos|tan)\s*", r"\1", out)
+    out = re.sub(r"(sqrt|ln|abs|sign|asin|acos|atan|logb|sec|csc|cot|sin|cos|tan)\s*", r"\1", out)
     out = re.sub("(" + ATOM + r")\s*root\s*(" + ATOM + ")", r"rootf(\1,\2)", out)
     return parse_expr(out, local_dict=names, transformations=tr)
 
@@ -72,6 +72,8 @@ def gen_int():
         f"X^{k + 2}*e^X", f"e^({a}X)*sin({abs(b)}X)", f"e^({a}X)*cos({abs(b)}X)", f"X*atan({a}X)", f"abs({a}X+{b})", f"ln(X)^{k + 1}", f"X*ln(X)^2",
         f"1/(X^2+{a}X+{a + 2})", f"1/(X^2+X_{a})", f"(2X+{b})/(X^2+X+{a})", f"X^2/(X^2+{a})", f"X^3/(X^2+{a})", f"sqrt({a + 3}_X^2)",
         f"sqrt(X^2+{a})", f"1/sqrt(X^2+{a})", f"1/sqrt({a + 3}_X^2)", f"tan(X)^{k + 1}", f"sec(X)^3", f"sin(X)^2*cos(X)^2", f"asin(X)", f"sec(X)", f"cot(X)^{k + 1}", f"csc(X)^3", f"sec(X)^{k + 2}", f"sin({a}X)^2*cos({a}X)^2", f"sin(X)^2*cos(X)^4", f"tan({a}X)^2",
+        f"1/sqrt(X^2+{a * 2}X+{a * a + 4})", f"sqrt(X^2+{a * 2}X+{a * a + 3})", f"sqrt(X^2_{a + 1})/X", f"X^2/sqrt({a + 1}_X^2)", f"1/(X^2*sqrt(X^2+{a}))",
+        f"X^2/sqrt(X^2_{a + 1})", f"sqrt({a + 1}_X^2)/X^2", f"1/(X^2+{a})^(3/2)", f"1/(X^2_{a + 1})^(3/2)", f"cos(X)^3/sin(X)^2", f"cos(X)^2/sin(X)^2", f"1/cos(X)^4", f"sin(X)^2/cos(X)^4",
     ])
 
 def nz(lo, hi):
