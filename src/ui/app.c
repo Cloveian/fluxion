@@ -18,6 +18,7 @@
 #include "range.h"
 #include "work.h"
 #include "bind.h"
+#include "sticky.h"
 
 #include <ctype.h>
 #include <stdio.h>
@@ -83,8 +84,7 @@ static editor_t view;
 
 static editor_t ed;
 static editor_t *running = &ed; /* the editor whose line is being run, for push(). the form keys run from view */
-static unsigned mods, mods_lock;    /* M_ bits tapped for the next key, and the ones that stay on after it */
-static const char *status;      /* one-line message above the input, or NULL */
+static const char *status;     /* one-line message above the input, or NULL */
 
 static int menu = -1;           /* open folder, -1 = none */
 static const folder_t *menu_in; /* folders[menu] or one of its subfolders */
@@ -2273,43 +2273,6 @@ static bool edit_act(action_t a) {
     return true;
 }
 
-/* two taps of [2nd] or [alpha] this close together lock it */
-#define DOUBLE_TAP (CLOCKS_PER_SEC * 2 / 5)
-
-/* [2nd] / [alpha] / [on] (ctrl / shift on the nspire), on for the next key. seperate
-   so any of them can be on together ([2nd][alpha] + a letter is a capital). a quick
-   second tap locks it whatever the first one did (it may have just turned it off),
-   a tap while locked unlocks */
-static void tap(unsigned bit, bool again) {
-    if(again) {
-        mods |= bit;
-        mods_lock |= bit;
-    } else if(mods_lock & bit) {
-        mods &= ~bit;
-        mods_lock &= ~bit;
-    } else {
-        mods ^= bit;
-    }
-}
-
-/* the last modifier tapped, 0 after any other key. a double tap is two
-   taps with nothing in between (alpha a alpha b isn't one) */
-static unsigned last;
-static clock_t last_time;
-
-static void modifier(unsigned bit) {
-    /* modifier? i hardly know 'er bahahwahaa */
-    bool again = bit == last && clock() - last_time < DOUBLE_TAP;
-
-    last = bit;
-    last_time = clock();
-    tap(bit, again);
-
-    /* locking ate the double tap, so a third quick tap starts a fresh one */
-    if(again)
-        last = 0;
-}
-
 /* one step up / down through answer, input, answer before... */
 static void hist_up(void) {
     if(hist_out) {
@@ -2491,7 +2454,7 @@ static bool handle(keypress_t p) {
     if(p.key == K_POINT_DOWN || p.key == K_POINT_DRAG)
         a = plain = pointer_action(p);
     else {
-        a = bind_key(p.key, mods | p.held);
+        a = bind_key(p.key, sticky_on() | p.held);
         plain = bind_key(p.key, 0);
     }
 
@@ -2503,20 +2466,19 @@ static bool handle(keypress_t p) {
 
     /* [2nd][alpha][on] is lights out. both are already on by the time the on tap comes */
     if(a.op == A_SCREEN_OFF) {
-        mods = mods_lock = 0;
+        sticky_clear();
         keys_sleep();
         return true;
     }
     if(plain.op == A_MOD) {
-        modifier((unsigned)plain.n);
+        sticky_tap((unsigned)plain.n);
         return true;
     }
-    last = 0;
-    mods = mods_lock;   /* the tapped ones turn off unless locked */
+    sticky_used();
 
     if(menu >= 0) {
         /* locked alpha leaves 1-9 as numbers in here, a tapped one still makes 7-9 o p q */
-        if((mods_lock & M_ALPHA) && plain.op == A_CHAR && plain.n >= '1' && plain.n <= '9')
+        if((sticky_locked() & M_ALPHA) && plain.op == A_CHAR && plain.n >= '1' && plain.n <= '9')
             a = plain;
         if(!menu_act(a))
             menu_act(plain);
@@ -2834,8 +2796,8 @@ static void draw_top_bar(void) {
         unsigned m = keypad.shown[i];
         int letter = m == M_2ND ? 0 : m == M_ALPHA ? 1 : m == M_SHIFT ? 3 : 2;    /* [on] and ctrl are both C */
 
-        if(m & mods)
-            draw_padlock(left + i * LOCK_SLOT, y, letter, (m & mods_lock) != 0);
+        if(m & sticky_on())
+            draw_padlock(left + i * LOCK_SLOT, y, letter, (m & sticky_locked()) != 0);
     }
 
     /* the form, when it isn't the normal one, over by the battery */
@@ -3110,13 +3072,13 @@ static bool busy_poll(void) {
     p = keys_peek();
     a = bind_key(p.key, 0);
     if(p.key != busy_key && a.op == A_MOD && !p.held)
-        modifier((unsigned)a.n);
+        sticky_tap((unsigned)a.n);
     if(p.held && !busy_held)
         busy_chord = false;
     if(p.held && p.key != K_NONE)
         busy_chord = true;
     if((busy_held & ~p.held) && !busy_chord)
-        modifier(busy_held & ~p.held);
+        sticky_tap(busy_held & ~p.held);
     busy_key = p.key;
     busy_held = p.held;
 
@@ -3170,7 +3132,7 @@ void app_run(void) {
     for(;;) {
         keypress_t p = keys_wait();
 
-        if(bind_key(p.key, mods | p.held).op == A_ENTER && menu < 0 && !ed_is_empty(&ed))
+        if(bind_key(p.key, sticky_on() | p.held).op == A_ENTER && menu < 0 && !ed_is_empty(&ed))
             busy_start(); /* the form keys start it themselves */
         if(!handle(p))
             break;

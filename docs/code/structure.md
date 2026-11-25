@@ -26,7 +26,8 @@ fluxion/
 │       ├── args.c  cutting a command's line at its commas and parsing the pieces, for every command file
 │       ├── catalog.c  everything you can type or pick, and what the engine can do. its words are the name table too
 │       ├── work.c  the show-the-work page, and calc1.c / polyfn.c / series.c / ineq.c the commands behind it (derivative at a point, tangent, apart, sum(, inequalities ...)
-│       ├── bind.c  bind_ce.c / bind_nspire.c: which key does which action. input only calls actions
+│       ├── bind.c  bind_ce.c / bind_nspire.c: which key does which action. input only calls actions (actions.h is the list of them)
+│       ├── sticky.c  [2nd] / [alpha] / [on]: tapped, on for the next key, a quick second tap locks it
 │       ├── page.c  full screen list pages (catalog, vars, mode)
 │       ├── names.c  stored names and the typed-word lookup the editor asks
 │       ├── vars.c   the [vars] page
