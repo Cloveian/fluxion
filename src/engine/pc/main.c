@@ -577,8 +577,14 @@ int run_solve(int argc, char **argv) {
         printf("Out of memory\n");
     else if(n == SOLVE_ALL)
         printf("Root: all\n");
-    else if(n == SOLVE_UNKNOWN)
+    else if(n == SOLVE_UNKNOWN) {
+        double num[8];
+        int m = solve_numeric(e, SYM_X, num, 8);
+
         printf("Root: unknown\n");
+        for(i = 0; i < m; i++)
+            printf("Numeric: %.7g\n", num[i]);
+    }
     else if(n == 0)
         printf("Root: none\n");
     for(i = 0; i < n && !pcas_oom; i++) {

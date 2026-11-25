@@ -32,6 +32,7 @@ typedef enum {
     TEST_SIMPLIFY_TEXT, /*Fluxion: simplifytext; expression; text. cancel and simplify like enter, no form setting, as it's shown*/
     TEST_STEPS,     /*Fluxion: steps; equation; var and method; the lines | the move | lines*/
     TEST_TRUTH,     /*Fluxion: truth; left=right (or < > <= >=); true, false or unknown, then a comma and the route or the counterexample*/
+    TEST_NUMERIC,   /*Fluxion: numeric; left=right; var; the real roots by sign changes, comma seperated, within 1e-5*/
 
     TEST_INVALID
 } TestType;

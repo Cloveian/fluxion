@@ -553,6 +553,19 @@ const char *read_equation(char *src, pcas_ast_t **lhs, pcas_ast_t **rhs, Symbol 
     return NULL;
 }
 
+#define NUMERIC_MAX 8 /* roots the numeric fallback keeps */
+
+/* "x = 1.1673, 2.5 (numeric)" */
+static box_t *numeric_box(char var, const double *r, int n) {
+    char text[NUMERIC_MAX * 14 + 24];
+    int i, len = snprintf(text, sizeof text, "%c = ", var);
+
+    for(i = 0; i < n && len < (int)sizeof text - 16; i++)
+        len += snprintf(text + len, sizeof text - (size_t)len, i > 0 ? ", %.6g" : "%.6g", r[i]);
+    snprintf(text + len, sizeof text - (size_t)len, " (numeric)");
+    return word_box(text);
+}
+
 static void run_solve(char *src, box_t *in) {
     pcas_ast_t *roots[SOLVE_MAX] = { NULL }, *e, *rhs;
     char shown, rel;
@@ -560,7 +573,8 @@ static void run_solve(char *src, box_t *in) {
     const char *why = read_equation(src, &e, &rhs, &var, &shown, &rel);
     clock_t start;
     unsigned long ms;
-    int n, i;
+    double num[NUMERIC_MAX];
+    int n, i, found = 0;
 
     if(why != NULL) {
         push(in, NULL, why, 0);
@@ -588,11 +602,15 @@ static void run_solve(char *src, box_t *in) {
         n = solve_in_range(roots, n, hi);
         ast_Cleanup(hi);
     }
+    if(n == SOLVE_UNKNOWN && !pcas_cancelled && setting_angle != ANGLE_DEGREES) /* last resort, labelled */
+        found = solve_numeric(e, var, num, NUMERIC_MAX);
     ms = (unsigned long)((clock() - start) * 1000 / CLOCKS_PER_SEC);
     ast_Cleanup(e);
 
     if(pcas_cancelled)
         push(in, NULL, pcas_oom ? "out of memory" : "cancelled", ms);
+    else if(n == SOLVE_UNKNOWN && found > 0)
+        push(in, numeric_box(shown, num, found), NULL, ms);
     else if(n == SOLVE_UNKNOWN)
         push(in, NULL, "can't solve this one yet", ms);
     else if(n == SOLVE_ALL)

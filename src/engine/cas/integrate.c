@@ -1421,7 +1421,7 @@ static pcas_ast_t *integral_of(pcas_ast_t *I, steps_t *s) {
 }
 
 /*e with x = pt, as a float*/
-static bool float_at(pcas_ast_t *e, pcas_ast_t *x, pcas_ast_t *pt, double *v) {
+bool float_at(pcas_ast_t *e, pcas_ast_t *x, pcas_ast_t *pt, double *v) {
     pcas_ast_t *c = ast_Copy(e);
     bool ok = c != NULL && substitute(c, x, pt) && approx_float(c, v);
 

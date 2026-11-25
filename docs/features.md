@@ -17,6 +17,7 @@ Everything Fluxion does right now, as tables. Yes / partly / no first, the other
 | Rational equations                       | yes    |
 | Trig equations                           | yes    |
 | Inequalities                             | yes\*  |
+| Numeric roots, no exact form (6 digits)  | yes\*  |
 | Solve steps                              | yes\*  |
 | Steps for expand, factor, simplify       | yes\*  |
 | Steps for derivatives, limits, integrals | yes\*  |

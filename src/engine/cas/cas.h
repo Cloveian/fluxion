@@ -234,6 +234,8 @@ bool eval(pcas_ast_t *e, unsigned short flags);
 int solve(pcas_ast_t *e, Symbol var, pcas_ast_t **out);
 /*Fluxion: solve() with the complex roots of quadratics too. the app wants them, asym and friends don't*/
 int solve_ex(pcas_ast_t *e, Symbol var, pcas_ast_t **out, bool complex);
+/*Fluxion: real roots of e = 0 by sign changes, up to max in out, about 6 digits (numsolve.c). the last resort after solve gives up. -1 when e can't be worked out as numbers (another letter), 0 when it found none*/
+int solve_numeric(pcas_ast_t *e, Symbol var, double *out, int max);
 /*Fluxion: the other children of e, copied, as a sum or a product of op (solve.c, layers.c)*/
 pcas_ast_t *rest_of(pcas_ast_t *e, pcas_ast_t *skip, OperatorType op);
 /*Fluxion: e is a whole number that fits n*/
@@ -265,6 +267,8 @@ bool has_symbol(const pcas_ast_t *e, Symbol s);
 bool approx(pcas_ast_t *e);
 /*Fluxion: e as a float straight off the tree, no simplify. false with a letter left or where it isn't real, sqrt(-1)*/
 bool approx_float(pcas_ast_t *e, double *x);
+/*Fluxion: e with x = pt as a float (integrate.c, numsolve.c)*/
+bool float_at(pcas_ast_t *e, pcas_ast_t *x, pcas_ast_t *pt, double *v);
 /*Fluxion: the same over the complex numbers, principal powers and roots. for checking a complex root*/
 bool approx_complex(pcas_ast_t *e, double *re, double *im);
 

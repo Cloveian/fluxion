@@ -99,6 +99,8 @@ def gen_eq():
         f"ln(X)+ln(X+{abs(a)})_{abs(b) % 3 + 1}", f"abs({a}X+{b})_{abs(c) + 1}", f"abs(X_{b})_abs(X+{c})", f"abs(X)_{a}X_{abs(d)}",
         f"2^X_{abs(a) + 5}", f"{a}^X_{abs(b) + 1}", f"sin({a}X)_{p}/{q}", f"cos(X)_{p}/{q}", f"tan(X)_{p}", f"2sin(X)^2_sin(X)_1",
         f"sin(X)^2_{abs(p)}/{q}", f"cos(X)^2_cos(X)", f"sin(X)_cos(X)", f"sin(2X)_sin(X)", f"X^2_{a}X_{abs(b)}X",
+        f"X^5+{a}X+{b}", f"cos(X)_X/{q}", f"e^X+{a}X_{abs(b)}", f"ln(X)+{a}X_{abs(c)}", f"X*e^X_{abs(d)}", f"tan(X)_{a}X", f"X^5_{a}X^2_{abs(b)}",
+        f"sin(X)_X/{q + 2}", f"e^X_{a}X^2", f"X^4+X_{abs(c) + 1}",
     ])
 
 def solve_check(expr, roots):
@@ -255,7 +257,7 @@ def run(expr):
         expr = f"limit({expr[0]},X,{expr[1]}{',' + expr[2] if len(expr) > 2 else ''})"
     if cmd == "solve":
         p = subprocess.run(["build-pc/fluxion", "solve", expr], capture_output=True, text=True, timeout=20)
-        return re.findall(r"^Root: (.*)$", p.stdout, re.M)
+        return re.findall(r"^Root: (.*)$", p.stdout, re.M), re.findall(r"^Numeric: (.*)$", p.stdout, re.M)
     if cmd == "integral":
         expr = f"integral({expr},X)"
     p = subprocess.run(["build-pc/fluxion", "simplify" if cmd in ("integral", "limit") else cmd, expr] + (["X"] if cmd == "derivative" else []), capture_output=True, text=True, timeout=20)
@@ -334,9 +336,15 @@ for i in range(count):
         continue
     if cmd == "solve":
         try:
-            roots = run(expr)
+            roots, nums = run(expr)
         except subprocess.TimeoutExpired:
             bad.append((expr, "TIMEOUT", None)); continue
+        if roots == ["unknown"] and nums:  # the numeric last resort, each one has to be a zero
+            f = to_sympy(expr)
+            worst = max(abs(complex(f.subs(X, sp.Float(n)).evalf())) for n in nums)
+            if worst > 1e-3 * (1 + max(abs(float(n)) for n in nums)) ** 5:
+                bad.append((expr, nums, f"numeric root gives {worst:.3g}")); continue
+            ok += 1; continue
         if roots == ["unknown"]:
             skipped += 1; why.append((expr, "can't solve")); continue
         if roots == ["none"]:

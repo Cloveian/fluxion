@@ -1361,6 +1361,14 @@ truth; 1/2+1/3=5/6; true,numbers
 truth; sqrt(2)*sqrt(2)=2; true,numbers
 truth; X^2=X; false,X=2
 truth; ln(X*Y)=ln(X)+ln(Y); true,simplify
+#real roots by sign changes when solve gives up, about 6 digits. a pole flips the sign too and isn't one
+numeric; X^5_X=1; X; 1.167304
+numeric; X^5_5X+1=0; X; -1.541652,0.2000641,1.4405
+numeric; cos(X)=X; X; 0.7390851
+numeric; tan(X)=X; X; -4.493409,0,4.493409
+numeric; X*e^X=1; X; 0.5671433
+numeric; ln(X)+X^2=3; X; 1.592143
+numeric; 1/X=0; X;
 #int / floor goes down for a negative fraction too. round is half away from 0 like the TI, mod has the sign of the second, min and max of numbers, and the complex parts
 simplify; int(0_1/2); -1
 simplify; int(0_7/2); -4

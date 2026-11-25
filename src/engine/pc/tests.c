@@ -42,6 +42,7 @@ TestType resolve_type(char *type) {
     if(!strcmp(type, "simplifytext")) return TEST_SIMPLIFY_TEXT;
     if(!strcmp(type, "steps"))      return TEST_STEPS;
     if(!strcmp(type, "truth"))      return TEST_TRUTH;
+    if(!strcmp(type, "numeric"))    return TEST_NUMERIC;
     if(!strcmp(type, "expand"))     return TEST_EXPAND;
     if(!strcmp(type, "deriv"))      return TEST_DERIV;
     if(!strcmp(type, "solve"))      return TEST_SOLVE;
@@ -649,6 +650,31 @@ static bool test_truth(test_t *t) {
     return passed;
 }
 
+/*Fluxion: numeric; X^5_5X+1=0; X; -1.54165,0.200064,1.4405. what the solver gives up on, found by sign changes, to 1e-5*/
+static bool test_numeric(test_t *t) {
+    pcas_ast_t *left, *right, *e;
+    double got[8], want;
+    char *p = t->arg3, *end;
+    char rel;
+    int n, i;
+    bool passed = true;
+
+    if(!parse_relation(t, "equation", &left, &right, &rel))
+        return false;
+    e = ast_MakeBinary(OP_ADD, left, ast_MakeBinary(OP_MULT, ast_MakeInt(-1), right));
+    n = solve_numeric(e, (Symbol)t->arg2[0], got, 8);
+    for(i = 0; passed && i < n; i++) {
+        want = strtod(p, &end);
+        passed = end != p && fabs(got[i] - want) <= 1e-5 * (1 + fabs(want));
+        p = *end == ',' ? end + 1 : end;
+    }
+    passed = passed && n >= 0 && *p == '\0';
+    if(!passed)
+        printf("Test failed on line %u. Expected %s but found %d roots, the first %g\n", t->line, t->arg3, n, n > 0 ? got[0] : 0.0);
+    ast_Cleanup(e);
+    return passed;
+}
+
 /*Fluxion: steps; left<right (or > <= >=); var; the lines. the chart's test points are written |tX... (|t-3), a flipped sign |/-2flip*/
 static bool test_ineq_steps(test_t *t) {
     pcas_ast_t *left, *right;
@@ -1132,6 +1158,8 @@ bool test_Run(test_t *t) {
         return test_steps(t);
     if(t->type == TEST_TRUTH)
         return test_truth(t);
+    if(t->type == TEST_NUMERIC)
+        return test_numeric(t);
     if(t->type == TEST_ANTIDERIV)
         return test_antideriv(t);
 
