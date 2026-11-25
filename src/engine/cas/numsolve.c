@@ -36,8 +36,8 @@ static bool new_root(double *out, int n, int max, double r) {
 }
 
 int solve_numeric(pcas_ast_t *e, Symbol var, double *out, int max) {
-    double xs[PTS_MAX], fs[PTS_MAX];
-    bool ok[PTS_MAX];
+    static double xs[PTS_MAX], fs[PTS_MAX]; /*static, 4 KB is too much stack for the calculator*/
+    static bool ok[PTS_MAX];
     pcas_ast_t *x = ast_MakeSymbol(var);
     int n = 0, found = 0, i, j, defined = 0;
 
@@ -108,7 +108,8 @@ done:
 #define ROMBERG 10 /*levels, 2^9 intervals at most*/
 
 bool integral_numeric(pcas_ast_t *I, double *out) {
-    double r[ROMBERG][ROMBERG], a, b, h, sum, v, p;
+    static double r[ROMBERG][ROMBERG]; /*static too, stack*/
+    double a, b, h, sum, v, p;
     pcas_ast_t *f, *x;
     int i, j, k;
 
