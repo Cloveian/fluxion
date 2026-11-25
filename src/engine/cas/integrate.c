@@ -726,12 +726,115 @@ pcas_ast_t *partial_sum(pcas_ast_t *top, pcas_ast_t *bottom, Symbol var) {
     return sum;
 }
 
-static const char *partial_fractions(pcas_ast_t *e) {
-    pcas_ast_t *f = ast_ChildGet(e, 0), *x = ast_ChildGet(e, 1), *sum;
+/*P/Q with Q a product of different factors of degree 1 and 2, at least one 2 that doesn't split (x^2+1): A/(x-r) + (Bx+C)/(x^2+..). the numbers come from the identity P = sum of numerattors times the other factors at deg Q points. new, NULL when it isn't that*/
+static pcas_ast_t *partial_general(pcas_ast_t *top, pcas_ast_t *bottom, Symbol var) {
+    static const int at[SYSTEM_MAX] = { 0, 1, -1, 2 };
+    pcas_ast_t *g = ast_Copy(bottom), *lead = NULL, *fac[SYSTEM_MAX], *scale = ast_MakeInt(1), *x = ast_MakeSymbol(var), *c, *sum = NULL, *total, *term, *eqs[SYSTEM_MAX] = { NULL };
+    pcas_ast_t *out[SYSTEM_SETS][SYSTEM_MAX] = { { NULL } };
+    Symbol unk[SYSTEM_MAX];
+    int dq = poly_degree(bottom, var, NULL), dp = poly_degree(top, var, NULL), nf = 0, quads = 0, deg = 0, nu = 0, i, j, k, at_u[4], sets;
+    Symbol l;
 
-    if(!isoptype(f, OP_DIV) || (sum = partial_sum(ast_ChildGet(f, 0), ast_ChildGet(f, 1), x->op.symbol)) == NULL)
+    if(g == NULL || scale == NULL || x == NULL || dq < 2 || dq > SYSTEM_MAX || dp < 0 || dp >= dq)
+        goto done;
+    factor(g, FAC_POLYNOMIAL);
+    for(c = isoptype(g, OP_MULT) ? ast_ChildGet(g, 0) : g; c != NULL; c = isoptype(g, OP_MULT) ? c->next : NULL) {
+        int d;
+
+        if(!has_symbol(c, var)) {
+            scale = ast_MakeBinary(OP_MULT, scale, ast_Copy(c));
+            continue;
+        }
+        d = isoptype(c, OP_POW) ? -1 : poly_degree(c, var, &lead);
+        if(d < 1 || d > 2 || nf == SYSTEM_MAX || !is_ast_int(lead, 1)) /*monic, 5x-5 and x^2+4 over 25 is the same fraction told badly*/
+            goto done;
+        ast_Cleanup(lead);
+        lead = NULL;
+        fac[nf++] = c;
+        deg += d;
+        quads += d == 2;
+    }
+    if(deg != dq || quads == 0 || nf < 2) /*one quadratic on its own is quadratic_bottom's*/
+        goto done;
+    /*a letter for each number to find, not var and not in the way*/
+    for(l = SYM_A; l <= SYM_Z && nu < dq; l++)
+        if(l != var && !has_symbol(top, l) && !has_symbol(bottom, l))
+            unk[nu++] = l;
+    if(nu < dq)
+        goto done;
+    for(i = 0, k = 0; i < nf; i++) { /*which unknowns go with which factor*/
+        at_u[i] = k;
+        k += poly_degree(fac[i], var, NULL) == 2 ? 2 : 1;
+    }
+    /*total = sum numerator_j * product of the others - P*/
+    total = ast_MakeBinary(OP_MULT, ast_MakeInt(-1), ast_Copy(top));
+    for(i = 0; i < nf; i++) {
+        term = poly_degree(fac[i], var, NULL) == 2
+               ? ast_MakeBinary(OP_ADD, ast_MakeBinary(OP_MULT, ast_MakeSymbol(unk[at_u[i]]), ast_Copy(x)), ast_MakeSymbol(unk[at_u[i] + 1]))
+               : ast_MakeSymbol(unk[at_u[i]]);
+        for(j = 0; j < nf; j++)
+            if(j != i)
+                term = ast_MakeBinary(OP_MULT, term, ast_Copy(fac[j]));
+        total = ast_MakeBinary(OP_ADD, total, term);
+    }
+    for(i = 0; i < dq; i++) {
+        pcas_ast_t *v = ast_MakeInt(at[i]);
+
+        eqs[i] = ast_MakeBinary(OP_MULT, ast_MakeInt(1), ast_Copy(total));
+        substitute(eqs[i], x, v);
+        ast_Cleanup(v);
+        simplify(eqs[i], SIMP_ALL);
+    }
+    ast_Cleanup(total);
+    sets = pcas_cancelled ? SOLVE_UNKNOWN : solve_system(eqs, dq, unk, out);
+    if(sets != 1 || (sum = ast_MakeOperator(OP_ADD)) == NULL)
+        goto done;
+    for(i = 0; i < nf; i++) {
+        pcas_ast_t *num;
+
+        if(poly_degree(fac[i], var, NULL) == 2)
+            num = ast_MakeBinary(OP_ADD, ast_MakeBinary(OP_MULT, ast_Copy(out[0][at_u[i]]), ast_Copy(x)), ast_Copy(out[0][at_u[i] + 1]));
+        else
+            num = ast_Copy(out[0][at_u[i]]);
+        term = ast_MakeBinary(OP_DIV, num, ast_MakeBinary(OP_MULT, ast_Copy(scale), ast_Copy(fac[i])));
+        simplify(term, SIMP_ALL);
+        if(!is_ast_int(term, 0))
+            ast_ChildAppend(sum, term);
+        else
+            ast_Cleanup(term);
+    }
+done:
+    ast_Cleanup(lead);
+    for(i = 0; i < SYSTEM_MAX; i++)
+        ast_Cleanup(eqs[i]);
+    for(j = 0; j < SYSTEM_SETS; j++)
+        for(i = 0; i < SYSTEM_MAX; i++)
+            ast_Cleanup(out[j][i]);
+    ast_Cleanup(g);
+    ast_Cleanup(scale);
+    ast_Cleanup(x);
+    return sum;
+}
+
+static const char *partial_fractions(pcas_ast_t *e) {
+    pcas_ast_t *f = ast_ChildGet(e, 0), *x = ast_ChildGet(e, 1), *sum, *each, *t;
+
+    if(!isoptype(f, OP_DIV))
         return NULL;
-    replace_node(e, integral(sum, x));
+    if((sum = partial_sum(ast_ChildGet(f, 0), ast_ChildGet(f, 1), x->op.symbol)) != NULL) {
+        replace_node(e, integral(sum, x));
+        return "partial fractions";
+    }
+    if((sum = partial_general(ast_ChildGet(f, 0), ast_ChildGet(f, 1), x->op.symbol)) == NULL)
+        return NULL;
+    /*one integral a term, the like terms pass would put the fractions back over one bottom*/
+    if((each = ast_MakeOperator(OP_ADD)) != NULL)
+        for(t = ast_ChildGet(sum, 0); t != NULL; t = t->next)
+            ast_ChildAppend(each, integral(ast_Copy(t), x));
+    ast_Cleanup(sum);
+    if(each == NULL)
+        return NULL;
+    replace_node(e, each);
     return "partial fractions";
 }
 
