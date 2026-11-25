@@ -51,7 +51,8 @@ only `src/platform/` is allowed to touch graphx, keypadc or SDL. everything else
 
 - PC: engine + layout built with `gcc`, takes a few seconds
 - `make budget`: every test line's work (pcas_check calls), PC time and \*6500 for the CE, most work first. work is the same number on every machine, time per unit spreads ~4x (more on bignum heavy stuff)
-- `python3 tools/fuzz.py [count] [seed] [pos|any]`: random expressions through `build-pc/fluxion simplify`, checked at random points against sympy. `any` tests negative letters too. a point where the input isn't real is skipped (Y^pi at a negative Y is noise)
+- `python3 tools/fuzz.py [count] [seed] [pos|any] [mode]`: random expressions through `build-pc/fluxion`, checked at random points against sympy. modes are simplify (the default), expand, factor, derivative, integral, solve, limit, critical and system (2 equations, the sets have to satisfy both and match sympy's real ones). `any` tests negative letters too. a point where the input isn't real is skipped (Y^pi at a negative Y is noise), a point right next to a pole can show as wrong from the finite difference, simplify / expand / factor also report answers that are right but huge
+- `python3 tools/golden.py seed count old-app new-app`: the same random key scripts through two `fluxion-app` builds, which PNGs differ. for refactors that must not change a pixel (keep a copy of the old binary first)
 - `python3 tools/uifuzz.py seed count [fluxion-app]`: random key and click scripts through `fluxion-app --png`, prints the ones that crash, time out or trip a sanitizer. an asan build finds the most
 - CEmu: by hand. `cemu-autotester` comes with CEdev if i ever want scripted key presses
 
