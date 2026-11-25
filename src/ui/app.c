@@ -1912,6 +1912,7 @@ static const popup_set_t marks_set = { popup_marks, NULL, (int)sizeof popup_mark
 
 static const popup_set_t *pset = &math_set;
 static int popup = -1; /* selected one, -1 = closed */
+static int pop_x, pop_y, pop_cell_w = 1, pop_cell_h = 1; /* where draw_popup put it, for clicks */
 
 /* where the cursor was last drawn, so the popup knows where to go */
 static int cur_x, cur_top;
@@ -1941,6 +1942,7 @@ static bool popup_act(action_t a) {
         popup = (popup + pset->cols) % n;
         break;
     case A_ENTER: popup_pick(popup); break;
+    case A_POPUP_PICK: popup_pick(a.n); break;
     case A_CLEAR: case A_ESC: case A_POPUP: popup = -1; break;
     case A_CHAR:
         if(a.n >= '1' && a.n <= '9' && a.n - '1' < n)
@@ -2335,7 +2337,7 @@ static bool history_act(action_t a) {
     return false;
 }
 
-/* the mouse as an action: soft keys, an open menu's items, the input line. nothing for the rest yet */
+/* the mouse as an action: soft keys, an open menu's or popup's items, the input line. nothing for the rest yet */
 static action_t pointer_action(keypress_t p) {
     action_t a = { A_NONE, 0, NULL };
     bool on_keys = p.y >= areas.keys.y && p.y < areas.keys.y + areas.keys.h;
@@ -2355,7 +2357,14 @@ static action_t pointer_action(keypress_t p) {
         }
     }
     if(popup >= 0 && p.key == K_POINT_DOWN) {
-        a.op = A_ESC;
+        int col = (p.x - pop_x) / pop_cell_w, line = (p.y - pop_y) / pop_cell_h;
+        int i = line * pset->cols + col;
+
+        a.op = A_ESC; /* outside it */
+        if(p.x >= pop_x && p.y >= pop_y && col < pset->cols && i < pset->count) {
+            a.op = A_POPUP_PICK;
+            a.n = i;
+        }
         return a;
     }
 
@@ -2614,6 +2623,10 @@ static void draw_popup(void) {
         x = areas.body.x + areas.body.w - 1 - w;
     if(y < areas.body.y)
         y = areas.body.y;
+    pop_x = x;
+    pop_y = y;
+    pop_cell_w = cell_w;
+    pop_cell_h = cell_h;
 
     screen_color(COL_BG);
     screen_fill(x, y, w, h);
