@@ -2861,22 +2861,18 @@ static void draw_top_bar(void) {
 
 /* behind the highlighted half of a history entry. browsing gets just an outline,
    the selection inside it is the highlight then */
-static void outline(int x, int base, const box_t *b) {
+static void highlight(int x, int base, const box_t *b) {
     int top = base - b->ascent - 1, h = b->ascent + b->descent + 2;
 
-    screen_color(COL_DIM);
-    screen_hline(x - 2, top, b->width + 4);
-    screen_hline(x - 2, top + h - 1, b->width + 4);
-    screen_vline(x - 2, top, h);
-    screen_vline(x + b->width + 1, top, h);
-}
-
-static void highlight(int x, int base, const box_t *b) {
     if(browsing) {
-        outline(x, base, b);
+        screen_color(COL_DIM);
+        screen_hline(x - 2, top, b->width + 4);
+        screen_hline(x - 2, top + h - 1, b->width + 4);
+        screen_vline(x - 2, top, h);
+        screen_vline(x + b->width + 1, top, h);
     } else {
         screen_color(COL_SELECT);
-        screen_fill(x - 2, base - b->ascent - 1, b->width + 4, b->ascent + b->descent + 2);
+        screen_fill(x - 2, top, b->width + 4, h);
     }
 }
 
@@ -2899,14 +2895,12 @@ static int entry_h(const entry_t *h) {
     return n + GAP;
 }
 
-/* true when the mouse is over the entry that was just added */
-static bool add_hit(int y0, int y1, int id) {
+static void add_hit(int y0, int y1, int id) {
     if(hit_n < HITS_MAX) {
         hits[hit_n].y0 = y0;
         hits[hit_n].y1 = y1;
         hits[hit_n++].id = id;
     }
-    return hover_in(areas.body.x, y0, areas.body.w, y1 - y0);
 }
 
 static void draw_screen(void) {
@@ -3009,8 +3003,7 @@ static void draw_screen(void) {
                 highlight(x, base, out);
             screen_color(COL_FG);
             draw_box(out, x, base);
-            if(add_hit(y - out->ascent - out->descent - 2, y, i * 2 + 1) && !(i == hist && hist_out))
-                outline(x, base, out);
+            add_hit(y - out->ascent - out->descent - 2, y, i * 2 + 1);
             if(h->ms >= 100) {
                 char t[32];
 
@@ -3033,8 +3026,7 @@ static void draw_screen(void) {
                 highlight(x, y - inb->descent, inb);
             screen_color(COL_FG);
             draw_box(inb, x, y - inb->descent);
-            if(add_hit(y - inb->ascent - inb->descent - GAP, y, i * 2) && !(i == hist && !hist_out))
-                outline(x, y - inb->descent, inb);
+            add_hit(y - inb->ascent - inb->descent - GAP, y, i * 2);
             y -= inb->ascent + inb->descent + GAP;
         }
         layout_free(browse);
