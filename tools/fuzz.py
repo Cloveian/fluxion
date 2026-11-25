@@ -43,7 +43,8 @@ def gen(d):
     if k < 0.98: return f"({a})^({b})"
     return f"cos({a})"
 
-TOK = re.compile(r"(?:sqrt|ln|abs|sign|asin|acos|atan|logb|sec|csc|cot|sin|cos|tan|root|pi|e|i|X|Y|N)|\d+(?:\.\d+)?|[-+*/^()_,]")
+FUNCS = ["sinh", "cosh", "tanh", "sqrt", "ln", "abs", "sign", "asin", "acos", "atan", "logb", "sec", "csc", "cot", "sin", "cos", "tan"]
+TOK = re.compile("(?:" + "|".join(FUNCS) + r"|root|pi|e|i|X|Y|N)|\d+(?:\.\d+)?|[-+*/^()_,]")
 ATOM = r"(?:[\w.]+(?:\((?:[^()]|\([^()]*\))*\))?|\((?:[^()]|\([^()]*\))*\))"
 
 def to_sympy(s):
@@ -53,13 +54,16 @@ def to_sympy(s):
         raise ValueError("untokenized")
     out = ""
     for t in toks:
-        if t in ("sqrt", "ln", "abs", "sign", "asin", "acos", "atan", "logb", "sec", "csc", "cot", "sin", "cos", "tan"): out += t
+        if t in FUNCS: out += t
         elif t == "_": out += "-"
         elif t == "root": out += " root "
         else: out += " " + t + " "
-    out = re.sub(r"(sqrt|ln|abs|sign|asin|acos|atan|logb|sec|csc|cot|sin|cos|tan)\s*", r"\1", out)
+    out = re.sub("(" + "|".join(FUNCS) + r")\s*", r"\1", out)
     out = re.sub("(" + ATOM + r")\s*root\s*(" + ATOM + ")", r"rootf(\1,\2)", out)
-    return parse_expr(out, local_dict=names, transformations=tr)
+    e = parse_expr(out, local_dict=names, transformations=tr)
+    # odd roots of negatives are real here (3root(-8) is -2), sympy's x**(1/3) is the complex one
+    return e.replace(lambda t: t.is_Pow and t.exp.is_Rational and t.exp.q > 1 and t.exp.q % 2 == 1,
+                     lambda t: sp.real_root(t.base, t.exp.q) ** t.exp.p)
 
 def gen_int():
     # the integrals a calc 1 class has: x^k times something, trig powers, 1/(quadratic), sums of those
