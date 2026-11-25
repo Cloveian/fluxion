@@ -49,7 +49,7 @@ void keys_script(char *const *presses, int count) {
       wait:6        the next press waits 6 s
       png:out.png   the screen right then, at 2x
       clip:3x+2     puts that on the clipboard, for a paste to find
-      click:x,y     a mouse click at that framebuffer pixel, drag:x,y with the button down, alpha+click: is a shift-click
+      click:x,y     mouse click at a framebuffer pixel (alpha+click: selects), drag:x,y is the button held
       busy:on+mode  held down while the engine runs, skipped if it's done by then
 */
 static Uint64 wait_until; /* SDL ms, clock() is CPU time and stands still in a wait */
@@ -96,11 +96,12 @@ static keypress_t parse_press(const char *s) {
             break;
         }
     }
-    if(strncmp(s, "click:", 6) == 0 || strncmp(s, "drag:", 5) == 0) { /* click:120,300  drag:200,300 (with alpha+ it's a shift-click) */
+    if(strncmp(s, "click:", 6) == 0 || strncmp(s, "drag:", 5) == 0) { /* click:120,200  drag:200,200, with alpha+ it's a shift-click */
+        const char *comma = strchr(s, ',');
+
         press.key = s[0] == 'c' ? K_POINT_DOWN : K_POINT_DRAG;
-        s += s[0] == 'c' ? 6 : 5;
-        press.x = (short)atoi(s);
-        press.y = strchr(s, ',') != NULL ? (short)atoi(strchr(s, ',') + 1) : 0;
+        press.x = (short)atoi(strchr(s, ':') + 1);
+        press.y = comma != NULL ? (short)atoi(comma + 1) : 0;
         return press;
     }
     press.key = keys_named(s);
@@ -191,29 +192,29 @@ static keycode_t from_keypad(SDL_Scancode sc, SDL_Keycode k) {
 static keypress_t pending[PENDING_MAX];
 static int pending_first, pending_count;
 
-static void push(keycode_t key, bool on) {
+static keypress_t *push(keycode_t key, bool on) {
     keypress_t *slot;
 
     if(key == K_NONE || pending_count >= PENDING_MAX)
-        return;
+        return NULL;
     slot = &pending[(pending_first + pending_count) % PENDING_MAX];
     slot->key = key;
     slot->held = on ? M_ON : 0;
     slot->x = slot->y = 0;
     pending_count++;
+    return slot;
 }
 
-/* the mouse, at a window position. shift is the selecting kind of click. a drag in a row replaces the one before it, only where it ended counts */
+/* the mouse at a window position, shift held is a selecting click. a drag right after a drag replaces it, only where it ended counts */
 static void push_pointer(keycode_t key, float wx, float wy) {
     keypress_t *slot;
     int x, y;
 
     if(key == K_POINT_DRAG && pending_count > 0 && pending[(pending_first + pending_count - 1) % PENDING_MAX].key == K_POINT_DRAG)
         pending_count--;
-    push(key, false);
-    if(pending_count == 0 || pending[(pending_first + pending_count - 1) % PENDING_MAX].key != key)
+    slot = push(key, false);
+    if(slot == NULL)
         return;
-    slot = &pending[(pending_first + pending_count - 1) % PENDING_MAX];
     window_point(wx, wy, &x, &y);
     slot->x = (short)x;
     slot->y = (short)y;

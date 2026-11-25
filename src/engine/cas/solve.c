@@ -1908,9 +1908,24 @@ static pcas_ast_t *atom_of(pcas_ast_t *e, Symbol var) {
     return NULL;
 }
 
+/*b is a to the k for a whole k from 1 up, the k, else 0. a base alike (e and e) is 1, 4 and 2 is 2*/
+static mp_small power_of_base(pcas_ast_t *b, pcas_ast_t *a) {
+    mp_small bv, av, v;
+    mp_small k;
+
+    if(ast_Compare(b, a))
+        return 1;
+    if(!whole_number(b, &bv) || !whole_number(a, &av) || av < 2 || bv < 2)
+        return 0;
+    for(k = 1, v = av; v < bv && k < 32; k++)
+        v *= av;
+    return v == bv ? k : 0;
+}
+
 /*Fluxion: every g in e becomes u, e^(2x) is u^2 for g = e^x. false when a power of the base isn't a whole mutliple of g's*/
 static bool swap_atom(pcas_ast_t *e, pcas_ast_t *g, Symbol var, Symbol u) {
     pcas_ast_t *c, *q;
+    mp_small k;
 
     if(ast_Compare(e, g)) {
         replace_node(e, ast_MakeSymbol(u));
@@ -1918,9 +1933,9 @@ static bool swap_atom(pcas_ast_t *e, pcas_ast_t *g, Symbol var, Symbol u) {
     }
     if(e->type != NODE_OPERATOR)
         return true;
-    if(isoptype(g, OP_POW) && isoptype(e, OP_POW) && ast_Compare(ast_ChildGet(e, 0), ast_ChildGet(g, 0))
+    if(isoptype(g, OP_POW) && isoptype(e, OP_POW) && (k = power_of_base(ast_ChildGet(e, 0), ast_ChildGet(g, 0))) > 0
        && has_symbol(ast_ChildGet(e, 1), var)) {
-        q = ast_MakeBinary(OP_DIV, ast_Copy(ast_ChildGet(e, 1)), ast_Copy(ast_ChildGet(g, 1)));
+        q = ast_MakeBinary(OP_MULT, ast_MakeInt(k), ast_MakeBinary(OP_DIV, ast_Copy(ast_ChildGet(e, 1)), ast_Copy(ast_ChildGet(g, 1))));
         if(q == NULL)
             return false;
         simplify(q, SIMP_SOLVE);
@@ -1938,6 +1953,59 @@ static bool swap_atom(pcas_ast_t *e, pcas_ast_t *g, Symbol var, Symbol u) {
     return true;
 }
 
+/*the power in e with var in its exponent and the smallest whole base, cur or one that beats it. 4^x and 2^x go in 2^x*/
+static pcas_ast_t *smaller_base(pcas_ast_t *e, Symbol var, pcas_ast_t *cur) {
+    pcas_ast_t *c, *better;
+    mp_small bv, cv;
+
+    if(e->type != NODE_OPERATOR)
+        return cur;
+    if(isoptype(e, OP_POW) && has_symbol(ast_ChildGet(e, 1), var) && !has_symbol(ast_ChildGet(e, 0), var)
+       && whole_number(ast_ChildGet(e, 0), &bv) && whole_number(ast_ChildGet(cur, 0), &cv) && bv < cv)
+        cur = e;
+    for(c = ast_ChildGet(e, 0); c != NULL; c = c->next) {
+        better = smaller_base(c, var, cur);
+        cur = better;
+    }
+    return cur;
+}
+
+/*Fluxion: a sin(u) + b cos(u) = 0 with numbers for a and b is tan(u) = -b/a, sin(x) = cos(x) is tan(x) = 1. unknown when it's anything else*/
+static int solve_trig_ratio(pcas_ast_t *e, Symbol var, pcas_ast_t **out, bool complex) {
+    pcas_ast_t *t, *f, *sin_t = NULL, *cos_t = NULL, *a = NULL, *b = NULL, *eq;
+    int n;
+
+    if(!isoptype(e, OP_ADD) || ast_ChildLength(e) != 2)
+        return SOLVE_UNKNOWN;
+    for(t = ast_ChildGet(e, 0); t != NULL; t = t->next) {
+        pcas_ast_t *coef = NULL, *fn = t;
+
+        if(isoptype(t, OP_MULT) && ast_ChildLength(t) == 2 && ast_ChildGet(t, 0)->type == NODE_NUMBER) {
+            coef = ast_ChildGet(t, 0);
+            fn = ast_ChildGet(t, 1);
+        }
+        if(isoptype(fn, OP_SIN) && sin_t == NULL) {
+            sin_t = fn;
+            a = coef;
+        } else if(isoptype(fn, OP_COS) && cos_t == NULL) {
+            cos_t = fn;
+            b = coef;
+        } else {
+            return SOLVE_UNKNOWN;
+        }
+    }
+    if(sin_t == NULL || cos_t == NULL || !ast_Compare(ast_ChildGet(sin_t, 0), ast_ChildGet(cos_t, 0)) || !has_symbol(sin_t, var))
+        return SOLVE_UNKNOWN;
+    /*tan(u) + b/a. a missing number is 1*/
+    f = ast_MakeBinary(OP_DIV, b != NULL ? ast_Copy(b) : ast_MakeInt(1), a != NULL ? ast_Copy(a) : ast_MakeInt(1));
+    eq = ast_MakeBinary(OP_ADD, ast_MakeUnary(OP_TAN, ast_Copy(ast_ChildGet(sin_t, 0))), f);
+    if(eq == NULL)
+        return SOLVE_UNKNOWN;
+    n = solve_ex(eq, var, out, complex);
+    ast_Cleanup(eq);
+    return n;
+}
+
 /*Fluxion: a polynomial in one sin / cos / tan / exponential, 2sin(x)^2 - sin(x) - 1 = 0 or e^(2x) - 3e^x + 2 = 0. solved for a letter u first, then each u = atom for var*/
 static int solve_atom(pcas_ast_t *e, Symbol var, pcas_ast_t **out, bool complex) {
     static int depth = 0; /*u = sin(x^2 + x) would come straight back here*/
@@ -1947,6 +2015,8 @@ static int solve_atom(pcas_ast_t *e, Symbol var, pcas_ast_t **out, bool complex)
 
     if(a == NULL || depth > 0)
         return SOLVE_UNKNOWN;
+    if(isoptype(a, OP_POW))
+        a = smaller_base(e, var, a);
     g = ast_Copy(a);
     c = ast_Copy(e);
     if(g == NULL || c == NULL) {
@@ -2088,6 +2158,10 @@ int solve_ex(pcas_ast_t *expr, Symbol var, pcas_ast_t **out, bool complex) {
     if(n == SOLVE_UNKNOWN && !pcas_cancelled) { /*Fluxion*/
         clear_roots(out);
         n = solve_product(e, var, out, complex);
+    }
+    if(n == SOLVE_UNKNOWN && !pcas_cancelled) { /*Fluxion*/
+        clear_roots(out);
+        n = solve_trig_ratio(e, var, out, complex);
     }
     if(n > 0 && !pcas_cancelled && has_root_of(expr, var)) { /*Fluxion: sqrt(-x) = -2 got x = -4 off simplify's i sqrt(x)*/
         int i, k;

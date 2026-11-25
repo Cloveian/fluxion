@@ -543,7 +543,7 @@ static void select_parent(editor_t *ed, bool leftwards) {
     ed->anchor = leftwards ? at + 1 : at;
 }
 
-/* each place the cursor can be in row and every row inside it, the nearest to (x, y) so far in best. distance counts a row up or down more than a step along */
+/* cursor spot nearest (x, y) in row and the rows inside it. a row up or down counts 4x a step along */
 static void nearest(const editor_t *ed, const layout_font_t *font, ed_row_t *row, int x, int y, ed_row_t **best_row, int *best_pos, long *best) {
     int p, i, j, cx, cy;
 

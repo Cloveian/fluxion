@@ -2343,9 +2343,10 @@ static bool history_act(action_t a) {
     return false;
 }
 
-/* the mouse as an action: the soft key row under it, or a click on the input line. nothing for the rest yet */
+/* the mouse as an action: soft keys, an open menu's items, the input line. nothing for the rest yet */
 static action_t pointer_action(keypress_t p) {
     action_t a = { A_NONE, 0, NULL };
+    bool on_keys = p.y >= areas.keys.y && p.y < areas.keys.y + areas.keys.h;
     int row;
 
     if(menu >= 0 && p.key == K_POINT_DOWN) {
@@ -2356,7 +2357,7 @@ static action_t pointer_action(keypress_t p) {
             a.n = row < 9 ? '1' + row : 'a' + (row - 9);
             return a;
         }
-        if(!(p.y >= areas.keys.y && p.y < areas.keys.y + areas.keys.h)) {
+        if(!on_keys) {
             a.op = A_ESC; /* outside it */
             return a;
         }
@@ -2366,7 +2367,7 @@ static action_t pointer_action(keypress_t p) {
         return a;
     }
 
-    if(p.key == K_POINT_DOWN && p.y >= areas.keys.y && p.y < areas.keys.y + areas.keys.h && !NSPIRE) {
+    if(p.key == K_POINT_DOWN && on_keys && !NSPIRE) {
         a.op = A_SOFT;
         a.n = p.x * FOLDER_COUNT / (areas.keys.w > 0 ? areas.keys.w : 1);
         if(a.n >= FOLDER_COUNT)

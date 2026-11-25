@@ -114,8 +114,7 @@ void layout_decimal(bool on);
 
 void layout_free(box_t *b);
 
-/* where the cursor box is inside b when b is drawn with its left edge and baseline at (x, y): its x, and the middle of its height as a y.
-   false when there's no cursor in it */
+/* x and middle height of the cursor box in b, drawn with its left edge and baseline at (x, y). false with no cursor in it */
 bool layout_cursor(const box_t *b, int x, int y, int *cx, int *cy);
 
 /*

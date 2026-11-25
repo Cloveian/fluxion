@@ -92,8 +92,7 @@ void ed_end(editor_t *ed);
 void ed_select_left(editor_t *ed);
 void ed_select_right(editor_t *ed);
 void ed_select_all(editor_t *ed); /* the whole row the cursor is in */
-/* the cursor goes to the place nearest a click at (x, y), measured from the line's left edge and baseline. extend makes it a selection from where
-   the cursor was (only in the same row, a click in another row just moves) */
+/* cursor to the spot nearest a click at (x, y) from the line's left edge and baseline. extend selects from where it was, same row only */
 void ed_click(editor_t *ed, const layout_font_t *font, int x, int y, bool extend);
 bool ed_has_selection(const editor_t *ed);
 void ed_deselect(editor_t *ed, bool to_start); /* cursor goes to the start or the end of it */
