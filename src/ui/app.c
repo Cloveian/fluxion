@@ -2024,6 +2024,69 @@ static ed_row_t *row_from_text(const char *text) {
     return row;
 }
 
+/* "expand((x+1)^9)" from another program, args read as math. false and nothing typed if it isn't a command */
+#define PASTE_ARGS_MAX 6
+static bool paste_command(const char *text) {
+    char name[16];
+    ed_row_t *rows[PASTE_ARGS_MAX] = { NULL };
+    const char *p = text, *start, *end;
+    size_t len;
+    int n = 0, depth = 0, i;
+    bool ok = false;
+
+    while(isspace((unsigned char)*p))
+        p++;
+    for(len = 0; isalpha((unsigned char)p[len]) && len < sizeof name - 1; len++)
+        name[len] = (char)tolower((unsigned char)p[len]);
+    name[len] = '\0';
+    if(len == 0 || p[len] != '(' || !ed_is_command(name))
+        return false;
+    start = p + len + 1;
+    end = start + strlen(start);
+    while(end > start && isspace((unsigned char)end[-1]))
+        end--;
+    if(end == start || end[-1] != ')')
+        return false;
+    end--; /* the last ) */
+    for(p = start; p <= end && n < PASTE_ARGS_MAX; p++) { /* split at the commas outside brackets */
+        if(p < end && *p == '(')
+            depth++;
+        else if(p < end && *p == ')')
+            depth--;
+        if(depth < 0)
+            goto done;
+        if(p == end || (*p == ',' && depth == 0)) {
+            char *arg = malloc((size_t)(p - start) + 1);
+
+            if(arg == NULL)
+                goto done;
+            memcpy(arg, start, (size_t)(p - start));
+            arg[p - start] = '\0';
+            rows[n] = row_from_text(arg);
+            free(arg);
+            if(rows[n++] == NULL)
+                goto done;
+            start = p + 1;
+        }
+    }
+    if(depth != 0 || p <= end)
+        goto done;
+    will_edit(false);
+    type_text(&ed, name);
+    ed_insert_char(&ed, '(');
+    for(i = 0; i < n; i++) {
+        if(i > 0)
+            ed_insert_char(&ed, ',');
+        ed_paste(&ed, rows[i]);
+    }
+    ed_insert_char(&ed, ')');
+    ok = true;
+done:
+    for(i = 0; i < PASTE_ARGS_MAX; i++)
+        ed_row_free(rows[i]);
+    return ok;
+}
+
 /* copied row out to other programs, engine text with a plain minus */
 static void clipboard_share(const ed_row_t *row) {
     char *text = ed_row_to_engine(row), *c;
@@ -2143,7 +2206,8 @@ static bool edit_act(action_t a) {
         ed_row_t *row = theirs ? row_from_text(outside) : NULL;
 
         if(theirs && row == NULL) {
-            status = "can't read that as math";
+            if(!paste_command(outside))
+                status = "can't read that as math";
         } else if(row == NULL && clipboard == NULL) {
             status = "nothing copied yet";
         } else {
