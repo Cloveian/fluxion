@@ -770,6 +770,35 @@ static const char *product_to_sum(pcas_ast_t *e) {
     return "product to sum";
 }
 
+/*1/(1 + sin u) is tan u - sec u, 1/(1 - sin u) tan u + sec u, 1/(1 + cos u) csc u - cot u, 1/(1 - cos u) -csc u - cot u. u linear*/
+static const char *one_plus_trig(pcas_ast_t *e) {
+    pcas_ast_t *f = ast_ChildGet(e, 0), *x = ast_ChildGet(e, 1), *d, *t, *u, *a, *F, *first, *second;
+    bool sine, minus = false;
+
+    if(!isoptype(f, OP_DIV) || !is_ast_int(ast_ChildGet(f, 0), 1))
+        return NULL;
+    d = ast_ChildGet(f, 1);
+    if(!isoptype(d, OP_ADD) || ast_ChildLength(d) != 2)
+        return NULL;
+    t = is_ast_int(ast_ChildGet(d, 0), 1) ? ast_ChildGet(d, 1) : is_ast_int(ast_ChildGet(d, 1), 1) ? ast_ChildGet(d, 0) : NULL;
+    if(t != NULL && isoptype(t, OP_MULT) && ast_ChildLength(t) == 2 && is_ast_int(ast_ChildGet(t, 0), -1)) {
+        minus = true;
+        t = ast_ChildGet(t, 1);
+    }
+    if(t == NULL || !(isoptype(t, OP_SIN) || isoptype(t, OP_COS)) || (a = linear(u = ast_ChildGet(t, 0), x)) == NULL)
+        return NULL;
+    sine = isoptype(t, OP_SIN);
+    first = ast_MakeUnary(sine ? OP_TAN : OP_CSC, ast_Copy(u));
+    second = ast_MakeUnary(sine ? OP_SEC : OP_COT, ast_Copy(u));
+    if(!sine && minus)
+        first = ast_MakeBinary(OP_MULT, ast_MakeInt(-1), first);
+    if(!sine || !minus)
+        second = ast_MakeBinary(OP_MULT, ast_MakeInt(-1), second);
+    F = ast_MakeBinary(OP_ADD, first, second);
+    replace_node(e, over(F, a));
+    return "half angle";
+}
+
 /*P/Q with P as big as Q or bigger, long *dih*vision: the quotient plus the remainder over Q*/
 static const char *long_division(pcas_ast_t *e) {
     pcas_ast_t *f = ast_ChildGet(e, 0), *x = ast_ChildGet(e, 1), *q, *r, *sum;
@@ -1388,6 +1417,8 @@ static const char *one_rule(pcas_ast_t *e, subs_t *subs) {
     if((name = trig_product(e)) != NULL)
         return name;
     if((name = product_to_sum(e)) != NULL)
+        return name;
+    if((name = one_plus_trig(e)) != NULL)
         return name;
     if((name = pyth_rule(e)) != NULL)
         return name;

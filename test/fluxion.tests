@@ -1106,6 +1106,12 @@ simplify; integral(sqrt(9_X^2)/X^2,X); -asin(X/3)_(3(1_(X^2)/9)^(1/2))/X
 simplify; integral(1/(X^2+1)^(3/2),X); X/(1+X^2)^(1/2)
 simplify; integral(1/(X^2*sqrt(X^2+1)),X); (-(1+X^2)^(1/2))/X
 simplify; integral(sqrt(X^2_4)/X,X); sqrt((X^2_4))_2atan(sqrt((X^2_4))/2)
+#1/(1 + sin u) and the other three, closed forms in tan sec csc cot
+simplify; integral(1/(1+sin(X)),X); tan(X)_sec(X)
+simplify; integral(1/(1_sin(X)),X); tan(X)+sec(X)
+simplify; integral(1/(1+cos(X)),X); csc(X)_cot(X)
+simplify; integral(1/(1_cos(X)),X); -csc(X)_cot(X)
+simplify; integral(1/(1+cos(2X)),X); csc(2X)/2_(cot(2X))/2
 #product to sum, sin(3x)cos(2x) is (sin(5x) + sin(x))/2
 simplify; integral(sin(3X)*cos(2X),X); (-cos(5X))/10_(cos(X))/2
 simplify; integral(sin(3X)*sin(2X),X); sin(X)/2_(sin(5X))/10

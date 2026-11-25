@@ -79,6 +79,7 @@ def gen_int():
         f"1/sqrt(X^2+{a * 2}X+{a * a + 4})", f"sqrt(X^2+{a * 2}X+{a * a + 3})", f"sqrt(X^2_{a + 1})/X", f"X^2/sqrt({a + 1}_X^2)", f"1/(X^2*sqrt(X^2+{a}))",
         f"X^2/sqrt(X^2_{a + 1})", f"sqrt({a + 1}_X^2)/X^2", f"1/(X^2+{a})^(3/2)", f"1/(X^2_{a + 1})^(3/2)", f"cos(X)^3/sin(X)^2", f"cos(X)^2/sin(X)^2", f"1/cos(X)^4", f"sin(X)^2/cos(X)^4",
         f"1/(X^2+{a})^2", f"({a}X+{b})/(X^2+{a + 1})^2", f"1/({a}X^2+{abs(b) + 3})^2",
+        f"1/(1+sin({a}X))", f"1/(1_cos({a}X+1))",
         f"sin({a + 1}X)*cos(X)", f"cos({a + 1}X)*cos({a}X+1)", f"sin({a}X)*sin({a + 2}X)",
         f"sqrt(X)/(X+{a})", f"X/sqrt(X+{a})", f"X^2*sqrt({a}X+1)", f"1/({a}+sqrt(X))", f"sqrt({a}X+1)/(X+1)",
         f"asin(X)^2", f"X^2*asin(X)", f"X^2*acos(X)", f"X*acos(X)*sqrt(1_X^2)",
