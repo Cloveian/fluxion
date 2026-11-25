@@ -771,7 +771,7 @@ static pcas_ast_t *partial_general(pcas_ast_t *top, pcas_ast_t *bottom, Symbol v
         dg[nf++] = d;
         deg += (int)m * d;
     }
-    if(deg != dq || (nf == 1 && mult[0] == 1)) /*one factor on its own is quadratic_bottom's*/
+    if(deg != dq || (nf == 1 && (mult[0] == 1 || dg[0] == 2))) /*one factor on its own is quadratic_bottom's, a quadratic to a power splits into itself*/
         goto done;
     /*a letter for each number to find, not var and not in the way*/
     for(l = SYM_A; l <= SYM_Z && nu < dq; l++)
@@ -815,12 +815,16 @@ static pcas_ast_t *partial_general(pcas_ast_t *top, pcas_ast_t *bottom, Symbol v
             num = ast_MakeBinary(OP_ADD, ast_MakeBinary(OP_MULT, ast_Copy(out[0][it_u[i]]), ast_Copy(x)), ast_Copy(out[0][it_u[i] + 1]));
         else
             num = ast_Copy(out[0][it_u[i]]);
-        term = ast_MakeBinary(OP_DIV, num, ast_MakeBinary(OP_MULT, den, pw));
-        simplify(term, SIMP_ALL);
-        if(!is_ast_int(term, 0))
-            ast_ChildAppend(sum, term);
-        else
-            ast_Cleanup(term);
+        simplify(num, SIMP_ALL); /*top and bottom apart, a whole term splits over its bottom*/
+        if(is_ast_int(num, 0)) {
+            ast_Cleanup(num);
+            ast_Cleanup(den);
+            ast_Cleanup(pw);
+            continue;
+        }
+        den = ast_MakeBinary(OP_MULT, den, pw);
+        simplify(den, SIMP_NORMALIZE | SIMP_COMMUTATIVE | SIMP_RATIONAL | SIMP_EVAL);
+        ast_ChildAppend(sum, ast_MakeBinary(OP_DIV, num, den));
     }
 done:
     ast_Cleanup(lead);
@@ -1164,6 +1168,46 @@ static const char *reciprocal_trig(pcas_ast_t *e) {
     return "1/cos is sec";
 }
 
+/*(p x + q)/(A x^2 + C)^2 with A and C over 0: -p/(2(x^2+k)) and q (x/(2k(x^2+k)) + atan(x/a)/(2k a)) all over A^2, k = C/A and a = sqrt(k)*/
+static const char *quadratic_squared(pcas_ast_t *e) {
+    pcas_ast_t *f = ast_ChildGet(e, 0), *x = ast_ChildGet(e, 1), *bottom, *Q, *cq[3] = { NULL }, *cn[3] = { NULL };
+    pcas_ast_t *k, *a, *Qk, *res = NULL, *px, *qq;
+    double av, cv;
+    int i, dv_top;
+
+    if(!isoptype(f, OP_DIV))
+        return NULL;
+    bottom = ast_ChildGet(f, 1);
+    if(!isoptype(bottom, OP_POW) || !is_value(ast_ChildGet(bottom, 1), 2, 1))
+        return NULL;
+    Q = ast_ChildGet(bottom, 0);
+    if(poly_degree(Q, x->op.symbol, NULL) != 2 || (dv_top = poly_degree(ast_ChildGet(f, 0), x->op.symbol, NULL)) < 0 || dv_top > 1)
+        return NULL;
+    poly_coefs(Q, x->op.symbol, cq);
+    poly_coefs(ast_ChildGet(f, 0), x->op.symbol, cn);
+    if(cq[2] != NULL && cq[0] != NULL && (cq[1] == NULL || is_ast_int(cq[1], 0)) && approx_double(cq[2], &av) && approx_double(cq[0], &cv) && av > 0 && cv > 0) {
+        k = ast_MakeBinary(OP_DIV, ast_Copy(cq[0]), ast_Copy(cq[2]));
+        simplify(k, SIMP_ALL);
+        a = sqrt_of(ast_Copy(k));
+        Qk = ast_MakeBinary(OP_ADD, ast_MakeBinary(OP_POW, ast_Copy(x), ast_MakeInt(2)), ast_Copy(k));
+        px = ast_MakeBinary(OP_MULT, coef_copy(cn[1]), ast_MakeBinary(OP_DIV, ast_MakeInt(-1), ast_MakeBinary(OP_MULT, ast_MakeInt(2), ast_Copy(Qk))));
+        qq = ast_MakeBinary(OP_MULT, coef_copy(cn[0]), ast_MakeBinary(OP_ADD,
+                ast_MakeBinary(OP_DIV, ast_Copy(x), ast_MakeBinary(OP_MULT, ast_MakeInt(2), ast_MakeBinary(OP_MULT, ast_Copy(k), ast_Copy(Qk)))),
+                ast_MakeBinary(OP_DIV, ast_MakeUnary(OP_TAN_INV, ast_MakeBinary(OP_DIV, ast_Copy(x), ast_Copy(a))),
+                               ast_MakeBinary(OP_MULT, ast_MakeInt(2), ast_MakeBinary(OP_MULT, ast_Copy(k), ast_Copy(a))))));
+        res = ast_MakeBinary(OP_DIV, ast_MakeBinary(OP_ADD, px, qq), ast_MakeBinary(OP_POW, ast_Copy(cq[2]), ast_MakeInt(2)));
+        replace_node(e, res);
+        ast_Cleanup(k);
+        ast_Cleanup(a);
+        ast_Cleanup(Qk);
+    }
+    for(i = 0; i < 3; i++) {
+        ast_Cleanup(cq[i]);
+        ast_Cleanup(cn[i]);
+    }
+    return res != NULL ? "reduction formula" : NULL;
+}
+
 /*one rule on the integral node e, in place. its name, NULL when nothing fits*/
 static const char *one_rule(pcas_ast_t *e, subs_t *subs) {
     pcas_ast_t *f = ast_ChildGet(e, 0), *x = ast_ChildGet(e, 1), *n, *c, *rest;
@@ -1226,6 +1270,8 @@ static const char *one_rule(pcas_ast_t *e, subs_t *subs) {
     if((name = exp_trig(e)) != NULL)
         return name;
     if((name = long_division(e)) != NULL)
+        return name;
+    if((name = quadratic_squared(e)) != NULL)
         return name;
     if((name = partial_fractions(e)) != NULL)
         return name;

@@ -1133,6 +1133,13 @@ simplify; integral(1/((X_1)^2*(X+2)),X); -1/(-3+3X)+ln(abs(2+X)/abs(-1+X))/9
 simplify; integral(X/((X+1)^3),X); -1/(1+X)+1/(2(1+X)^2)
 simplify; integral(1/(X^2*(X^2+1)),X); -1/X_atan(X)
 simplify; integral(1/((X+1)^2*(X^2+1)),X); ln(abs(1+X))/2_1/(2+2X)_(ln(abs(1+X^2)))/4
+#(px+q)/(Ax^2+C)^2 by the reduction formula, partial fraction terms get their top and bottom simplified apart (a whole term came back over its bottom squared)
+simplify; integral(1/(X^2+1)^2,X); X/(2+2X^2)+atan(X)/2
+simplify; integral(X/(X^2+1)^2,X); -1/(2+2X^2)
+simplify; integral(1/(2X^2+3)^2,X); X/(18+12X^2)+atan((X2^(1/2))/3^(1/2))/(6*3^(1/2)2^(1/2))
+simplify; integral((3X+1)/((X_1)*(X^2+4)),X); (4ln(abs(-1+X)))/5_(2ln(abs(4+X^2)))/5+(11atan(X/2))/10
+antideriv; 1/((X+1)^2*(X^2+2)); X
+simplify; integral((2X+1)/((X_1)*(X^2+3)),X); (3ln(abs(-1+X)))/4_(3ln(abs(3+X^2)))/8+(5atan(X/3^(1/2)))/(4*3^(1/2))
 simplify; integral((2X+3)/(3(X_1)*(X^2+4)),X); atan(X/2)/6_(ln(abs(4+X^2)))/6+ln(abs(-1+X))/3
 #u-substitution: some piece of it is u and the rest is u' (up to a number)
 antideriv; 2Xcos(X^2); X
