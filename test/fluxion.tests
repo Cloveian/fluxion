@@ -1170,6 +1170,9 @@ simplify; integral(asin(X)^2,X); Xasin(X)^2_2X+2sqrt((-X^2+1))asin(X)
 simplify; integral(asin(X)*X^2,X); (asin(X)X^3)/3+(X^2sqrt((-X^2+1)))/9+(2sqrt((-X^2+1)))/9
 simplify; integral(acos(X)*X^2,X); (acos(X)X^3)/3_(X^2sqrt((-X^2+1)))/9_(2sqrt((-X^2+1)))/9
 simplify; integral(X*acos(X)*sqrt(1_X^2),X); X^3/9_(X)/3_(acos(X)(-X^2+1)^(3/2))/3
+#acos(sin(u)) is pi/2 - u in the trig substitution, so the answer has asin and pi in it
+simplify; integral(acos(X)^2,X); Xacos(X)^2_2X+2sqrt((-X^2+1))asin(X)_pisqrt((-X^2+1))
+simplify; integral(X*acos(X)^2,X); (piasin(X))/4_(Xpi(1_X^2)^(1/2))/4+(Xasin(X)(1_X^2)^(1/2))/2+cos(2asin(X))/8_(asin(X)^2)/4+(acos(X)^2X^2)/2
 #u = x^2 when only x^4 shows (an extra try in u-substitution), x^4 is u^2
 simplify; integral(X/(X^4+1),X); atan(X^2)/2
 simplify; integral(X^3/(X^8+1),X); atan(X^4)/4

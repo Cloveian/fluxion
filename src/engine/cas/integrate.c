@@ -1184,6 +1184,21 @@ static bool has_inverse_trig(pcas_ast_t *e) {
     return false;
 }
 
+/*acos(s) is pi/2 - u where s stands for sin(u) (the substituted x)*/
+static void acos_of_sin(pcas_ast_t *e, pcas_ast_t *s, pcas_ast_t *u) {
+    pcas_ast_t *c;
+
+    if(e->type != NODE_OPERATOR)
+        return;
+    for(c = ast_ChildGet(e, 0); c != NULL; c = c->next)
+        acos_of_sin(c, s, u);
+    if(isoptype(e, OP_COS_INV) && ast_Compare(ast_ChildGet(e, 0), s)) {
+        pcas_ast_t *half_pi = ast_MakeBinary(OP_DIV, ast_MakeSymbol(SYM_PI), ast_MakeInt(2));
+
+        replace_node(e, ast_MakeBinary(OP_ADD, half_pi, ast_MakeBinary(OP_MULT, ast_MakeInt(-1), ast_Copy(u))));
+    }
+}
+
 /*sqrt(c - k x^2) is x = a sin(u), sqrt(c + k x^2) x = a tan(u), sqrt(k x^2 - c) x = a sec(u), a = sqrt(c/k). the power of that root is c^n times a power of cos or tan, u in the range where those are over 0*/
 static const char *trig_sub(pcas_ast_t *e, subs_t *subs) {
     pcas_ast_t *f = ast_ChildGet(e, 0), *x = ast_ChildGet(e, 1), *cq[3] = {NULL}, *P, *u, *a = NULL, *c = NULL, *k = NULL;
@@ -1228,6 +1243,8 @@ static const char *trig_sub(pcas_ast_t *e, subs_t *subs) {
             substitute(q, P, R);
             substitute(q, ast_ChildGet(P, 0), Rb);
             substitute(q, x, xr);
+            if(kind == 1)
+                acos_of_sin(q, xr, u);
             q = ast_MakeBinary(OP_MULT, q, dx);
             simplify(q, SIMP_ALL);
             g = kind == 1 ? ast_MakeUnary(OP_SIN_INV, ast_MakeBinary(OP_DIV, ast_Copy(x), ast_Copy(a)))

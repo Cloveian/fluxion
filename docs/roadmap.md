@@ -41,7 +41,7 @@
 - [x] One-sided limits, a 4th argument of 1 or -1, limit(abs(x)/x,x,0,1)
 - [x] Limits that need the conjugate, sqrt(x^2+x) - x is 1/2
 - [x] Steps for limits at inf the paper way (*dih*vide by the top power, the conjugate, l'Hopital for inf/inf)
-- [x] More integrals: sqrt(1-x^2) and sqrt(x^2+1) forms, 1/(x^2+bx+c) with irrational roots, e^x sin(x), x atan(x), x^5 e^x, abs(x), sec and csc, tan^n, sec^n, sin^2 cos^2. And x/(x^4+1), atan(x)/x^2, x^2 asin(x), x/sqrt(x+1), sqrt(x)/(1+x), sin(3x)cos(2x), 1/(1+sin(x)), 1/(2+cos(x)) and the rest of the fractions in sin and cos (t = tan(x/2)). x^2/sqrt(x+1) and up. Left: acos(x)^2, atan(x)/x.
+- [x] More integrals: sqrt(1-x^2) and sqrt(x^2+1) forms, 1/(x^2+bx+c) with irrational roots, e^x sin(x), x atan(x), x^5 e^x, abs(x), sec and csc, tan^n, sec^n, sin^2 cos^2. And x/(x^4+1), atan(x)/x^2, x^2 asin(x), x/sqrt(x+1), sqrt(x)/(1+x), sin(3x)cos(2x), 1/(1+sin(x)), 1/(2+cos(x)) and the rest of the fractions in sin and cos (t = tan(x/2)). x^2/sqrt(x+1) and up, acos(x)^2. Left: atan(x)/x (no elementary answer).
 - [x] Integrals answer without the extra constants (ln(2abs(1+x^2))/2)
 
 ## later

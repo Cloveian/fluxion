@@ -82,7 +82,7 @@ def gen_int():
         f"1/(1+sin({a}X))", f"1/(1_cos({a}X+1))",
         f"sin({a + 1}X)*cos(X)", f"cos({a + 1}X)*cos({a}X+1)", f"sin({a}X)*sin({a + 2}X)",
         f"sqrt(X)/(X+{a})", f"X/sqrt(X+{a})", f"X^2*sqrt({a}X+1)", f"1/({a}+sqrt(X))", f"sqrt({a}X+1)/(X+1)", f"X^2/sqrt(X+{a})", f"X^3/sqrt({a}X+1)", f"(X^2+{a})^2*(X_{b})",
-        f"asin(X)^2", f"X^2*asin(X)", f"X^2*acos(X)", f"X*acos(X)*sqrt(1_X^2)",
+        f"asin(X)^2", f"X^2*asin(X)", f"X^2*acos(X)", f"X*acos(X)*sqrt(1_X^2)", f"acos(X)^2", f"acos(X)*sqrt(1_X^2)", f"X*acos(X)^2",
         f"atan(X)/X^2", f"ln(X)/X^{k + 1}", f"atan({a}X)/X^2", f"ln(X)/sqrt(X)",
         f"X/(X^4+{a})", f"X^3/(X^8+{a})", f"X^5/(X^4+{a})", f"X/sqrt({a + 1}_X^4)",
         f"1/(X*(X_{a})^2)", f"1/(X^2*(X+{a}))", f"({a}X+{b})/((X_1)^2*(X+{a + 2}))", f"X/((X+{a})^3)", f"1/(X^2*(X^2+{a}))", f"1/((X+1)^2*(X^2+{a}))", f"(X^2+{a})/(X*(X_1)^2)",
