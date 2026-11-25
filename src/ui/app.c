@@ -19,6 +19,7 @@
 #include "work.h"
 #include "bind.h"
 #include "sticky.h"
+#include "input.h"
 
 #include <ctype.h>
 #include <stdio.h>
@@ -2389,14 +2390,14 @@ static bool history_act(action_t a) {
 }
 
 /* the mouse as an action: soft keys, an open menu's or popup's items, the input line. nothing for the rest yet */
-static action_t pointer_action(keypress_t p) {
+static action_t pointer_action(const input_t *p) {
     action_t a = { A_NONE, 0, NULL };
-    bool on_keys = p.y >= areas.keys.y && p.y < areas.keys.y + areas.keys.h;
+    bool down = !p->drag, on_keys = p->y >= areas.keys.y && p->y < areas.keys.y + areas.keys.h;
     int row;
 
-    if(menu >= 0 && p.key == K_POINT_DOWN) {
-        row = (p.y - menu_y - 2) / (menu_row_h > 0 ? menu_row_h : 1);
-        if(p.x >= menu_x && p.x < menu_x + menu_w && p.y >= menu_y + 2 && row < menu_rows) {
+    if(menu >= 0 && down) {
+        row = (p->y - menu_y - 2) / (menu_row_h > 0 ? menu_row_h : 1);
+        if(p->x >= menu_x && p->x < menu_x + menu_w && p->y >= menu_y + 2 && row < menu_rows) {
             row += menu_top; /* its key: 1 to 9, then a to z */
             a.op = A_CHAR;
             a.n = row < 9 ? '1' + row : 'a' + (row - 9);
@@ -2407,56 +2408,50 @@ static action_t pointer_action(keypress_t p) {
             return a;
         }
     }
-    if(popup >= 0 && p.key == K_POINT_DOWN) {
-        int col = (p.x - pop_x) / pop_cell_w, line = (p.y - pop_y) / pop_cell_h;
+    if(popup >= 0 && down) {
+        int col = (p->x - pop_x) / pop_cell_w, line = (p->y - pop_y) / pop_cell_h;
         int i = line * pset->cols + col;
 
         a.op = A_ESC; /* outside it */
-        if(p.x >= pop_x && p.y >= pop_y && col < pset->cols && i < pset->count) {
+        if(p->x >= pop_x && p->y >= pop_y && col < pset->cols && i < pset->count) {
             a.op = A_POPUP_PICK;
             a.n = i;
         }
         return a;
     }
 
-    if(p.key == K_POINT_DOWN && on_keys && !NSPIRE) {
+    if(down && on_keys && !NSPIRE) {
         a.op = A_SOFT;
-        a.n = p.x * FOLDER_COUNT / (areas.keys.w > 0 ? areas.keys.w : 1);
+        a.n = p->x * FOLDER_COUNT / (areas.keys.w > 0 ? areas.keys.w : 1);
         if(a.n >= FOLDER_COUNT)
             a.n = FOLDER_COUNT - 1;
-    } else if(p.key == K_POINT_DOWN && p.y < in_top) {
+    } else if(down && p->y < in_top) {
         for(row = 0; row < hit_n; row++)
-            if(p.y >= hits[row].y0 && p.y < hits[row].y1) {
+            if(p->y >= hits[row].y0 && p->y < hits[row].y1) {
                 a.op = A_HIST_POINT;
                 a.n = hits[row].id;
                 break;
             }
-    } else if(p.y >= in_top && p.y < areas.keys.y) {
-        a.op = p.key == K_POINT_DRAG || (p.held & M_ALPHA) != 0 ? A_POINT_DRAG : A_POINT;
-        a.n = p.x | (p.y << 12);
+    } else if(p->y >= in_top && p->y < areas.keys.y) {
+        a.op = p->drag || p->shift ? A_POINT_DRAG : A_POINT;
+        a.n = p->x | (p->y << 12);
     }
     return a;
 }
 
-static bool handle(keypress_t p) {
-    action_t a, plain;
+static bool handle(const input_t *in) {
+    action_t a = in->a, plain = in->plain;
 
     status = NULL;
     if(menu < 0)
         menu_from = -1; /* [2nd][y=] and such open nothing */
 
-    if(p.key == K_QUIT)
+    if(in->quit)
         return false;
 
-    /* every modifier that's on (tapped or held down) goes with this key. plain is
-       the key on its own, for the popups, menus and pages, where 2nd and such
-       don't matter */
-    if(p.key == K_POINT_DOWN || p.key == K_POINT_DRAG)
-        a = plain = pointer_action(p);
-    else {
-        a = bind_key(p.key, sticky_on() | p.held);
-        plain = bind_key(p.key, 0);
-    }
+    /* pointer clicks have no modifiers, so a and plain are the same */
+    if(in->pointer)
+        a = plain = pointer_action(in);
 
     if(popup >= 0) {
         if(!popup_act(a))
@@ -3037,18 +3032,12 @@ static void draw_busy_hint(unsigned long s) {
     screen_direct(false);
 }
 
-/* what the keys looked like at the last poll, for edges */
 static clock_t busy_keys_next;
-static keycode_t busy_key;
-static unsigned busy_held;
-static bool busy_chord;
 
 /* pcas_poll, the engine calls this constantly, so check the clock and only read
    the keys 40 times a second and draw a frame 10 times a second. 40 Hz so a quick
    tap doesn't fall between two polls */
 static bool busy_poll(void) {
-    keypress_t p;
-    action_t a;
     unsigned long s;
 
     if(clock() < busy_keys_next)
@@ -3065,25 +3054,7 @@ static bool busy_poll(void) {
         }
     }
 
-    /* a modifier tapped while it works still counts for the next key (keys_peek marks
-       whatever's down as held). the ones peek sees as keys (2nd, alpha) on the press,
-       the held ones ([on], ctrl, shift) on the release and only if nothing came with
-       them, since [on]+[mode] is the cancel */
-    p = keys_peek();
-    a = bind_key(p.key, 0);
-    if(p.key != busy_key && a.op == A_MOD && !p.held)
-        sticky_tap((unsigned)a.n);
-    if(p.held && !busy_held)
-        busy_chord = false;
-    if(p.held && p.key != K_NONE)
-        busy_chord = true;
-    if((busy_held & ~p.held) && !busy_chord)
-        sticky_tap(busy_held & ~p.held);
-    busy_key = p.key;
-    busy_held = p.held;
-
-    a = bind_key(p.key, p.held);
-    return a.op == A_CANCEL || a.op == A_ESC || a.op == A_QUIT;
+    return input_poll();
 }
 
 static void busy_start(void) {
@@ -3095,9 +3066,7 @@ static void busy_start(void) {
     busy_shown = 0;
     busy_next = busy_started + CLOCKS_PER_SEC / 10;
     busy_keys_next = busy_next;
-    busy_key = K_NONE;
-    busy_held = 0;
-    busy_chord = false;
+    input_poll_reset();
     draw_working();
 }
 
@@ -3130,11 +3099,11 @@ void app_run(void) {
     keys_on_sleep = on_sleep;
 
     for(;;) {
-        keypress_t p = keys_wait();
+        input_t in = input_wait();
 
-        if(bind_key(p.key, sticky_on() | p.held).op == A_ENTER && menu < 0 && !ed_is_empty(&ed))
+        if(in.a.op == A_ENTER && menu < 0 && !ed_is_empty(&ed))
             busy_start(); /* the form keys start it themselves */
-        if(!handle(p))
+        if(!handle(&in))
             break;
         draw_screen();
     }

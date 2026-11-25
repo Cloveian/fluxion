@@ -27,6 +27,7 @@ fluxion/
 │       ├── catalog.c  everything you can type or pick, and what the engine can do. its words are the name table too
 │       ├── work.c  the show-the-work page, and calc1.c / polyfn.c / series.c / ineq.c the commands behind it (derivative at a point, tangent, apart, sum(, inequalities ...)
 │       ├── bind.c  bind_ce.c / bind_nspire.c: which key does which action. input only calls actions (actions.h is the list of them)
+│       ├── input.c  waits for a key or a click and hands the app actions (a with the modifiers, plain without), no key codes. also the poll while the engine works
 │       ├── sticky.c  [2nd] / [alpha] / [on]: tapped, on for the next key, a quick second tap locks it
 │       ├── page.c  full screen list pages (catalog, vars, mode)
 │       ├── names.c  stored names and the typed-word lookup the editor asks
