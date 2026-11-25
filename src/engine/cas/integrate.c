@@ -20,6 +20,7 @@ typedef struct {
 #define PARTS_MAX 6 /*x^5 e^x needs 5*/
 
 static pcas_ast_t *integral_of(pcas_ast_t *I, steps_t *s);
+static void trig_basic(pcas_ast_t *e);
 static bool trig_first; /*second try, completing the square and trig substitution go before u-substitution*/
 
 /*u is a*x + b: a, new. NULL for anything else (or a = 0)*/
@@ -860,6 +861,49 @@ static const char *sin_cos_form(pcas_ast_t *e) {
     return "sin and cos";
 }
 
+/*sin or cos of some w anywhere in e*/
+static bool has_sin_cos_of(pcas_ast_t *e, pcas_ast_t *w) {
+    pcas_ast_t *c;
+
+    if(e->type != NODE_OPERATOR)
+        return false;
+    if((isoptype(e, OP_SIN) || isoptype(e, OP_COS)) && ast_Compare(ast_ChildGet(e, 0), w))
+        return true;
+    for(c = ast_ChildGet(e, 0); c != NULL; c = c->next)
+        if(has_sin_cos_of(c, w))
+            return true;
+    return false;
+}
+
+/*a sin or cos of 2w somewhere in f with trig of w next to it*/
+static bool double_next_to_single(pcas_ast_t *f, pcas_ast_t *e) {
+    pcas_ast_t *c, *a;
+
+    if(e->type != NODE_OPERATOR)
+        return false;
+    a = ast_ChildGet(e, 0);
+    if((isoptype(e, OP_SIN) || isoptype(e, OP_COS)) && isoptype(a, OP_MULT) && ast_ChildLength(a) == 2 && is_ast_int(ast_ChildGet(a, 0), 2)
+       && has_sin_cos_of(f, ast_ChildGet(a, 1)))
+        return true;
+    for(c = a; c != NULL; c = c->next)
+        if(double_next_to_single(f, c))
+            return true;
+    return false;
+}
+
+/*sin(2x)/(1+cos(x)): the double angle opened up so u = cos(x) fits*/
+static const char *double_angle(pcas_ast_t *e) {
+    pcas_ast_t *f = ast_ChildGet(e, 0), *x = ast_ChildGet(e, 1), *g;
+
+    if(!double_next_to_single(f, f))
+        return NULL;
+    g = ast_Copy(f);
+    trig_basic(g);
+    simplify(g, SIMP_LIGHT | SIMP_LIKE_TERMS);
+    replace_node(e, integral(g, x));
+    return "double angle";
+}
+
 /*P/Q with P as big as Q or bigger, long *dih*vision: the quotient plus the remainder over Q*/
 static const char *long_division(pcas_ast_t *e) {
     pcas_ast_t *f = ast_ChildGet(e, 0), *x = ast_ChildGet(e, 1), *q, *r, *sum;
@@ -1609,6 +1653,8 @@ static const char *one_rule(pcas_ast_t *e, subs_t *subs) {
     if((name = multiply_out(e)) != NULL)
         return name;
     if((name = sin_cos_form(e)) != NULL)
+        return name;
+    if((name = double_angle(e)) != NULL)
         return name;
     if((name = shift_square(e, subs)) != NULL)
         return name;

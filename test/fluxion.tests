@@ -1121,6 +1121,11 @@ simplify; integral(1/(1+2cos(X)),X); (sqrt(3)ln(abs(sqrt(3)+tan(X/2))/abs(sqrt(3
 simplify; integral(1/(sin(X)+cos(X)),X); ln(abs(2_2tan(X/2)_2*2^(1/2))/abs(2_2tan(X/2)+2^(3/2)))/2^(1/2)
 #the quadratic squared with an x term, completed to u = x + 1 first
 simplify; integral(1/(X^2+2X+5)^2,X); 1/(8(X+1)^2+32)+X/(8(X+1)^2+32)+atan(X/2+1/2)/16
+#sin(2x) or cos(2x) next to trig of x is opened up so u = cos(x) or sin(x) fits
+simplify; integral(sin(2X)/(1+cos(X)),X); 2ln(abs(cos(X)+1))_2cos(X)
+simplify; integral(sin(2X)/(2+sin(X)),X); 2sin(X)_4ln(abs(sin(X)+2))
+simplify; integral(cos(2X)/sin(X),X); 2cos(X)+ln(abs(tan(X/2)))
+simplify; integral(sin(2X)*e^(sin(X)),X); 2e^(sin(X))sin(X)_2e^(sin(X))
 #tan and sec (cot and csc) powers together go to sin and cos when u-substitution has nothing
 simplify; integral(tan(X)^3*sec(X),X); 1/(3cos(X)^3)_1/cos(X)
 simplify; integral(tan(X)^2*sec(X)^2,X); (sec(X)^2tan(X))/3_(tan(X))/3
