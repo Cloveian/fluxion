@@ -389,9 +389,24 @@ static bool algebraic_only(pcas_ast_t *e) {
     return true;
 }
 
+/*x^4, x^6 and so on somewhere in e. x/(x^4+1) wants u = x^2, which isn't a piece of it*/
+static bool high_even_power(pcas_ast_t *e, pcas_ast_t *x) {
+    pcas_ast_t *c;
+    mp_small n;
+
+    if(e->type != NODE_OPERATOR)
+        return false;
+    if(isoptype(e, OP_POW) && ast_Compare(ast_ChildGet(e, 0), x) && whole_number(ast_ChildGet(e, 1), &n) && n > 2 && n % 2 == 0)
+        return true;
+    for(c = ast_ChildGet(e, 0); c != NULL; c = c->next)
+        if(high_even_power(c, x))
+            return true;
+    return false;
+}
+
 /*u = some piece g where f/g' is all g, 2x cos(x^2) is cos(u) with u = x^2. ∫f dx becomes ∫(f/g') du*/
 static const char *usub(pcas_ast_t *e, subs_t *subs) {
-    pcas_ast_t *f = ast_ChildGet(e, 0), *x = ast_ChildGet(e, 1), *cand[CANDS_MAX], *g, *q, *u;
+    pcas_ast_t *f = ast_ChildGet(e, 0), *x = ast_ChildGet(e, 1), *cand[CANDS_MAX], *g, *q, *u, *sq = NULL;
     unsigned short how = SIMP_ALL; /*the identity passes were most of the time on a plain fraction, nothing in it for them*/
     int n, i;
 
@@ -401,6 +416,8 @@ static const char *usub(pcas_ast_t *e, subs_t *subs) {
     if(subs->n >= SUBS_MAX || (u = fresh(subs)) == NULL)
         return NULL;
     n = candidates(f, f, x, cand, 0);
+    if(n < CANDS_MAX && high_even_power(f, x) && (sq = ast_MakeBinary(OP_POW, ast_Copy(x), ast_MakeInt(2))) != NULL)
+        cand[n++] = sq; /*tried last*/
     for(i = 0; i < n && !pcas_cancelled; i++) {
         q = ast_MakeBinary(OP_DIV, ast_Copy(f), slope_of(cand[i], x));
         g = ast_Copy(cand[i]);
@@ -411,9 +428,10 @@ static const char *usub(pcas_ast_t *e, subs_t *subs) {
             substitute(q, g, u);
         }
         ast_Cleanup(g);
-        if(q != NULL && has_symbol(q, x->op.symbol) && isoptype(cand[i], OP_POW) && !has_symbol(ast_ChildGet(cand[i], 0), x->op.symbol)) {
+        if(q != NULL && has_symbol(q, x->op.symbol) && isoptype(cand[i], OP_POW)
+           && (!has_symbol(ast_ChildGet(cand[i], 0), x->op.symbol) || ast_Compare(ast_ChildGet(cand[i], 0), x))) { /*e^x, or x^2 so x^4 is u^2*/
             power_of_u(q, cand[i], u, x->op.symbol);
-            simplify(q, SIMP_ALL);
+            simplify(q, how);
         }
         if(q != NULL && has_symbol(q, x->op.symbol) && (isoptype(cand[i], OP_SIN) || isoptype(cand[i], OP_COS))) {
             g = ast_MakeUnary(isoptype(cand[i], OP_SIN) ? OP_COS : OP_SIN, ast_Copy(ast_ChildGet(cand[i], 0)));
@@ -425,10 +443,12 @@ static const char *usub(pcas_ast_t *e, subs_t *subs) {
             subs->u[subs->n] = u; /*not a copy, an oom one is NULL and fresh() reads it*/
             subs->g[subs->n++] = ast_Copy(cand[i]);
             replace_node(e, integral(q, u));
+            ast_Cleanup(sq);
             return "u-substitution";
         }
         ast_Cleanup(q);
     }
+    ast_Cleanup(sq);
     ast_Cleanup(u);
     return NULL;
 }

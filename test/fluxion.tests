@@ -1133,6 +1133,11 @@ simplify; integral(1/((X_1)^2*(X+2)),X); -1/(-3+3X)+ln(abs(2+X)/abs(-1+X))/9
 simplify; integral(X/((X+1)^3),X); -1/(1+X)+1/(2(1+X)^2)
 simplify; integral(1/(X^2*(X^2+1)),X); -1/X_atan(X)
 simplify; integral(1/((X+1)^2*(X^2+1)),X); ln(abs(1+X))/2_1/(2+2X)_(ln(abs(1+X^2)))/4
+#u = x^2 when only x^4 shows (an extra try in u-substitution), x^4 is u^2
+simplify; integral(X/(X^4+1),X); atan(X^2)/2
+simplify; integral(X^3/(X^8+1),X); atan(X^4)/4
+simplify; integral(X^5/(X^4+1),X); X^2/2_(atan(X^2))/2
+simplify; integral(X/sqrt(1_X^4),X); asin(X^2)/2
 #(px+q)/(Ax^2+C)^2 by the reduction formula, partial fraction terms get their top and bottom simplified apart (a whole term came back over its bottom squared)
 simplify; integral(1/(X^2+1)^2,X); X/(2+2X^2)+atan(X)/2
 simplify; integral(X/(X^2+1)^2,X); -1/(2+2X^2)
