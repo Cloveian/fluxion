@@ -726,35 +726,52 @@ pcas_ast_t *partial_sum(pcas_ast_t *top, pcas_ast_t *bottom, Symbol var) {
     return sum;
 }
 
-/*P/Q with Q a product of different factors of degree 1 and 2, at least one 2 that doesn't split (x^2+1): A/(x-r) + (Bx+C)/(x^2+..). the numbers come from the identity P = sum of numerattors times the other factors at deg Q points. new, NULL when it isn't that*/
+/*b^p as a factor, 1 for p = 0*/
+static pcas_ast_t *factor_power(pcas_ast_t *b, int p) {
+    if(p == 0)
+        return ast_MakeInt(1);
+    return p == 1 ? ast_Copy(b) : ast_MakeBinary(OP_POW, ast_Copy(b), ast_MakeInt(p));
+}
+
+/*P/Q with Q a product of monic factors of degree 1 or 2 to a power, at most 4 in all (x^2 (x+1), (x-1)(x^2+4), (x^2+1)^2): a term for each power, A/(x-r)^j or (Bx+C)/(x^2+..)^j. the numbers come from the identity P = sum of numerators times the rest of Q, taken at deg Q points. new, NULL when it isn't that*/
 static pcas_ast_t *partial_general(pcas_ast_t *top, pcas_ast_t *bottom, Symbol var) {
     static const int at[SYSTEM_MAX] = { 0, 1, -1, 2 };
-    pcas_ast_t *g = ast_Copy(bottom), *lead = NULL, *fac[SYSTEM_MAX], *scale = ast_MakeInt(1), *x = ast_MakeSymbol(var), *c, *sum = NULL, *total, *term, *eqs[SYSTEM_MAX] = { NULL };
+    pcas_ast_t *g = ast_Copy(bottom), *lead = NULL, *base[SYSTEM_MAX], *scale = ast_MakeInt(1), *x = ast_MakeSymbol(var), *c, *sum = NULL, *total, *term, *eqs[SYSTEM_MAX] = { NULL };
     pcas_ast_t *out[SYSTEM_SETS][SYSTEM_MAX] = { { NULL } };
     Symbol unk[SYSTEM_MAX];
-    int dq = poly_degree(bottom, var, NULL), dp = poly_degree(top, var, NULL), nf = 0, quads = 0, deg = 0, nu = 0, i, j, k, at_u[4], sets;
+    int dq = poly_degree(bottom, var, NULL), dp = poly_degree(top, var, NULL), nf = 0, deg = 0, nu = 0, nt = 0, i, j, k, sets;
+    int mult[SYSTEM_MAX], dg[SYSTEM_MAX], it_b[SYSTEM_MAX], it_j[SYSTEM_MAX], it_u[SYSTEM_MAX];
     Symbol l;
 
     if(g == NULL || scale == NULL || x == NULL || dq < 2 || dq > SYSTEM_MAX || dp < 0 || dp >= dq)
         goto done;
     factor(g, FAC_POLYNOMIAL);
     for(c = isoptype(g, OP_MULT) ? ast_ChildGet(g, 0) : g; c != NULL; c = isoptype(g, OP_MULT) ? c->next : NULL) {
+        pcas_ast_t *b = c;
+        mp_small m = 1;
         int d;
 
         if(!has_symbol(c, var)) {
             scale = ast_MakeBinary(OP_MULT, scale, ast_Copy(c));
             continue;
         }
-        d = isoptype(c, OP_POW) ? -1 : poly_degree(c, var, &lead);
+        if(isoptype(c, OP_POW)) {
+            b = ast_ChildGet(c, 0);
+            if(ast_ChildGet(c, 1)->type != NODE_NUMBER || !mp_rat_is_integer(ast_ChildGet(c, 1)->op.num)
+               || mp_int_to_int(mp_rat_numer_ref(ast_ChildGet(c, 1)->op.num), &m) != MP_OK || m < 2 || m > SYSTEM_MAX)
+                goto done;
+        }
+        d = poly_degree(b, var, &lead);
         if(d < 1 || d > 2 || nf == SYSTEM_MAX || !is_ast_int(lead, 1)) /*monic, 5x-5 and x^2+4 over 25 is the same fraction told badly*/
             goto done;
         ast_Cleanup(lead);
         lead = NULL;
-        fac[nf++] = c;
-        deg += d;
-        quads += d == 2;
+        base[nf] = b;
+        mult[nf] = (int)m;
+        dg[nf++] = d;
+        deg += (int)m * d;
     }
-    if(deg != dq || quads == 0 || nf < 2) /*one quadratic on its own is quadratic_bottom's*/
+    if(deg != dq || (nf == 1 && mult[0] == 1)) /*one factor on its own is quadratic_bottom's*/
         goto done;
     /*a letter for each number to find, not var and not in the way*/
     for(l = SYM_A; l <= SYM_Z && nu < dq; l++)
@@ -762,19 +779,21 @@ static pcas_ast_t *partial_general(pcas_ast_t *top, pcas_ast_t *bottom, Symbol v
             unk[nu++] = l;
     if(nu < dq)
         goto done;
-    for(i = 0, k = 0; i < nf; i++) { /*which unknowns go with which factor*/
-        at_u[i] = k;
-        k += poly_degree(fac[i], var, NULL) == 2 ? 2 : 1;
-    }
-    /*total = sum numerator_j * product of the others - P*/
+    for(i = 0, k = 0; i < nf; i++) /*a term and its unknowns for each power of each factor*/
+        for(j = 1; j <= mult[i]; j++) {
+            it_b[nt] = i;
+            it_j[nt] = j;
+            it_u[nt++] = k;
+            k += dg[i];
+        }
+    /*total = sum numerator * the rest of Q - P*/
     total = ast_MakeBinary(OP_MULT, ast_MakeInt(-1), ast_Copy(top));
-    for(i = 0; i < nf; i++) {
-        term = poly_degree(fac[i], var, NULL) == 2
-               ? ast_MakeBinary(OP_ADD, ast_MakeBinary(OP_MULT, ast_MakeSymbol(unk[at_u[i]]), ast_Copy(x)), ast_MakeSymbol(unk[at_u[i] + 1]))
-               : ast_MakeSymbol(unk[at_u[i]]);
+    for(i = 0; i < nt; i++) {
+        term = dg[it_b[i]] == 2
+               ? ast_MakeBinary(OP_ADD, ast_MakeBinary(OP_MULT, ast_MakeSymbol(unk[it_u[i]]), ast_Copy(x)), ast_MakeSymbol(unk[it_u[i] + 1]))
+               : ast_MakeSymbol(unk[it_u[i]]);
         for(j = 0; j < nf; j++)
-            if(j != i)
-                term = ast_MakeBinary(OP_MULT, term, ast_Copy(fac[j]));
+            term = ast_MakeBinary(OP_MULT, term, factor_power(base[j], j == it_b[i] ? mult[j] - it_j[i] : mult[j]));
         total = ast_MakeBinary(OP_ADD, total, term);
     }
     for(i = 0; i < dq; i++) {
@@ -789,14 +808,14 @@ static pcas_ast_t *partial_general(pcas_ast_t *top, pcas_ast_t *bottom, Symbol v
     sets = pcas_cancelled ? SOLVE_UNKNOWN : solve_system(eqs, dq, unk, out);
     if(sets != 1 || (sum = ast_MakeOperator(OP_ADD)) == NULL)
         goto done;
-    for(i = 0; i < nf; i++) {
-        pcas_ast_t *num;
+    for(i = 0; i < nt; i++) {
+        pcas_ast_t *num, *den = ast_Copy(scale), *pw = factor_power(base[it_b[i]], it_j[i]);
 
-        if(poly_degree(fac[i], var, NULL) == 2)
-            num = ast_MakeBinary(OP_ADD, ast_MakeBinary(OP_MULT, ast_Copy(out[0][at_u[i]]), ast_Copy(x)), ast_Copy(out[0][at_u[i] + 1]));
+        if(dg[it_b[i]] == 2)
+            num = ast_MakeBinary(OP_ADD, ast_MakeBinary(OP_MULT, ast_Copy(out[0][it_u[i]]), ast_Copy(x)), ast_Copy(out[0][it_u[i] + 1]));
         else
-            num = ast_Copy(out[0][at_u[i]]);
-        term = ast_MakeBinary(OP_DIV, num, ast_MakeBinary(OP_MULT, ast_Copy(scale), ast_Copy(fac[i])));
+            num = ast_Copy(out[0][it_u[i]]);
+        term = ast_MakeBinary(OP_DIV, num, ast_MakeBinary(OP_MULT, den, pw));
         simplify(term, SIMP_ALL);
         if(!is_ast_int(term, 0))
             ast_ChildAppend(sum, term);
