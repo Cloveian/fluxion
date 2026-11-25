@@ -6,18 +6,20 @@ Everything Fluxion does right now, as tables. Yes / partly / no first, the other
 
 ### Solving
 
-| Feature                     |        |
-| --------------------------- | ------ |
-| Polynomial equations        | yes    |
-| Exact cubics                | yes    |
-| Complex roots               | yes\*  |
-| Literal equations           | yes    |
-| Exp, log and root equations | yes    |
-| Absolute value equations    | yes    |
-| Rational equations          | yes    |
-| Trig equations              | yes    |
-| Inequalities                | yes\*  |
-| Solve steps                 | partly |
+| Feature                                  |        |
+| ---------------------------------------- | ------ |
+| Polynomial equations                     | yes    |
+| Exact cubics                             | yes    |
+| Complex roots                            | yes\*  |
+| Literal equations                        | yes    |
+| Exp, log and root equations              | yes    |
+| Absolute value equations                 | yes    |
+| Rational equations                       | yes    |
+| Trig equations                           | yes    |
+| Inequalities                             | yes\*  |
+| Solve steps                              | yes\*  |
+| Steps for expand, factor, simplify       | yes\*  |
+| Steps for derivatives, limits, integrals | yes\*  |
 
 ### Simplifying
 
@@ -112,14 +114,17 @@ Everything Fluxion does right now, as tables. Yes / partly / no first, the other
 | Ghost brackets     | yes |
 | Auto ans           | yes |
 | Selection          | yes |
+| Mouse (PC and web) | yes |
 
 ### History, copy and paste
 
-| Feature        |     |
-| -------------- | --- |
-| History        | yes |
-| Copy and paste | yes |
-| Undo           | yes |
+| Feature                        |       |
+| ------------------------------ | ----- |
+| History                        | yes   |
+| Copy and paste                 | yes   |
+| Paste a command (`solve(...)`) | yes   |
+| Long answers wrap              | yes\* |
+| Undo                           | yes   |
 
 ### Menus and keys
 
