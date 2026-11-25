@@ -1908,17 +1908,19 @@ static pcas_ast_t *atom_of(pcas_ast_t *e, Symbol var) {
     return NULL;
 }
 
-/*b is a to the k for a whole k from 1 up, the k, else 0. a base alike (e and e) is 1, 4 and 2 is 2*/
+/*k when b is a^k for a whole k, else 0. same base is 1, 4 and 2 is 2*/
 static mp_small power_of_base(pcas_ast_t *b, pcas_ast_t *a) {
-    mp_small bv, av, v;
-    mp_small k;
+    mp_small bv, av, v, k;
 
     if(ast_Compare(b, a))
         return 1;
     if(!whole_number(b, &bv) || !whole_number(a, &av) || av < 2 || bv < 2)
         return 0;
-    for(k = 1, v = av; v < bv && k < 32; k++)
+    for(k = 1, v = av; v < bv; k++) {
+        if(v > bv / av) /*v * av would pass b, or wrap*/
+            return 0;
         v *= av;
+    }
     return v == bv ? k : 0;
 }
 
@@ -1953,9 +1955,9 @@ static bool swap_atom(pcas_ast_t *e, pcas_ast_t *g, Symbol var, Symbol u) {
     return true;
 }
 
-/*the power in e with var in its exponent and the smallest whole base, cur or one that beats it. 4^x and 2^x go in 2^x*/
+/*power in e with var in the exponent and the smallest whole base, cur if none beats it. 4^x and 2^x pick 2^x*/
 static pcas_ast_t *smaller_base(pcas_ast_t *e, Symbol var, pcas_ast_t *cur) {
-    pcas_ast_t *c, *better;
+    pcas_ast_t *c;
     mp_small bv, cv;
 
     if(e->type != NODE_OPERATOR)
@@ -1963,14 +1965,12 @@ static pcas_ast_t *smaller_base(pcas_ast_t *e, Symbol var, pcas_ast_t *cur) {
     if(isoptype(e, OP_POW) && has_symbol(ast_ChildGet(e, 1), var) && !has_symbol(ast_ChildGet(e, 0), var)
        && whole_number(ast_ChildGet(e, 0), &bv) && whole_number(ast_ChildGet(cur, 0), &cv) && bv < cv)
         cur = e;
-    for(c = ast_ChildGet(e, 0); c != NULL; c = c->next) {
-        better = smaller_base(c, var, cur);
-        cur = better;
-    }
+    for(c = ast_ChildGet(e, 0); c != NULL; c = c->next)
+        cur = smaller_base(c, var, cur);
     return cur;
 }
 
-/*Fluxion: a sin(u) + b cos(u) = 0 with numbers for a and b is tan(u) = -b/a, sin(x) = cos(x) is tan(x) = 1. unknown when it's anything else*/
+/*Fluxion: a sin(u) + b cos(u) = 0 with numbers for a and b is tan(u) = -b/a, so sin(x) = cos(x) is tan(x) = 1*/
 static int solve_trig_ratio(pcas_ast_t *e, Symbol var, pcas_ast_t **out, bool complex) {
     pcas_ast_t *t, *f, *sin_t = NULL, *cos_t = NULL, *a = NULL, *b = NULL, *eq;
     int n;
@@ -1980,7 +1980,7 @@ static int solve_trig_ratio(pcas_ast_t *e, Symbol var, pcas_ast_t **out, bool co
     for(t = ast_ChildGet(e, 0); t != NULL; t = t->next) {
         pcas_ast_t *coef = NULL, *fn = t;
 
-        if(isoptype(t, OP_MULT) && ast_ChildLength(t) == 2 && ast_ChildGet(t, 0)->type == NODE_NUMBER) {
+        if(isoptype(t, OP_MULT) && ast_ChildLength(t) == 2 && !has_symbol(ast_ChildGet(t, 0), var)) { /*a number in either shape*/
             coef = ast_ChildGet(t, 0);
             fn = ast_ChildGet(t, 1);
         }
