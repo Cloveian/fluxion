@@ -922,32 +922,43 @@ static const char *double_angle(pcas_ast_t *e) {
     return "double angle";
 }
 
-/*P/Q with P as big as Q or bigger, long *dih*vision: the quotient plus the remainder over Q*/
-static const char *long_division(pcas_ast_t *e) {
-    pcas_ast_t *f = ast_ChildGet(e, 0), *x = ast_ChildGet(e, 1), *q, *r, *sum;
-    int dp, dq;
+/*top divided by Q: integral of q (or q/Q) plus integral of the remainder over rem_bottom. e is the integral node*/
+static const char *divide_split(pcas_ast_t *e, pcas_ast_t *Q, pcas_ast_t *rem_bottom, bool q_over_Q) {
+    pcas_ast_t *top = ast_ChildGet(ast_ChildGet(e, 0), 0), *x = ast_ChildGet(e, 1), *q, *r, *sum;
     bool exact;
 
-    if(!isoptype(f, OP_DIV))
+    if((q = poly_quotient(top, Q, x->op.symbol, &exact)) == NULL)
         return NULL;
-    dq = poly_degree(ast_ChildGet(f, 1), x->op.symbol, NULL);
-    dp = poly_degree(ast_ChildGet(f, 0), x->op.symbol, NULL);
-    if(dq < 1 || dp < dq || (q = poly_quotient(ast_ChildGet(f, 0), ast_ChildGet(f, 1), x->op.symbol, &exact)) == NULL)
-        return NULL;
+    if(q_over_Q)
+        q = ast_MakeBinary(OP_DIV, q, ast_Copy(Q));
     if(exact) {
         replace_node(e, integral(q, x));
         return "polynomial division";
     }
-    r = poly_remainder(ast_ChildGet(f, 0), ast_ChildGet(f, 1), x->op.symbol);
+    r = poly_remainder(top, Q, x->op.symbol);
     if(r == NULL || (sum = ast_MakeOperator(OP_ADD)) == NULL) {
         ast_Cleanup(q);
         ast_Cleanup(r);
         return NULL;
     }
     ast_ChildAppend(sum, integral(q, x));
-    ast_ChildAppend(sum, integral(ast_MakeBinary(OP_DIV, r, ast_Copy(ast_ChildGet(f, 1))), x));
+    ast_ChildAppend(sum, integral(ast_MakeBinary(OP_DIV, r, ast_Copy(rem_bottom)), x));
     replace_node(e, sum);
     return "polynomial division";
+}
+
+/*P/Q with P as big as Q or bigger, long *dih*vision: the quotient plus the remainder over Q*/
+static const char *long_division(pcas_ast_t *e) {
+    pcas_ast_t *f = ast_ChildGet(e, 0), *x = ast_ChildGet(e, 1);
+    int dp, dq;
+
+    if(!isoptype(f, OP_DIV))
+        return NULL;
+    dq = poly_degree(ast_ChildGet(f, 1), x->op.symbol, NULL);
+    dp = poly_degree(ast_ChildGet(f, 0), x->op.symbol, NULL);
+    if(dq < 1 || dp < dq)
+        return NULL;
+    return divide_split(e, ast_ChildGet(f, 1), ast_ChildGet(f, 1), false);
 }
 
 /*P/Q with Q of degree 2 to 4 over *dih*stinct rational roots and P of a lower degree: A1/(x-r1) + A2/(x-r2) + ..., Ai = P(ri)/Q'(ri). new, NULL when it isn't one of those*/
@@ -994,6 +1005,20 @@ pcas_ast_t *partial_sum(pcas_ast_t *top, pcas_ast_t *bottom, Symbol var) {
     ast_Cleanup(lead);
     ast_Cleanup(x);
     return sum;
+}
+
+/*P/Q^2 with Q a quadratic and P of degree 2 or 3: p/Q + r/Q^2 by dividing P by Q, so r is a line and quadratic_squared takes it*/
+static const char *squared_split(pcas_ast_t *e) {
+    pcas_ast_t *f = ast_ChildGet(e, 0), *x = ast_ChildGet(e, 1), *bottom;
+    int dp;
+
+    if(!isoptype(f, OP_DIV))
+        return NULL;
+    bottom = ast_ChildGet(f, 1);
+    dp = poly_degree(ast_ChildGet(f, 0), x->op.symbol, NULL);
+    if(!isoptype(bottom, OP_POW) || !is_value(ast_ChildGet(bottom, 1), 2, 1) || poly_degree(ast_ChildGet(bottom, 0), x->op.symbol, NULL) != 2 || dp < 2 || dp > 3)
+        return NULL;
+    return divide_split(e, ast_ChildGet(bottom, 0), bottom, true);
 }
 
 /*b^p as a factor, 1 for p = 0*/
@@ -1683,6 +1708,8 @@ static const char *one_rule(pcas_ast_t *e, subs_t *subs) {
     if((name = long_division(e)) != NULL)
         return name;
     if((name = quadratic_squared(e)) != NULL)
+        return name;
+    if((name = squared_split(e)) != NULL)
         return name;
     if((name = partial_fractions(e)) != NULL)
         return name;
