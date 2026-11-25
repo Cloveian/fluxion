@@ -1253,6 +1253,10 @@ steps; integral(cos(3X),X); X; integral(cos(3X), X) | trig rule | sin(3X)/3 | + 
 steps; integral(sin(X)^2,X); X; integral(sin(X)^2,X)|powerreduction|integral(1/2,X)+integral((-cos(2X))/2,X)|constantrule,constantmultiple|X/2+integral(-cos(2X),X)/2|constantmultiple|X/2_(integral(cos(2X),X))/2|trigrule|X/2_(sin(2X))/4|+C|X/2_(sin(2X))/4+C
 steps; integral(X*e^X,X); X; integral(Xe^X, X) | integration by parts | Xe^X_integral(e^X, X) | exp rule | Xe^X_e^X | + C | Xe^X_e^X+C
 steps; integral(e^(X^2),X); X; none
+#trig substitution (U = atan(X) goes back with sin(atan(X)) folded), partial fractions with a repeated factor, the reduction formula
+steps; integral(1/(X^2*sqrt(X^2+1)),X); X; integral(sqrt((X^2+1))/(X^2(X^2+1)),X)|trig substitution|U=atan(X)|integral(cos(U)/sin(U)^2,U)|u-substitution|W=sin(U)|integral(1/W^2,W)|power rule|-1/W|back to x|-1/sin(atan(X))|(-sqrt((X^2+1)))/X|+C|(-sqrt((X^2+1)))/X+C
+steps; integral(1/(X^2*(X+1)),X); X; integral(1/(X^2(X+1)),X)|partial fractions|integral(-1/X,X)+integral(1/X^2,X)+integral(1/(X+1),X)|constant multiple, power rule, log rule|ln(abs(X+1))_1/X_integral(1/X,X)|log rule|ln(abs(X+1))_1/X_ln(abs(X))|ln(abs(X+1)/abs(X))_1/X|+C|ln(abs(X+1)/abs(X))_1/X+C
+steps; integral(1/(X^2+1)^2,X); X; integral(1/(X^2+1)^2,X)|reduction formula|X/(2X^2+2)+atan(X)/2|+C|X/(2X^2+2)+atan(X)/2+C
 #a layer a line (layers.c), ending on the roots solve has. a root squared away can bring in one that doesn't fit, so those get checked
 steps; sqrt(X+3)=5; X; sqrt((X+3))=5|squarebothsides|X+3=25|_3|X=22
 steps; 2^X=8; X; 2^X=8|takethelogofbothsides|X=3

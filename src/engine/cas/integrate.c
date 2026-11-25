@@ -1080,6 +1080,7 @@ static const char *trig_sub(pcas_ast_t *e, subs_t *subs) {
             g = kind == 1 ? ast_MakeUnary(OP_SIN_INV, ast_MakeBinary(OP_DIV, ast_Copy(x), ast_Copy(a)))
                 : kind == 2 ? ast_MakeUnary(OP_TAN_INV, ast_MakeBinary(OP_DIV, ast_Copy(x), ast_Copy(a)))
                 : ast_MakeUnary(OP_COS_INV, ast_MakeBinary(OP_DIV, ast_Copy(a), ast_MakeUnary(OP_ABS, ast_Copy(x))));
+            simplify(g, SIMP_LIGHT); /*asin(x/1) is asin(x) on the u = line*/
             if(!pcas_cancelled && !has_symbol(q, x->op.symbol)) {
                 subs->u[subs->n] = u;
                 subs->g[subs->n++] = g;
