@@ -108,6 +108,59 @@ void screen_rgb(unsigned char color, unsigned char rgb[3]) {
     memcpy(rgb, palette[color < COL_COUNT ? color : COL_FG], 3);
 }
 
+bool screen_png_smooth;
+
+int screen_smooth_factor(int scale) {
+    return scale % 3 == 0 ? 3 : scale % 2 == 0 ? 2 : 1;
+}
+
+/* the index at x, y, the edges repeated */
+static unsigned char index_at(int x, int y) {
+    x = x < 0 ? 0 : x >= SCREEN_W ? SCREEN_W - 1 : x;
+    y = y < 0 ? 0 : y >= SCREEN_H ? SCREEN_H - 1 : y;
+    return FB(x, y);
+}
+
+/* scale2x and scale3x (AdvMAME): the corners that meet a same-coloured neighbour on two sides get rounded off. they only compare colours, which is all the palette has */
+void screen_expand(int f, unsigned char *rgb) {
+    unsigned char lut[COL_COUNT][3], out[9];
+    int x, y, k, i;
+
+    for(i = 0; i < COL_COUNT; i++)
+        screen_rgb((unsigned char)i, lut[i]);
+    for(y = 0; y < SCREEN_H; y++) {
+        for(x = 0; x < SCREEN_W; x++) {
+            unsigned char e = index_at(x, y), b = index_at(x, y - 1), d = index_at(x - 1, y);
+            unsigned char r = index_at(x + 1, y), h = index_at(x, y + 1);
+
+            if(f == 2) {
+                out[0] = d == b && d != h && b != r ? b : e;
+                out[1] = b == r && b != d && r != h ? r : e;
+                out[2] = h == d && h != r && d != b ? d : e;
+                out[3] = r == h && r != b && h != d ? h : e;
+            } else {
+                unsigned char a = index_at(x - 1, y - 1), c = index_at(x + 1, y - 1);
+                unsigned char g = index_at(x - 1, y + 1), n = index_at(x + 1, y + 1);
+
+                out[0] = d == b && b != r && d != h ? d : e;
+                out[1] = (d == b && b != r && d != h && e != c) || (b == r && b != d && r != h && e != a) ? b : e;
+                out[2] = b == r && b != d && r != h ? r : e;
+                out[3] = (d == b && b != r && d != h && e != g) || (d == h && d != b && h != r && e != a) ? d : e;
+                out[4] = e;
+                out[5] = (b == r && b != d && r != h && e != n) || (r == h && r != b && h != d && e != c) ? r : e;
+                out[6] = d == h && d != b && h != r ? d : e;
+                out[7] = (d == h && d != b && h != r && e != n) || (r == h && r != b && h != d && e != g) ? h : e;
+                out[8] = r == h && r != b && h != d ? r : e;
+            }
+            for(k = 0; k < f * f; k++) {
+                size_t at = ((size_t)y * (size_t)f + (size_t)(k / f)) * (size_t)SCREEN_W * (size_t)f + (size_t)x * (size_t)f + (size_t)(k % f);
+
+                memcpy(&rgb[at * 3], lut[out[k]], 3);
+            }
+        }
+    }
+}
+
 /* PNG, no libraries. just uncompressed deflate blocks so the files come out big, whatever */
 /* only the deflate side, no inflater */
 /* inflater? i har... opp... nvm (・_・;) */
@@ -159,6 +212,8 @@ int screen_save_png(const char *path, int scale) {
     unsigned char ihdr[13], *idat, *p;
     unsigned long a = 1, b = 0;   /* adler32 */
     FILE *f;
+    unsigned char *big = NULL;  /* smoothed pixels, fac by fac of them per framebuffer pixel */
+    int fac = 1;
 
     if(scale < 1) scale = 1;
     if(scale > 8) scale = 8;
@@ -167,15 +222,27 @@ int screen_save_png(const char *path, int scale) {
     row_len = 1 + w * 3;
 
     idat = malloc(2 + (size_t)h * (5 + row_len) + 4);
-    if(idat == NULL)
+    if(screen_png_smooth)
+        fac = screen_smooth_factor(scale);
+    if(fac > 1) /* each of those is scale / fac pixels wide in the file */
+        big = malloc((size_t)SCREEN_W * (size_t)SCREEN_H * (size_t)(fac * fac) * 3);
+    if(idat == NULL || (fac > 1 && big == NULL)) {
+        free(idat);
+        free(big);
         return -1;
+    }
+    if(big != NULL)
+        screen_expand(fac, big);
     p = idat;
 
     *p++ = 0x78;
     *p++ = 0x01;
     for(y = 0; y < h; y++) {
         unsigned char *row;
+        const unsigned char *src = NULL;
 
+        if(big != NULL)
+            src = big + (size_t)(y * fac / scale) * (size_t)SCREEN_W * (size_t)fac * 3;
         *p++ = y == h - 1;          /* last block */
         *p++ = row_len & 0xFF;  *p++ = (row_len >> 8) & 0xFF;
         *p++ = ~row_len & 0xFF; *p++ = (~row_len >> 8) & 0xFF;
@@ -183,7 +250,10 @@ int screen_save_png(const char *path, int scale) {
         row = p;
         *p++ = 0;                   /* no filter */
         for(x = 0; x < w; x++) {
-            screen_rgb(FB(x / scale, y / scale), p);
+            if(src != NULL)
+                memcpy(p, src + (size_t)(x * fac / scale) * 3, 3);
+            else
+                screen_rgb(FB(x / scale, y / scale), p);
             p += 3;
         }
 
@@ -194,6 +264,7 @@ int screen_save_png(const char *path, int scale) {
     }
     put32(p, (b << 16) | a);
     p += 4;
+    free(big);
 
     put32(ihdr, (unsigned long)w);
     put32(ihdr + 4, (unsigned long)h);

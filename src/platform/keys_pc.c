@@ -258,6 +258,10 @@ static void key_down(const SDL_KeyboardEvent *ev) {
         window_fullscreen_toggle();
         return;
     }
+    if(ev->key == SDLK_F10) { /* smooth or blocky pixels */
+        window_smooth_toggle();
+        return;
+    }
     bigger = ev->key == SDLK_EQUALS || ev->key == SDLK_PLUS || ev->key == SDLK_KP_PLUS;
     smaller = ev->key == SDLK_MINUS || ev->key == SDLK_KP_MINUS;
     if(on && (bigger || smaller)) {

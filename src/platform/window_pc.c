@@ -1,6 +1,6 @@
 #ifndef __TICE__
 
-/* PC only. shows screen_pc.c's framebuffer in an SDL3 window, scaled up by a whole number, black around what's left. the framebuffer follows the window size. F11 fullscreen, Ctrl + and - for the scale */
+/* PC only. shows screen_pc.c's framebuffer in an SDL3 window, scaled up by a whole number, black around what's left. the framebuffer follows the window size. F11 fullscreen, F10 smooth pixels, Ctrl + and - for the scale */
 
 #include "window_pc.h"
 #include "screen.h"
@@ -15,19 +15,26 @@ static SDL_Window *window;
 static SDL_Renderer *renderer;
 static SDL_Texture *texture;
 static int scale = SCALE_START; /* window pixels to a framebuffer pixel, whole numbers */
-static int tex_w, tex_h; /* what the texture was made for */
+static int tex_w, tex_h, tex_f; /* what the texture was made for */
 static unsigned char *rgb;
+static bool smooth; /* corners of the pixels rounded off, on from the start for a high density screen. F10 */
 
-/* texture and rgb buffer for the size now */
-static void make_texture(void) {
+/* texture pixels to a framebuffer pixel */
+static int smooth_factor(void) {
+    return smooth ? screen_smooth_factor(scale) : 1;
+}
+
+/* texture and rgb buffer for the size now, f times as big across */
+static void make_texture(int f) {
     if(texture != NULL)
         SDL_DestroyTexture(texture);
-    texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGB24, SDL_TEXTUREACCESS_STREAMING, SCREEN_W, SCREEN_H);
+    texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGB24, SDL_TEXTUREACCESS_STREAMING, SCREEN_W * f, SCREEN_H * f);
     SDL_SetTextureScaleMode(texture, SDL_SCALEMODE_NEAREST);
     free(rgb);
-    rgb = malloc((size_t)SCREEN_W * (size_t)SCREEN_H * 3);
+    rgb = malloc((size_t)SCREEN_W * (size_t)SCREEN_H * (size_t)(f * f) * 3);
     tex_w = SCREEN_W;
     tex_h = SCREEN_H;
+    tex_f = f;
 }
 
 void window_sync(void) {
@@ -69,24 +76,34 @@ bool window_open(const char *title) {
         return false;
     }
 
-    make_texture();
+    smooth = SDL_GetWindowPixelDensity(window) > 1.0f;
+    make_texture(smooth_factor());
     SDL_StartTextInput(window);
     return true;
+}
+
+void window_smooth_toggle(void) {
+    smooth = !smooth;
+    window_present();
 }
 
 void window_present(void) {
     const unsigned char *px = screen_pixels();
     SDL_FRect to = { 0, 0, 0, 0 };
-    int i;
+    int i, f = smooth_factor();
 
     if(window == NULL)
         return;
-    if(tex_w != SCREEN_W || tex_h != SCREEN_H)
-        make_texture();
+    if(tex_w != SCREEN_W || tex_h != SCREEN_H || tex_f != f)
+        make_texture(f);
 
-    for(i = 0; i < SCREEN_W * SCREEN_H; i++)
-        screen_rgb(px[i], &rgb[i * 3]);
-    SDL_UpdateTexture(texture, NULL, rgb, SCREEN_W * 3);
+    if(f == 1) {
+        for(i = 0; i < SCREEN_W * SCREEN_H; i++)
+            screen_rgb(px[i], &rgb[i * 3]);
+    } else {
+        screen_expand(f, rgb);
+    }
+    SDL_UpdateTexture(texture, NULL, rgb, SCREEN_W * f * 3);
 
     to.w = (float)(SCREEN_W * scale); /* from the corner, the rest stays black */
     to.h = (float)(SCREEN_H * scale);

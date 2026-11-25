@@ -27,6 +27,8 @@ int main(int argc, char **argv)
             png = argv[i + 1];
         else if(strcmp(argv[i], "--scale") == 0)
             scale = atoi(argv[i + 1]);
+        else if(strcmp(argv[i], "--smooth") == 0) /* 1: round the pixel corners like the window does on a high density screen */
+            screen_png_smooth = atoi(argv[i + 1]) != 0;
         else if(strcmp(argv[i], "--size") == 0) { /* 640x480, framebuffer pixels */
             sscanf(argv[i + 1], "%dx%d", &w, &h);
 #ifdef SCREEN_RESIZABLE /* the web page's is the one size */

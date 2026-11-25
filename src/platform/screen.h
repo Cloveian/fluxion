@@ -76,6 +76,11 @@ void screen_palette(const unsigned char rgb[COL_COUNT][3]);
 const unsigned char *screen_pixels(void);       /* SCREEN_W * SCREEN_H palette indexes */
 void screen_rgb(unsigned char color, unsigned char rgb[3]);
 int screen_save_png(const char *path, int scale);   /* scale 1-8, 0 on success */
+
+/* the pixels with their corners rounded off (scale2x / scale3x), for a pixel size that 2 or 3 goes into */
+int screen_smooth_factor(int scale);                /* 3, 2 or 1 for none */
+void screen_expand(int f, unsigned char *rgb);      /* every pixel as f by f (2 or 3), SCREEN_W * f * SCREEN_H * f * 3 bytes */
+extern bool screen_png_smooth;                      /* screen_save_png does it too */
 #endif
 
 #endif
