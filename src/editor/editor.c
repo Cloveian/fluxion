@@ -422,6 +422,10 @@ void ed_right(editor_t *ed) {
         return;
     }
 
+    /* stepping over a ghost ) makes it a real one, same as typing it */
+    if(open_before(ed->row, ed->pos) && ed_insert_char(ed, ')'))
+        return;
+
     /* at the end of a slot, next slot or out past the template */
     p = ed->row->parent;
     if(p == NULL)
