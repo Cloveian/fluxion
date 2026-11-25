@@ -1112,6 +1112,13 @@ simplify; integral(1/(1_sin(X)),X); tan(X)+sec(X)
 simplify; integral(1/(1+cos(X)),X); csc(X)_cot(X)
 simplify; integral(1/(1_cos(X)),X); -csc(X)_cot(X)
 simplify; integral(1/(1+cos(2X)),X); csc(2X)/2_(cot(2X))/2
+#a fraction in sin and cos last of all, t = tan(x/2)
+simplify; integral(1/(2+cos(X)),X); (2sqrt(3)atan((sqrt(3)tan(X/2))/3))/3
+simplify; integral(1/(3+sin(X)),X); atan(1/2^(3/2)+(3tan(X/2))/2^(3/2))/2^(1/2)
+simplify; integral(1/(2+cos(2X)),X); (sqrt(3)atan((sqrt(3)tan(X))/3))/3
+simplify; integral(1/(5+3cos(X)),X); atan(tan(X/2)/2)/2
+simplify; integral(1/(1+2cos(X)),X); (sqrt(3)ln(abs(sqrt(3)+tan(X/2))/abs(sqrt(3)_tan(X/2))))/3
+simplify; integral(1/(sin(X)+cos(X)),X); ln(abs(2_2tan(X/2)_2*2^(1/2))/abs(2_2tan(X/2)+2^(3/2)))/2^(1/2)
 #product to sum, sin(3x)cos(2x) is (sin(5x) + sin(x))/2
 simplify; integral(sin(3X)*cos(2X),X); (-cos(5X))/10_(cos(X))/2
 simplify; integral(sin(3X)*sin(2X),X); sin(X)/2_(sin(5X))/10

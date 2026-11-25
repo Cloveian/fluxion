@@ -1371,6 +1371,78 @@ static const char *quadratic_squared(pcas_ast_t *e) {
     return res != NULL ? "reduction formula" : NULL;
 }
 
+/*1 + sign t^2*/
+static pcas_ast_t *one_plus_square(pcas_ast_t *t, int sign) {
+    pcas_ast_t *sq = ast_MakeBinary(OP_POW, ast_Copy(t), ast_MakeInt(2));
+
+    return ast_MakeBinary(OP_ADD, ast_MakeInt(1), sign > 0 ? sq : ast_MakeBinary(OP_MULT, ast_MakeInt(-1), sq));
+}
+
+/*sin, cos, tan, sec, csc and cot of g as t = tan(g/2) has them, e taken apart in place. false for an x outside the trig or another angle*/
+static bool half_tangent(pcas_ast_t *e, pcas_ast_t *g, pcas_ast_t *t, pcas_ast_t *x) {
+    pcas_ast_t *c, *top = NULL, *bot = NULL;
+    OperatorType op;
+    mp_small k;
+
+    if(e->type == NODE_SYMBOL)
+        return e->op.symbol != x->op.symbol;
+    if(e->type != NODE_OPERATOR)
+        return true;
+    op = optype(e);
+    if(op == OP_POW && !whole_number(ast_ChildGet(e, 1), &k))
+        return false;
+    if(op == OP_ADD || op == OP_MULT || op == OP_DIV || op == OP_POW) {
+        for(c = ast_ChildGet(e, 0); c != NULL; c = c->next)
+            if(!half_tangent(c, g, t, x))
+                return false;
+        return true;
+    }
+    if(!ast_Compare(ast_ChildGet(e, 0), g))
+        return false;
+    switch(op) {
+    case OP_SIN: top = ast_MakeBinary(OP_MULT, ast_MakeInt(2), ast_Copy(t)); bot = one_plus_square(t, 1); break;
+    case OP_COS: top = one_plus_square(t, -1); bot = one_plus_square(t, 1); break;
+    case OP_TAN: top = ast_MakeBinary(OP_MULT, ast_MakeInt(2), ast_Copy(t)); bot = one_plus_square(t, -1); break;
+    case OP_SEC: top = one_plus_square(t, 1); bot = one_plus_square(t, -1); break;
+    case OP_CSC: top = one_plus_square(t, 1); bot = ast_MakeBinary(OP_MULT, ast_MakeInt(2), ast_Copy(t)); break;
+    case OP_COT: top = one_plus_square(t, -1); bot = ast_MakeBinary(OP_MULT, ast_MakeInt(2), ast_Copy(t)); break;
+    default: return false;
+    }
+    replace_node(e, ast_MakeBinary(OP_DIV, top, bot));
+    return true;
+}
+
+/*a fraction in sin and cos of one angle g, t = tan(g/2) turns it into one in t. 1/(2+cos(x)) is 2/(t^2+3) dt. the last thing tried*/
+static const char *tangent_half(pcas_ast_t *e, subs_t *subs) {
+    pcas_ast_t *f = ast_ChildGet(e, 0), *x = ast_ChildGet(e, 1), *tr = first_sin_cos(f, x), *u, *a, *q, *dx;
+
+    if(tr == NULL || subs->n >= SUBS_MAX || (u = fresh(subs)) == NULL)
+        return NULL;
+    if((a = linear(ast_ChildGet(tr, 0), x)) == NULL) {
+        ast_Cleanup(u);
+        return NULL;
+    }
+    q = ast_Copy(f);
+    if(q != NULL && half_tangent(q, ast_ChildGet(tr, 0), u, x)) {
+        dx = ast_MakeBinary(OP_DIV, ast_MakeInt(2), ast_MakeBinary(OP_MULT, a, one_plus_square(u, 1))); /*dx = 2/(a(1+t^2)) dt*/
+        q = ast_MakeBinary(OP_MULT, q, dx);
+        simplify(q, SIMP_LIGHT);
+        comdenom(q, false);
+        simplify(q, SIMP_ALL);
+        if(!pcas_cancelled && !has_symbol(q, x->op.symbol)) {
+            subs->u[subs->n] = u;
+            subs->g[subs->n++] = ast_MakeUnary(OP_TAN, ast_MakeBinary(OP_DIV, ast_Copy(ast_ChildGet(tr, 0)), ast_MakeInt(2)));
+            replace_node(e, integral(q, u));
+            return "tangent half angle";
+        }
+    } else {
+        ast_Cleanup(a);
+    }
+    ast_Cleanup(q);
+    ast_Cleanup(u);
+    return NULL;
+}
+
 /*one rule on the integral node e, in place. its name, NULL when nothing fits*/
 static const char *one_rule(pcas_ast_t *e, subs_t *subs) {
     pcas_ast_t *f = ast_ChildGet(e, 0), *x = ast_ChildGet(e, 1), *n, *c, *rest;
@@ -1445,6 +1517,8 @@ static const char *one_rule(pcas_ast_t *e, subs_t *subs) {
     if((name = quadratic_bottom(e)) != NULL)
         return name;
     if((name = by_parts(e, subs)) != NULL)
+        return name;
+    if((name = tangent_half(e, subs)) != NULL)
         return name;
     if(isoptype(f, OP_DIV) && liate(ast_ChildGet(f, 1), x) == 1 && isoptype(ast_ChildGet(f, 1), OP_POW)) { /*X/e^(2X) is X e^(-2X), simplify wrote it the first way*/
         pcas_ast_t *bottom = ast_ChildGet(f, 1), *as = ast_MakeBinary(OP_MULT, ast_Copy(ast_ChildGet(f, 0)),
