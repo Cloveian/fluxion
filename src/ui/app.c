@@ -2024,16 +2024,39 @@ static ed_row_t *row_from_text(const char *text) {
     return row;
 }
 
-/* "expand((x+1)^9)" from another program, args read as math. false and nothing typed if it isn't a command */
-#define PASTE_ARGS_MAX 6
+/* "expand((x+1)^9)" from another program, args read as math, = < > between two of them. false and nothing typed if it isn't a command */
+#define PASTE_ITEMS_MAX 16
+typedef struct {
+    ed_row_t *row; /* NULL for a plain character */
+    char ch;
+} paste_item_t;
+
+/* text [from, to) as math into items, false if it isn't */
+static bool paste_part(paste_item_t *items, int *n, const char *from, const char *to) {
+    char *copy = malloc((size_t)(to - from) + 1);
+    ed_row_t *row;
+
+    if(copy == NULL)
+        return false;
+    memcpy(copy, from, (size_t)(to - from));
+    copy[to - from] = '\0';
+    row = *n < PASTE_ITEMS_MAX ? row_from_text(copy) : NULL;
+    free(copy);
+    if(row == NULL)
+        return false;
+    items[(*n)++].row = row;
+    return true;
+}
+
 static bool paste_command(const char *text) {
     char name[16];
-    ed_row_t *rows[PASTE_ARGS_MAX] = { NULL };
-    const char *p = text, *start, *end;
+    paste_item_t items[PASTE_ITEMS_MAX];
+    const char *p = text, *start, *end, *piece;
     size_t len;
     int n = 0, depth = 0, i;
     bool ok = false;
 
+    memset(items, 0, sizeof items);
     while(isspace((unsigned char)*p))
         p++;
     for(len = 0; isalpha((unsigned char)p[len]) && len < sizeof name - 1; len++)
@@ -2048,42 +2071,40 @@ static bool paste_command(const char *text) {
     if(end == start || end[-1] != ')')
         return false;
     end--; /* the last ) */
-    for(p = start; p <= end && n < PASTE_ARGS_MAX; p++) { /* split at the commas outside brackets */
+    piece = start;
+    for(p = start; p <= end; p++) { /* split at the commas outside brackets, and at = < > */
         if(p < end && *p == '(')
             depth++;
         else if(p < end && *p == ')')
             depth--;
         if(depth < 0)
             goto done;
-        if(p == end || (*p == ',' && depth == 0)) {
-            char *arg = malloc((size_t)(p - start) + 1);
-
-            if(arg == NULL)
+        if(p == end || (depth == 0 && (*p == ',' || *p == '=' || *p == '<' || *p == '>'))) {
+            if(!paste_part(items, &n, piece, p) || (p < end && n >= PASTE_ITEMS_MAX - 1))
                 goto done;
-            memcpy(arg, start, (size_t)(p - start));
-            arg[p - start] = '\0';
-            rows[n] = row_from_text(arg);
-            free(arg);
-            if(rows[n++] == NULL)
-                goto done;
-            start = p + 1;
+            if(p < end) {
+                items[n].ch = *p;
+                n++;
+            }
+            piece = p + 1;
         }
     }
-    if(depth != 0 || p <= end)
+    if(depth != 0)
         goto done;
     will_edit(false);
     type_text(&ed, name);
     ed_insert_char(&ed, '(');
     for(i = 0; i < n; i++) {
-        if(i > 0)
-            ed_insert_char(&ed, ',');
-        ed_paste(&ed, rows[i]);
+        if(items[i].row != NULL)
+            ed_paste(&ed, items[i].row);
+        else
+            ed_insert_char(&ed, items[i].ch);
     }
     ed_insert_char(&ed, ')');
     ok = true;
 done:
-    for(i = 0; i < PASTE_ARGS_MAX; i++)
-        ed_row_free(rows[i]);
+    for(i = 0; i < PASTE_ITEMS_MAX; i++)
+        ed_row_free(items[i].row);
     return ok;
 }
 
