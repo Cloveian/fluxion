@@ -1126,6 +1126,10 @@ simplify; integral(sin(2X)/(1+cos(X)),X); 2ln(abs(cos(X)+1))_2cos(X)
 simplify; integral(sin(2X)/(2+sin(X)),X); 2sin(X)_4ln(abs(sin(X)+2))
 simplify; integral(cos(2X)/sin(X),X); 2cos(X)+ln(abs(tan(X/2)))
 simplify; integral(sin(2X)*e^(sin(X)),X); 2e^(sin(X))sin(X)_2e^(sin(X))
+#x e^x sin(x), by parts leaves e^x (sin(x) - cos(x)), multiplied out
+simplify; integral(X*e^X*sin(X),X); (Xe^Xsin(X))/2_(Xe^Xcos(X))/2+(cos(X)e^X)/2
+simplify; integral(X*e^X*cos(X),X); (Xsin(X)e^X)/2+(Xe^Xcos(X))/2_(e^Xsin(X))/2
+simplify; integral(X^2*e^X*sin(X),X); (X^2sin(X)e^X)/2_(X^2e^Xcos(X))/2+Xcos(X)e^X_(e^Xsin(X))/2_(e^Xcos(X))/2
 #u = ln(x) puts x back as e^u
 simplify; integral(cos(ln(X)),X); (Xsin(ln(X)))/2+(Xcos(ln(X)))/2
 simplify; integral(sin(ln(X)),X); (Xsin(ln(X)))/2_(Xcos(ln(X)))/2

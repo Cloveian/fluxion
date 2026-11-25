@@ -814,13 +814,17 @@ static const char *one_plus_trig(pcas_ast_t *e) {
     return "half angle";
 }
 
-/*polynomial left as a power or product of sums, (u^2-1)^2 from a substitution, multiplied out for the sum rule. so is (sin(x)+cos(x))^2*/
+/*polynomial left as a power or product of sums, (u^2-1)^2 from a substitution, multiplied out for the sum rule. so is (sin(x)+cos(x))^2, and e^x(sin(x)-cos(x)) from by parts*/
 static const char *multiply_out(pcas_ast_t *e) {
-    pcas_ast_t *f = ast_ChildGet(e, 0), *x = ast_ChildGet(e, 1);
+    pcas_ast_t *f = ast_ChildGet(e, 0), *x = ast_ChildGet(e, 1), *c;
     mp_small n;
     bool sum_power = isoptype(f, OP_POW) && isoptype(ast_ChildGet(f, 0), OP_ADD) && whole_number(ast_ChildGet(f, 1), &n) && n >= 2 && n <= 6;
+    bool sum_factor = false;
 
-    if(poly_degree(f, x->op.symbol, NULL) < 2 && !sum_power)
+    if(isoptype(f, OP_MULT))
+        for(c = ast_ChildGet(f, 0); c != NULL && !sum_factor; c = c->next)
+            sum_factor = isoptype(c, OP_ADD);
+    if(poly_degree(f, x->op.symbol, NULL) < 2 && !sum_power && !sum_factor)
         return NULL;
     split_terms(e, ast_Copy(f), x);
     return "multiply out";
