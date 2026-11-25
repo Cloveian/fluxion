@@ -543,6 +543,55 @@ static void select_parent(editor_t *ed, bool leftwards) {
     ed->anchor = leftwards ? at + 1 : at;
 }
 
+/* each place the cursor can be in row and every row inside it, the nearest to (x, y) so far in best. distance counts a row up or down more than a step along */
+static void nearest(const editor_t *ed, const layout_font_t *font, ed_row_t *row, int x, int y, ed_row_t **best_row, int *best_pos, long *best) {
+    int p, i, j, cx, cy;
+
+    for(p = 0; p <= row->len; p++) {
+        editor_t probe = *ed;
+        box_t *b;
+        long d;
+
+        probe.row = row;
+        probe.pos = p;
+        probe.anchor = -1;
+        b = ed_layout(&probe, font, true);
+        if(b == NULL || !layout_cursor(b, 0, 0, &cx, &cy)) {
+            layout_free(b);
+            continue;
+        }
+        layout_free(b);
+        d = (long)(cx > x ? cx - x : x - cx) + 4L * (cy > y ? cy - y : y - cy);
+        if(d < *best) {
+            *best = d;
+            *best_row = row;
+            *best_pos = p;
+        }
+    }
+    for(i = 0; i < row->len; i++)
+        for(j = 0; j < row->items[i]->slots; j++)
+            nearest(ed, font, row->items[i]->slot[j], x, y, best_row, best_pos, best);
+}
+
+void ed_click(editor_t *ed, const layout_font_t *font, int x, int y, bool extend) {
+    ed_row_t *row = ed->row;
+    int pos = ed->pos;
+    long best = 1L << 30;
+
+    nearest(ed, font, ed->root, x, y, &row, &pos, &best);
+    if(extend && row == ed->row) {
+        if(ed->anchor < 0)
+            ed->anchor = ed->pos;
+        ed->pos = pos;
+        if(ed->anchor == ed->pos)
+            ed->anchor = -1;
+        return;
+    }
+    ed->row = row;
+    ed->pos = pos;
+    ed->anchor = -1;
+}
+
 void ed_select_all(editor_t *ed) {
     ed->anchor = 0;
     ed->pos = ed->row->len;

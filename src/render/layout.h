@@ -114,6 +114,10 @@ void layout_decimal(bool on);
 
 void layout_free(box_t *b);
 
+/* where the cursor box is inside b when b is drawn with its left edge and baseline at (x, y): its x, and the middle of its height as a y.
+   false when there's no cursor in it */
+bool layout_cursor(const box_t *b, int x, int y, int *cx, int *cy);
+
 /*
     for building boxes from something other than an engine tree (the editor).
     make the tree, then layout_finish() picks font sizes and measures it.

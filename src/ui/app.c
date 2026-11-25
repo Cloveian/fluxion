@@ -93,6 +93,8 @@ static int menu_sel, menu_top;
 #define MENU_DEPTH_MAX 4
 static const folder_t *menu_back[MENU_DEPTH_MAX];
 static int menu_back_sel[MENU_DEPTH_MAX], menu_depth;
+static int menu_x, menu_y, menu_w, menu_row_h, menu_rows; /* the open menu's box, where draw_menu put it, for clicks */
+static int in_left, in_base, in_top; /* where draw_screen put the input line (left edge, baseline) and the band it's in, for mouse clicks */
 static int menu_from = -1;      /* the answer highlighted when it opened, for show steps */
 
 static unsigned short simp_flags = SIMP_ALL;
@@ -1977,7 +1979,10 @@ static void ans_first(void) {
         type_text(&ed, "ans");
 }
 
-/* what's on the system clipboard as a row, or NULL when it isn't math or there's nothing. text from other programs: - is a minus after something and a negative before it */
+static ed_row_t *clipboard;
+static char *shared; /* last copy as the system clipboard has it, pasting the same keeps the editor's rows */
+
+/* system clipboard text as a row, NULL when it isn't math. other programs write - as a minus after something, a negative before it */
 static ed_row_t *row_from_text(const char *text) {
     char *engine = malloc(strlen(text) + 1), prev = '\0';
     ed_row_t *row = NULL;
@@ -1991,16 +1996,16 @@ static ed_row_t *row_from_text(const char *text) {
     for(; *text != '\0'; text++) {
         if(*text == ' ' || *text == '\t' || *text == '\n' || *text == '\r')
             continue;
-        if(isalpha((unsigned char)*text)) { /* a word: a function if a ( follows, pi, e and i stay, any other letter is a variable (capital in the engine) */
+        if(isalpha((unsigned char)*text)) {
+            /* a function name (( after), pi, e and i stay lowercase, any other letter is a variable, capital in the engine */
             const char *end = text;
-            size_t len;
+            bool lower;
 
             while(isalpha((unsigned char)*end))
                 end++;
-            len = (size_t)(end - text);
+            lower = *end == '(' || (end - text == 2 && strncmp(text, "pi", 2) == 0) || (end - text == 1 && (*text == 'e' || *text == 'i'));
             for(; text < end; text++)
-                engine[n++] = *end == '(' || (len == 2 && strncmp(end - 2, "pi", 2) == 0) || (len == 1 && (*text == 'e' || *text == 'i'))
-                              ? *text : (char)toupper((unsigned char)*text);
+                engine[n++] = lower ? *text : (char)toupper((unsigned char)*text);
             text--;
             prev = 'a';
             continue;
@@ -2025,12 +2030,12 @@ static ed_row_t *row_from_text(const char *text) {
     return row;
 }
 
-/* the copied row for other programs, in the engine's text with a plain minus */
-static void clipboard_share(const ed_row_t *row, char **shared) {
+/* copied row out to other programs, engine text with a plain minus */
+static void clipboard_share(const ed_row_t *row) {
     char *text = ed_row_to_engine(row), *c;
 
-    free(*shared);
-    *shared = text;
+    free(shared);
+    shared = text;
     if(text == NULL)
         return;
     for(c = text; *c != '\0'; c++)
@@ -2039,16 +2044,13 @@ static void clipboard_share(const ed_row_t *row, char **shared) {
     clipboard_put(text);
 }
 
-static ed_row_t *clipboard;
-static char *shared; /* what the last copy put on the system clipboard, so a paste of the same thing keeps the editor's own rows */
-
 static const popup_set_t *const popup_sets[] = { &math_set, &trig_set, &constants_set, &marks_set };
 
 /* what a key does to the line. false to quit */
 static bool edit_act(action_t a) {
     switch(a.op) {
     case A_CHAR: case A_SELECT_LEFT: case A_SELECT_RIGHT: case A_NEXT_FORM: case A_DECIMAL:
-    case A_CUT: case A_COPY: case A_PASTE: case A_UNDO: case A_CLEAR_LINE: case A_ITEM: case A_SELECT_ALL:
+    case A_CUT: case A_COPY: case A_PASTE: case A_UNDO: case A_CLEAR_LINE: case A_ITEM: case A_SELECT_ALL: case A_POINT: case A_POINT_DRAG:
         break;  /* they do their own */
     case A_FUNC: case A_TEMPLATE: case A_POWER: case A_TYPE:
     case A_BACKSPACE: case A_DELETE: case A_CLEAR:
@@ -2134,7 +2136,7 @@ static bool edit_act(action_t a) {
         }
         ed_row_free(clipboard);
         clipboard = copy;
-        clipboard_share(copy, &shared);
+        clipboard_share(copy);
         if(a.op == A_CUT) {
             will_edit(false);
             ed_erase_selection(&ed);
@@ -2166,6 +2168,10 @@ static bool edit_act(action_t a) {
     case A_SELECT_ALL:
         typing_run = false;
         ed_select_all(&ed);
+        break;
+    case A_POINT: case A_POINT_DRAG:
+        typing_run = false;
+        ed_click(&ed, &draw_font, (a.n & 0xFFF) - in_left, (a.n >> 12) - in_base, a.op == A_POINT_DRAG);
         break;
 
     case A_ENTER:  evaluate(); break;
@@ -2337,6 +2343,41 @@ static bool history_act(action_t a) {
     return false;
 }
 
+/* the mouse as an action: the soft key row under it, or a click on the input line. nothing for the rest yet */
+static action_t pointer_action(keypress_t p) {
+    action_t a = { A_NONE, 0, NULL };
+    int row;
+
+    if(menu >= 0 && p.key == K_POINT_DOWN) {
+        row = (p.y - menu_y - 2) / (menu_row_h > 0 ? menu_row_h : 1);
+        if(p.x >= menu_x && p.x < menu_x + menu_w && p.y >= menu_y + 2 && row < menu_rows) {
+            row += menu_top; /* its key: 1 to 9, then a to z */
+            a.op = A_CHAR;
+            a.n = row < 9 ? '1' + row : 'a' + (row - 9);
+            return a;
+        }
+        if(!(p.y >= areas.keys.y && p.y < areas.keys.y + areas.keys.h)) {
+            a.op = A_ESC; /* outside it */
+            return a;
+        }
+    }
+    if(popup >= 0 && p.key == K_POINT_DOWN) {
+        a.op = A_ESC;
+        return a;
+    }
+
+    if(p.key == K_POINT_DOWN && p.y >= areas.keys.y && p.y < areas.keys.y + areas.keys.h && !NSPIRE) {
+        a.op = A_SOFT;
+        a.n = p.x * FOLDER_COUNT / (areas.keys.w > 0 ? areas.keys.w : 1);
+        if(a.n >= FOLDER_COUNT)
+            a.n = FOLDER_COUNT - 1;
+    } else if(p.y >= in_top && p.y < areas.keys.y) {
+        a.op = p.key == K_POINT_DRAG || (p.held & M_ALPHA) != 0 ? A_POINT_DRAG : A_POINT;
+        a.n = p.x | (p.y << 12);
+    }
+    return a;
+}
+
 static bool handle(keypress_t p) {
     action_t a, plain;
 
@@ -2350,8 +2391,12 @@ static bool handle(keypress_t p) {
     /* every modifier that's on (tapped or held down) goes with this key. plain is
        the key on its own, for the popups, menus and pages, where 2nd and such
        don't matter */
-    a = bind_key(p.key, mods | p.held);
-    plain = bind_key(p.key, 0);
+    if(p.key == K_POINT_DOWN || p.key == K_POINT_DRAG)
+        a = plain = pointer_action(p);
+    else {
+        a = bind_key(p.key, mods | p.held);
+        plain = bind_key(p.key, 0);
+    }
 
     if(popup >= 0) {
         if(!popup_act(a))
@@ -2488,6 +2533,11 @@ static void draw_menu(void) {
     if(x + width > areas.body.x + areas.body.w - 1)
         x = areas.body.x + areas.body.w - 1 - width;
 
+    menu_x = x;
+    menu_y = top;
+    menu_w = width;
+    menu_row_h = row_h;
+    menu_rows = rows;
     screen_color(COL_BG);
     screen_fill(x, top, width, bottom - top + 1);
     screen_color(COL_DIM);
@@ -2746,6 +2796,8 @@ static void draw_screen(void) {
         }
         screen_color(COL_FG);
         draw_box(in, x, base);
+        in_left = x;
+        in_base = base;
         cur_x = cursor_x(in, x);
         cur_top = base - in->ascent;
         line_y = base - in->ascent - 3;
@@ -2756,6 +2808,7 @@ static void draw_screen(void) {
 
     screen_color(COL_DIM);
     screen_hline(left, line_y, right - left);
+    in_top = line_y;
 
     /* messages at the right of the line */
     if(status != NULL) {

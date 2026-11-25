@@ -40,6 +40,13 @@ void window_sync(void) {
         screen_resize(px / scale, py / scale);
 }
 
+void window_point(float wx, float wy, int *x, int *y) {
+    float density = window != NULL ? SDL_GetWindowPixelDensity(window) : 1;
+
+    *x = (int)(wx * density) / scale;
+    *y = (int)(wy * density) / scale;
+}
+
 void window_zoom(int step) {
     if(scale + step < 1 || scale + step > SCALE_MAX)
         return;

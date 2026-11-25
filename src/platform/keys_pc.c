@@ -7,6 +7,7 @@
       ~             [(-)], negate    =         [2nd][math]
       numpad        digits . + - * / enter, with NumLock on or off
       Backspace     [clear]          Delete    [del]
+      Home / End    start / end of the line
       Enter         [enter]          arrows    arrows
       Shift alone   [alpha]          Alt alone [2nd]
       Shift+letter  a capital (same as [2nd][alpha] + letter)
@@ -48,6 +49,7 @@ void keys_script(char *const *presses, int count) {
       wait:6        the next press waits 6 s
       png:out.png   the screen right then, at 2x
       clip:3x+2     puts that on the clipboard, for a paste to find
+      click:x,y     a mouse click at that framebuffer pixel, drag:x,y with the button down, alpha+click: is a shift-click
       busy:on+mode  held down while the engine runs, skipped if it's done by then
 */
 static Uint64 wait_until; /* SDL ms, clock() is CPU time and stands still in a wait */
@@ -93,6 +95,13 @@ static keypress_t parse_press(const char *s) {
         } else {
             break;
         }
+    }
+    if(strncmp(s, "click:", 6) == 0 || strncmp(s, "drag:", 5) == 0) { /* click:120,300  drag:200,300 (with alpha+ it's a shift-click) */
+        press.key = s[0] == 'c' ? K_POINT_DOWN : K_POINT_DRAG;
+        s += s[0] == 'c' ? 6 : 5;
+        press.x = (short)atoi(s);
+        press.y = strchr(s, ',') != NULL ? (short)atoi(strchr(s, ',') + 1) : 0;
+        return press;
     }
     press.key = keys_named(s);
     return press;
@@ -183,11 +192,32 @@ static keypress_t pending[PENDING_MAX];
 static int pending_first, pending_count;
 
 static void push(keycode_t key, bool on) {
+    keypress_t *slot;
+
     if(key == K_NONE || pending_count >= PENDING_MAX)
         return;
-    pending[(pending_first + pending_count) % PENDING_MAX].key = key;
-    pending[(pending_first + pending_count) % PENDING_MAX].held = on ? M_ON : 0;
+    slot = &pending[(pending_first + pending_count) % PENDING_MAX];
+    slot->key = key;
+    slot->held = on ? M_ON : 0;
+    slot->x = slot->y = 0;
     pending_count++;
+}
+
+/* the mouse, at a window position. shift is the selecting kind of click. a drag in a row replaces the one before it, only where it ended counts */
+static void push_pointer(keycode_t key, float wx, float wy) {
+    keypress_t *slot;
+    int x, y;
+
+    if(key == K_POINT_DRAG && pending_count > 0 && pending[(pending_first + pending_count - 1) % PENDING_MAX].key == K_POINT_DRAG)
+        pending_count--;
+    push(key, false);
+    if(pending_count == 0 || pending[(pending_first + pending_count - 1) % PENDING_MAX].key != key)
+        return;
+    slot = &pending[(pending_first + pending_count - 1) % PENDING_MAX];
+    window_point(wx, wy, &x, &y);
+    slot->x = (short)x;
+    slot->y = (short)y;
+    slot->held = (SDL_GetModState() & SDL_KMOD_SHIFT) != 0 ? M_ALPHA : 0;
 }
 
 /* a typed character: = is [2nd][math], like on the TI */
@@ -231,7 +261,7 @@ static void key_down(const SDL_KeyboardEvent *ev) {
     smaller = ev->key == SDLK_MINUS || ev->key == SDLK_KP_MINUS;
     if(on && (bigger || smaller)) {
         window_zoom(bigger ? 1 : -1); /* the pixel size */
-        push(K_NONE, false);
+        push(K_REDRAW, false);
         return;
     }
 
@@ -271,8 +301,8 @@ static void key_down(const SDL_KeyboardEvent *ev) {
         return;
     }
 
-    /* Ctrl + C X V Z A, no text comes with those. bound to copy, cut, paste, undo and select all */
-    if(on && ev->key < 0x80 && (ev->key == 'c' || ev->key == 'x' || ev->key == 'v' || ev->key == 'z' || ev->key == 'a')) {
+    /* Ctrl + C X V Z A, no text comes with those */
+    if(on && ev->key > 0 && ev->key < 0x80 && strchr("cxvza", (int)ev->key) != NULL) {
         skip_text = true;
         push(keys_from_char((char)ev->key), true);
         return;
@@ -371,7 +401,7 @@ keypress_t keys_wait(void) {
 
         case SDL_EVENT_WINDOW_RESIZED:
             window_sync();
-            push(K_NONE, false); /* the app redraws at its new size */
+            push(K_REDRAW, false);
             break;
 
         case SDL_EVENT_WINDOW_EXPOSED:
@@ -387,6 +417,21 @@ keypress_t keys_wait(void) {
 
         case SDL_EVENT_KEY_DOWN:
             key_down(&ev.key);
+            break;
+
+        case SDL_EVENT_MOUSE_BUTTON_DOWN:
+            if(ev.button.button == SDL_BUTTON_LEFT)
+                push_pointer(K_POINT_DOWN, ev.button.x, ev.button.y);
+            break;
+
+        case SDL_EVENT_MOUSE_MOTION:
+            if((ev.motion.state & SDL_BUTTON_LMASK) != 0)
+                push_pointer(K_POINT_DRAG, ev.motion.x, ev.motion.y);
+            break;
+
+        case SDL_EVENT_MOUSE_WHEEL:
+            if(ev.wheel.y != 0)
+                push(ev.wheel.y > 0 ? K_UP : K_DOWN, false); /* scrolls the history like the arrows */
             break;
 
         case SDL_EVENT_KEY_UP:

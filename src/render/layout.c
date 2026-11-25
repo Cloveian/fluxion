@@ -904,6 +904,22 @@ box_t *layout_text(const char *text, unsigned char level) { return new_text(text
 box_t *layout_space(int width) { return new_space(width); }
 void layout_add(box_t *parent, box_t *child) { add(parent, child); }
 
+bool layout_cursor(const box_t *b, int x, int y, int *cx, int *cy) {
+    const box_t *k;
+
+    x += b->x;
+    y += b->y;
+    if(b->kind == BOX_CURSOR) {
+        *cx = x;
+        *cy = y + (b->descent - b->ascent) / 2;
+        return true;
+    }
+    for(k = b->child; k != NULL; k = k->next)
+        if(layout_cursor(k, x, y, cx, cy))
+            return true;
+    return false;
+}
+
 void layout_free(box_t *b) {
     while(b != NULL) {
         box_t *next = b->next;

@@ -24,6 +24,7 @@ typedef enum {
     A_CLEAR,        /* the CE's [clear], backspace while typing, out of whatever's open */
     A_CLEAR_LINE,   /* n 1 and the line's empty: clears the screen */
     A_CUT, A_COPY, A_PASTE, A_UNDO, A_SELECT_ALL,
+    A_POINT, A_POINT_DRAG, /* n is x | y << 12 on the screen, drag and shift-click select */
     A_ENTER, A_NEXT_FORM, A_DECIMAL,
 
     /* the rest of the app */

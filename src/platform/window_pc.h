@@ -14,6 +14,8 @@ void window_fullscreen_toggle(void);
 void window_sync(void);
 /* 1 or -1, bigger or smaller pixels */
 void window_zoom(int step);
+/* a mouse position from SDL (window units) as a framebuffer pixel */
+void window_point(float wx, float wy, int *x, int *y);
 
 /* open, show the framebuffer, wait for close (or Esc), close. 0 on success. */
 int window_show(const char *title);

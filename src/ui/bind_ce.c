@@ -32,7 +32,7 @@ static const bind_t binds[] = {
     DO(K_MATH, 0, A_POPUP, POPUP_MATH),
     DO(K_VARS, 0, A_VARS, 0), DO(K_MODE, 0, A_SETTINGS, 0), DO(K_QUIT, 0, A_QUIT, 0),
     DO(K_2ND, 0, A_MOD, M_2ND), DO(K_ALPHA, 0, A_MOD, M_ALPHA), DO(K_ON, 0, A_MOD, M_ON),
-    /* the PC's keyboard has these, the CE doesn't */
+    /* typed on a PC keyboard, no CE key */
     CHAR(K_LESS, 0, '<'), CHAR(K_GREATER, 0, '>'), CHAR(K_BANG, 0, '!'), CHAR(K_PERCENT, 0, '%'),
     DO(K_HOME, 0, A_LINE_START, 0), DO(K_END, 0, A_LINE_END, 0),
     /* no such keys on a CE, the PC's scripts try the nspire's menu and popup with them */
@@ -72,7 +72,7 @@ static const bind_t binds[] = {
     /* [on] is ctrl. 1 2 3 cut copy paste, next to each other like X C V */
     DO(K_1, M_ON, A_CUT, 0), DO(K_2, M_ON, A_COPY, 0), DO(K_3, M_ON, A_PASTE, 0),
     DO(K_STO, M_ON, A_UNDO, 0),
-    /* and on the PC's keyboard the usual ones. Ctrl + a letter */
+    /* PC keyboard's usual ones, Ctrl + letter */
     DO(LETTER('x'), M_ON, A_CUT, 0), DO(LETTER('c'), M_ON, A_COPY, 0), DO(LETTER('v'), M_ON, A_PASTE, 0),
     DO(LETTER('z'), M_ON, A_UNDO, 0), DO(LETTER('a'), M_ON, A_SELECT_ALL, 0),
     DO(K_CLEAR, M_ON, A_CLEAR_LINE, 1),     /* Ctrl+Backspace */

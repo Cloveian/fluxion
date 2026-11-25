@@ -29,7 +29,9 @@ int main(int argc, char **argv)
             scale = atoi(argv[i + 1]);
         else if(strcmp(argv[i], "--size") == 0) { /* 640x480, framebuffer pixels */
             sscanf(argv[i + 1], "%dx%d", &w, &h);
+#ifdef SCREEN_RESIZABLE /* the web page's is the one size */
             screen_resize(w, h);
+#endif
         }
     }
 
