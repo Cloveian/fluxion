@@ -634,21 +634,20 @@ static const char *long_division(pcas_ast_t *e) {
     return "polynomial division";
 }
 
-/*P/Q with Q a quadratic or cubic over *dih*stinct rational roots and P of a lower degree: A1/(x-r1) + A2/(x-r2) + ..., Ai = P(ri)/Q'(ri)*/
-static const char *partial_fractions(pcas_ast_t *e) {
-    pcas_ast_t *f = ast_ChildGet(e, 0), *x = ast_ChildGet(e, 1), *roots[SOLVE_MAX] = { NULL }, *lead = NULL, *sum, *t, *num, *den, *wrap;
+/*P/Q with Q of degree 2 to 4 over *dih*stinct rational roots and P of a lower degree: A1/(x-r1) + A2/(x-r2) + ..., Ai = P(ri)/Q'(ri). new, NULL when it isn't one of those*/
+pcas_ast_t *partial_sum(pcas_ast_t *top, pcas_ast_t *bottom, Symbol var) {
+    pcas_ast_t *roots[SOLVE_MAX] = { NULL }, *lead = NULL, *sum, *t, *num, *den, *x = ast_MakeSymbol(var);
     int dp, dq, i, j, n;
     bool ok = true;
 
-    if(!isoptype(f, OP_DIV))
-        return NULL;
-    dq = poly_degree(ast_ChildGet(f, 1), x->op.symbol, &lead);
-    dp = poly_degree(ast_ChildGet(f, 0), x->op.symbol, NULL); /*-1 for sin(x) or e^x up there*/
-    if(dq < 2 || dq > 3 || dp < 0 || dp >= dq) {
+    dq = poly_degree(bottom, var, &lead);
+    dp = poly_degree(top, var, NULL); /*-1 for sin(x) or e^x up there*/
+    if(x == NULL || dq < 2 || dq > 4 || dp < 0 || dp >= dq) {
         ast_Cleanup(lead);
+        ast_Cleanup(x);
         return NULL;
     }
-    n = solve_ex(ast_ChildGet(f, 1), x->op.symbol, roots, false);
+    n = solve_ex(bottom, var, roots, false);
     for(i = 0; i < n && ok; i++) {
         fold_fraction(roots[i]);
         ok = roots[i]->type == NODE_NUMBER;
@@ -657,12 +656,12 @@ static const char *partial_fractions(pcas_ast_t *e) {
         for(i = 0; i < n; i++)
             ast_Cleanup(roots[i]);
         ast_Cleanup(lead);
+        ast_Cleanup(x);
         return NULL;
     }
     for(i = 0; i < n; i++) {
-        wrap = ast_MakeBinary(OP_MULT, ast_MakeInt(1), ast_Copy(ast_ChildGet(f, 0))); /*substitute works on what's under the node*/
-        substitute(wrap, x, roots[i]);
-        num = wrap;
+        num = ast_MakeBinary(OP_MULT, ast_MakeInt(1), ast_Copy(top)); /*substitute works on what's under the node*/
+        substitute(num, x, roots[i]);
         den = ast_Copy(lead);
         for(j = 0; j < n; j++)
             if(j != i)
@@ -677,6 +676,15 @@ static const char *partial_fractions(pcas_ast_t *e) {
     for(i = 0; i < n; i++)
         ast_Cleanup(roots[i]);
     ast_Cleanup(lead);
+    ast_Cleanup(x);
+    return sum;
+}
+
+static const char *partial_fractions(pcas_ast_t *e) {
+    pcas_ast_t *f = ast_ChildGet(e, 0), *x = ast_ChildGet(e, 1), *sum;
+
+    if(!isoptype(f, OP_DIV) || (sum = partial_sum(ast_ChildGet(f, 0), ast_ChildGet(f, 1), x->op.symbol)) == NULL)
+        return NULL;
     replace_node(e, integral(sum, x));
     return "partial fractions";
 }

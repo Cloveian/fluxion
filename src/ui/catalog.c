@@ -162,6 +162,12 @@ ITEM(it_im,       "im",    "im", ITEM_FUNCTION, "im($)", HAVE_YES, "letters coun
      "the imaginary part, without the i. im(3+4i) -> 4")
 ITEM(it_arg,      "arg",   "arg", ITEM_FUNCTION, "arg($)", HAVE_YES, "radians, -pi to pi",
      "the angle of a complex number. arg(1+i) -> pi/4")
+ITEM(it_apart,    "apart",  "apart", ITEM_COMMAND, "apart($)", HAVE_PARTLY,
+     "apart(f,x): the whole part, then a fraction over each root of the bottom. rational roots, all different",
+     "splits a fraction into simpler ones. apart(1/(x^2-1),x) -> 1/(2x-2)-1/(2x+2)")
+ITEM(it_polydiv,  "divide", "divide", ITEM_COMMAND, "divide($)", HAVE_YES,
+     "divide(p,q,x): polynomial long division, the quotient and the remainder. numbers for coefficients",
+     "p = quotient q + remainder. divide(x^3+1,x+2,x) -> quotient x^2-2x+4, remainder -7")
 ITEM(it_amplitude, "amplitude", "amplitude", ITEM_COMMAND, "amplitude($)", HAVE_PARTLY,
      "amplitude(f,x): |A| of A*sin(Bx+C)+D or cos, sqrt(a^2+b^2) for a*sin(u)+b*cos(u). anything else is a message",
      "how far a sine or cosine wave goes from its middle. amplitude(3sin(2x)+1,x) -> 3")
@@ -325,7 +331,7 @@ const item_t *const catalog[] = {
     &it_sin, &it_cos, &it_tan, &it_asin, &it_acos, &it_atan, &it_cot, &it_sec, &it_csc, &it_acot, &it_asec, &it_acsc, &it_ln, &it_exp, &it_log, &it_pow10,
     &it_sinh, &it_cosh, &it_tanh, &it_asinh, &it_acosh, &it_atanh, &it_logb, &it_abs, &it_percent, &it_fact, &it_int,
     &it_gcd, &it_lcm, &it_ncr, &it_npr, &it_amplitude,
-    &it_floor, &it_ceil, &it_round, &it_sign, &it_mod, &it_min, &it_max, &it_binomial, &it_conj, &it_re, &it_im, &it_arg,
+    &it_apart, &it_polydiv, &it_floor, &it_ceil, &it_round, &it_sign, &it_mod, &it_min, &it_max, &it_binomial, &it_conj, &it_re, &it_im, &it_arg,
     &it_frac, &it_parens, &it_piecewise,
     &it_simplify, &it_expand, &it_subst, &it_evaluate, &it_factor, &it_solve, &it_asym, &it_domain, &it_range, &it_system,
     &it_slope, &it_dist, &it_mid, &it_par, &it_perp, &it_roots, &it_fromroots, &it_inverse,
@@ -357,7 +363,7 @@ SUBFOLDER(it_conics, conics_folder, "Conics", conics)
 SUBFOLDER(it_prob, prob_folder, "Probability", prob)
 
 static const item_t *const algebra[] = {
-    &it_expand, &it_factor, &it_solve, &it_system, &it_roots, &it_fromroots, &it_inverse, &it_subst, &it_evaluate,
+    &it_expand, &it_factor, &it_solve, &it_system, &it_roots, &it_fromroots, &it_inverse, &it_apart, &it_polydiv, &it_subst, &it_evaluate,
     &it_fn_info, &it_lines, &it_shapes, &it_solids, &it_conics, &it_prob
 };
 static const item_t *const calculus[] = {

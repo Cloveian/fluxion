@@ -29,6 +29,8 @@ Everything Fluxion does right now, as tables. Yes / partly / no first, the other
 | Rationalizing                 | yes |
 | True / false statements       | yes |
 | Expand                        | yes |
+| Partial fractions (apart)     | yes |
+| Polynomial long division      | yes |
 
 ### Factoring
 

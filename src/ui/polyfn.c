@@ -114,27 +114,115 @@ static box_t *inverse_of(pcas_ast_t *f, Symbol var, const char **message) {
     return out;
 }
 
+/* a / b as a sum of simpler fractions: the whole part from the long division, the rest over the roots of b. NULL (and message) when it can't */
+static box_t *apart_of(pcas_ast_t *f, Symbol var, const char **message) {
+    pcas_ast_t *e = ast_Copy(f), *top, *bottom, *q = NULL, *r = NULL, *sum = NULL, *whole = NULL, *t;
+    box_t *out = NULL;
+    bool exact;
+
+    if(setting_angle == ANGLE_DEGREES)
+        e = degrees_in(e);
+    simplify(e, SIMP_ALL);
+    comdenom(e, true);
+    if(!isoptype(e, OP_DIV) || !has_symbol(ast_ChildGet(e, 1), var)) {
+        ast_Cleanup(e);
+        *message = "not a fraction with x on the bottom";
+        return NULL;
+    }
+    top = ast_ChildGet(e, 0);
+    bottom = ast_ChildGet(e, 1);
+    if(poly_degree(top, var, NULL) >= poly_degree(bottom, var, NULL)) {
+        q = poly_quotient(top, bottom, var, &exact);
+        r = q != NULL ? poly_remainder(top, bottom, var) : NULL;
+        if(q == NULL || r == NULL) {
+            *message = "the top and bottom have to be polynomials";
+            goto done;
+        }
+        top = r;
+        whole = q;
+    }
+    if(is_ast_int(top, 0)) { /*it divides evenly, there's no fraction left*/
+        sum = ast_Copy(whole);
+    } else if((sum = partial_sum(top, bottom, var)) == NULL) {
+        *message = "the bottom needs rational roots, all different";
+        goto done;
+    } else if(whole != NULL) {
+        sum = ast_MakeBinary(OP_ADD, ast_Copy(whole), sum);
+    }
+    if(isoptype(sum, OP_ADD)) /*a term at a time, all of it at once puts the fractions back over one bottom*/
+        for(t = ast_ChildGet(sum, 0); t != NULL; t = t->next)
+            simplify(t, SIMP_ALL);
+    else
+        simplify(sum, SIMP_ALL);
+    simplify(sum, SIMP_NORMALIZE | SIMP_COMMUTATIVE);
+    simplify_canonical_form(sum, CANONICAL_ALL);
+    if(setting_angle == ANGLE_DEGREES)
+        degrees_out(sum);
+    out = pcas_cancelled ? NULL : layout_build(sum, &draw_font);
+done:
+    ast_Cleanup(e);
+    ast_Cleanup(q);
+    ast_Cleanup(r);
+    ast_Cleanup(sum);
+    return out;
+}
+
+/* divide(p, q, x): the quotient and what's left, p = quotient q + remainder */
+static box_t *divide_of(pcas_ast_t *p, pcas_ast_t *q, Symbol var, const char **message) {
+    pcas_ast_t *top = ast_Copy(p), *bottom = ast_Copy(q), *quo, *rem;
+    box_t *col = NULL;
+    bool exact;
+
+    simplify(top, SIMP_ALL);
+    simplify(bottom, SIMP_ALL);
+    quo = poly_quotient(top, bottom, var, &exact);
+    rem = quo != NULL ? poly_remainder(top, bottom, var) : NULL;
+    if(quo == NULL || rem == NULL) {
+        *message = "both have to be polynomials in x with numbers for coefficients";
+    } else {
+        simplify(quo, SIMP_ALL);
+        simplify(rem, SIMP_ALL);
+        simplify_canonical_form(quo, CANONICAL_ALL);
+        simplify_canonical_form(rem, CANONICAL_ALL);
+        col = layout_box(BOX_COL, 0);
+        layout_add(col, labelled("quotient", layout_build(quo, &draw_font)));
+        layout_add(col, labelled("remainder", layout_build(rem, &draw_font)));
+        layout_finish(col, &draw_font);
+    }
+    ast_Cleanup(top);
+    ast_Cleanup(bottom);
+    ast_Cleanup(quo);
+    ast_Cleanup(rem);
+    return col;
+}
+
 bool polyfn_run(const char *cmd, char *src, box_t *in) {
     pcas_ast_t *a[ARGS_MAX] = { NULL };
     pcas_error_t err = E_SUCCESS;
     const char *message = NULL, *usage;
     box_t *out = NULL;
     clock_t start;
-    bool inv;
+    enum { K_FROMROOTS, K_INVERSE, K_APART, K_DIVIDE } kind;
     int n, i;
 
     if(cmd == NULL)
         return false;
     if(strcmp(cmd, "fromroots") == 0)
-        inv = false;
+        kind = K_FROMROOTS;
     else if(strcmp(cmd, "inverse") == 0)
-        inv = true;
+        kind = K_INVERSE;
+    else if(strcmp(cmd, "apart") == 0)
+        kind = K_APART;
+    else if(strcmp(cmd, "divide") == 0)
+        kind = K_DIVIDE;
     else
         return false;
-    usage = inv ? "inverse(f, x)" : "fromroots(root, root, ..., x)";
+    usage = kind == K_INVERSE ? "inverse(f, x)" : kind == K_APART ? "apart(f, x)" : kind == K_DIVIDE ? "divide(p, q, x)"
+            : "fromroots(root, root, ..., x)";
 
     n = args_read(src, a, ARGS_MAX, &err);
-    if(n < 1 || (inv && (n > 2 || (n == 2 && !is_var(a[1]))))) {
+    if(n < 1 || ((kind == K_INVERSE || kind == K_APART) && (n > 2 || (n == 2 && !is_var(a[1]))))
+       || (kind == K_DIVIDE && (n < 2 || n > 3 || (n == 3 && !is_var(a[2]))))) {
         for(i = 0; i < n; i++)
             ast_Cleanup(a[i]);
         push(in, NULL, n < 0 ? error_text[err] : usage, 0);
@@ -142,8 +230,12 @@ bool polyfn_run(const char *cmd, char *src, box_t *in) {
     }
 
     start = clock();
-    if(inv)
+    if(kind == K_INVERSE)
         out = inverse_of(a[0], n == 2 ? a[1]->op.symbol : SYM_X, &message);
+    else if(kind == K_APART)
+        out = apart_of(a[0], n == 2 ? a[1]->op.symbol : SYM_X, &message);
+    else if(kind == K_DIVIDE)
+        out = divide_of(a[0], a[1], n == 3 ? a[2]->op.symbol : SYM_X, &message);
     else
         out = from_roots(a, n);
 
