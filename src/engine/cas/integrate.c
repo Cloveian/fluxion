@@ -799,6 +799,16 @@ static const char *one_plus_trig(pcas_ast_t *e) {
     return "half angle";
 }
 
+/*polynomial left as a power or product of sums, (u^2-1)^2 from a substitution, multiplied out for the sum rule*/
+static const char *multiply_out(pcas_ast_t *e) {
+    pcas_ast_t *f = ast_ChildGet(e, 0), *x = ast_ChildGet(e, 1);
+
+    if(poly_degree(f, x->op.symbol, NULL) < 2)
+        return NULL;
+    split_terms(e, ast_Copy(f), x);
+    return "multiply out";
+}
+
 /*P/Q with P as big as Q or bigger, long *dih*vision: the quotient plus the remainder over Q*/
 static const char *long_division(pcas_ast_t *e) {
     pcas_ast_t *f = ast_ChildGet(e, 0), *x = ast_ChildGet(e, 1), *q, *r, *sum;
@@ -1501,6 +1511,8 @@ static const char *one_rule(pcas_ast_t *e, subs_t *subs) {
             return name;
     }
     if((name = usub(e, subs)) != NULL)
+        return name;
+    if((name = multiply_out(e)) != NULL)
         return name;
     if((name = shift_square(e, subs)) != NULL)
         return name;
