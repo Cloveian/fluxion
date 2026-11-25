@@ -790,6 +790,12 @@ solve; 4^X_3*2^X+2=0; X; 0,1
 solve; 9^X_4*3^X+3=0; X; 0,1
 solve; sin(X)=cos(X); X; pi/4+Npi
 solve; 3sin(X)+cos(X)=0; X; atan(-1/3)+Npi
+#sin(2x) and cos(2x) go through the double angle first
+solve; sin(2X)=sin(X); X; piN,pi/3+2piN,(-pi)/3+2piN
+solve; sin(2X)=cos(X); X; pi/2+Npi,pi/6+2piN,2piN+(5pi)/6
+solve; cos(2X)=cos(X); X; (2pi)/3+2piN,(-2pi)/3+2piN,2piN
+solve; sin(4X)=0; X; (piN)/4
+solve; cos(2X)=1; X; piN
 solve; asin(X)=pi/2; X; 1
 solve; acos(X)=-1; X; false
 solve; acos(X)=pi; X; -1

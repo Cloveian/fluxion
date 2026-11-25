@@ -1994,6 +1994,49 @@ static pcas_ast_t *smaller_base(pcas_ast_t *e, Symbol var, pcas_ast_t *cur) {
     return cur;
 }
 
+/*Fluxion: sin(2h) is 2 sin(h) cos(h), cos(2h) is 2 cos(h)^2 - 1, when the angle with var has an even number in front. true if changed*/
+static bool halve_angles(pcas_ast_t *e, Symbol var) {
+    pcas_ast_t *g, *h, *c, *s, *k;
+    mp_small v;
+    bool changed = false;
+
+    if(e->type != NODE_OPERATOR)
+        return false;
+    if((isoptype(e, OP_SIN) || isoptype(e, OP_COS)) && has_symbol(e, var)) {
+        g = ast_ChildGet(e, 0);
+        if(isoptype(g, OP_MULT) && whole_number(ast_ChildGet(g, 0), &v) && v >= 2 && v % 2 == 0) {
+            h = ast_Copy(g);
+            replace_node(ast_ChildGet(h, 0), ast_MakeInt(v / 2));
+            simplify(h, SIMP_SOLVE);
+            c = ast_MakeUnary(OP_COS, ast_Copy(h));
+            if(isoptype(e, OP_SIN)) {
+                s = ast_MakeBinary(OP_MULT, ast_MakeInt(2), ast_MakeBinary(OP_MULT, ast_MakeUnary(OP_SIN, h), c));
+            } else {
+                ast_Cleanup(h);
+                s = ast_MakeBinary(OP_ADD, ast_MakeBinary(OP_MULT, ast_MakeInt(2), ast_MakeBinary(OP_POW, c, ast_MakeInt(2))), ast_MakeInt(-1));
+            }
+            replace_node(e, s);
+            return true;
+        }
+    }
+    for(k = ast_ChildGet(e, 0); k != NULL; k = k->next)
+        changed = halve_angles(k, var) || changed;
+    return changed;
+}
+
+/*Fluxion: sin(2x) = sin(x) goes through the double angle first, then a product or a quadratic in sin x, cos x*/
+static int solve_double_angle(pcas_ast_t *e, Symbol var, pcas_ast_t **out, bool complex) {
+    pcas_ast_t *f = ast_Copy(e);
+    int n = SOLVE_UNKNOWN;
+
+    if(f != NULL && halve_angles(f, var) && !pcas_cancelled)
+        n = solve_ex(f, var, out, complex);
+    ast_Cleanup(f);
+    if(n < 0)
+        clear_roots(out);
+    return n;
+}
+
 /*Fluxion: a sin(u) + b cos(u) = 0 with numbers for a and b is tan(u) = -b/a, so sin(x) = cos(x) is tan(x) = 1*/
 static int solve_trig_ratio(pcas_ast_t *e, Symbol var, pcas_ast_t **out, bool complex) {
     pcas_ast_t *t, *f, *sin_t = NULL, *cos_t = NULL, *a = NULL, *b = NULL, *eq;
@@ -2186,6 +2229,10 @@ int solve_ex(pcas_ast_t *expr, Symbol var, pcas_ast_t **out, bool complex) {
     if(n == SOLVE_UNKNOWN && !pcas_cancelled) { /*Fluxion*/
         clear_roots(out);
         n = solve_trig_ratio(e, var, out, complex);
+    }
+    if(n == SOLVE_UNKNOWN && !pcas_cancelled) { /*Fluxion*/
+        clear_roots(out);
+        n = solve_double_angle(e, var, out, complex);
     }
     if(n > 0 && !pcas_cancelled && has_root_of(expr, var)) { /*Fluxion: sqrt(-x) = -2 got x = -4 off simplify's i sqrt(x)*/
         int i, k;
