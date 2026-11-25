@@ -95,6 +95,9 @@ static int menu_sel, menu_top;
 static const folder_t *menu_back[MENU_DEPTH_MAX];
 static int menu_back_sel[MENU_DEPTH_MAX], menu_depth;
 static int menu_x, menu_y, menu_w, menu_row_h, menu_rows; /* the open menu's box, where draw_menu put it, for clicks */
+#define HITS_MAX 24 /* history halves on screen at once, for clicks */
+static struct { int y0, y1, id; } hits[HITS_MAX];
+static int hit_n;
 static int in_left, in_base, in_top; /* where draw_screen put the input line (left edge, baseline) and the band it's in, for mouse clicks */
 static int menu_from = -1;      /* the answer highlighted when it opened, for show steps */
 
@@ -2361,6 +2364,13 @@ static action_t pointer_action(keypress_t p) {
         a.n = p.x * FOLDER_COUNT / (areas.keys.w > 0 ? areas.keys.w : 1);
         if(a.n >= FOLDER_COUNT)
             a.n = FOLDER_COUNT - 1;
+    } else if(p.key == K_POINT_DOWN && p.y < in_top) {
+        for(row = 0; row < hit_n; row++)
+            if(p.y >= hits[row].y0 && p.y < hits[row].y1) {
+                a.op = A_HIST_POINT;
+                a.n = hits[row].id;
+                break;
+            }
     } else if(p.y >= in_top && p.y < areas.keys.y) {
         a.op = p.key == K_POINT_DRAG || (p.held & M_ALPHA) != 0 ? A_POINT_DRAG : A_POINT;
         a.n = p.x | (p.y << 12);
@@ -2441,6 +2451,23 @@ static bool handle(keypress_t p) {
         if(setting_brightness > 7) setting_brightness = 7;
         screen_brightness(setting_brightness);
         settings_save();
+        return true;
+    }
+
+    if(a.op == A_HIST_POINT) {
+        int id = a.n / 2;
+        bool want_out;
+
+        if(id < 0 || id >= history_len)
+            return true;
+        want_out = a.n % 2 == 1 && history[id].out_row != NULL;
+        if(hist == id && hist_out == want_out && !browsing) {
+            a.op = A_ENTER; /* the one that's lit goes in the line */
+            return history_act(a);
+        }
+        hist = id;
+        hist_out = want_out;
+        browsing = false;
         return true;
     }
 
@@ -2747,6 +2774,14 @@ static int entry_h(const entry_t *h) {
     return n + GAP;
 }
 
+static void add_hit(int y0, int y1, int id) {
+    if(hit_n < HITS_MAX) {
+        hits[hit_n].y0 = y0;
+        hits[hit_n].y1 = y1;
+        hits[hit_n++].id = id;
+    }
+}
+
 static void draw_screen(void) {
     const font_t *small = draw_label_font();
     box_t *in = ed_layout(&ed, &draw_font, true);
@@ -2807,6 +2842,7 @@ static void draw_screen(void) {
                   line_y - small->ascent - small->descent - 1, status, small);
     }
 
+    hit_n = 0;
     /* history, newest at the bottom, going up to the status bar (drawn over
        the top of the last one). scrolled so the highlighted one fits */
     i = history_len - 1;
@@ -2842,6 +2878,7 @@ static void draw_screen(void) {
                 highlight(x, base, out);
             screen_color(COL_FG);
             draw_box(out, x, base);
+            add_hit(y - out->ascent - out->descent - 2, y, i * 2 + 1);
             if(h->ms >= 100) {
                 char t[32];
 
@@ -2862,6 +2899,7 @@ static void draw_screen(void) {
                 highlight(left, y - inb->descent, inb);
             screen_color(COL_FG);
             draw_box(inb, left, y - inb->descent);
+            add_hit(y - inb->ascent - inb->descent - GAP, y, i * 2);
             y -= inb->ascent + inb->descent + GAP;
         }
         layout_free(browse);
