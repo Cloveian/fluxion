@@ -10,10 +10,10 @@ fluxion/
 │   ├── main.c  calculator start: app_run()
 │   ├── main_pc.c  the same app on the PC (window, or scripted keys -> PNG)
 │   ├── engine/   PineappleCAS engine (MIT, see its README for what's changed)
-│   │   ├── cas/   simplify, expand, factor, derivative, identities, solve (+ trig families, systems in system.c), asym, approx (decimal), degrees
+│   │   ├── cas/   simplify, expand, factor, derivative, identities, solve (+ trig families, systems in system.c), integrate, limit, truth (true / false statements), evalfn (floor, mod, conj ...), asym, approx (decimal), degrees. the show-the-work lines are steps.c with a file a kind: polysteps, systemsteps, ineqsteps, exprsteps (expand, factor, simplify), cmdsteps (tangent, critical, extrema, inflect, implicit)
 │   │   ├── imath/  big-number + rational maths
 │   │   └── pc/  PC-only command line + test runner (empty on the calculator)
-│   ├── platform/  screen.h / keys.h / store.h: *_ti.c = graphx + keypadc + appvars, *_pc.c = framebuffer + SDL + files in build-pc/store
+│   ├── platform/  screen.h / keys.h / store.h: *_ti.c = graphx + keypadc + appvars, *_pc.c = framebuffer + SDL + files in build-pc/store. window_pc.c is the SDL window (resizable, whole number scale), keys_pc.c turns the keyboard and the mouse into presses, clipboard.c is the system clipboard, web.c the browser build's keys and mouse
 │   ├── render/
 │   │   ├── layout.c    expression tree -> boxes with sizes + positions (no drawing)
 │   │   ├── draw.c  boxes -> lines and text, through screen.h
@@ -25,6 +25,8 @@ fluxion/
 │       ├── areas.c  the top bar / body / soft-key bands, where the drawing gets its edges
 │       ├── args.c  cutting a command's line at its commas and parsing the pieces, for every command file
 │       ├── catalog.c  everything you can type or pick, and what the engine can do. its words are the name table too
+│       ├── work.c  the show-the-work page, and calc1.c / polyfn.c / series.c / ineq.c the commands behind it (derivative at a point, tangent, apart, sum(, inequalities ...)
+│       ├── bind.c  bind_ce.c / bind_nspire.c: which key does which action. input only calls actions
 │       ├── page.c  full screen list pages (catalog, vars, mode)
 │       ├── names.c  stored names and the typed-word lookup the editor asks
 │       ├── vars.c   the [vars] page
