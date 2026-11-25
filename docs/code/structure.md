@@ -48,6 +48,7 @@ only `src/platform/` is allowed to touch graphx, keypadc or SDL. everything else
 - PC: engine + layout built with `gcc`, takes a few seconds
 - `make budget`: every test line's work (pcas_check calls), PC time and \*6500 for the CE, most work first. work is the same number on every machine, time per unit spreads ~4x (more on bignum heavy stuff)
 - `python3 tools/fuzz.py [count] [seed] [pos|any]`: random expressions through `build-pc/fluxion simplify`, checked at random points against sympy. `any` tests negative letters too. a point where the input isn't real is skipped (Y^pi at a negative Y is noise)
+- `python3 tools/uifuzz.py seed count [fluxion-app]`: random key and click scripts through `fluxion-app --png`, prints the ones that crash, time out or trip a sanitizer. an asan build finds the most
 - CEmu: by hand. `cemu-autotester` comes with CEdev if i ever want scripted key presses
 
 ## Gotchas

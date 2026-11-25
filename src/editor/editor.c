@@ -605,7 +605,7 @@ void ed_select_left(editor_t *ed) {
     else
         select_parent(ed, true);
     if(ed->anchor == ed->pos)
-        ed->anchor = -1; /*nowhere to grow to, a stale anchor made the next template's empty row look selected*/
+        ed->anchor = -1; /* nothing selected, a stale anchor made the next template's empty row look selected */
 }
 
 void ed_select_right(editor_t *ed) {
