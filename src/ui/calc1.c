@@ -177,17 +177,16 @@ static box_t *slopes(pcas_ast_t *f, Symbol var, char shown, const char **message
     return col;
 }
 
-#define ORDER_MAX 8 /*terms of a Taylor polynomial, each a derivative and a simplify*/
+#define ORDER_MAX 8 /* each term is a derivative and a simplify */
 
-/* f(a) + f'(a)(x-a) + f''(a)/2 (x-a)^2 + ... up to the order, the zero terms left out. NULL (and message) when it doesn't work */
+/* f(a) + f'(a)(x-a) + f''(a)/2 (x-a)^2 + ... up to the order, zero terms left out. order and a are worked out already. NULL and a message when it doesn't work */
 static box_t *taylor(pcas_ast_t *f, pcas_ast_t *a, pcas_ast_t *order, Symbol var, const char **message) {
-    pcas_ast_t *d = ast_Copy(f), *sum = ast_MakeOperator(OP_ADD), *o = ast_Copy(order), *x = ast_MakeSymbol((char)var), *c, *base, *next;
+    pcas_ast_t *d = ast_Copy(f), *sum = ast_MakeOperator(OP_ADD), *x = ast_MakeSymbol((char)var), *c, *base, *next;
     box_t *out = NULL;
     mp_small n, k;
     int fact = 1;
 
-    simplify(o, SIMP_ALL);
-    if(!whole_number(o, &n) || n < 0 || n > ORDER_MAX) {
+    if(!whole_number(order, &n) || n < 0 || n > ORDER_MAX) {
         *message = "the order is a whole number from 0 to 8";
     } else {
         for(k = 0; k <= n && d != NULL && !pcas_cancelled; k++) {
@@ -222,7 +221,6 @@ static box_t *taylor(pcas_ast_t *f, pcas_ast_t *a, pcas_ast_t *order, Symbol var
     }
     ast_Cleanup(d);
     ast_Cleanup(sum);
-    ast_Cleanup(o);
     ast_Cleanup(x);
     return out;
 }
@@ -288,17 +286,17 @@ static void implicit(char **piece, int n, box_t *in) {
     ast_Cleanup(fy);
 }
 
-/* the pieces of a command (not implicit): the function in a[0], the point in a[1] for a tangent, the variable from a letter at the end, x if there isn't one.
+/* the pieces of a command (not implicit): the function in a[0], the point in a[1] for a tangent or taylor, the order in a[2] for taylor, the variable from a letter at the end, x if there isn't one.
    what's wrong with them, or NULL. a[] is the caller's to free either way */
 static const char *read_command(int c, char **piece, int n, pcas_ast_t **a, Symbol *var, char *shown) {
     pcas_error_t err = E_SUCCESS;
-    int i;
+    int i, parsed = c == C_TAYLOR ? 3 : c == C_TANGENT ? 2 : 1;
 
     *var = SYM_X;
     *shown = 'x';
     if(n == cmds[c].most && !args_var(piece[n - 1], var, shown))
         return cmds[c].usage;
-    for(i = 0; i < (c == C_TAYLOR ? 3 : c == C_TANGENT ? 2 : 1); i++)
+    for(i = 0; i < parsed; i++)
         if((a[i] = args_parse(piece[i], &err)) == NULL)
             return error_text[err];
     return NULL;
@@ -358,6 +356,7 @@ bool calc1_run(const char *cmd, char *src, box_t *in) {
         out = slopes(a[0], var, shown, &message);
     } else if(c == C_TAYLOR) {
         simplify(a[1], SIMP_ALL);
+        simplify(a[2], SIMP_ALL);
         out = taylor(a[0], a[1], a[2], var, &message);
     } else {
         out = turning_points(a[0], var, c == C_INFLECT, &message);

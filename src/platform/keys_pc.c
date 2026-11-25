@@ -216,6 +216,11 @@ static void key_down(const SDL_KeyboardEvent *ev) {
     bool shift = (ev->mod & SDL_KMOD_SHIFT) != 0;
     keycode_t key;
 
+    if(ev->key == SDLK_F11) { /* fullscreen, not a calculator key */
+        window_fullscreen_toggle();
+        return;
+    }
+
     /* new keystroke, so whatever text comes next belongs to it */
     skip_text = false;
 
@@ -344,6 +349,7 @@ keypress_t keys_wait(void) {
             break;
 
         case SDL_EVENT_WINDOW_EXPOSED:
+        case SDL_EVENT_WINDOW_RESIZED:
             window_present();
             break;
 

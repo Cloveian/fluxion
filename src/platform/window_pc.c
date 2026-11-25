@@ -1,6 +1,6 @@
 #ifndef __TICE__
 
-/* PC only. shows screen_pc.c's framebuffer in an SDL3 window, scaled up */
+/* PC only. shows screen_pc.c's framebuffer in an SDL3 window, scaled up by a whole number that fits, black around it. resizable, F11 for fullscreen */
 
 #include "window_pc.h"
 #include "screen.h"
@@ -22,7 +22,7 @@ bool window_open(const char *title) {
         return false;
     }
 
-    if(!SDL_CreateWindowAndRenderer(title, SCREEN_W * SCALE, SCREEN_H * SCALE, 0, &window, &renderer)) {
+    if(!SDL_CreateWindowAndRenderer(title, SCREEN_W * SCALE, SCREEN_H * SCALE, SDL_WINDOW_RESIZABLE, &window, &renderer)) {
         SDL_Log("window: %s", SDL_GetError());
         SDL_Quit();
         return false;
@@ -31,6 +31,7 @@ bool window_open(const char *title) {
     texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGB24, SDL_TEXTUREACCESS_STREAMING,
                                 SCREEN_W, SCREEN_H);
     SDL_SetTextureScaleMode(texture, SDL_SCALEMODE_NEAREST);
+    SDL_SetRenderLogicalPresentation(renderer, SCREEN_W, SCREEN_H, SDL_LOGICAL_PRESENTATION_INTEGER_SCALE);
     SDL_StartTextInput(window);
     return true;
 }
@@ -50,6 +51,11 @@ void window_present(void) {
     SDL_RenderClear(renderer);
     SDL_RenderTexture(renderer, texture, NULL, NULL);
     SDL_RenderPresent(renderer);
+}
+
+void window_fullscreen_toggle(void) {
+    if(window != NULL)
+        SDL_SetWindowFullscreen(window, (SDL_GetWindowFlags(window) & SDL_WINDOW_FULLSCREEN) == 0);
 }
 
 void window_close(void) {
@@ -80,7 +86,9 @@ int window_show(const char *title) {
             running = false;
         else if(ev.type == SDL_EVENT_KEY_DOWN && ev.key.key == SDLK_ESCAPE)
             running = false;
-        else if(ev.type == SDL_EVENT_WINDOW_EXPOSED)
+        else if(ev.type == SDL_EVENT_KEY_DOWN && ev.key.key == SDLK_F11)
+            window_fullscreen_toggle();
+        else if(ev.type == SDL_EVENT_WINDOW_EXPOSED || ev.type == SDL_EVENT_WINDOW_RESIZED)
             window_present();
     }
 

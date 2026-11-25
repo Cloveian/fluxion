@@ -9,6 +9,7 @@
 bool window_open(const char *title);
 void window_present(void);
 void window_close(void);
+void window_fullscreen_toggle(void);
 
 /* open, show the framebuffer, wait for close (or Esc), close. 0 on success. */
 int window_show(const char *title);
