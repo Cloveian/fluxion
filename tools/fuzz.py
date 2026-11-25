@@ -94,6 +94,7 @@ def gen_int():
         f"cos(ln(X))", f"sin(ln(X))", f"X*cos(ln(X))", f"X^{k}*sin(ln(X))",
         f"X*e^({a}X)*sin(X)", f"X*e^X*cos({a}X)", f"X^2*e^X*sin(X)", f"({a}X+{b})*e^X*cos(X)",
         f"X^2/(X^2+{a})^2", f"({a}X^2+X)/(X^2+X+{a + 1})^2", f"X^3/(X^2+{a})^2", f"(X^2+{b})/(X^2+{2 * a}X+{a * a + 1})^2",
+        f"sin(X)*cos(X)*e^({a}X)", f"X*sin({a}X)*cos({a}X)*e^X", f"X^{k}*sin(X)*cos(X)",
         f"1/(1+e^X)", f"e^X/({a}+e^(2X))", f"1/(e^X+e^(-X))", f"1/(1+e^({a}X))", f"e^(2X)/(e^X+{a})",
     ])
 

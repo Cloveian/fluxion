@@ -922,6 +922,32 @@ static const char *double_angle(pcas_ast_t *e) {
     return "double angle";
 }
 
+/*sin(u) cos(u) next to other factors is sin(2u)/2, e^x sin(x) cos(x)*/
+static const char *sin_cos_pair(pcas_ast_t *e) {
+    pcas_ast_t *f = ast_ChildGet(e, 0), *x = ast_ChildGet(e, 1), *s = NULL, *c = NULL, *k, *g;
+
+    if(!isoptype(f, OP_MULT) || ast_ChildLength(f) < 3)
+        return NULL;
+    for(k = ast_ChildGet(f, 0); k != NULL; k = k->next) {
+        if(isoptype(k, OP_SIN))
+            s = k;
+        else if(isoptype(k, OP_COS))
+            c = k;
+    }
+    if(s == NULL || c == NULL || !ast_Compare(ast_ChildGet(s, 0), ast_ChildGet(c, 0)))
+        return NULL;
+    g = ast_MakeOperator(OP_MULT);
+    for(k = ast_ChildGet(f, 0); k != NULL && g != NULL; k = k->next)
+        if(k != s && k != c)
+            ast_ChildAppend(g, ast_Copy(k));
+    if(g == NULL)
+        return NULL;
+    ast_ChildAppend(g, ast_MakeBinary(OP_DIV, ast_MakeUnary(OP_SIN, ast_MakeBinary(OP_MULT, ast_MakeInt(2), ast_Copy(ast_ChildGet(s, 0)))), ast_MakeInt(2)));
+    simplify(g, SIMP_LIGHT | SIMP_LIKE_TERMS);
+    replace_node(e, integral(g, x));
+    return "double angle";
+}
+
 /*top divided by Q: integral of q (or q/Q) plus integral of the remainder over rem_bottom. e is the integral node*/
 static const char *divide_split(pcas_ast_t *e, pcas_ast_t *Q, pcas_ast_t *rem_bottom, bool q_over_Q) {
     pcas_ast_t *top = ast_ChildGet(ast_ChildGet(e, 0), 0), *x = ast_ChildGet(e, 1), *q, *r, *sum;
@@ -1698,6 +1724,8 @@ static const char *one_rule(pcas_ast_t *e, subs_t *subs) {
     if((name = sin_cos_form(e)) != NULL)
         return name;
     if((name = double_angle(e)) != NULL)
+        return name;
+    if((name = sin_cos_pair(e)) != NULL)
         return name;
     if((name = shift_square(e, subs)) != NULL)
         return name;

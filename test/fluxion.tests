@@ -1138,6 +1138,9 @@ simplify; integral(X^2*e^X*sin(X),X); (X^2sin(X)e^X)/2_(X^2e^Xcos(X))/2+Xcos(X)e
 simplify; integral(cos(ln(X)),X); (Xsin(ln(X)))/2+(Xcos(ln(X)))/2
 simplify; integral(sin(ln(X)),X); (Xsin(ln(X)))/2_(Xcos(ln(X)))/2
 simplify; integral(X*cos(ln(X)),X); (sin(ln(X))X^2)/5+(2X^2cos(ln(X)))/5
+#sin(u) cos(u) next to other factors is sin(2u)/2
+simplify; integral(sin(X)*cos(X)*e^X,X); (e^Xsin(2X))/10_(e^Xcos(2X))/5
+simplify; integral(sin(X)*cos(X)*X^2,X); (-cos(2X)X^2)/4+(Xsin(2X))/4+cos(2X)/8
 #tan and sec (cot and csc) powers together go to sin and cos when u-substitution has nothing
 simplify; integral(tan(X)^3*sec(X),X); 1/(3cos(X)^3)_1/cos(X)
 simplify; integral(tan(X)^2*sec(X)^2,X); (sec(X)^2tan(X))/3_(tan(X))/3
