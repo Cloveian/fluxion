@@ -2083,8 +2083,11 @@ static bool paste_command(const char *text) {
             if(!paste_part(items, &n, piece, p) || (p < end && n >= PASTE_ITEMS_MAX - 1))
                 goto done;
             if(p < end) {
-                items[n].ch = *p;
+                bool two = (*p == '<' || *p == '>') && p[1] == '='; /* <= and >= are one character */
+
+                items[n].ch = two ? (*p == '<' ? CH_LE : CH_GE) : *p;
                 n++;
+                p += two;
             }
             piece = p + 1;
         }
