@@ -48,7 +48,7 @@ typedef enum {
     /* PC and web page: typed characters the CE has no key for, and End (Home is the nspire's) */
     K_LESS, K_GREATER, K_BANG, K_PERCENT, K_END,
 
-    /* PC: the mouse, in the keypress's x and y (screen pixels). a drag is the button still down, held has M_ALPHA with shift */
+    /* PC and web page: the mouse, in the keypress's x and y (screen pixels). a drag is the button still down, held has M_ALPHA with shift */
     K_POINT_DOWN, K_POINT_DRAG,
     K_REDRAW, /* PC: the window changed size, nothing to do but draw */
 

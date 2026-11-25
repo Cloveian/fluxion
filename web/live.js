@@ -1,5 +1,5 @@
 // fluxion running in the page, inside calc.js's calculator. the keypad, the keyboard and the
-// autoplay all end up in web_press() (src/platform/web.c)
+// autoplay all end up in web_press(), the mouse in web_point() (src/platform/web.c)
 import createFluxion from "./build/fluxion.js";
 import { calculator } from "./calc.js";
 
@@ -37,10 +37,29 @@ export async function live(parent, model = "ce") {
         if (key) mod._web_press(key, +!!(held.on ?? held.ctrl), +!!(held.second ?? held.shift), +!!held.alpha);
     }
 
+    // the mouse over the screen: down puts the cursor, a drag selects, shift-click extends, the same as the pc
+    let mouse = null; // pointer id while it's down
+    function point(kind, e) {
+        if (!mod) return;
+        const r = canvas.getBoundingClientRect();
+        // a captured drag can leave the canvas, the app wants it inside the 320x240
+        const at = (v, size) => Math.min(size - 1, Math.max(0, Math.floor(v * size)));
+        mod._web_point(kind, at((e.clientX - r.left) / r.width, 320), at((e.clientY - r.top) / r.height, 240), +e.shiftKey);
+    }
+    canvas.addEventListener("pointerdown", e => {
+        if (e.button !== 0 || mouse !== null) return;
+        mouse = e.pointerId;
+        canvas.setPointerCapture(e.pointerId);
+        point(0, e);
+    });
+    canvas.addEventListener("pointermove", e => e.pointerId === mouse && point(1, e));
+    for (const type of ["pointerup", "pointercancel"])
+        canvas.addEventListener(type, e => { if (e.pointerId === mouse) mouse = null; });
+
     const calc = calculator(box, press, model);
     const s = calc.screen, pct = (a, b) => `${(a / b * 100).toFixed(3)}%`;
     Object.assign(canvas.style, {
-        position: "absolute",
+        position: "absolute", touchAction: "none",
         left: pct(s.x, s.of.width), top: pct(s.y, s.of.height),
         width: pct(s.width, s.of.width), height: pct(s.height, s.of.height),
     });
