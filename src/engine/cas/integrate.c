@@ -375,10 +375,28 @@ static void pythagoras(pcas_ast_t *e, pcas_ast_t *other, pcas_ast_t *u) {
     }
 }
 
+/*only + * / ^ and roots, no trig, logs or exponentials*/
+static bool algebraic_only(pcas_ast_t *e) {
+    pcas_ast_t *c;
+
+    if(e->type != NODE_OPERATOR)
+        return true;
+    if(!isoptype(e, OP_ADD) && !isoptype(e, OP_MULT) && !isoptype(e, OP_DIV) && !isoptype(e, OP_POW) && !isoptype(e, OP_ROOT))
+        return false;
+    for(c = ast_ChildGet(e, 0); c != NULL; c = c->next)
+        if(!algebraic_only(c))
+            return false;
+    return true;
+}
+
 /*u = some piece g where f/g' is all g, 2x cos(x^2) is cos(u) with u = x^2. ∫f dx becomes ∫(f/g') du*/
 static const char *usub(pcas_ast_t *e, subs_t *subs) {
     pcas_ast_t *f = ast_ChildGet(e, 0), *x = ast_ChildGet(e, 1), *cand[CANDS_MAX], *g, *q, *u;
+    unsigned short how = SIMP_ALL; /*the identity passes were most of the time on a plain fraction, nothing in it for them*/
     int n, i;
+
+    if(algebraic_only(f))
+        how = SIMP_LIGHT | SIMP_LIKE_TERMS;
 
     if(subs->n >= SUBS_MAX || (u = fresh(subs)) == NULL)
         return NULL;
@@ -386,8 +404,8 @@ static const char *usub(pcas_ast_t *e, subs_t *subs) {
     for(i = 0; i < n && !pcas_cancelled; i++) {
         q = ast_MakeBinary(OP_DIV, ast_Copy(f), slope_of(cand[i], x));
         g = ast_Copy(cand[i]);
-        simplify(q, SIMP_ALL);
-        simplify(g, SIMP_ALL); /*how it looks in q now, x^2+1 or 1+x^2*/
+        simplify(q, how);
+        simplify(g, how); /*how it looks in q now, x^2+1 or 1+x^2*/
         if(q != NULL && g != NULL) {
             substitute(q, cand[i], u);
             substitute(q, g, u);
@@ -802,7 +820,8 @@ static pcas_ast_t *partial_general(pcas_ast_t *top, pcas_ast_t *bottom, Symbol v
         eqs[i] = ast_MakeBinary(OP_MULT, ast_MakeInt(1), ast_Copy(total));
         substitute(eqs[i], x, v);
         ast_Cleanup(v);
-        simplify(eqs[i], SIMP_ALL);
+        expand(eqs[i], EXP_ALL); /*numbers and the unknowns only, SIMP_ALL was most of the time*/
+        simplify(eqs[i], SIMP_LIGHT | SIMP_LIKE_TERMS);
     }
     ast_Cleanup(total);
     sets = pcas_cancelled ? SOLVE_UNKNOWN : solve_system(eqs, dq, unk, out);
@@ -815,7 +834,7 @@ static pcas_ast_t *partial_general(pcas_ast_t *top, pcas_ast_t *bottom, Symbol v
             num = ast_MakeBinary(OP_ADD, ast_MakeBinary(OP_MULT, ast_Copy(out[0][it_u[i]]), ast_Copy(x)), ast_Copy(out[0][it_u[i] + 1]));
         else
             num = ast_Copy(out[0][it_u[i]]);
-        simplify(num, SIMP_ALL); /*top and bottom apart, a whole term splits over its bottom*/
+        simplify(num, SIMP_LIGHT | SIMP_LIKE_TERMS); /*top and bottom apart, a whole term splits over its bottom*/
         if(is_ast_int(num, 0)) {
             ast_Cleanup(num);
             ast_Cleanup(den);

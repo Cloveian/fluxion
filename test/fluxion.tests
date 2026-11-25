@@ -1119,7 +1119,7 @@ simplify; integral(1/(e^X+e^(-X)),X); atan(e^X)
 simplify; integral(1/(1+e^(2X)),X); ln(abs(e^(2X))/abs(1+e^(2X)))/2
 simplify; integral(e^(3X)/(e^X+2),X); e^(2X)/2+4ln(abs(2+e^X))_2e^X
 #partial fractions with an irreducible quadratic factor, the numbers from the identity at a few points
-simplify; integral(1/(X*(X^2+1)),X); ln(abs(X))_(ln(abs(1+X^2)))/2
+simplify; integral(1/(X*(X^2+1)),X); ln(abs(X^2)/abs(1+X^2))/2
 simplify; integral(1/(X^4_1),X); (-atan(X))/2+ln(abs(-1+X)/abs(1+X))/4
 simplify; integral((2X+3)/((X_1)*(X^2+4)),X); ln(abs(-1+X))+atan(X/2)/2_(ln(abs(4+X^2)))/2
 simplify; integral((X+1)/(X*(X^2+1)),X); ln(abs(X))+atan(X)_(ln(abs(1+X^2)))/2
