@@ -1301,6 +1301,11 @@ simplify; arg(3); 0
 simplify; conj(X+Y*i); X_Yi
 simplify; re(X+Y*i); X
 simplify; im(X+Y*i); Y
+#log with a base, log(8,2) is logb(8,2)
+simplify; log(8,2); 3
+simplify; log(81,3)+1; 5
+simplify; log(X+1,2); logb(X+1,2)
+simplify; log(100); 2
 steps; inflect:X^3; X; deriv(X^3,X,X)|powerrule|3X^2|theslopeofthat|deriv(3X^2,X,X)|constantmultiple|3deriv(X^2,X,X)|powerrule|6X|setitto0|6X=0|/6|X=0
 steps; critical:X*e^(2X); X; deriv(Xe^(2X),X,X)|productrule|Xderiv(e^(2X),X,X)+e^(2X)|exprule,chainrule|2Xe^(2X)+e^(2X)|setitto0|2Xe^(2X)+e^(2X)=0|solve|X=-1/2
 steps; tangent:sin(X),0; X; deriv(sin(X),X,0)|trigrule|cos(X)|plugin|cos(0)|1|thepoint|sin(0)|0|point-slopeform|Y_0=(X_0)|solvefory|Y=X

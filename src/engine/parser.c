@@ -485,6 +485,10 @@ bool collapse_precedence(pcas_stack_t *operators, pcas_stack_t *expressions, Tok
         token_t *op;
         unsigned i, n;
 
+        /*Fluxion: comma straight after log( means logb(, so log(8,2) works*/
+        if(type == TOK_COMMA && ((token_t*)stack_Peek(operators))->type == TOK_LOG)
+            ((token_t*)stack_Peek(operators))->type = TOK_LOG_BASE;
+
         /*Break when we meet the corresponding (*/
         if(type == TOK_CLOSE_PAR && ((token_t*)stack_Peek(operators))->type == TOK_OPEN_PAR)
             break;
