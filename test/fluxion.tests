@@ -1205,6 +1205,17 @@ steps; limit((3X^2+X)/(2X^2_5),X,inf); X; limit((3X^2+X)/(2X^2_5),X,inf) | divid
 steps; limit((X+1)/(X^2+1),X,inf); X; limit((X+1)/(X^2+1),X,inf) | divide by the top power | limit((1/X^2+1/X)/(1/X^2+1),X,inf) | 1/x -> 0 | 0
 steps; limit(X^3/(X+1),X,inf); X; limit(X^3/(X+1),X,inf) | divide by the top power | limit((X^2)/(1/X+1),X,inf) | 1/x -> 0 | inf
 steps; limit(e^(-X),X,inf); X; limit(1/e^X,X,inf) | plug in inf | 0
+#at inf: a root minus something is times the conjugate then over the top power, inf/inf is l'Hopital until one side stops being infinite
+steps; limit(sqrt(X^2+X)_X,X,inf); X; limit(-X+sqrt((X^2+X)),X,inf)|multiplybytheconjugate|limit(X/(X+sqrt((X^2+X))),X,inf)|dividebythetoppower|limit((1)/(sqrt((1/X+1))+1),X,inf)|1/x->0|1/2
+steps; limit(sqrt(X^2+1)_X,X,inf); X; limit(-X+sqrt((X^2+1)),X,inf)|multiplybytheconjugate|limit(1/(X+sqrt((X^2+1))),X,inf)|dividebythetoppower|limit((1/X)/(sqrt((1/X^2+1))+1),X,inf)|1/x->0|0
+steps; limit(sqrt(X^2+3X)_X,X,inf); X; limit(-X+sqrt((X^2+3X)),X,inf)|multiplybytheconjugate|limit((3X)/(X+sqrt((X^2+3X))),X,inf)|dividebythetoppower|limit((3)/(sqrt((3/X+1))+1),X,inf)|1/x->0|3/2
+steps; limit(sqrt(X+1)_sqrt(X),X,inf); X; limit(sqrt((X+1))_sqrt(X),X,inf)|multiplybytheconjugate|limit(1/(sqrt((X+1))+sqrt(X)),X,inf)|1/x->0|0
+steps; limit(sqrt(4X^2+X)_2X,X,inf); X; limit(-2X+sqrt((4X^2+X)),X,inf)|multiplybytheconjugate|limit(X/(2X+sqrt((4X^2+X))),X,inf)|dividebythetoppower|limit((1)/(sqrt((1/X+4))+2),X,inf)|1/x->0|1/4
+steps; limit(X*e^(-X),X,inf); X; limit(X/e^X,X,inf)|inf/inf,l'Hopital|limit(1/e^X,X,inf)|plugininf|0
+steps; limit(ln(X)/X,X,inf); X; limit(ln(X)/X,X,inf)|inf/inf,l'Hopital|limit(1/X,X,inf)|plugininf|0
+steps; limit(X^2/e^X,X,inf); X; limit(X^2/e^X,X,inf)|inf/inf,l'Hopital|limit((2X)/e^X,X,inf)|inf/inf,l'Hopital|limit(2/e^X,X,inf)|plugininf|0
+steps; limit(e^X/X^3,X,inf); X; limit(e^X/X^3,X,inf)|inf/inf,l'Hopital|limit(e^X/(3X^2),X,inf)|inf/inf,l'Hopital|limit(e^X/(6X),X,inf)|inf/inf,l'Hopital|limit(e^X/6,X,inf)|plugininf|inf
+steps; limit(ln(X)/sqrt(X),X,inf); X; limit((sqrt(X)ln(X))/X,X,inf)|inf/inf,l'Hopital|limit((2sqrt(X))/X,X,inf)|plugininf|0
 #integrals: a rule on every integral a line, u = on its own line, + C at the end. a definite one ends on F(b) - F(a)
 steps; integral(3X^2+2X,X); X; integral(3X^2+2X, X) | sum rule | integral(3X^2, X) + integral(2X, X) | constant multiple | 3integral(X^2, X) + 2integral(X, X) | power rule | X^3+X^2 | + C | X^3+X^2+C
 steps; integral(2Xcos(X^2),X); X; integral(2Xcos(X^2), X) | constant multiple | 2integral(Xcos(X^2), X) | u-substitution | U=X^2 | 2integral(cos(U)/2, U) | constant multiple | integral(cos(U), U) | trig rule | sin(U) | back to x | sin(X^2) | + C | sin(X^2)+C

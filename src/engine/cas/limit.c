@@ -907,6 +907,124 @@ static step_t *over_power(steps_t *s, step_t *l, pcas_ast_t *f, pcas_ast_t *var,
     return l;
 }
 
+/*the power of var a term grows like, root(2, x^2+x) is 1. -1 when it's not a polynomal or a root of one*/
+static int term_degree(pcas_ast_t *t, pcas_ast_t *var) {
+    pcas_ast_t *c;
+    int d, sum = 0;
+    long n, dn;
+    double k;
+
+    if(isoptype(t, OP_ROOT)) {
+        d = poly_degree(ast_ChildGet(t, 1), var->op.symbol, NULL);
+        if(d < 0 || !approx_double(ast_ChildGet(t, 0), &k) || k < 1 || d % (int)k != 0)
+            return -1;
+        return d / (int)k;
+    }
+    if(isoptype(t, OP_POW) && exponent(ast_ChildGet(t, 1), &n, &dn) && dn != 1) { /*sqrt written as a power of 1/2*/
+        d = poly_degree(ast_ChildGet(t, 0), var->op.symbol, NULL);
+        return n == 1 && d >= 0 && d % dn == 0 ? (int)(d / dn) : -1;
+    }
+    if(isoptype(t, OP_MULT)) {
+        for(c = ast_ChildGet(t, 0); c != NULL; c = c->next) {
+            if((d = term_degree(c, var)) < 0)
+                return -1;
+            sum += d;
+        }
+        return sum;
+    }
+    return poly_degree(t, var->op.symbol, NULL);
+}
+
+/*t over var^m, a root takes it under the radical as var^(m k). new*/
+static pcas_ast_t *term_over(pcas_ast_t *t, pcas_ast_t *var, int m) {
+    pcas_ast_t *c, *out;
+    long n, dn;
+    double k;
+
+    if(isoptype(t, OP_ROOT) && approx_double(ast_ChildGet(t, 0), &k))
+        return ast_MakeBinary(OP_ROOT, ast_Copy(ast_ChildGet(t, 0)), spread(ast_ChildGet(t, 1), var, m * (int)k));
+    if(isoptype(t, OP_POW) && exponent(ast_ChildGet(t, 1), &n, &dn) && dn != 1)
+        return ast_MakeBinary(OP_POW, spread(ast_ChildGet(t, 0), var, m * (int)dn), ast_Copy(ast_ChildGet(t, 1)));
+    if(isoptype(t, OP_MULT) && has_root(t)) {
+        out = ast_MakeOperator(OP_MULT);
+        for(c = ast_ChildGet(t, 0); c != NULL; c = c->next)
+            ast_ChildAppend(out, has_root(c) ? term_over(c, var, m) : ast_Copy(c));
+        return out;
+    }
+    out = ast_MakeBinary(OP_DIV, ast_Copy(t), ast_MakeBinary(OP_POW, ast_Copy(var), ast_MakeInt(m)));
+    simplify(out, SIMP_LIGHT);
+    return out;
+}
+
+/*root(x^2+x) - x at inf the paper way: times the conjugate over itself, then top and bottom over the bottom's top power. the new line, or l when it isn't that shape*/
+static step_t *conjugate_steps(steps_t *s, step_t *l, pcas_ast_t *f, pcas_ast_t *var, pcas_ast_t *a) {
+    pcas_ast_t *p, *q, *top, *bottom, *bot_over, *c;
+    int m = 0, d;
+
+    if(s == NULL || inf_sign(a) <= 0 || !isoptype(f, OP_ADD) || ast_ChildLength(f) != 2 || !has_root(f))
+        return l;
+    p = ast_ChildGet(f, 0);
+    q = ast_ChildGet(f, 1);
+    if(!has_root(p) || (has_root(q) && isoptype(p, OP_MULT) && is_ast_int(ast_ChildGet(p, 0), -1))) { /*the root that isn't negated goes first*/
+        p = ast_ChildGet(f, 1);
+        q = ast_ChildGet(f, 0);
+    }
+    top = ast_MakeBinary(OP_ADD, ast_MakeBinary(OP_POW, ast_Copy(p), ast_MakeInt(2)),
+        ast_MakeBinary(OP_MULT, ast_MakeInt(-1), ast_MakeBinary(OP_POW, ast_Copy(q), ast_MakeInt(2))));
+    bottom = ast_MakeBinary(OP_ADD, ast_Copy(p), ast_MakeBinary(OP_MULT, ast_MakeInt(-1), ast_Copy(q)));
+    simplify(top, SIMP_LIGHT);
+    expand(top, EXP_ALL);
+    simplify(top, SIMP_LIGHT | SIMP_LIKE_TERMS);
+    simplify(bottom, SIMP_LIGHT);
+    c = ast_MakeBinary(OP_DIV, ast_Copy(top), ast_Copy(bottom));
+    l = step(s, l, "multiply by the conjugate", lim(c, var, a, 0));
+    ast_Cleanup(c);
+    if(isoptype(bottom, OP_ADD)) {
+        for(q = ast_ChildGet(bottom, 0); q != NULL && m >= 0; q = q->next) {
+            d = term_degree(q, var);
+            m = d < 0 ? -1 : d > m ? d : m;
+        }
+        if(m >= 1 && poly_degree(top, var->op.symbol, NULL) >= 0) {
+            bot_over = ast_MakeOperator(OP_ADD);
+            for(q = ast_ChildGet(bottom, 0); q != NULL; q = q->next)
+                ast_ChildAppend(bot_over, term_over(q, var, m));
+            c = ast_MakeBinary(OP_DIV, spread(top, var, m), bot_over);
+            l = step(s, l, "divide by the top power", lim(c, var, a, 0));
+            ast_Cleanup(c);
+        }
+    }
+    ast_Cleanup(top);
+    ast_Cleanup(bottom);
+    return l;
+}
+
+/*inf/inf at inf by l'Hopital, as many times as both stay infinite. x/e^x is 1/e^x. the new line, or l when it isn't that shape*/
+static step_t *inf_lhopital(steps_t *s, step_t *l, pcas_ast_t *f, pcas_ast_t *var, pcas_ast_t *a) {
+    pcas_ast_t *g, *next, *r;
+    int rounds, kt, kb;
+
+    if(s == NULL || (g = ast_Copy(f)) == NULL)
+        return l;
+    simplify(g, SIMP_LIGHT); /*x e^(-x) is x/e^x*/
+    for(rounds = 0; rounds < 4 && isoptype(g, OP_DIV) && !pcas_cancelled; rounds++) {
+        r = NULL;
+        kt = far(ast_ChildGet(g, 0), var, &r, 2);
+        ast_Cleanup(r);
+        r = NULL;
+        kb = far(ast_ChildGet(g, 1), var, &r, 2);
+        ast_Cleanup(r);
+        if((kt != FAR_UP && kt != FAR_DOWN) || (kb != FAR_UP && kb != FAR_DOWN))
+            break;
+        next = ast_MakeBinary(OP_DIV, slope_of(ast_ChildGet(g, 0), var), slope_of(ast_ChildGet(g, 1), var));
+        simplify(next, SIMP_ALL);
+        ast_Cleanup(g);
+        g = next;
+        l = step(s, l, "inf/inf, l'Hopital", lim(g, var, a, 0));
+    }
+    ast_Cleanup(g);
+    return l;
+}
+
 /*from one side, dir 1 the right and -1 the left: f(a + dir/x) as x -> inf. e^(1/x) at 0 is inf from the right, 0 from the left*/
 static pcas_ast_t *one_side(pcas_ast_t *f, pcas_ast_t *var, pcas_ast_t *a, int dir, bool root) {
     pcas_ast_t *g = ast_Copy(f), *to, *out = NULL;
@@ -952,9 +1070,17 @@ static pcas_ast_t *limit_of(pcas_ast_t *f, pcas_ast_t *var, pcas_ast_t *a, steps
         out = limit_far(f, var, inf_sign(a), root);
         if(out != NULL) {
             step_t *before = l;
+            const char *last = "1/x -> 0";
 
             l = over_power(s, l, f, var, a);
-            step(s, l, l != before ? "1/x -> 0" : "plug in inf", ast_Copy(out));
+            if(l == before)
+                l = conjugate_steps(s, l, f, var, a);
+            if(l == before) {
+                l = inf_lhopital(s, l, f, var, a);
+                if(l != before)
+                    last = "plug in inf";
+            }
+            step(s, l, l != before ? last : "plug in inf", ast_Copy(out));
         }
         return out;
     }
