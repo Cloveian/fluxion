@@ -131,6 +131,8 @@ mp_result mp_rat_set_value(mp_rat r, mp_small numer, mp_small denom)
   if ((res = mp_int_set_value(MP_DENOM_P(r), denom)) != MP_OK)
     return res;
 
+  if (denom == 1) /*Fluxion: whole numbers are reduced already, skips the gcd*/
+    return MP_OK;
   return s_rat_reduce(r);
 }
 
@@ -476,6 +478,8 @@ int       mp_rat_compare_value(mp_rat r, mp_small n, mp_small d)
   mp_result res;
   int  out = INT_MAX;
 
+  if (d == 1 && mp_rat_is_integer(r)) /*Fluxion: whole against whole, no temporary*/
+    return mp_int_compare_value(MP_NUMER_P(r), n);
   if ((res = mp_rat_init(&tmp)) != MP_OK)
     return out;
   if ((res = mp_rat_set_value(&tmp, n, d)) != MP_OK)
