@@ -549,17 +549,29 @@ static bool test_system_steps(test_t *t) {
     passed = strcmp(got, t->arg3) == 0;
     if(!passed)
         printf("Test failed on line %u. Expected %s but got %s\n", t->line, t->arg3, got);
-    if(passed && s.n > 0) { /*the last line against solve_system*/
+    if(passed && s.n > 0) { /*the answer lines (one set each) against solve_system*/
         pcas_ast_t *sets[SYSTEM_SETS][SYSTEM_MAX] = {{NULL}};
-        step_t *last = &s.line[s.n - 1];
-        int k, j, sol = solve_system(eqs, n, vars, sets);
+        int k, j, sol = solve_system(eqs, n, vars, sets), lines = 0, line, match;
 
-        if(sol != 1 || last->eqs != n)
+        for(line = s.n - 1; line >= 0 && s.line[line].eqs == n && s.line[line].list; line--) {
+            for(j = 0; j < n && s.line[line].eq[j].left->type == NODE_SYMBOL; j++)
+                ;
+            if(j < n)
+                break;
+            lines++;
+        }
+        if(sol != lines || lines == 0)
             passed = false;
-        for(j = 0; passed && j < n; j++)
-            passed = same_value(sets[0][j], last->eq[j].right);
+        for(line = s.n - lines; passed && line < s.n; line++) { /*each of them is one of the sets*/
+            for(k = 0, match = 0; k < sol && !match; k++) {
+                match = 1;
+                for(j = 0; j < n && match; j++)
+                    match = same_value(sets[k][j], s.line[line].eq[j].right);
+            }
+            passed = match;
+        }
         if(!passed)
-            printf("Test failed on line %u. The steps end at an answer solve_system doesn't give\n", t->line);
+            printf("Test failed on line %u. The steps end at answers solve_system doesn't give\n", t->line);
         for(k = 0; k < SYSTEM_SETS; k++)
             for(j = 0; j < SYSTEM_MAX; j++)
                 ast_Cleanup(sets[k][j]);

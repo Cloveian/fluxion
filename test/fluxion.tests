@@ -1235,6 +1235,10 @@ steps; X+2Y=3,3X_Y=2; XY; X+2Y=3,3X_Y=2|cancelaletterfromtheothers|X+2Y=3,-Y=-1|
 steps; X/2+Y/3=1,X_Y=2; XY; X1/2+Y1/3=1,X_Y=2|clearthefractions|3X+2Y=6,X_Y=2|swaptwoequations|X_Y=2,3X+2Y=6|cancelaletterfromtheothers|X_Y=2,Y=0|cancelaletterfromtheothers|X=2,Y=0
 steps; X+Y+Z=6,2X_Y+Z=3,X+2Y_Z=2; XYZ; X+Y+Z=6,2X_Y+Z=3,X+2Y_Z=2|cancelaletterfromtheothers|X+Y+Z=6,-3Y_Z=-9,Y_2Z=-4|swaptwoequations|X+Y+Z=6,Y_2Z=-4,-3Y_Z=-9|cancelaletterfromtheothers|X+3Z=10,Y_2Z=-4,-Z=-3|cancelaletterfromtheothers|-X=-1,-Y=-2,-Z=-3|divideeachbyitsnumber|X=1,Y=2,Z=3
 steps; 2Y=4,X+Y=3; XY; 2Y=4,X+Y=3|swaptwoequations|X+Y=3,2Y=4|cancelaletterfromtheothers|X=1,2Y=4|divideeachbyitsnumber|X=1,Y=2
+#two equations where one is a line: it gives one letter, goes in the other, the quadratic steps, then the other letter for each root
+steps; X^2+Y^2=25,X+Y=7; XY; X^2+Y^2_25=0,X+Y_7=0|solvethelineforoneletter|X=-Y+7,X^2+Y^2_25=0|putitintheotherone|Y^2+(-Y+7)^2_25=0|2Y^2_14Y+24=0|/2|Y^2_7Y+12=0|(Y_4)(Y_3)=0|Y_4=0orY_3=0|Y=4orY=3|theotherletterforeach|X=3,Y=4|andtheother|X=4,Y=3
+steps; X^2_Y=0,X+Y=2; XY; X^2_Y=0,X+Y_2=0|solvethelineforoneletter|Y=X^2,X+Y_2=0|putitintheotherone|X^2+X_2=0|(X_1)(X+2)=0|X_1=0orX+2=0|X=1orX=-2|theotherletterforeach|X=1,Y=1|andtheother|X=-2,Y=4
+steps; X*Y=6,X_Y=1; XY; XY_6=0,X_Y_1=0|solvethelineforoneletter|X=Y+1,XY_6=0|putitintheotherone|Y(Y+1)_6=0|Y^2+Y_6=0|(Y_2)(Y+3)=0|Y_2=0orY+3=0|Y=2orY=-3|theotherletterforeach|X=3,Y=2|andtheother|X=-2,Y=-3
 #expand( opens one product with a sum in it a line, then the powers and like terms. factor( is the polynomial factoring lines up to the product
 steps; expand:(X+1)(X+2); X; (X+1)(X+2)|distribute|X(X+2)+X+2|distribute|X^2+X+2X+2|multiplyoutandaddliketerms|X^2+3X+2
 steps; expand:2(X+3); X; 2(X+3)|distribute|2X+6|multiplyoutandaddliketerms|2X+6

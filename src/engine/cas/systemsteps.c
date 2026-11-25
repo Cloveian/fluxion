@@ -220,6 +220,123 @@ static bool clear_column(steps_t *out, matrix_t a, int n, int col, const Symbol 
     return true;
 }
 
+/*two equations where one is a line in one letter: a letter that's the other one's, then the quadratic steps for the other letter, then back*/
+static bool substitution(pcas_ast_t **eqs, const Symbol *vars, steps_t *out) {
+    static steps_t t;
+    pcas_ast_t *e[2] = {NULL}, *lead = NULL, *rv = NULL, *s, *v, *u, *r[SOLVE_MAX] = {NULL}, *rt[SOLVE_MAX] = {NULL}, *zero = NULL;
+    mp_rat tmp = num_FromInt(0);
+    int i, j, k, at = -1, which = -1, m, deg;
+    step_t *l;
+    bool ok = false;
+
+    out->n = 0;
+    for(i = 0; i < 2; i++) { /*simplified and expanded, how poly_degree wants them*/
+        e[i] = ast_Copy(eqs[i]);
+        simplify(e[i], SIMP_NORMALIZE | SIMP_COMMUTATIVE | SIMP_RATIONAL | SIMP_EVAL | SIMP_LIKE_TERMS);
+        expand(e[i], EXP_ALL);
+        simplify(e[i], SIMP_NORMALIZE | SIMP_COMMUTATIVE | SIMP_RATIONAL | SIMP_EVAL | SIMP_LIKE_TERMS);
+    }
+    for(i = 0; i < 2 && at < 0; i++)
+        for(j = 0; j < 2 && at < 0; j++) {
+            deg = poly_degree(e[i], vars[j], &lead);
+            if(deg == 1 && lead != NULL && read_number(lead, tmp)) {
+                at = i;
+                which = j;
+            }
+            ast_Cleanup(lead);
+            lead = NULL;
+        }
+    if(at < 0)
+        goto done;
+
+    /*the first line, both as they are*/
+    l = steps_eq(out, ast_Copy(e[0]), ast_MakeInt(0));
+    if(l == NULL)
+        goto done;
+    l->eq[1].left = ast_Copy(e[1]);
+    l->eq[1].right = ast_MakeInt(0);
+    l->eqs = 2;
+    l->list = true;
+
+    /*the line for letter v by itself*/
+    if(solve_ex(e[at], vars[which], r, false) != 1 || r[0] == NULL)
+        goto done;
+    rv = r[0];
+    r[0] = NULL;
+    simplify(rv, SIMP_ALL);
+    v = ast_MakeSymbol(vars[which]);
+    u = ast_MakeSymbol(vars[1 - which]);
+    steps_rule(&out->line[out->n - 1], "solve the line for one letter");
+    l = steps_eq(out, ast_Copy(v), ast_Copy(rv));
+    if(l == NULL)
+        goto done;
+    l->eq[1].left = ast_Copy(e[1 - at]);
+    l->eq[1].right = ast_MakeInt(0);
+    l->eqs = 2;
+    l->list = true;
+
+    /*in the other one*/
+    s = ast_Copy(e[1 - at]);
+    substitute(s, v, rv);
+    steps_rule(l, "put it in the other one");
+    zero = ast_MakeInt(0);
+    if(steps_eq(out, ast_Copy(s), ast_Copy(zero)) == NULL || !steps_solve(s, zero, vars[1 - which], METHOD_OPTIMAL, &t) || !steps_append(out, &t)) {
+        ast_Cleanup(s);
+        goto done;
+    }
+    ast_Cleanup(s);
+
+    /*the roots on the last line, each with the letter it gives*/
+    l = &out->line[out->n - 1];
+    for(k = 0; k < l->eqs; k++) {
+        if(l->eq[k].pm != NULL || l->eq[k].right == NULL || l->eq[k].left->type != NODE_SYMBOL)
+            goto done;
+        rt[k] = ast_Copy(l->eq[k].right);
+    }
+    m = l->eqs;
+    steps_rule(l, "the other letter for each");
+    for(k = 0; k < m; k++) {
+        pcas_ast_t *w = ast_Copy(rv), *first, *second;
+        step_t *pair;
+
+        substitute(w, u, rt[k]);
+        simplify(w, SIMP_ALL);
+        if(k > 0)
+            steps_rule(&out->line[out->n - 1], "and the other");
+        first = ast_MakeSymbol(vars[0]);
+        second = ast_MakeSymbol(vars[1]);
+        pair = steps_eq(out, first, which == 0 ? w : rt[k]);
+        if(pair == NULL) {
+            ast_Cleanup(second);
+            ast_Cleanup(which == 0 ? rt[k] : w);
+            rt[k] = NULL;
+            goto done;
+        }
+        pair->eq[1].left = second;
+        pair->eq[1].right = which == 0 ? rt[k] : w;
+        pair->eqs = 2;
+        pair->list = true;
+        rt[k] = NULL;
+    }
+    ok = !pcas_cancelled;
+
+done:
+    num_Cleanup(tmp);
+    for(i = 0; i < SOLVE_MAX; i++)
+        ast_Cleanup(rt[i]);
+    for(i = 0; i < 2; i++)
+        ast_Cleanup(e[i]);
+    ast_Cleanup(rv);
+    ast_Cleanup(zero);
+    for(i = 0; i < SOLVE_MAX; i++)
+        ast_Cleanup(r[i]);
+    if(ok)
+        steps_shown(out);
+    else
+        steps_free(out);
+    return ok;
+}
+
 bool steps_system(pcas_ast_t **eqs, int n, const Symbol *vars, steps_t *out) {
     matrix_t a = {{NULL}};
     bool ok = false;
@@ -240,8 +357,13 @@ bool steps_system(pcas_ast_t **eqs, int n, const Symbol *vars, steps_t *out) {
             ast_Cleanup(row[j]);
         }
         ast_Cleanup(rhs);
-        if(!good)
+        if(!good) {
+            if(n == 2) { /*not lines, a line and a curve is substitution*/
+                matrix_free(a, n);
+                return substitution(eqs, vars, out);
+            }
             goto done;
+        }
     }
 
     if(!add_system(out, a, n, vars))
