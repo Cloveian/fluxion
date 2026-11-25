@@ -1112,6 +1112,12 @@ simplify; integral(cos(X)^3/sin(X)^2,X); -sin(X)_1/sin(X)
 simplify; integral(cos(X)^2/sin(X)^2,X); -X_cot(X)
 simplify; integral(1/cos(X)^4,X); (2tan(X))/3+(sec(X)^2tan(X))/3
 simplify; integral(sin(X)^2/cos(X)^4,X); (-tan(X))/3+(sec(X)^2tan(X))/3
+#u = e^x, and e^(2x) is u^2, e^(-x) is 1/u
+simplify; integral(1/(1+e^X),X); ln(abs(e^X)/abs(1+e^X))
+simplify; integral(e^X/(1+e^(2X)),X); atan(e^X)
+simplify; integral(1/(e^X+e^(-X)),X); atan(e^X)
+simplify; integral(1/(1+e^(2X)),X); ln(abs(e^(2X))/abs(1+e^(2X)))/2
+simplify; integral(e^(3X)/(e^X+2),X); e^(2X)/2+4ln(abs(2+e^X))_2e^X
 #u-substitution: some piece of it is u and the rest is u' (up to a number)
 antideriv; 2Xcos(X^2); X
 antideriv; Xe^(X^2); X

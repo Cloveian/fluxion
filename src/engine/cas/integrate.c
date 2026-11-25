@@ -340,6 +340,24 @@ static pcas_ast_t *fresh(subs_t *subs) {
     return NULL;
 }
 
+/*u stands for b^t, so b^(2t) is u^2 and b^(-t) is 1/u. whole k only*/
+static void power_of_u(pcas_ast_t *e, pcas_ast_t *cand, pcas_ast_t *u, Symbol x) {
+    pcas_ast_t *c, *ratio;
+    double kv;
+
+    if(e->type != NODE_OPERATOR)
+        return;
+    for(c = ast_ChildGet(e, 0); c != NULL; c = c->next)
+        power_of_u(c, cand, u, x);
+    if(isoptype(e, OP_POW) && ast_Compare(ast_ChildGet(e, 0), ast_ChildGet(cand, 0))) {
+        ratio = ast_MakeBinary(OP_DIV, ast_Copy(ast_ChildGet(e, 1)), ast_Copy(ast_ChildGet(cand, 1)));
+        simplify(ratio, SIMP_ALL);
+        if(!has_symbol(ratio, x) && approx_double(ratio, &kv) && kv == floor(kv) && kv != 0 && kv >= -6 && kv <= 6)
+            replace_node(e, ast_MakeBinary(OP_POW, ast_Copy(u), ast_MakeInt((long)kv)));
+        ast_Cleanup(ratio);
+    }
+}
+
 /*cos(g)^2 is 1 - u^2 when u stands for sin(g), and the other way round. even powers only*/
 static void pythagoras(pcas_ast_t *e, pcas_ast_t *other, pcas_ast_t *u) {
     pcas_ast_t *c, *k;
@@ -375,6 +393,10 @@ static const char *usub(pcas_ast_t *e, subs_t *subs) {
             substitute(q, g, u);
         }
         ast_Cleanup(g);
+        if(q != NULL && has_symbol(q, x->op.symbol) && isoptype(cand[i], OP_POW) && !has_symbol(ast_ChildGet(cand[i], 0), x->op.symbol)) {
+            power_of_u(q, cand[i], u, x->op.symbol);
+            simplify(q, SIMP_ALL);
+        }
         if(q != NULL && has_symbol(q, x->op.symbol) && (isoptype(cand[i], OP_SIN) || isoptype(cand[i], OP_COS))) {
             g = ast_MakeUnary(isoptype(cand[i], OP_SIN) ? OP_COS : OP_SIN, ast_Copy(ast_ChildGet(cand[i], 0)));
             pythagoras(q, g, u);

@@ -78,6 +78,7 @@ def gen_int():
         f"sqrt(X^2+{a})", f"1/sqrt(X^2+{a})", f"1/sqrt({a + 3}_X^2)", f"tan(X)^{k + 1}", f"sec(X)^3", f"sin(X)^2*cos(X)^2", f"asin(X)", f"sec(X)", f"cot(X)^{k + 1}", f"csc(X)^3", f"sec(X)^{k + 2}", f"sin({a}X)^2*cos({a}X)^2", f"sin(X)^2*cos(X)^4", f"tan({a}X)^2",
         f"1/sqrt(X^2+{a * 2}X+{a * a + 4})", f"sqrt(X^2+{a * 2}X+{a * a + 3})", f"sqrt(X^2_{a + 1})/X", f"X^2/sqrt({a + 1}_X^2)", f"1/(X^2*sqrt(X^2+{a}))",
         f"X^2/sqrt(X^2_{a + 1})", f"sqrt({a + 1}_X^2)/X^2", f"1/(X^2+{a})^(3/2)", f"1/(X^2_{a + 1})^(3/2)", f"cos(X)^3/sin(X)^2", f"cos(X)^2/sin(X)^2", f"1/cos(X)^4", f"sin(X)^2/cos(X)^4",
+        f"1/(1+e^X)", f"e^X/({a}+e^(2X))", f"1/(e^X+e^(-X))", f"1/(1+e^({a}X))", f"e^(2X)/(e^X+{a})",
     ])
 
 def nz(lo, hi):
