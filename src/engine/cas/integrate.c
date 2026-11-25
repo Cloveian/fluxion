@@ -733,6 +733,43 @@ static const char *trig_product(pcas_ast_t *e) {
     return "power reduction";
 }
 
+/*sin(A) cos(B) and the other two pairs, both linear in x. sin(3x) cos(2x) is (sin(5x) + sin(x))/2*/
+static const char *product_to_sum(pcas_ast_t *e) {
+    pcas_ast_t *f = ast_ChildGet(e, 0), *x = ast_ChildGet(e, 1), *p, *q, *A, *B, *k, *plus, *minus, *g;
+
+    if(!isoptype(f, OP_MULT) || ast_ChildLength(f) != 2)
+        return NULL;
+    p = ast_ChildGet(f, 0);
+    q = p->next;
+    if(!(isoptype(p, OP_SIN) || isoptype(p, OP_COS)) || !(isoptype(q, OP_SIN) || isoptype(q, OP_COS)))
+        return NULL;
+    if(isoptype(p, OP_COS) && isoptype(q, OP_SIN)) { /*the sine goes first*/
+        p = q;
+        q = ast_ChildGet(f, 0);
+    }
+    A = ast_ChildGet(p, 0);
+    B = ast_ChildGet(q, 0);
+    if(ast_Compare(A, B) || (k = linear(A, x)) == NULL)
+        return NULL;
+    ast_Cleanup(k);
+    if((k = linear(B, x)) == NULL)
+        return NULL;
+    ast_Cleanup(k);
+
+    plus = ast_MakeBinary(OP_ADD, ast_Copy(A), ast_Copy(B));
+    minus = ast_MakeBinary(OP_ADD, ast_Copy(A), ast_MakeBinary(OP_MULT, ast_MakeInt(-1), ast_Copy(B)));
+    simplify(plus, SIMP_ALL);
+    simplify(minus, SIMP_ALL);
+    if(isoptype(p, OP_SIN) && isoptype(q, OP_COS))
+        g = ast_MakeBinary(OP_ADD, ast_MakeUnary(OP_SIN, plus), ast_MakeUnary(OP_SIN, minus));
+    else if(isoptype(p, OP_SIN))
+        g = ast_MakeBinary(OP_ADD, ast_MakeUnary(OP_COS, minus), ast_MakeBinary(OP_MULT, ast_MakeInt(-1), ast_MakeUnary(OP_COS, plus)));
+    else
+        g = ast_MakeBinary(OP_ADD, ast_MakeUnary(OP_COS, minus), ast_MakeUnary(OP_COS, plus));
+    split_terms(e, ast_MakeBinary(OP_DIV, g, ast_MakeInt(2)), x);
+    return "product to sum";
+}
+
 /*P/Q with P as big as Q or bigger, long *dih*vision: the quotient plus the remainder over Q*/
 static const char *long_division(pcas_ast_t *e) {
     pcas_ast_t *f = ast_ChildGet(e, 0), *x = ast_ChildGet(e, 1), *q, *r, *sum;
@@ -1349,6 +1386,8 @@ static const char *one_rule(pcas_ast_t *e, subs_t *subs) {
     if((name = trig_reduce(e)) != NULL)
         return name;
     if((name = trig_product(e)) != NULL)
+        return name;
+    if((name = product_to_sum(e)) != NULL)
         return name;
     if((name = pyth_rule(e)) != NULL)
         return name;
