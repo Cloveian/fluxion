@@ -205,7 +205,7 @@ static keypress_t *push(keycode_t key, bool on) {
     return slot;
 }
 
-/* the mouse at a window position, shift held is a selecting click. a drag right after a drag replaces it, only where it ended counts */
+/* the mouse at a window position, shift held is a selecting click. a drag right after a drag repalces it, only where it ended counts */
 static void push_pointer(keycode_t key, float wx, float wy) {
     keypress_t *slot;
     int x, y;
