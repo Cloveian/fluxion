@@ -48,8 +48,8 @@ typedef enum {
     /* PC and web page: typed characters the CE has no key for, and End (Home is the nspire's) */
     K_LESS, K_GREATER, K_BANG, K_PERCENT, K_END,
 
-    /* PC and web page: the mouse, in the keypress's x and y (screen pixels). a drag is the button still down, held has M_ALPHA with shift */
-    K_POINT_DOWN, K_POINT_DRAG,
+    /* PC and web page: the mouse, in the keypress's x and y (screen pixels). a drag is the button still down, held has M_ALPHA with shift. a move is no button, x below 0 when it left the window */
+    K_POINT_DOWN, K_POINT_DRAG, K_POINT_MOVE,
     K_REDRAW, /* PC: the window changed size, nothing to do but draw */
 
     K_QUIT  /* the PC window got closed */
@@ -62,7 +62,7 @@ enum { M_2ND = 1, M_ALPHA = 2, M_ON = 4, M_CTRL = 8, M_SHIFT = 16 };
 typedef struct {
     keycode_t key;
     unsigned held;  /* M_ bits held down with it */
-    short x, y;     /* K_POINT_DOWN and K_POINT_DRAG */
+    short x, y;     /* K_POINT_DOWN, K_POINT_DRAG and K_POINT_MOVE */
 } keypress_t;
 
 void keys_begin(void);

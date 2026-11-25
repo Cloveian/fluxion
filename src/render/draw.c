@@ -101,7 +101,7 @@ void draw_text_styled(int x, int top, const char *text, const font_t *font, font
     }
 }
 
-void draw_softkeys(const rect_t *bar, const char *const names[5], int lit, unsigned off) {
+void draw_softkeys(const rect_t *bar, const char *const names[5], int lit, unsigned off, int hot) {
     const font_t *font = draw_font_for(0);     /* smallest, five names have to fit somehow */
     int i, w = bar->w / 5;
 
@@ -113,6 +113,10 @@ void draw_softkeys(const rect_t *bar, const char *const names[5], int lit, unsig
             screen_color(COL_ACCENT);
             screen_fill(bar->x + i * w + 1, bar->y, w - 2, bar->h);
             screen_color(COL_BG);
+        } else if(i == hot && !(off & (1u << i))) {
+            screen_color(COL_SELECT);
+            screen_fill(bar->x + i * w + 1, bar->y, w - 2, bar->h);
+            screen_color(COL_FG);
         } else {
             screen_color(off & (1u << i) ? COL_SELECT : COL_DIM);
         }

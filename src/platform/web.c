@@ -90,18 +90,19 @@ void web_press(int key, int on, int second, int alpha) {
     queue[(head + count++) % QUEUE] = p;
 }
 
-/* the mouse over the screen, x and y in its 320x240. kind 0 down, 1 drag, shift is shift-click */
+/* the mouse over the screen, x and y in its 320x240 (below 0 once it left). kind 0 down, 1 drag, 2 move with no button, shift is shift-click */
 EMSCRIPTEN_KEEPALIVE
 void web_point(int kind, int x, int y, int shift) {
     keypress_t *p;
+    keycode_t key = kind == 0 ? K_POINT_DOWN : kind == 1 ? K_POINT_DRAG : K_POINT_MOVE;
 
-    /* a drag right after a drag replaces it, only where it ended counts (keys_pc.c does the same) */
-    if(kind != 0 && count > 0 && queue[(head + count - 1) % QUEUE].key == K_POINT_DRAG)
+    /* a drag right after a drag replaces it, same for moves, only where it ended counts (keys_pc.c does the same) */
+    if(kind != 0 && count > 0 && queue[(head + count - 1) % QUEUE].key == key)
         count--;
     if(count == QUEUE)
         return;
     p = &queue[(head + count++) % QUEUE];
-    p->key = kind == 0 ? K_POINT_DOWN : K_POINT_DRAG;
+    p->key = key;
     p->held = shift ? M_ALPHA : 0;  /* the nspire's app reads M_ALPHA for this too */
     p->x = (short)x;
     p->y = (short)y;

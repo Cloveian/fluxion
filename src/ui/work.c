@@ -3,6 +3,7 @@
 #include "work.h"
 #include "app.h"
 #include "areas.h"
+#include "hover.h"
 #include "settings.h"
 #include <string.h>
 #include "platform/screen.h"
@@ -404,7 +405,7 @@ void work_draw(void) {
         screen_vline(x0 + w - 2, y0 + (bottom - y0) * top / nrows, bar_h > 2 ? bar_h : 2);
     }
     if(has_methods())
-        draw_softkeys(&areas.keys, method_keys, (int)method, off);
+        draw_softkeys(&areas.keys, method_keys, (int)method, off, hover_cell(&areas.keys, 5));
 }
 
 const char *const *work_softkeys(void) {

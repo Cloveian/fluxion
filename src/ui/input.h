@@ -9,8 +9,9 @@
 typedef struct {
     action_t a; /* with the modifers that are on (tapped, locked or held) */
     action_t plain; /* key on its own, for menus and pages where [2nd] doesnt matter */
-    bool pointer; /* click or drag at x y, a and plain are empty */
+    bool pointer; /* click, drag or hover at x y, a and plain are empty */
     bool drag; /* button still down */
+    bool hover; /* no button, x below 0 once the mouse left */
     bool shift; /* shift-click extends the selection */
     int x, y;
     bool quit; /* window closed */

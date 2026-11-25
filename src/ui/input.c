@@ -12,9 +12,10 @@ input_t input_wait(void) {
 
     memset(&in, 0, sizeof in);
     in.quit = p.key == K_QUIT;
-    if(p.key == K_POINT_DOWN || p.key == K_POINT_DRAG) {
+    if(p.key == K_POINT_DOWN || p.key == K_POINT_DRAG || p.key == K_POINT_MOVE) {
         in.pointer = true;
         in.drag = p.key == K_POINT_DRAG;
+        in.hover = p.key == K_POINT_MOVE;
         in.shift = (p.held & M_ALPHA) != 0;
         in.x = p.x;
         in.y = p.y;

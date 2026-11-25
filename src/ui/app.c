@@ -1,5 +1,6 @@
 #include "app.h"
 #include "areas.h"
+#include "hover.h"
 #include "args.h"
 #include "names.h"
 #include "vars.h"
@@ -2471,6 +2472,10 @@ static action_t pointer_action(const input_t *p) {
 static bool handle(const input_t *in) {
     action_t a = in->a, plain = in->plain;
 
+    if(in->pointer && in->hover) { /* just redraws, the status and the modifiers stay */
+        hover_set(in->x, in->y);
+        return true;
+    }
     status = NULL;
     if(menu < 0)
         menu_from = -1; /* [2nd][y=] and such open nothing */
@@ -2600,7 +2605,7 @@ static void draw_bar(void) {
 
     for(i = 0; i < FOLDER_COUNT; i++)
         names[i] = folders[i].name;
-    draw_softkeys(&areas.keys, names, menu, 0);
+    draw_softkeys(&areas.keys, names, menu, 0, hover_cell(&areas.keys, FOLDER_COUNT));
 }
 
 static void draw_menu(void) {
@@ -2677,6 +2682,10 @@ static void draw_menu(void) {
             screen_fill(x + 1, y - 1, width - 2, row_h);
             screen_color(COL_BG);
         } else {
+            if(hover_in(x + 1, y, width - 2, row_h)) {
+                screen_color(COL_SELECT);
+                screen_fill(x + 1, y - 1, width - 2, row_h);
+            }
             screen_color(can ? COL_FG : COL_DIM);
         }
 
@@ -2741,6 +2750,9 @@ static void draw_popup(void) {
 
         if(i == popup) {
             screen_color(COL_ACCENT);
+            screen_fill(cx + 1, cy + 1, cell_w - 1, cell_h - 1);
+        } else if(hover_in(cx, cy, cell_w, cell_h)) {
+            screen_color(COL_SELECT);
             screen_fill(cx + 1, cy + 1, cell_w - 1, cell_h - 1);
         }
         screen_color(i == popup ? COL_BG : COL_DIM);
@@ -2849,18 +2861,22 @@ static void draw_top_bar(void) {
 
 /* behind the highlighted half of a history entry. browsing gets just an outline,
    the selection inside it is the highlight then */
-static void highlight(int x, int base, const box_t *b) {
+static void outline(int x, int base, const box_t *b) {
     int top = base - b->ascent - 1, h = b->ascent + b->descent + 2;
 
+    screen_color(COL_DIM);
+    screen_hline(x - 2, top, b->width + 4);
+    screen_hline(x - 2, top + h - 1, b->width + 4);
+    screen_vline(x - 2, top, h);
+    screen_vline(x + b->width + 1, top, h);
+}
+
+static void highlight(int x, int base, const box_t *b) {
     if(browsing) {
-        screen_color(COL_DIM);
-        screen_hline(x - 2, top, b->width + 4);
-        screen_hline(x - 2, top + h - 1, b->width + 4);
-        screen_vline(x - 2, top, h);
-        screen_vline(x + b->width + 1, top, h);
+        outline(x, base, b);
     } else {
         screen_color(COL_SELECT);
-        screen_fill(x - 2, top, b->width + 4, h);
+        screen_fill(x - 2, base - b->ascent - 1, b->width + 4, b->ascent + b->descent + 2);
     }
 }
 
@@ -2883,12 +2899,14 @@ static int entry_h(const entry_t *h) {
     return n + GAP;
 }
 
-static void add_hit(int y0, int y1, int id) {
+/* true when the mouse is over the entry that was just added */
+static bool add_hit(int y0, int y1, int id) {
     if(hit_n < HITS_MAX) {
         hits[hit_n].y0 = y0;
         hits[hit_n].y1 = y1;
         hits[hit_n++].id = id;
     }
+    return hover_in(areas.body.x, y0, areas.body.w, y1 - y0);
 }
 
 static void draw_screen(void) {
@@ -2991,7 +3009,8 @@ static void draw_screen(void) {
                 highlight(x, base, out);
             screen_color(COL_FG);
             draw_box(out, x, base);
-            add_hit(y - out->ascent - out->descent - 2, y, i * 2 + 1);
+            if(add_hit(y - out->ascent - out->descent - 2, y, i * 2 + 1) && !(i == hist && hist_out))
+                outline(x, base, out);
             if(h->ms >= 100) {
                 char t[32];
 
@@ -3014,7 +3033,8 @@ static void draw_screen(void) {
                 highlight(x, y - inb->descent, inb);
             screen_color(COL_FG);
             draw_box(inb, x, y - inb->descent);
-            add_hit(y - inb->ascent - inb->descent - GAP, y, i * 2);
+            if(add_hit(y - inb->ascent - inb->descent - GAP, y, i * 2) && !(i == hist && !hist_out))
+                outline(x, y - inb->descent, inb);
             y -= inb->ascent + inb->descent + GAP;
         }
         layout_free(browse);

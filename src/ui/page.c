@@ -1,5 +1,6 @@
 #include "page.h"
 #include "areas.h"
+#include "hover.h"
 
 #include <string.h>
 
@@ -241,5 +242,5 @@ void page_draw(void) {
     }
 
     if(pg->softkeys != NULL)
-        draw_softkeys(&areas.keys, pg->softkeys, -1, 0);
+        draw_softkeys(&areas.keys, pg->softkeys, -1, 0, hover_cell(&areas.keys, 5));
 }

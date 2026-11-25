@@ -49,7 +49,7 @@ void keys_script(char *const *presses, int count) {
       wait:6        the next press waits 6 s
       png:out.png   the screen right then, at 2x
       clip:3x+2     puts that on the clipboard, for a paste to find
-      click:x,y     mouse click at a framebuffer pixel (alpha+click: selects), drag:x,y is the button held
+      click:x,y     mouse click at a framebuffer pixel (alpha+click: selects), drag:x,y is the button held, hover:x,y no button
       busy:on+mode  held down while the engine runs, skipped if it's done by then
 */
 static Uint64 wait_until; /* SDL ms, clock() is CPU time and stands still in a wait */
@@ -96,10 +96,10 @@ static keypress_t parse_press(const char *s) {
             break;
         }
     }
-    if(strncmp(s, "click:", 6) == 0 || strncmp(s, "drag:", 5) == 0) { /* click:120,200  drag:200,200, with alpha+ it's a shift-click */
+    if(strncmp(s, "click:", 6) == 0 || strncmp(s, "drag:", 5) == 0 || strncmp(s, "hover:", 6) == 0) { /* click:120,200  drag:200,200, with alpha+ it's a shift-click */
         const char *comma = strchr(s, ',');
 
-        press.key = s[0] == 'c' ? K_POINT_DOWN : K_POINT_DRAG;
+        press.key = s[0] == 'c' ? K_POINT_DOWN : s[0] == 'd' ? K_POINT_DRAG : K_POINT_MOVE;
         press.x = (short)atoi(strchr(s, ':') + 1);
         press.y = comma != NULL ? (short)atoi(comma + 1) : 0;
         return press;
@@ -205,12 +205,12 @@ static keypress_t *push(keycode_t key, bool on) {
     return slot;
 }
 
-/* the mouse at a window position, shift held is a selecting click. a drag right after a drag repalces it, only where it ended counts */
+/* the mouse at a window position, shift held is a selecting click. a drag right after a drag repalces it, only where it ended counts, same for a move after a move */
 static void push_pointer(keycode_t key, float wx, float wy) {
     keypress_t *slot;
     int x, y;
 
-    if(key == K_POINT_DRAG && pending_count > 0 && pending[(pending_first + pending_count - 1) % PENDING_MAX].key == K_POINT_DRAG)
+    if((key == K_POINT_DRAG || key == K_POINT_MOVE) && pending_count > 0 && pending[(pending_first + pending_count - 1) % PENDING_MAX].key == key)
         pending_count--;
     slot = push(key, false);
     if(slot == NULL)
@@ -426,9 +426,16 @@ keypress_t keys_wait(void) {
             break;
 
         case SDL_EVENT_MOUSE_MOTION:
-            if((ev.motion.state & SDL_BUTTON_LMASK) != 0)
-                push_pointer(K_POINT_DRAG, ev.motion.x, ev.motion.y);
+            push_pointer((ev.motion.state & SDL_BUTTON_LMASK) != 0 ? K_POINT_DRAG : K_POINT_MOVE, ev.motion.x, ev.motion.y);
             break;
+
+        case SDL_EVENT_WINDOW_MOUSE_LEAVE: {
+            keypress_t *left = push(K_POINT_MOVE, false);
+
+            if(left != NULL)
+                left->x = left->y = -1;
+            break;
+        }
 
         case SDL_EVENT_MOUSE_WHEEL:
             if(ev.wheel.y != 0)

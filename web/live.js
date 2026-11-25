@@ -37,7 +37,7 @@ export async function live(parent, model = "ce") {
         if (key) mod._web_press(key, +!!(held.on ?? held.ctrl), +!!(held.second ?? held.shift), +!!held.alpha);
     }
 
-    // the mouse over the screen: down puts the cursor, a drag selects, shift-click extends, the same as the pc
+    // the mouse over the screen: down puts the cursor, a drag selects, shift-click extends, the same as the pc. a move with no button lights what's under it
     let mouse = null; // pointer id while it's down
     function point(kind, e) {
         if (!mod) return;
@@ -52,7 +52,13 @@ export async function live(parent, model = "ce") {
         canvas.setPointerCapture(e.pointerId);
         point(0, e);
     });
-    canvas.addEventListener("pointermove", e => e.pointerId === mouse && point(1, e));
+    canvas.addEventListener("pointermove", e => {
+        if (e.pointerId === mouse) point(1, e);
+        else if (mouse === null && e.pointerType === "mouse") point(2, e); // hover, no button
+    });
+    canvas.addEventListener("pointerleave", e => {
+        if (mod && mouse === null && e.pointerType === "mouse") mod._web_point(2, -1, -1, 0);
+    });
     for (const type of ["pointerup", "pointercancel"])
         canvas.addEventListener(type, e => { if (e.pointerId === mouse) mouse = null; });
 
