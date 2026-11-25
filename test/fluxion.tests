@@ -1126,6 +1126,10 @@ simplify; integral(sin(2X)/(1+cos(X)),X); 2ln(abs(cos(X)+1))_2cos(X)
 simplify; integral(sin(2X)/(2+sin(X)),X); 2sin(X)_4ln(abs(sin(X)+2))
 simplify; integral(cos(2X)/sin(X),X); 2cos(X)+ln(abs(tan(X/2)))
 simplify; integral(sin(2X)*e^(sin(X)),X); 2e^(sin(X))sin(X)_2e^(sin(X))
+#u = ln(x) puts x back as e^u
+simplify; integral(cos(ln(X)),X); (Xsin(ln(X)))/2+(Xcos(ln(X)))/2
+simplify; integral(sin(ln(X)),X); (Xsin(ln(X)))/2_(Xcos(ln(X)))/2
+simplify; integral(X*cos(ln(X)),X); (sin(ln(X))X^2)/5+(2X^2cos(ln(X)))/5
 #tan and sec (cot and csc) powers together go to sin and cos when u-substitution has nothing
 simplify; integral(tan(X)^3*sec(X),X); 1/(3cos(X)^3)_1/cos(X)
 simplify; integral(tan(X)^2*sec(X)^2,X); (sec(X)^2tan(X))/3_(tan(X))/3

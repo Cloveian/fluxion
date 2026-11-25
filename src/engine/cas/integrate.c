@@ -409,6 +409,18 @@ static void x_from_root(pcas_ast_t *q, pcas_ast_t *cand, pcas_ast_t *u, pcas_ast
     ast_Cleanup(zero);
 }
 
+/*u = ln(x), q still has an x (cos(ln(x))) so x = e^u*/
+static void x_from_ln(pcas_ast_t *q, pcas_ast_t *cand, pcas_ast_t *u, pcas_ast_t *x, unsigned short how) {
+    pcas_ast_t *back;
+
+    if(!isoptype(cand, OP_LOG) || !ast_Compare(ast_ChildGet(cand, 1), x) || ast_ChildGet(cand, 0)->type != NODE_SYMBOL || ast_ChildGet(cand, 0)->op.symbol != SYM_EULER)
+        return;
+    back = ast_MakeBinary(OP_POW, ast_MakeSymbol(SYM_EULER), ast_Copy(u));
+    substitute(q, x, back);
+    simplify(q, how);
+    ast_Cleanup(back);
+}
+
 /*x^4, x^6 and so on somewhere in e. x/(x^4+1) wants u = x^2, which isn't a piece of it*/
 static bool high_even_power(pcas_ast_t *e, pcas_ast_t *x) {
     pcas_ast_t *c;
@@ -461,6 +473,8 @@ static const char *usub(pcas_ast_t *e, subs_t *subs) {
         }
         if(q != NULL && has_symbol(q, x->op.symbol))
             x_from_root(q, cand[i], u, x, how);
+        if(q != NULL && has_symbol(q, x->op.symbol))
+            x_from_ln(q, cand[i], u, x, how);
         if(q != NULL && !pcas_cancelled && !has_symbol(q, x->op.symbol)) {
             subs->u[subs->n] = u; /*not a copy, an oom one is NULL and fresh() reads it*/
             subs->g[subs->n++] = ast_Copy(cand[i]);

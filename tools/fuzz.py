@@ -91,6 +91,7 @@ def gen_int():
         f"tan(X)^{k + 1}*sec(X)^{k}", f"tan({a}X)^{k + 1}*sec({a}X)^2", f"cot(X)^{k + 1}*csc(X)^{k}", f"(sin(X)+cos(X))^{k + 1}", f"1/(sec(X)+2)", f"(1+sec(X))^2",
         f"({b}X+1)/(X^2+{2 * a}X+{a * a + 1})^2", f"1/({a}X^2+{2 * a}X+{a + 1})^2",
         f"sin(2X)/({a}+cos(X))", f"sin(2X)/({a + 1}+sin(X))", f"cos(2X)/sin(X)", f"sin(2X)*e^(sin(X))",
+        f"cos(ln(X))", f"sin(ln(X))", f"X*cos(ln(X))", f"X^{k}*sin(ln(X))",
         f"1/(1+e^X)", f"e^X/({a}+e^(2X))", f"1/(e^X+e^(-X))", f"1/(1+e^({a}X))", f"e^(2X)/(e^X+{a})",
     ])
 
