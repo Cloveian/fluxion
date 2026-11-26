@@ -657,6 +657,21 @@ static bool dot_by_frac(const box_t *a, const box_t *b) {
     return (is_dot(a) && unselected(b)->kind == BOX_FRAC) || (unselected(a)->kind == BOX_FRAC && is_dot(b));
 }
 
+/* a bracket pair somewhere in this row's boxes, a function call's included */
+static bool has_bracket(const box_t *b) {
+    const box_t *c;
+
+    b = unselected(b);
+    if(b->kind == BOX_PARENS || b->kind == BOX_ABS)
+        return true;
+    if(b->kind != BOX_ROW)
+        return false;
+    for(c = b->child; c != NULL; c = c->next)
+        if(has_bracket(c))
+            return true;
+    return false;
+}
+
 static void measure(const layout_font_t *f, box_t *b) {
     int fi = b->size;
     box_t *k;
@@ -848,7 +863,8 @@ static void measure(const layout_font_t *f, box_t *b) {
     case BOX_ABS: {
         box_t *content = b->child;
         int side = b->kind == BOX_PARENS ? PAREN_W : ABS_W;
-        bool tall = content->ascent > f->ascent[fi] || content->descent > f->descent[fi];
+        /* a bracket inside counts as tall, so it carries on up each level */
+        bool tall = content->ascent > f->ascent[fi] || content->descent > f->descent[fi] || has_bracket(content);
 
         content->x = side;
         content->y = 0;
