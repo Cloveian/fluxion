@@ -1461,7 +1461,7 @@ int solve_in_range(pcas_ast_t **roots, int n, pcas_ast_t *hi) {
 }
 
 /*smallest first, by the decimal. letters stay where they are*/
-static void sort_roots(pcas_ast_t **out, int n) {
+void sort_roots(pcas_ast_t **out, int n) {
     pcas_ast_t *val[SOLVE_MAX];
     int i, j;
 
@@ -1857,7 +1857,7 @@ static bool zero_at(pcas_ast_t *b, Symbol var, pcas_ast_t *root) {
 }
 
 /*Fluxion: some bottom in e (a/b or b^-k with var in it) is 0 at root. root NULL, any bottom with var in it*/
-static bool bottom_zero(pcas_ast_t *e, Symbol var, pcas_ast_t *root) {
+bool bottom_zero(pcas_ast_t *e, Symbol var, pcas_ast_t *root) {
     pcas_ast_t *k, *b = NULL;
 
     if(e->type != NODE_OPERATOR)

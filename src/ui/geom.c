@@ -32,8 +32,7 @@ static const struct {
     { "perp",  "perp(m, x1, y1)", 3 },
 };
 
-/* a - b. there's no subtract node, it's a plus the negative */
-static pcas_ast_t *minus(pcas_ast_t *a, pcas_ast_t *b) {
+pcas_ast_t *minus(pcas_ast_t *a, pcas_ast_t *b) {
     return ast_MakeBinary(OP_ADD, a, ast_MakeBinary(OP_MULT, ast_MakeInt(-1), b));
 }
 

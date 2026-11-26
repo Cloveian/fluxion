@@ -9,6 +9,9 @@
    was one of these, and then the answer (or a message) is already pushed. src is cut up at the commas */
 bool calc1_run(const char *cmd, char *src, box_t *in);
 
+/* d/dvar of f, times over. NULL on oom or cancelled */
+pcas_ast_t *derive(pcas_ast_t *f, Symbol var, int times);
+
 /* f with v put in for var, worked out */
 pcas_ast_t *value_at(pcas_ast_t *f, Symbol var, pcas_ast_t *v);
 

@@ -58,6 +58,10 @@ Everything Fluxion does right now, as tables. Yes / partly / no first, the other
 | Max, min, inflections        | yes\* |
 | Up and down intervals        | yes   |
 | Taylor polynomials           | yes   |
+| Average value                | yes\* |
+| Area between curves          | yes\* |
+| Mean value theorem, Rolle    | yes\* |
+| Continuity at a point        | yes\* |
 | Sums and products            | yes\* |
 
 ### Systems

@@ -259,6 +259,10 @@ bool approx_double(pcas_ast_t *e, double *v);
 void fold_fraction(pcas_ast_t *e);
 /*Fluxion: is the symbol s anywhere in e*/
 bool has_symbol(const pcas_ast_t *e, Symbol s);
+/*Fluxion: some bottom in e (a/b or b^-k with var in it) is 0 at root, any bottom with var in it when root is NULL (solve.c)*/
+bool bottom_zero(pcas_ast_t *e, Symbol var, pcas_ast_t *root);
+/*Fluxion: out[0..n) smallest first by the decimal, ones without one stay put (solve.c)*/
+void sort_roots(pcas_ast_t **out, int n);
 
 /*
     Fluxion: the decimal form (cas/approx.c). every part without variables that

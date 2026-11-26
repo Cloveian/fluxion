@@ -30,8 +30,7 @@ static const struct {
     { "taylor", "taylor(f, a, n, x)", 3, 4 },
 };
 
-/* d/dvar of f, times over. NULL on oom or cancelled */
-static pcas_ast_t *derive(pcas_ast_t *f, Symbol var, int times) {
+pcas_ast_t *derive(pcas_ast_t *f, Symbol var, int times) {
     pcas_ast_t *e = ast_Copy(f), *x = ast_MakeSymbol((char)var), *d;
 
     for(; times > 0 && e != NULL; times--) {

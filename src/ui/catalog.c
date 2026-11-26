@@ -200,6 +200,18 @@ ITEM(it_taylor,   "taylor", "taylor", ITEM_COMMAND, "taylor($)", HAVE_YES,
 ITEM(it_implicit, "implicit", "implicit", ITEM_COMMAND, "implicit($)", HAVE_PARTLY,
      "implicit(equation,y,x): dy/dx as -(dF/dx)/(dF/dy) of left - right. y and x are the defaults",
      "the slope of a curve that isn't a function of x. implicit(x^2+y^2=25) -> dy/dx = -x/y")
+ITEM(it_average, "average", "average", ITEM_COMMAND, "average($)", HAVE_PARTLY,
+     "average(f,a,b,x): the integral of f from a to b over b - a, the x is optional",
+     "the average value of f on [a, b]. average(x^2,0,3) -> average = 3")
+ITEM(it_area, "area", "area", ITEM_COMMAND, "area($)", HAVE_PARTLY,
+     "area(f,g,a,b,x): between two curves from a to b, or from where they cross without a and b. the x is optional",
+     "the area enclosed by two curves, whichever is on top. area(x,x^2) -> area = 1/6")
+ITEM(it_mvt, "mvt", "mvt", ITEM_COMMAND, "mvt($)", HAVE_PARTLY,
+     "mvt(f,a,b,x): the c between a and b where f'(c) is the slope from a to b. a level f is Rolle's theorem",
+     "where the curve's slope matches the line between its ends. mvt(x^2,0,2) -> c = 1")
+ITEM(it_continuous, "continuous", "continuous", ITEM_COMMAND, "continuous($)", HAVE_PARTLY,
+     "continuous(f,a,x): the limit from each side against f(a), and whether it's continuous, removable, a jump or infinite",
+     "whether the curve breaks at x = a. continuous(abs(x)/x,0) -> a jump discontinuity")
 
 /* Templates */
 ITEM(it_frac,     "n/d",   NULL, ITEM_TEMPLATE, "($)/($)", HAVE_YES, "empty fraction, cursor in the top",
@@ -348,6 +360,7 @@ const item_t *const catalog[] = {
     &it_cube, &it_box, &it_polygon, &it_pand, &it_por,
     &it_ellipse, &it_hyperbola,
     &it_deriv, &it_deriv_at, &it_integral, &it_limit, &it_tangent, &it_critical, &it_extrema, &it_inflect, &it_implicit, &it_increasing, &it_taylor,
+    &it_average, &it_area, &it_mvt, &it_continuous,
     &it_id_basic, &it_id_trig, &it_id_hyp, &it_id_cplx, &it_id_tconst, &it_id_iconst, &it_clear, &it_steps
 };
 const unsigned catalog_count = sizeof catalog / sizeof catalog[0];
@@ -363,6 +376,7 @@ static const item_t *const shapes[] = { &it_triangle, &it_circle, &it_rect, &it_
 static const item_t *const solids[] = { &it_sphere, &it_cyl, &it_cone, &it_cube, &it_box };
 static const item_t *const conics[] = { &it_ellipse, &it_hyperbola };
 static const item_t *const prob[] = { &it_pand, &it_por };
+static const item_t *const applied[] = { &it_average, &it_area, &it_mvt, &it_continuous };
 
 SUBFOLDER(it_fn_info, fn_info_folder, "Function info", fn_info)
 SUBFOLDER(it_lines, lines_folder, "Lines", lines)
@@ -370,13 +384,15 @@ SUBFOLDER(it_shapes, shapes_folder, "Shapes", shapes)
 SUBFOLDER(it_solids, solids_folder, "Solids", solids)
 SUBFOLDER(it_conics, conics_folder, "Conics", conics)
 SUBFOLDER(it_prob, prob_folder, "Probability", prob)
+SUBFOLDER(it_applied, applied_folder, "Applications", applied)
 
 static const item_t *const algebra[] = {
     &it_expand, &it_factor, &it_solve, &it_system, &it_roots, &it_fromroots, &it_inverse, &it_apart, &it_polydiv, &it_sum, &it_product, &it_subst, &it_evaluate,
     &it_fn_info, &it_lines, &it_shapes, &it_solids, &it_conics, &it_prob
 };
 static const item_t *const calculus[] = {
-    &it_deriv, &it_deriv_at, &it_integral, &it_limit, &it_tangent, &it_critical, &it_extrema, &it_inflect, &it_implicit, &it_increasing, &it_taylor
+    &it_deriv, &it_deriv_at, &it_integral, &it_limit, &it_tangent, &it_critical, &it_extrema, &it_inflect, &it_implicit, &it_increasing, &it_taylor,
+    &it_applied
 };
 static const item_t *const functions[] = {
     &it_sin, &it_cos, &it_tan, &it_asin, &it_acos, &it_atan, &it_cot, &it_sec, &it_csc, &it_acot, &it_asec, &it_acsc,
