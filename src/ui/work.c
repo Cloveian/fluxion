@@ -462,26 +462,39 @@ bool work_act(action_t a) {
     return true;
 }
 
-/* top, so the cursor line is on the page */
-static void follow(int y0, int bottom) {
-    int i, y;
+/* height of the rows showing from a to b */
+static int span(int a, int b) {
+    int i, h = 0;
 
+    for(i = a; i <= b; i++)
+        if(rows[i] != NULL && !hidden(i))
+            h += rows[i]->ascent + rows[i]->descent + GAP;
+    return h - GAP;
+}
+
+/* top, so the cursor line is on the page and no room is left empty above it */
+static void follow(int y0, int bottom) {
     if(sel < top)
         top = sel;
-    while(top < sel) {
-        y = y0;
-        for(i = top; i <= sel; i++)
-            if(rows[i] != NULL && !hidden(i))
-                y += rows[i]->ascent + rows[i]->descent + GAP;
-        if(y - GAP <= bottom)
-            break;
+    while(top < sel && y0 + span(top, sel) > bottom)
         top++;
-    }
+    while(top > 0 && y0 + span(top - 1, nrows - 1) <= bottom)
+        top--;
+}
+
+/* rows showing before row upto */
+static int visible(int upto) {
+    int i, n = 0;
+
+    for(i = 0; i < upto; i++)
+        if(rows[i] != NULL && !hidden(i))
+            n++;
+    return n;
 }
 
 void work_draw(void) {
     int x0 = areas.body.x, w = areas.body.w, y0 = areas.body.y + GAP, y = y0, bottom = areas.keys.y - GAP;
-    int i, x;
+    int i, x, total, above, shown;
 
     if(tree)
         follow(y0, bottom);
@@ -492,8 +505,8 @@ void work_draw(void) {
             continue;
         if(y + b->ascent + b->descent > bottom)
             break;
-        /* centered, a line too wide for it starts at the left edge */
-        x = b->width < w - 2 * GAP ? x0 + (w - b->width) / 2 : x0 + GAP;
+        /* centered, a line too wide for it starts at the left edge (past the + / - on a tree page) */
+        x = b->width < w - 2 * GAP ? x0 + (w - b->width) / 2 : x0 + (tree ? 4 * GAP : GAP);
         if(tree && i == sel) {
             screen_color(COL_SELECT);
             screen_fill(x0 + 1, y - 1, w - 2, b->ascent + b->descent + 2);
@@ -509,12 +522,15 @@ void work_draw(void) {
         y += b->ascent + b->descent + GAP;
     }
 
-    /* the scrolbar when it doesn't all fit, by rows */
-    if(top > 0 || i < nrows) {
-        int bar_h = (bottom - y0) * (i - top) / nrows;
+    /* the scrolbar when it doesn't all fit, by the rows that show */
+    total = visible(nrows);
+    above = visible(top);
+    shown = visible(i);
+    if(above > 0 || shown < total) {
+        int bar_h = (bottom - y0) * (shown - above) / total;
 
         screen_color(COL_DIM);
-        screen_vline(x0 + w - 2, y0 + (bottom - y0) * top / nrows, bar_h > 2 ? bar_h : 2);
+        screen_vline(x0 + w - 2, y0 + (bottom - y0) * above / total, bar_h > 2 ? bar_h : 2);
     }
     if(has_methods())
         draw_softkeys(&areas.keys, method_keys, (int)method, off, hover_cell(&areas.keys, 5));
