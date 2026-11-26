@@ -13,7 +13,7 @@ fluxion/
 │   │   ├── cas/   simplify, expand, factor, derivative, identities, solve (+ trig families, systems in system.c), integrate, limit, truth (true / false statements), evalfn (floor, mod, conj ...), asym, approx (decimal), degrees. the show-the-work lines are steps.c with a file a kind: polysteps, systemsteps, ineqsteps, exprsteps (expand, factor, simplify), cmdsteps (tangent, critical, extrema, inflect, implicit)
 │   │   ├── imath/  big-number + rational maths
 │   │   └── pc/  PC-only command line + test runner (empty on the calculator)
-│   ├── platform/  screen.h / keys.h / store.h: *_ti.c = graphx + keypadc + appvars, *_pc.c = framebuffer + SDL + files in build-pc/store. window_pc.c is the SDL window (resizable, Ctrl + / - / 0 zoom it in steps from 0.5 to 4, remembered in the FLXZOOM store slot), keys_pc.c turns the keyboard and the mouse into presses (keys_pc_script.c is the scripted ones the tests and renders use), clipboard.c is the system clipboard, web.c the browser build's keys and mouse
+│   ├── platform/  screen.h / keys.h / store.h: *_ti.c = graphx + keypadc + appvars, *_pc.c = framebuffer + SDL + files in build-pc/store. window_pc.c is the SDL window (resizable, Ctrl + / - / 0 zoom it in steps from 0.5 to 4, remembered in the FLXZOOM store slot), events_pc.c is what the window sends as plain data (no SDL types), keys_pc.c turns that into presses (keys_pc_script.c is the scripted ones the tests and renders use), clipboard.c is the system clipboard, web.c the browser build's keys and mouse
 │   ├── render/
 │   │   ├── layout.c    expression tree -> boxes with sizes + positions (no drawing)
 │   │   ├── draw.c  boxes -> lines and text, through screen.h
@@ -58,6 +58,7 @@ only `src/platform/` is allowed to touch graphx, keypadc or SDL. everything else
 - `python3 tools/fuzz.py [count] [seed] [pos|any] [mode]`: random expressions through `build-pc/fluxion`, checked at random points against sympy. modes are simplify (the default), expand, factor, derivative, integral, solve, limit, critical and system (2 equations, the sets have to satisfy both and match sympy's real ones). `any` tests negative letters too. a point where the input isn't real is skipped (Y^pi at a negative Y is noise), a point right next to a pole can show as wrong from the finite difference, simplify / expand / factor also report answers that are right but huge
 - `python3 tools/golden.py seed count old-app new-app`: the same random key scripts through two `fluxion-app` builds, which PNGs differ. for refactors that must not change a pixel (keep a copy of the old binary first)
 - `python3 tools/uifuzz.py seed count [fluxion-app]`: random key and click scripts through `fluxion-app --png`, prints the ones that crash, time out or trip a sanitizer. an asan build finds the most
+- `build-pc/keys-pc-test k:lshift u:lshift t:a ...`: made up SDL events through the PC keys, prints the presses that come out. the scripted runs never touch the real keyboard path, so this is how a change to events_pc.c / keys_pc.c gets compared before and after (token list in test/keys_pc_test.c)
 - `tools/uikeys.py`: the key / click tokens and pasted commands that uifuzz.py and golden.py both build their scripts from, so a new key goes in one place
 - CEmu: by hand. `cemu-autotester` comes with CEdev if i ever want scripted key presses
 

@@ -23,75 +23,44 @@
 */
 
 #include "keys_pc.h"
-#include "window_pc.h"
+#include "events_pc.h"
 
 #include <string.h>
-#include <SDL3/SDL.h>
 
 void keys_begin(void) {}
 void keys_end(void) {}
 
-static keycode_t from_key(SDL_Keycode k) {
+static keycode_t from_key(int k) {
     switch(k) {
-    case SDLK_BACKSPACE: return K_CLEAR;
-    case SDLK_DELETE:    return K_DEL;
-    case SDLK_RETURN:
-    case SDLK_KP_ENTER:  return K_ENTER;
-    case SDLK_LEFT:      return K_LEFT;
-    case SDLK_RIGHT:     return K_RIGHT;
-    case SDLK_UP:        return K_UP;
-    case SDLK_DOWN:      return K_DOWN;
-    case SDLK_TAB:       return K_2ND;
-    case SDLK_HOME:      return K_HOME;
-    case SDLK_END:       return K_END;
-    case SDLK_F1:        return K_YEQU;
-    case SDLK_F2:        return K_WINDOW;
-    case SDLK_F3:        return K_ZOOM;
-    case SDLK_F4:        return K_TRACE;
-    case SDLK_F5:        return K_GRAPH;
-    default:             return K_NONE;
+    case PK_BACKSPACE: return K_CLEAR;
+    case PK_DELETE:    return K_DEL;
+    case PK_ENTER:
+    case PK_KP_ENTER:  return K_ENTER;
+    case PK_LEFT:      return K_LEFT;
+    case PK_RIGHT:     return K_RIGHT;
+    case PK_UP:        return K_UP;
+    case PK_DOWN:      return K_DOWN;
+    case PK_TAB:       return K_2ND;
+    case PK_HOME:      return K_HOME;
+    case PK_END:       return K_END;
+    case PK_F1:        return K_YEQU;
+    case PK_F2:        return K_WINDOW;
+    case PK_F3:        return K_ZOOM;
+    case PK_F4:        return K_TRACE;
+    case PK_F5:        return K_GRAPH;
+    default:           return K_NONE;
     }
 }
 
-/* numpad keys, by where they are (the scancode), so NumLock doesn't matter */
-static keycode_t from_keypad(SDL_Scancode sc, SDL_Keycode k) {
-    switch(sc) {
-    case SDL_SCANCODE_KP_0:        return K_0;
-    case SDL_SCANCODE_KP_1:        return K_1;
-    case SDL_SCANCODE_KP_2:        return K_2;
-    case SDL_SCANCODE_KP_3:        return K_3;
-    case SDL_SCANCODE_KP_4:        return K_4;
-    case SDL_SCANCODE_KP_5:        return K_5;
-    case SDL_SCANCODE_KP_6:        return K_6;
-    case SDL_SCANCODE_KP_7:        return K_7;
-    case SDL_SCANCODE_KP_8:        return K_8;
-    case SDL_SCANCODE_KP_9:        return K_9;
-    case SDL_SCANCODE_KP_PERIOD:   return K_DOT;
-    case SDL_SCANCODE_KP_PLUS:     return K_ADD;
-    case SDL_SCANCODE_KP_MINUS:    return K_SUB;
-    case SDL_SCANCODE_KP_MULTIPLY: return K_MUL;
-    case SDL_SCANCODE_KP_DIVIDE:   return K_DIV;
-    case SDL_SCANCODE_KP_ENTER:    return K_ENTER;
-    default: break;
-    }
+static keycode_t from_keypad(int k) {
     switch(k) {
-    case SDLK_KP_0:        return K_0;
-    case SDLK_KP_1:        return K_1;
-    case SDLK_KP_2:        return K_2;
-    case SDLK_KP_3:        return K_3;
-    case SDLK_KP_4:        return K_4;
-    case SDLK_KP_5:        return K_5;
-    case SDLK_KP_6:        return K_6;
-    case SDLK_KP_7:        return K_7;
-    case SDLK_KP_8:        return K_8;
-    case SDLK_KP_9:        return K_9;
-    case SDLK_KP_PERIOD:   return K_DOT;
-    case SDLK_KP_PLUS:     return K_ADD;
-    case SDLK_KP_MINUS:    return K_SUB;
-    case SDLK_KP_MULTIPLY: return K_MUL;
-    case SDLK_KP_DIVIDE:   return K_DIV;
-    case SDLK_KP_ENTER:    return K_ENTER;
-    default:               return K_NONE;
+    case PK_KP_DOT:   return K_DOT;
+    case PK_KP_PLUS:  return K_ADD;
+    case PK_KP_MINUS: return K_SUB;
+    case PK_KP_MUL:   return K_MUL;
+    case PK_KP_DIV:   return K_DIV;
+    case PK_KP_ENTER: return K_ENTER;
+    default:          return k >= PK_KP_0 && k <= PK_KP_9 ? (keycode_t)(K_0 + (k - PK_KP_0)) : K_NONE;
     }
 }
 
@@ -113,20 +82,18 @@ static keypress_t *push(keycode_t key, bool on) {
     return slot;
 }
 
-/* the mouse at a window position, shift held is a selecting click. a drag right after a drag repalces it, only where it ended counts, same for a move after a move */
-static void push_pointer(keycode_t key, float wx, float wy) {
+/* the mouse, shift held is a selecting click. a drag right after a drag repalces it, only where it ended counts, same for a move after a move */
+static void push_pointer(keycode_t key, int x, int y, unsigned mods) {
     keypress_t *slot;
-    int x, y;
 
     if((key == K_POINT_DRAG || key == K_POINT_MOVE) && pending_count > 0 && pending[(pending_first + pending_count - 1) % PENDING_MAX].key == key)
         pending_count--;
     slot = push(key, false);
     if(slot == NULL)
         return;
-    window_point(wx, wy, &x, &y);
     slot->x = (short)x;
     slot->y = (short)y;
-    slot->held = (SDL_GetModState() & SDL_KMOD_SHIFT) != 0 ? M_ALPHA : 0;
+    slot->held = (mods & PM_SHIFT) != 0 ? M_ALPHA : 0;
 }
 
 /* a typed character: = is [2nd][math], like on the TI */
@@ -144,55 +111,35 @@ static bool alt_alone;      /* Alt down, nothing else since */
 static bool ctrl_alone;     /* Ctrl down, nothing else since */
 static bool skip_text;      /* keystroke already handled at key-down, so drop its text */
 
-static bool is_shift(SDL_Keycode k) { return k == SDLK_LSHIFT || k == SDLK_RSHIFT; }
-static bool is_alt(SDL_Keycode k)   { return k == SDLK_LALT || k == SDLK_RALT; }
-static bool is_ctrl(SDL_Keycode k)  { return k == SDLK_LCTRL || k == SDLK_RCTRL; }
-
-static bool is_modifier(SDL_Keycode k) {
-    return is_shift(k) || is_alt(k) || is_ctrl(k)
-        || k == SDLK_LGUI || k == SDLK_RGUI || k == SDLK_MODE
-        || k == SDLK_CAPSLOCK || k == SDLK_NUMLOCKCLEAR;
+static bool is_modifier(int k) {
+    return k == PK_SHIFT || k == PK_ALT || k == PK_CTRL || k == PK_MOD_OTHER;
 }
 
 /* a key went down, queue its presses if it has any */
-static void key_down(const SDL_KeyboardEvent *ev) {
-    bool on = (ev->mod & SDL_KMOD_CTRL) != 0;
-    bool alt = (ev->mod & SDL_KMOD_ALT) != 0;
-    bool shift = (ev->mod & SDL_KMOD_SHIFT) != 0;
-    bool bigger, smaller, reset;
+static void key_down(const pc_event_t *ev) {
+    bool on = (ev->mods & PM_CTRL) != 0;
+    bool alt = (ev->mods & PM_ALT) != 0;
+    bool shift = (ev->mods & PM_SHIFT) != 0;
     keycode_t key;
-
-    if(ev->key == SDLK_F11) { /* fullscreen, not a calculator key */
-        window_fullscreen_toggle();
-        return;
-    }
-    bigger = ev->key == SDLK_EQUALS || ev->key == SDLK_PLUS || ev->key == SDLK_KP_PLUS;
-    smaller = ev->key == SDLK_MINUS || ev->key == SDLK_KP_MINUS;
-    reset = ev->key == SDLK_0 || ev->key == SDLK_KP_0;
-    if(on && (bigger || smaller || reset)) {
-        window_zoom(bigger ? 1 : smaller ? -1 : 0);
-        push(K_REDRAW, false);
-        return;
-    }
 
     /* new keystroke, so whatever text comes next belongs to it */
     skip_text = false;
 
-    if(ev->repeat && (is_shift(ev->key) || is_alt(ev->key) || is_ctrl(ev->key)))
+    if(ev->repeat && (ev->key == PK_SHIFT || ev->key == PK_ALT || ev->key == PK_CTRL))
         return;  /* still the same tap */
 
-    shift_alone = is_shift(ev->key);
-    alt_alone = is_alt(ev->key);
-    ctrl_alone = is_ctrl(ev->key);
+    shift_alone = ev->key == PK_SHIFT;
+    alt_alone = ev->key == PK_ALT;
+    ctrl_alone = ev->key == PK_CTRL;
     if(is_modifier(ev->key))
         return;     /* nothing's sent until it's released */
 
-    if(ev->key == SDLK_ESCAPE) {
+    if(ev->key == PK_ESCAPE) {
         push(K_QUIT, on);
         return;
     }
 
-    key = from_keypad(ev->scancode, ev->key);
+    key = from_keypad(ev->key);
     if(key != K_NONE) {
         skip_text = true;   /* NumLock on, the digit comes through as text too */
         if(alt)
@@ -231,30 +178,32 @@ static void key_down(const SDL_KeyboardEvent *ev) {
     }
 }
 
+#define HELD_MAX 24 /* keys down at once that peek looks through */
+
 keypress_t keys_peek(void) {
     keypress_t press = { K_NONE, 0 };
-    const bool *down;
-    int sc;
+    int down[HELD_MAX];
+    int i, n;
+    bool esc = false;
 
     if(pc_script_on())
         return pc_script_peek();
 
-    SDL_PumpEvents();
-    down = SDL_GetKeyboardState(NULL);
-    press.held = (SDL_GetModState() & SDL_KMOD_CTRL) ? M_ON : 0;
+    n = pc_keys_held(down, HELD_MAX);
+    press.held = (pc_mods_now() & PM_CTRL) ? M_ON : 0;
 
     /* only the keys that aren't typed text (enter, arrows, F1-F5, ...) */
-    for(sc = 0; sc < SDL_SCANCODE_COUNT && press.key == K_NONE; sc++) {
-        if(down[sc])
-            press.key = from_key(SDL_GetKeyFromScancode((SDL_Scancode)sc, SDL_KMOD_NONE, false));
+    for(i = 0; i < n && press.key == K_NONE; i++) {
+        press.key = from_key(down[i]);
+        esc = esc || down[i] == PK_ESCAPE;
     }
     /* Esc is [mode] here (it quits from keys_wait()): Ctrl+Esc = [on]+[mode], cancel */
-    if(press.key == K_NONE && down[SDL_SCANCODE_ESCAPE])
+    if(press.key == K_NONE && esc)
         press.key = K_MODE;
 
     /* its key-down is queued too, don't let keys_wait() see it as a new press */
     if(press.key != K_NONE || (press.held & M_ON)) {
-        SDL_FlushEvents(SDL_EVENT_KEY_DOWN, SDL_EVENT_TEXT_INPUT);
+        pc_keys_flush();
         shift_alone = alt_alone = ctrl_alone = false;  /* their key-ups might be gone */
     }
     return press;
@@ -285,10 +234,10 @@ keypress_t keys_wait(void) {
         return pc_script_wait();
 
     while(pending_count == 0) {
-        SDL_Event ev;
+        pc_event_t ev;
 
         /* a timeout while awake is the idle clock running out */
-        if(!SDL_WaitEventTimeout(&ev, asleep ? -1 : (int)(KEYS_IDLE_OFF / (CLOCKS_PER_SEC / 1000)))) {
+        if(!pc_event_wait(&ev, asleep ? -1 : (int)(KEYS_IDLE_OFF / (CLOCKS_PER_SEC / 1000)))) {
             if(asleep) {
                 push(K_QUIT, false);
                 break;
@@ -296,52 +245,50 @@ keypress_t keys_wait(void) {
             keys_sleep();
             continue;
         }
-        if(asleep && ev.type == SDL_EVENT_KEY_DOWN) {
+        if(asleep && ev.kind == EV_KEY_DOWN) {
             wake();     /* that key only turns the screen back on */
             continue;
         }
 
-        switch(ev.type) {
-        case SDL_EVENT_QUIT:
+        switch(ev.kind) {
+        case EV_QUIT:
             push(K_QUIT, false);
             break;
 
-        case SDL_EVENT_WINDOW_RESIZED:
-        case SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED: /* same points, other pixels */
-            window_sync();
+        case EV_REDRAW:
             push(K_REDRAW, false);
             break;
 
-        case SDL_EVENT_WINDOW_DISPLAY_SCALE_CHANGED:
-            window_rescale();
-            push(K_REDRAW, false);
-            break;
-
-        case SDL_EVENT_WINDOW_EXPOSED:
-            window_present();
-            break;
-
-        case SDL_EVENT_WINDOW_FOCUS_LOST:
+        case EV_FOCUS_LOST:
             /* like Alt+Tab to another window, that Alt wasn't meant for us */
             shift_alone = false;
             alt_alone = false;
             ctrl_alone = false;
             break;
 
-        case SDL_EVENT_KEY_DOWN:
-            key_down(&ev.key);
+        case EV_KEY_DOWN: {
+            pc_window_t taken = pc_window_key(&ev); /* fullscreen and zoom aren't calculator keys */
+
+            if(taken == PW_REDRAW)
+                push(K_REDRAW, false);
+            else if(taken == PW_NOT_MINE)
+                key_down(&ev);
+            break;
+        }
+
+        case EV_MOUSE_DOWN:
+            push_pointer(K_POINT_DOWN, ev.x, ev.y, ev.mods);
             break;
 
-        case SDL_EVENT_MOUSE_BUTTON_DOWN:
-            if(ev.button.button == SDL_BUTTON_LEFT)
-                push_pointer(K_POINT_DOWN, ev.button.x, ev.button.y);
+        case EV_MOUSE_DRAG:
+            push_pointer(K_POINT_DRAG, ev.x, ev.y, ev.mods);
             break;
 
-        case SDL_EVENT_MOUSE_MOTION:
-            push_pointer((ev.motion.state & SDL_BUTTON_LMASK) != 0 ? K_POINT_DRAG : K_POINT_MOVE, ev.motion.x, ev.motion.y);
+        case EV_MOUSE_MOVE:
+            push_pointer(K_POINT_MOVE, ev.x, ev.y, ev.mods);
             break;
 
-        case SDL_EVENT_WINDOW_MOUSE_LEAVE: {
+        case EV_MOUSE_LEAVE: {
             keypress_t *left = push(K_POINT_MOVE, false);
 
             if(left != NULL)
@@ -349,32 +296,31 @@ keypress_t keys_wait(void) {
             break;
         }
 
-        case SDL_EVENT_MOUSE_WHEEL:
-            if(ev.wheel.y != 0)
-                push(ev.wheel.y > 0 ? K_UP : K_DOWN, false); /* scrolls the history like the arrows */
+        case EV_WHEEL:
+            push(ev.wheel > 0 ? K_UP : K_DOWN, false); /* scrolls the history like the arrows */
             break;
 
-        case SDL_EVENT_KEY_UP:
-            if(is_shift(ev.key.key) && shift_alone) {
+        case EV_KEY_UP:
+            if(ev.key == PK_SHIFT && shift_alone) {
                 shift_alone = false;
-                push(K_ALPHA, (ev.key.mod & SDL_KMOD_CTRL) != 0);
-            } else if(is_alt(ev.key.key) && alt_alone) {
+                push(K_ALPHA, (ev.mods & PM_CTRL) != 0);
+            } else if(ev.key == PK_ALT && alt_alone) {
                 alt_alone = false;
-                push(K_2ND, (ev.key.mod & SDL_KMOD_CTRL) != 0);
-            } else if(is_ctrl(ev.key.key) && ctrl_alone) {
+                push(K_2ND, (ev.mods & PM_CTRL) != 0);
+            } else if(ev.key == PK_CTRL && ctrl_alone) {
                 ctrl_alone = false;
                 push(K_ON, false);
             }
             break;
 
-        case SDL_EVENT_TEXT_INPUT:
+        case EV_TEXT:
             /* printable characters come here (with shift and layout applied) */
             shift_alone = false;
             alt_alone = false;
             ctrl_alone = false;
             if(skip_text)
                 break;
-            push_char(ev.text.text[0], (SDL_GetModState() & SDL_KMOD_CTRL) != 0);
+            push_char(ev.text[0], (ev.mods & PM_CTRL) != 0);
             break;
 
         default:

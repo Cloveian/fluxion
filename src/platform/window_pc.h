@@ -2,7 +2,7 @@
 #define FLUXION_WINDOW_PC_H
 
 /* PC only. an SDL3 window showing screen_pc.c's framebuffer 1:1.
-   while it's open, screen_show() draws into it and keys_pc.c reads its keyboard. */
+   while it's open, screen_show() draws into it and events_pc.c reads its keyboard and mouse. */
 
 #include <stdbool.h>
 

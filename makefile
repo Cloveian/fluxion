@@ -97,12 +97,16 @@ build-pc/fluxion-app: src/main_pc.c $(FLUX_OBJECTS) $(ENGINE_OBJECTS)
 build-pc/editor-test: test/editor_test.c $(FLUX_OBJECTS) $(ENGINE_OBJECTS)
 	$(CC) $(FLUX_CFLAGS) $^ $(LDLIBS) $(SDL_LIBS) -o $@
 
+# made up SDL events through the PC keys, prints the presses: ./build-pc/keys-pc-test k:lshift u:lshift t:a
+build-pc/keys-pc-test: test/keys_pc_test.c $(FLUX_OBJECTS) $(ENGINE_OBJECTS)
+	$(CC) $(FLUX_CFLAGS) $^ $(LDLIBS) $(SDL_LIBS) -o $@
+
 # the app in a browser, for the showcase page: make web -> web/build/
 # same code, web.c stands in for the SDL bits. asyncify so keys_wait() can block
 EMCC ?= emcc
 WEB_FLAGS = -O2 -DCOMPILE_PC -Isrc/engine -Isrc -MMD -MP
 WEB_SOURCES := $(filter-out $(SRCDIR)/pc/%,$(SOURCES)) src/main_pc.c \
-               $(filter-out src/platform/keys_pc%.c src/platform/window_pc.c,$(FLUX_SOURCES))
+               $(filter-out src/platform/keys_pc%.c src/platform/events_pc.c src/platform/window_pc.c,$(FLUX_SOURCES))
 WEB_OBJECTS := $(WEB_SOURCES:src/%.c=build-web/%.o)
 
 build-web/engine/%.o: src/engine/%.c
@@ -169,7 +173,7 @@ else ifneq ($(filter $(NSPIRE_GOALS),$(MAKECMDGOALS)),)
 
 NSPIRE_FLAGS = -Os -Wall -Isrc/engine -Isrc -MMD -MP
 NSPIRE_SOURCES := $(filter-out src/engine/pc/%,$(wildcard src/engine/*.c src/engine/*/*.c)) src/main.c \
-                  $(filter-out src/platform/keys_pc%.c src/platform/window_pc.c src/platform/web.c, \
+                  $(filter-out src/platform/keys_pc%.c src/platform/events_pc.c src/platform/window_pc.c src/platform/web.c, \
                     $(wildcard src/render/*.c src/platform/*.c src/input/*.c src/editor/*.c src/ui/*.c))
 NSPIRE_OBJECTS := $(NSPIRE_SOURCES:src/%.c=build-nspire/%.o)
 
