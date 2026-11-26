@@ -5,7 +5,7 @@
 #   make installer     bin-installer/, the app as appvars + its installer
 #   make bundle        bin-bundle/, the installer files as one .b84 (TI Connect CE) and one .tig (TiLP)
 #   make release       tests, both calculators, the bundles, and everything to send in release/Fluxion-<version>/
-#   make pc            build-pc/fluxion (PineappleCAS's command line) + build-pc/fluxion-app
+#   make pc            build-pc/fluxion (PineappleCAS's command line) + build-pc/fluxion-app (keyboard as the keypad) + build-pc/fluxion-desktop (the desktop's own input)
 #   make test          PC build + the engine's tests + the identity mask check
 #   make budget        what each test line costs, the CE guess too
 #   make web           web/build/, the app for a browser (needs emscripten)
@@ -49,7 +49,7 @@ TARGET  = build-pc/fluxion
 SOURCES := $(wildcard $(SRCDIR)/*.c) $(wildcard $(SRCDIR)/*/*.c)
 OBJECTS := $(SOURCES:$(SRCDIR)/%.c=$(OBJDIR)/%.o)
 
-pc: $(TARGET) build-pc/fluxion-app
+pc: $(TARGET) build-pc/fluxion-app build-pc/fluxion-desktop
 
 $(TARGET): $(OBJECTS)
 	@mkdir -p $(@D)
@@ -157,7 +157,7 @@ web/build/%.md: docs/%.md
 
 web: web/build/fluxion.js web/build/fluxion-nspire.js web/build/features.md web/build/releases.md
 
-test: $(TARGET) build-pc/identity-masks build-pc/layout-dump build-pc/view build-pc/editor-test build-pc/fluxion-app
+test: $(TARGET) build-pc/identity-masks build-pc/layout-dump build-pc/view build-pc/editor-test build-pc/fluxion-app build-pc/fluxion-desktop
 	./$(TARGET) test test/pcas.tests
 	./$(TARGET) test test/fluxion.tests
 	./build-pc/identity-masks
