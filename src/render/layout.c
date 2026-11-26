@@ -497,28 +497,24 @@ static box_t *build_limit(pcas_ast_t *e, unsigned char level) {
     return row;
 }
 
-/* ∫f dx, a definite one with b over a small next to the ∫. as sub and sup the 3 of 0 to 3 read like 3x^2 */
+/* ∫f dx, a definite one with b over a stacked beside the sign. as sub and sup the 3 of 0 to 3 read like 3x^2 */
 static box_t *build_integral(pcas_ast_t *e, unsigned char level) {
-    box_t *row = new_box(BOX_ROW, level), *f, *d = new_box(BOX_ROW, level), *ab;
-    char s[2] = { CH_INTEGRAL, '\0' };
+    box_t *sign = new_box(BOX_INTEGRAL, level), *body = new_box(BOX_ROW, level), *f, *d = new_box(BOX_ROW, level);
 
-    if(ast_ChildLength(e) == 4 && (ab = new_box(BOX_COL, level + 1)) != NULL) { /*lowered as one, the 0 on the baseline read like 0x^2*/
-        add(ab, build(ast_ChildGet(e, 3), level + 1));
-        add(ab, build(ast_ChildGet(e, 2), level + 1));
-        add(row, pair(BOX_SUB, new_text(s, level), ab, level));
-        add(row, new_space(3));
-    } else {
-        add(row, new_text(s, level));
-    }
     f = build(ast_ChildGet(e, 0), level);
     if(isoptype(ast_ChildGet(e, 0), OP_ADD))
         f = wrap(BOX_PARENS, f, level);
     add(d, new_text("d", level));
     add(d, build(ast_ChildGet(e, 1), level));
-    add(row, f);
-    add(row, new_space(2));
-    add(row, d);
-    return row;
+    add(body, f);
+    add(body, new_space(2));
+    add(body, d);
+    add(sign, body);
+    if(ast_ChildLength(e) == 4) {
+        add(sign, build(ast_ChildGet(e, 3), level + 1));
+        add(sign, build(ast_ChildGet(e, 2), level + 1));
+    }
+    return sign;
 }
 
 static box_t *build_operator(pcas_ast_t *e, unsigned char level) {
@@ -637,8 +633,8 @@ static bool has_frac(const box_t *b) {
 
     if(b->kind == BOX_SUP || b->kind == BOX_SUB)
         return has_frac(b->child);  /* the base only */
-    if(b->kind == BOX_ROOT)
-        return has_frac(b->child); /* radicand only */
+    if(b->kind == BOX_ROOT || b->kind == BOX_INTEGRAL)
+        return has_frac(b->child); /* radicand only, or the body without the limits */
 
     for(k = b->child; k != NULL; k = k->next)
         if(has_frac(k))
@@ -823,6 +819,30 @@ static void measure(const layout_font_t *f, box_t *b) {
         b->ascent = f->ascent[fi];
         b->descent = f->descent[fi];
         break;
+
+    case BOX_INTEGRAL: {
+        box_t *body = b->child, *upper = body->next, *lower = upper != NULL ? upper->next : NULL;
+        int x = INTEGRAL_W, a = MAX(body->ascent, f->ascent[fi]), d = MAX(body->descent, f->descent[fi]);
+
+        if(upper != NULL && lower != NULL) {
+            int need = upper->ascent + upper->descent + lower->ascent + lower->descent + 1;
+
+            if(need > a + d) { /* both limits have to fit down the sign */
+                a += (need - a - d + 1) / 2;
+                d = need - a;
+            }
+            upper->x = lower->x = x;
+            upper->y = upper->ascent - a;
+            lower->y = d - lower->descent;
+            x += MAX(upper->width, lower->width) + 2;
+        }
+        body->x = x;
+        body->y = 0;
+        b->width = x + body->width;
+        b->ascent = a + 1;
+        b->descent = d + 1;
+        break;
+    }
 
     case BOX_PARENS:
     case BOX_ABS: {

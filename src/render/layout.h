@@ -51,6 +51,7 @@
 #define PAREN_W         5       /* each bracket, including its gap */
 #define ABS_W           3       /* each |bar|, including its gap */
 #define COL_GAP         2 /* between stacked lines */
+#define INTEGRAL_W      7 /* the integral sign's room */
 
 typedef enum {
     BOX_TEXT, /* text - numbers, variables, operators, function names */
@@ -65,7 +66,8 @@ typedef enum {
     BOX_ABS, /* content, |bars| as tall as it */
     BOX_CURSOR, /* the editor's cursor, no width and a line's height */
     BOX_SLOT, /* an empty slot in a template, drawn as a box */
-    BOX_SELECT /* a row, highlighted (the editor's selection) */
+    BOX_SELECT, /* a row, highlighted (the editor's selection) */
+    BOX_INTEGRAL /* the body, then ->next the upper limit and ->next the lower one (both or neither), the sign as tall as the body */
 } box_kind_t;
 
 typedef struct box {

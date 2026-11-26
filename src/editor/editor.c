@@ -752,10 +752,8 @@ static ed_node_t *func_head(const box_t *k) {
     return NULL;
 }
 
-static bool from_text(ed_row_t *r, const box_t *b, bool after_space) {
-    const char *s;
-
-    for(s = b->text; *s != '\0'; s++) {
+static bool from_text(ed_row_t *r, const char *s, bool after_space) {
+    for(; *s != '\0'; s++) {
         char c = *s;
 
         if(c == CH_MINUS && !after_space)
@@ -797,7 +795,7 @@ static bool from_box(ed_row_t *r, const box_t *b) {
             }
 
             if(k->kind == BOX_TEXT) {
-                if(!from_text(r, k, prev != NULL && prev->kind == BOX_SPACE))
+                if(!from_text(r, k->text, prev != NULL && prev->kind == BOX_SPACE))
                     return false;
             } else if(!from_box(r, k)) {
                 return false;
@@ -807,7 +805,7 @@ static bool from_box(ed_row_t *r, const box_t *b) {
     }
 
     case BOX_TEXT:
-        return from_text(r, b, false);
+        return from_text(r, b->text, false);
 
     case BOX_FRAC:
         n = node_new(ED_FRAC, 0, NULL);
@@ -835,6 +833,12 @@ static bool from_box(ed_row_t *r, const box_t *b) {
 
     case BOX_SUB:
         return from_children(r, b->child);
+
+    case BOX_INTEGRAL: { /* the sign, the limits, then the body, the order they were typed in */
+        char sign[2] = { CH_INTEGRAL, '\0' };
+
+        return from_text(r, sign, false) && from_children(r, b->child->next) && from_box(r, b->child);
+    }
 
     default:
         return true;    /* spaces, cursor, empty slots */

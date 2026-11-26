@@ -156,7 +156,22 @@ void draw_softkeys(const rect_t *bar, const char *const names[5], int lit, unsig
     }
 }
 
-/* the shapes (brackets, root sign) */
+/* the shapes (brackets, root and integral signs) */
+
+#ifdef SCREEN_RESIZABLE
+/* steps + 1 points along a quadratic bezier, appended to p. returns where the next ones go */
+static float *quad_pts(float *p, int steps, float x0, float y0, float cx, float cy, float x1, float y1) {
+    int i;
+
+    for(i = 0; i <= steps; i++) {
+        float t = (float)i / (float)steps, u = 1 - t;
+
+        *p++ = u * u * x0 + 2 * u * t * cx + t * t * x1;
+        *p++ = u * u * y0 + 2 * u * t * cy + t * t * y1;
+    }
+    return p;
+}
+#endif
 
 /*
     a bracket from row top to row bottom, pixel version (calculators, --pixels 1). the ends curve in over a
@@ -178,15 +193,10 @@ static void bracket(int x, int top, int bottom, bool left) {
     if(aa) { /* one quadratic arc, the same width whatever the height */
         enum { N = 17 };
         float pts[2 * N], xr = left ? (float)x + 3.4f : (float)x + 1.6f, cx = left ? (float)x - 1.6f : (float)x + 6.6f;
-        int i;
+        float y0 = (float)top + 0.5f, y1 = (float)bottom + 0.5f;
 
         /* both ends at xr, so x is just the bulge and y a straight run */
-        for(i = 0; i < N; i++) {
-            float t = (float)i / (N - 1);
-
-            pts[2 * i] = xr + 2 * (1 - t) * t * (cx - xr);
-            pts[2 * i + 1] = (float)top + 0.5f + t * (float)(bottom - top);
-        }
+        quad_pts(pts, N - 1, xr, y0, cx, (y0 + y1) / 2, xr, y1);
         screen_stroke(pts, N, STROKE);
         return;
     }
@@ -226,6 +236,31 @@ static void radical(int x, int top, int bottom, int bar_end) {
     screen_hline(rise, top, bar_end - rise);
 }
 
+/* ∫ over rows top to bottom, a stroke on the desktop, the bitmap fonts' glyph in the middle otherwise */
+static void integral_sign(int x, int top, int bottom, unsigned char size) {
+#ifdef SCREEN_RESIZABLE
+    if(aa) {
+        enum { N = 8 };
+        float pts[2 * (2 * N + 2)], *end = pts;
+        float w = (float)INTEGRAL_W - 1.5f, left = (float)x + 0.5f, y0 = (float)top + 0.5f, y1 = (float)bottom + 0.5f;
+        float hook = (y1 - y0) / 4 < 3.2f ? (y1 - y0) / 4 : 3.2f; /* how far the curls reach down the stem */
+        float tx = left + w * 0.65f, bx = left + w * 0.35f; /* the stem leans, top end right of the bottom one */
+
+        /* the top hook from its tip to the stem, then the stem's foot to the bottom hook's tip */
+        end = quad_pts(end, N, left + w, y0 + 1.4f, tx + 0.3f, y0 - 0.1f, tx, y0 + hook);
+        end = quad_pts(end, N, bx, y1 - hook, bx - 0.3f, y1 + 0.1f, left, y1 - 1.4f);
+        screen_stroke(pts, (int)(end - pts) / 2, STROKE);
+        return;
+    }
+#endif
+    {
+        char s[2] = { CH_INTEGRAL, '\0' };
+        const font_t *font = draw_font_for(size);
+
+        draw_text(x, (top + bottom - font->ascent - font->descent) / 2 + 1, s, font);
+    }
+}
+
 /* --- boxes --- */
 
 void draw_box(const box_t *b, int x, int y) {
@@ -246,6 +281,10 @@ void draw_box(const box_t *b, int x, int y) {
 
     case BOX_FRAC:
         screen_hline(x, y + b->aux, b->width);
+        break;
+
+    case BOX_INTEGRAL:
+        integral_sign(x, top, bottom, b->size);
         break;
 
     case BOX_ROOT: {
