@@ -14,6 +14,8 @@ void window_fullscreen_toggle(void);
 void window_smooth_toggle(void);
 /* window changed size, the framebuffer gets what fits at this scale */
 void window_sync(void);
+/* it went to a screen with a different display scale, keeps the size in points */
+void window_rescale(void);
 /* 1 or -1, bigger or smaller pixels */
 void window_zoom(int step);
 /* a mouse position from SDL (window units) as a framebuffer pixel */

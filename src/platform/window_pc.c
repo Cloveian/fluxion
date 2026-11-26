@@ -8,13 +8,14 @@
 #include <SDL3/SDL.h>
 #include <stdlib.h>
 
-#define SCALE_START 3
-#define SCALE_MAX 6
+#define SCALE_START 3 /* at density 1, times the density otherwise */
+#define SCALE_MAX 12
 
 static SDL_Window *window;
 static SDL_Renderer *renderer;
 static SDL_Texture *texture;
 static int scale = SCALE_START; /* window pixels to a framebuffer pixel, whole numbers */
+static float density = 1; /* window pixels to a point, 1.5 at a 150% display scale */
 static int tex_w, tex_h, tex_f; /* what the texture was made for */
 static unsigned char *rgb;
 static bool smooth; /* corners of the pixels rounded off, on from the start for a high density screen. F10 */
@@ -48,10 +49,24 @@ void window_sync(void) {
 }
 
 void window_point(float wx, float wy, int *x, int *y) {
-    float density = window != NULL ? SDL_GetWindowPixelDensity(window) : 1;
-
     *x = (int)(wx * density) / scale;
     *y = (int)(wy * density) / scale;
+}
+
+/* moved to a screen with another scale, same size in points */
+void window_rescale(void) {
+    float now;
+    int fit;
+
+    if(window == NULL)
+        return;
+    now = SDL_GetWindowPixelDensity(window);
+    if(now <= 0 || now == density)
+        return;
+    fit = (int)SDL_lroundf((float)scale * now / density);
+    scale = fit < 1 ? 1 : fit > SCALE_MAX ? SCALE_MAX : fit;
+    density = now;
+    window_sync();
 }
 
 void window_zoom(int step) {
@@ -70,13 +85,21 @@ bool window_open(const char *title) {
         return false;
     }
 
-    if(!SDL_CreateWindowAndRenderer(title, SCREEN_W * scale, SCREEN_H * scale, SDL_WINDOW_RESIZABLE, &window, &renderer)) {
+    /* without the density flag a fractional display scale gets a 1x buffer the compositor stretches */
+    if(!SDL_CreateWindowAndRenderer(title, SCREEN_W * scale, SCREEN_H * scale, SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY, &window, &renderer)) {
         SDL_Log("window: %s", SDL_GetError());
         SDL_Quit();
         return false;
     }
 
-    smooth = SDL_GetWindowPixelDensity(window) > 1.0f;
+    density = SDL_GetWindowPixelDensity(window);
+    if(density <= 0)
+        density = 1;
+    smooth = density > 1.0f;
+    if(density != 1) { /* asked for 960 x 720 points, that's more pixels now */
+        scale = (int)SDL_lroundf((float)SCALE_START * density);
+        SDL_SetWindowSize(window, (int)SDL_lroundf((float)(SCREEN_W * scale) / density), (int)SDL_lroundf((float)(SCREEN_H * scale) / density));
+    }
     make_texture(smooth_factor());
     SDL_StartTextInput(window);
     return true;

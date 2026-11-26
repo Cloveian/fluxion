@@ -405,7 +405,13 @@ keypress_t keys_wait(void) {
             break;
 
         case SDL_EVENT_WINDOW_RESIZED:
+        case SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED: /* same points, other pixels */
             window_sync();
+            push(K_REDRAW, false);
+            break;
+
+        case SDL_EVENT_WINDOW_DISPLAY_SCALE_CHANGED:
+            window_rescale();
             push(K_REDRAW, false);
             break;
 
