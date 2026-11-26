@@ -46,6 +46,10 @@ pcas_ast_t *derive(pcas_ast_t *f, Symbol var, int times) {
 pcas_ast_t *value_at(pcas_ast_t *f, Symbol var, pcas_ast_t *v) {
     pcas_ast_t *e = ast_Copy(f), *x = ast_MakeSymbol((char)var);
 
+    if(e == NULL) { /* oom */
+        ast_Cleanup(x);
+        return NULL;
+    }
     if(e->type == NODE_SYMBOL && e->op.symbol == var) {
         ast_Cleanup(e);
         e = ast_Copy(v);

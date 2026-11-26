@@ -23,6 +23,8 @@ static bool whole_value(pcas_ast_t *e, mp_small *n) {
     pcas_ast_t *c = ast_Copy(e);
     bool ok;
 
+    if(c == NULL) /* oom */
+        return false;
     simplify(c, SIMP_ALL);
     ok = whole_number(c, n);
     ast_Cleanup(c);
@@ -38,6 +40,10 @@ static pcas_ast_t *run_terms(pcas_ast_t *f, pcas_ast_t *k, mp_small lo, mp_small
         v = ast_MakeInt(i);
         t = value_at(f, k->op.symbol, v);
         ast_Cleanup(v);
+        if(t == NULL) { /* oom */
+            ast_Cleanup(acc);
+            return NULL;
+        }
         acc = ast_MakeBinary(product ? OP_MULT : OP_ADD, acc, t);
         simplify(acc, SIMP_ALL);
     }
@@ -80,6 +86,8 @@ static int coefficients(pcas_ast_t *f, pcas_ast_t *k, pcas_ast_t **c) {
             return j;
         }
         c[j] = ast_Copy(d);
+        if(c[j] == NULL) /* oom */
+            break;
         substitute(c[j], k, z);
         c[j] = ast_MakeBinary(OP_DIV, c[j], ast_MakeInt(fact));
         simplify(c[j], SIMP_ALL);
@@ -127,6 +135,29 @@ static pcas_ast_t *sum_formula(pcas_ast_t *f, pcas_ast_t *k, pcas_ast_t *a, pcas
     return total;
 }
 
+/* an index i would be the imaginary unit, so it's swapped for the first K..Z letter the command doesn't use */
+static void index_i_as_letter(pcas_ast_t *a[4]) {
+    pcas_ast_t *k;
+    Symbol s;
+    bool used;
+    int j;
+
+    if(a[1]->type != NODE_SYMBOL || a[1]->op.symbol != SYM_IMAG)
+        return;
+    for(s = SYM_K; s <= SYM_Z; s++) {
+        used = false;
+        for(j = 0; j < 4; j++)
+            used |= has_symbol(a[j], s);
+        if(!used)
+            break;
+    }
+    if(s > SYM_Z || (k = ast_MakeSymbol(s)) == NULL)
+        return;
+    substitute(a[0], a[1], k);
+    ast_Cleanup(a[1]);
+    a[1] = k;
+}
+
 bool series_run(const char *cmd, char *src, box_t *in) {
     pcas_ast_t *a[4] = { NULL }, *e = NULL;
     pcas_error_t err = E_SUCCESS;
@@ -141,6 +172,8 @@ bool series_run(const char *cmd, char *src, box_t *in) {
         return false;
     product = cmd[0] == 'p';
     n = args_read(src, a, 4, &err);
+    if(n == 4)
+        index_i_as_letter(a);
     if(n != 4 || a[1]->type != NODE_SYMBOL || a[1]->op.symbol < SYM_A || a[1]->op.symbol > SYM_Z) {
         push(in, NULL, n < 0 ? error_text[err] : product ? "product(f, k, from, to)" : "sum(f, k, from, to)", 0);
         for(i = 0; i < n; i++)
