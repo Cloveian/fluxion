@@ -4,6 +4,7 @@
 
 #include "window_pc.h"
 #include "screen.h"
+#include "store.h"
 
 #include <SDL3/SDL.h>
 
@@ -12,6 +13,7 @@
 static const float zooms[] = { 0.5f, 0.67f, 0.8f, 0.9f, 1.0f, 1.1f, 1.25f, 1.5f, 1.75f, 2.0f, 2.5f, 3.0f, 4.0f }; /* Ctrl + and - steps */
 #define ZOOM_ONE 4 /* index of the 1.0 */
 #define ZOOMS (int)(sizeof zooms / sizeof zooms[0])
+#define ZOOM_SLOT "FLXZOOM" /* one byte, the index into zooms */
 
 static SDL_Window *window;
 static SDL_Renderer *renderer;
@@ -82,14 +84,19 @@ void window_rescale(void) {
 
 void window_zoom(int step) {
     int to = step == 0 ? ZOOM_ONE : zoom + step;
+    unsigned char keep;
 
     if(to < 0 || to >= ZOOMS)
         return;
     zoom = to;
     apply_view();
+    keep = (unsigned char)zoom;
+    store_save(ZOOM_SLOT, &keep, 1);
 }
 
 bool window_open(const char *title) {
+    unsigned char saved;
+
     if(window != NULL)
         return true;
 
@@ -108,6 +115,8 @@ bool window_open(const char *title) {
     density = SDL_GetWindowPixelDensity(window);
     if(density <= 0)
         density = 1;
+    if(store_load(ZOOM_SLOT, &saved, 1) == 1 && saved < ZOOMS)
+        zoom = saved;
     apply_view(); /* the first frame at the real size, the resize events only fix it up */
     make_texture();
     SDL_StartTextInput(window);
