@@ -665,6 +665,18 @@ static bool take_pairs(pcas_ast_t *e) {
     return false;
 }
 
+/*Fluxion: A/D and B/D give gcd(A,B)/D with D as is, NULL when the bottoms differ. gcd() simplifies its answer (4(X_1) -> 4X_4) so A/D never cancelled it and 1/D+X/D grew a D^2*/
+static pcas_ast_t *gcd_same_bottom(pcas_ast_t *a, pcas_ast_t *b) {
+    pcas_ast_t *top;
+
+    if(!isoptype(a, OP_DIV) || !isoptype(b, OP_DIV) || !ast_Compare(ast_ChildGet(a, 1), ast_ChildGet(b, 1)))
+        return NULL;
+    top = gcd(ast_ChildGet(a, 0), ast_ChildGet(b, 0));
+    if(top == NULL) /*oom*/
+        return NULL;
+    return ast_MakeBinary(OP_DIV, top, ast_Copy(ast_ChildGet(a, 1)));
+}
+
 bool factor_addition(pcas_ast_t *e, unsigned char flags) {
     pcas_ast_t *child;
     bool changed = false;
@@ -711,7 +723,9 @@ bool factor_addition(pcas_ast_t *e, unsigned char flags) {
                 if(like_only && letters(b) != amask)
                     continue;
 
-                g = gcd(a, b);
+                g = gcd_same_bottom(a, b);
+                if(g == NULL)
+                    g = gcd(a, b);
 
                 if(g == NULL) /*Fluxion: oom*/
                     break;
