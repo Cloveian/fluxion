@@ -2312,7 +2312,7 @@ static bool edit_act(action_t a) {
         break;
     case A_POINT: case A_POINT_DRAG:
         typing_run = false;
-        ed_click(&ed, &draw_font, (a.n & 0xFFF) - in_left, (a.n >> 12) - in_base, a.op == A_POINT_DRAG);
+        ed_click(&ed, &draw_font, a.n - in_left, a.m - in_base, a.op == A_POINT_DRAG);
         break;
 
     case A_ENTER:  evaluate(); break;
@@ -2492,7 +2492,8 @@ static action_t pointer_action(const input_t *p) {
             }
     } else if(p->y >= in_top && p->y < areas.keys.y) {
         a.op = p->drag || p->shift ? A_POINT_DRAG : A_POINT;
-        a.n = p->x | (p->y << 12);
+        a.n = p->x;
+        a.m = p->y;
     }
     return a;
 }

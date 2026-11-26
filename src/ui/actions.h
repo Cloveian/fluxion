@@ -22,7 +22,7 @@ typedef enum {
     A_CLEAR,        /* the CE's [clear], backspace while typing, out of whatever's open */
     A_CLEAR_LINE,   /* n 1 and the line's empty: clears the screen */
     A_CUT, A_COPY, A_PASTE, A_UNDO, A_SELECT_ALL,
-    A_POINT, A_POINT_DRAG, /* n is x | y << 12 on the screen, drag and shift-click select */
+    A_POINT, A_POINT_DRAG, /* n x and m y on the screen, drag and shift-click select */
     A_POPUP_PICK,   /* n the item, a click on it in an open popup */
     A_HIST_POINT,   /* n entry * 2, + 1 for its answer. highlights it, again enters it */
     A_ENTER, A_NEXT_FORM, A_DECIMAL,
@@ -46,6 +46,7 @@ typedef struct {
     act_t op;
     int n;
     const char *s;
+    int m; /* y of a point */
 } action_t;
 
 #endif
