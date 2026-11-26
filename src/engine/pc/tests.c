@@ -345,6 +345,9 @@ static void steps_text(const steps_t *s, char *got, unsigned size) {
                 strncat(got, s->line[i].list ? "," : "or", size - strlen(got) - 1);
             else if(i > 0)
                 strncat(got, "|", size - strlen(got) - 1);
+            if(j == 0)
+                for(k = 0; k < s->line[i].level; k++) /*~ per level of working*/
+                    strncat(got, "~", size - strlen(got) - 1);
             if(q->low != NULL) {
                 append_tree(got, size, q->low);
                 strncat(got, rel_str(q->low_rel), size - strlen(got) - 1);
