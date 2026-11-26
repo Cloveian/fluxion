@@ -99,7 +99,17 @@ static step_t *new_line(steps_t *s) {
     l = &s->line[s->n++];
     memset(l, 0, sizeof(*l));
     l->eqs = 1;
+    l->level = (unsigned char)s->depth;
     return l;
+}
+
+void steps_in(steps_t *s) {
+    s->depth++;
+}
+
+void steps_out(steps_t *s) {
+    if(s->depth > 0)
+        s->depth--;
 }
 
 step_t *steps_eq(steps_t *s, pcas_ast_t *left, pcas_ast_t *right) {
@@ -987,8 +997,10 @@ bool steps_append(steps_t *s, steps_t *t) {
         ast_Cleanup(t->line[0].eq[j].pm);
         ast_Cleanup(t->line[0].eq[j].den);
     }
-    for(k = 1; k < t->n; k++)
-        s->line[s->n++] = t->line[k];
+    for(k = 1; k < t->n; k++) {
+        s->line[s->n] = t->line[k];
+        s->line[s->n++].level += (unsigned char)s->depth;
+    }
     t->n = 0;
     return true;
 }

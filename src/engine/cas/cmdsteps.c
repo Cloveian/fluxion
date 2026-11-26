@@ -24,8 +24,10 @@ static pcas_ast_t *derive_lines(steps_t *out, pcas_ast_t *f, pcas_ast_t *at, Sym
             steps_free(&t);
             return NULL;
         }
-        for(i = 0; i < t.n; i++)
-            out->line[out->n++] = t.line[i];
+        for(i = 0; i < t.n; i++) {
+            out->line[out->n] = t.line[i];
+            out->line[out->n++].level += (unsigned char)out->depth;
+        }
         t.n = 0;
     }
     slope = ast_Copy(out->line[out->n - 1].eq[0].left);

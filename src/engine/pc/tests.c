@@ -413,6 +413,7 @@ static bool test_cmd_steps(test_t *t) {
         ast_Cleanup(a);
         return false;
     }
+    s.depth = 0;
     if(!steps_command(kind, f, a, (Symbol)t->arg2[0], &s))
         strcpy(got, "none");
     else
@@ -441,6 +442,7 @@ static bool test_expr_steps(test_t *t) {
         printf("Test failed on line %u. Unable to parse %s\n", t->line, src);
         return false;
     }
+    s.depth = 0;
     ok = expand_cmd ? steps_expand(e, &s) : simplify_cmd ? steps_simplify(e, &s) : steps_factor(e, &s);
     if(!ok)
         strcpy(got, "none");
@@ -492,6 +494,7 @@ static bool test_calc_steps(test_t *t) {
         printf("Test failed on line %u. Unable to parse %s\n", t->line, t->arg1);
         return false;
     }
+    s.depth = 0;
     if(!steps_calc(e, &s))
         strcpy(got, "none");
     else
@@ -549,6 +552,7 @@ static bool test_system_steps(test_t *t) {
             ast_Cleanup(eqs[i]);
         return false;
     }
+    s.depth = 0;
     if(!steps_system(eqs, n, vars, &s))
         strcpy(got, "none");
     else
@@ -693,6 +697,7 @@ static bool test_ineq_steps(test_t *t) {
 
     if(!parse_relation(t, "inequality", &left, &right, &rel))
         return false;
+    s.depth = 0;
     if(!steps_ineq(left, right, rel, (Symbol)t->arg2[0], &s))
         strcpy(got, "none");
     else
@@ -745,6 +750,7 @@ static bool test_steps(test_t *t) {
         return false;
     }
 
+    s.depth = 0;
     if(!steps_solve(left, right, (Symbol)t->arg2[0], (Method)m, &s))
         strcpy(got, "none");
     else

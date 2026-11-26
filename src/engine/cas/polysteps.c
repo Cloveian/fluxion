@@ -243,7 +243,9 @@ static bool cardano(steps_t *out, step_t *first, pcas_ast_t *right, pcas_ast_t *
     steps_rule(l, "the discriminant, (q/2)^2 + (p/3)^3");
     e = ast_MakeBinary(OP_ADD, ast_MakeBinary(OP_POW, ast_MakeBinary(OP_DIV, steps_number(q), ast_MakeInt(2)), ast_MakeInt(2)),
                        ast_MakeBinary(OP_POW, ast_MakeBinary(OP_DIV, steps_number(p), ast_MakeInt(3)), ast_MakeInt(3)));
+    steps_in(out); /*the numbers put in is working, the value is the step*/
     l = steps_expr(out, e);
+    steps_out(out);
     if(l == NULL)
         goto done;
     l->as_is = true;

@@ -36,12 +36,18 @@ typedef struct {
     pcas_ast_t *by; /*the 5 of _5*/
     bool flip; /*the move turned the sign round: dividing a < by a negative*/
     const char *rules[STEP_RULES_MAX]; /*move n: the rules used, "product rule"*/
+    unsigned char level; /*0 is a main line, 1 working that folds away under the main line before it*/
 } step_t;
 
 typedef struct {
     step_t line[STEPS_MAX];
     int n;
+    int depth; /*the level new lines get, steps_in / steps_out*/
 } steps_t;
+
+/*the lines made between these are working, level 1 under the line before them. they can nest*/
+void steps_in(steps_t *s);
+void steps_out(steps_t *s);
 
 /*left = right worked out for var, false (and nothing in out) if it's a shape or method it doesn't do*/
 bool steps_solve(pcas_ast_t *left, pcas_ast_t *right, Symbol var, Method m, steps_t *out);

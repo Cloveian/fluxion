@@ -32,7 +32,11 @@ static char rel; /* 0 for an equation, else < > or l g (<= >=) */
 static Method method;
 static box_t *rows[ROWS_MAX];
 static bool is_move[ROWS_MAX];
-static int nrows, top;
+static unsigned char row_level[ROWS_MAX]; /* 0 a main line, 1 working under the main line above it */
+static bool kids[ROWS_MAX]; /* a main line with working under it */
+static bool folded[ROWS_MAX]; /* ...that's tucked away */
+static bool tree; /* some line has working, so the page has a cursor and folds */
+static int nrows, top, sel; /* sel is the line the cursor's on, on a tree page */
 static unsigned off; /* a bit per method that doesn't fit, greyed out */
 
 static box_t *text(char c) {
@@ -177,7 +181,8 @@ static void free_rows(void) {
 
     for(i = 0; i < nrows; i++)
         layout_free(rows[i]);
-    nrows = top = 0;
+    nrows = top = sel = 0;
+    tree = false;
 }
 
 /* in degrees, back the way the history shows them: sin(x), not sin(pi x/180) */
@@ -197,12 +202,58 @@ static void lines_out(steps_t *s) {
     }
 }
 
+/* row i is tucked away: working under a main line that's folded (or under working that is), or the move after such a line */
+static bool hidden(int i) {
+    int j, level;
+
+    if(is_move[i]) /* goes with the line before it */
+        i--;
+    level = row_level[i];
+    for(j = i - 1; j >= 0 && level > 0; j--) {
+        if(!is_move[j] && row_level[j] < level) {
+            if(folded[j])
+                return true;
+            level = row_level[j];
+        }
+    }
+    return false;
+}
+
+/* the next line row from i in dir (1 or -1) that shows, -1 when therre isn't one */
+static int next_line(int i, int dir) {
+    for(i += dir; i >= 0 && i < nrows; i += dir)
+        if(!is_move[i] && !hidden(i))
+            return i;
+    return -1;
+}
+
+static void move_sel(int dir) {
+    int n = next_line(sel, dir);
+
+    if(n >= 0)
+        sel = n;
+}
+
+/* a page that doesn't fit starts with its working folded, one that does shows all of it as it always did */
+static void fold_to_fit(void) {
+    int i, h = 0, room = areas.keys.y - GAP - (areas.body.y + GAP);
+
+    if(!tree)
+        return;
+    for(i = 0; i < nrows; i++)
+        if(rows[i] != NULL)
+            h += rows[i]->ascent + rows[i]->descent + GAP;
+    for(i = 0; i < nrows; i++)
+        folded[i] = kids[i] && h > room;
+}
+
 /* the steps into rows, false if it doesn't do this one */
 static bool build(void) {
     static steps_t s; /* 24 lines, ~1 KB on the CE */
     bool ok;
     int i;
 
+    s.depth = 0;
     if(sys_n > 0)
         ok = steps_system(sys, sys_n, sys_vars, &s);
     else if(calc == NULL && rel != 0)
@@ -222,13 +273,20 @@ static bool build(void) {
     free_rows();
     for(i = 0; i < s.n && nrows < ROWS_MAX; i++) {
         is_move[nrows] = false;
+        row_level[nrows] = s.line[i].level;
+        kids[nrows] = i + 1 < s.n && s.line[i + 1].level > s.line[i].level;
+        folded[nrows] = false;
+        tree = tree || kids[nrows];
         rows[nrows++] = line_box(&s.line[i], i == 0);
         if(s.line[i].move != 0 && nrows < ROWS_MAX) {
             is_move[nrows] = true;
+            row_level[nrows] = s.line[i].level;
+            kids[nrows] = folded[nrows] = false;
             rows[nrows++] = move_box(&s.line[i]);
         }
     }
     steps_free(&s);
+    fold_to_fit();
     return true;
 }
 
@@ -363,12 +421,37 @@ bool work_act(action_t a) {
     }
     switch(a.op) {
     case A_UP:
-        if(top > 0)
+        if(tree)
+            move_sel(-1);
+        else if(top > 0)
             top--;
         break;
     case A_DOWN:
-        if(top < nrows - 1)
+        if(tree)
+            move_sel(1);
+        else if(top < nrows - 1)
             top++;
+        break;
+    case A_RIGHT: /* open it, enter flips it */
+    case A_ENTER:
+        if(!tree)
+            return false;
+        if(kids[sel])
+            folded[sel] = a.op == A_ENTER ? !folded[sel] : false;
+        break;
+    case A_LEFT: /* close it, from inside the working that goes to the line above it */
+        if(!tree)
+            return false;
+        if(kids[sel] && !folded[sel]) {
+            folded[sel] = true;
+        } else if(row_level[sel] > 0) {
+            int j = sel - 1;
+
+            while(j > 0 && (is_move[j] || row_level[j] >= row_level[sel]))
+                j--;
+            sel = j;
+            folded[sel] = true;
+        }
         break;
     case A_CLEAR: case A_ESC:
         work_close();
@@ -379,20 +462,49 @@ bool work_act(action_t a) {
     return true;
 }
 
+/* top, so the cursor line is on the page */
+static void follow(int y0, int bottom) {
+    int i, y;
+
+    if(sel < top)
+        top = sel;
+    while(top < sel) {
+        y = y0;
+        for(i = top; i <= sel; i++)
+            if(rows[i] != NULL && !hidden(i))
+                y += rows[i]->ascent + rows[i]->descent + GAP;
+        if(y - GAP <= bottom)
+            break;
+        top++;
+    }
+}
+
 void work_draw(void) {
     int x0 = areas.body.x, w = areas.body.w, y0 = areas.body.y + GAP, y = y0, bottom = areas.keys.y - GAP;
     int i, x;
 
+    if(tree)
+        follow(y0, bottom);
     for(i = top; i < nrows; i++) {
         box_t *b = rows[i];
 
-        if(b == NULL)
+        if(b == NULL || hidden(i))
             continue;
         if(y + b->ascent + b->descent > bottom)
             break;
         /* centered, a line too wide for it starts at the left edge */
         x = b->width < w - 2 * GAP ? x0 + (w - b->width) / 2 : x0 + GAP;
-        screen_color(is_move[i] ? COL_ACCENT : COL_FG);
+        if(tree && i == sel) {
+            screen_color(COL_SELECT);
+            screen_fill(x0 + 1, y - 1, w - 2, b->ascent + b->descent + 2);
+        }
+        if(kids[i]) { /* + when its working is tucked away, - when it shows */
+            const font_t *small = draw_label_font();
+
+            screen_color(COL_ACCENT);
+            draw_text(x0 + GAP, y + (b->ascent + b->descent - small->ascent - small->descent) / 2, folded[i] ? "+" : "-", small);
+        }
+        screen_color(is_move[i] ? COL_ACCENT : row_level[i] > 0 ? COL_DIM : COL_FG);
         draw_box(b, x, y + b->ascent);
         y += b->ascent + b->descent + GAP;
     }
