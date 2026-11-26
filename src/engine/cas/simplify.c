@@ -1040,6 +1040,36 @@ static bool reciprocal_inverses(pcas_ast_t *e) {
     return true;
 }
 
+/*Fluxion: pi or a number all the way down, the only arguments simplify_periodic can reduce*/
+static bool pi_and_numbers(pcas_ast_t *e) {
+    pcas_ast_t *c;
+
+    if(e == NULL) /*Fluxion: oom, a child that never got appended*/
+        return false;
+    if(e->type == NODE_SYMBOL)
+        return e->op.symbol == SYM_PI;
+    if(e->type == NODE_OPERATOR)
+        for(c = ast_ChildGet(e, 0); c != NULL; c = c->next)
+            if(!pi_and_numbers(c))
+                return false;
+    return true;
+}
+
+/*Fluxion: simplify_periodic does one node, this runs it on all of them (cos(5pi) inside a sum)*/
+static bool periodic_tree(pcas_ast_t *e) {
+    pcas_ast_t *c;
+    bool changed = false;
+
+    if(e == NULL || e->type != NODE_OPERATOR)
+        return false;
+    for(c = ast_ChildGet(e, 0); c != NULL; c = c->next)
+        changed |= periodic_tree(c);
+    if((isoptype(e, OP_SIN) || isoptype(e, OP_COS) || isoptype(e, OP_TAN)) && pi_and_numbers(ast_ChildGet(e, 0)))
+        while(!pcas_check() && simplify_periodic(e))
+            changed = true;
+    return changed;
+}
+
 bool simplify_identities(pcas_ast_t *e, unsigned short flags) {
     bool changed = false;
 
@@ -1054,8 +1084,7 @@ bool simplify_identities(pcas_ast_t *e, unsigned short flags) {
             changed = true;
 
     if(flags & SIMP_ID_TRIG) {
-        while(!pcas_check() && simplify_periodic(e))
-            changed = true;
+        changed |= periodic_tree(e);
         changed |= id_ExecuteTable(e, id_trig_identities, ID_NUM_TRIG_IDENTITIES, true);
     }
 

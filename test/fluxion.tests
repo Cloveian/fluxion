@@ -645,6 +645,14 @@ decimal; -1/8; -0.125
 decimal; 1/7; 0.142857
 decimal; 1/3+2/3; 1
 
+#more than a turn of pi in a trig function reduces inside a sum or a product too, not just on its own
+simplify; 3cos(3pi); -3
+simplify; cos(3pi)+1; 0
+simplify; sin(5pi/2)+X; X+1
+simplify; cos(5pi)X; -X
+simplify; tan(5pi/4)+X; X+1
+simplify; cos(9pi/4)+X; X+sqrt(2)/2
+
 #Constants, roots, logs, trig (radians), factorial
 decimal; pi; 3.14159
 decimal; e; 2.71828
