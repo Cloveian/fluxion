@@ -63,6 +63,9 @@ void draw_set_ladder(const font_t *const *fonts, int count, int base) {
 }
 
 #ifdef SCREEN_RESIZABLE
+static bool aa; /* brackets and the root sign as strokes, on with the vector fonts */
+#define STROKE 1.1f /* layout pixels across */
+
 bool draw_use_vector(void) {
     const font_t *v[LAYOUT_MAX_SIZES];
     int i, n = draw_font.sizes;
@@ -73,6 +76,7 @@ bool draw_use_vector(void) {
             return false;
     }
     draw_set_ladder(v, n, draw_font.base);
+    aa = true;
     return true;
 }
 #endif
@@ -155,8 +159,8 @@ void draw_softkeys(const rect_t *bar, const char *const names[5], int lit, unsig
 /* the shapes (brackets, root sign) */
 
 /*
-    a bracket from row top to row bottom. the ends curve in over a quarter of
-    its height each, so tall brackets stay round instead of looking like [ ]:
+    a bracket from row top to row bottom, pixel version (calculators, --pixels 1). the ends curve in over a
+    quarter of its height each, so tall brackets stay round instead of looking like [ ]:
 
           ..#      mirrored for the right one, the
           .#       column next to the content is a gap
@@ -170,6 +174,23 @@ static void bracket(int x, int top, int bottom, bool left) {
     int out = left ? x + 3 : x + 1;   /* the curved ends */
     int mid = left ? x + 1 : x + 3;
 
+#ifdef SCREEN_RESIZABLE
+    if(aa) { /* one quadratic arc, the same width whatever the height */
+        enum { N = 17 };
+        float pts[2 * N], xr = left ? (float)x + 3.4f : (float)x + 1.6f, cx = left ? (float)x - 1.6f : (float)x + 6.6f;
+        int i;
+
+        /* both ends at xr, so x is just the bulge and y a straight run */
+        for(i = 0; i < N; i++) {
+            float t = (float)i / (N - 1);
+
+            pts[2 * i] = xr + 2 * (1 - t) * t * (cx - xr);
+            pts[2 * i + 1] = (float)top + 0.5f + t * (float)(bottom - top);
+        }
+        screen_stroke(pts, N, STROKE);
+        return;
+    }
+#endif
     if(curve < 1)
         curve = 1;
 
@@ -179,7 +200,7 @@ static void bracket(int x, int top, int bottom, bool left) {
 }
 
 /*
-    √ before the radicand, rising to the bar:
+    √ before the radicand, rising to the bar, pixel version:
 
              .......####  <- bar (top)
         #.   .
@@ -190,6 +211,15 @@ static void radical(int x, int top, int bottom, int bar_end) {
     int tick = (top + 2 * bottom) / 3;
     int rise = x + ROOT_SIGN_W - 3; /* where the sign meets the bar, 2px before the radicand */
 
+#ifdef SCREEN_RESIZABLE
+    if(aa) {
+        float pts[10] = { (float)x + 0.3f, (float)tick + 0.8f, (float)x + 1.4f, (float)tick + 0.5f, (float)x + 3.0f, (float)bottom + 0.6f,
+                          (float)rise + 0.5f, (float)top + 0.5f, (float)bar_end, (float)top + 0.5f };
+
+        screen_stroke(pts, 5, STROKE);
+        return;
+    }
+#endif
     screen_line(x, tick, x + 1, tick);
     screen_line(x + 1, tick, x + 3, bottom);
     screen_line(x + 3, bottom, rise, top);

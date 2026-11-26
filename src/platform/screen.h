@@ -27,6 +27,8 @@ void screen_pixel_size(int *w, int *h);
 int screen_real(float layout);
 /* alpha (0 to 255, w x h bytes, stride apart) blended in the current colour, its corner at real pixel x, y */
 void screen_mask(int x, int y, int w, int h, const unsigned char *alpha, int stride);
+/* n points (x, y, x, y, ...) in layout pixels, joined, width layout pixels across, round ends, antialiased. the middle of a pixel is .5 */
+void screen_stroke(const float *pts, int n, float width);
 extern void (*screen_resized)(void);
 #else
 #define SCREEN_W 320

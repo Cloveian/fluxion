@@ -133,6 +133,60 @@ void screen_mask(int x, int y, int w, int h, const unsigned char *alpha, int str
     }
 }
 
+/* squared distance from (px, py) to the segment a-b */
+static float seg_dist2(float px, float py, float ax, float ay, float bx, float by) {
+    float vx = bx - ax, vy = by - ay, wx = px - ax, wy = py - ay, len2 = vx * vx + vy * vy;
+    float t = len2 > 0 ? (wx * vx + wy * vy) / len2 : 0;
+
+    t = t < 0 ? 0 : t > 1 ? 1 : t;
+    wx -= t * vx;
+    wy -= t * vy;
+    return wx * wx + wy * wy;
+}
+
+void screen_stroke(const float *pts, int n, float width) {
+    float r = width * ppu / 2, lo_x = pts[0], hi_x = pts[0], lo_y = pts[1], hi_y = pts[1];
+    int i, j, k, x0, x1, y0, y1;
+
+    for(i = 1; i < n; i++) {
+        lo_x = pts[2 * i] < lo_x ? pts[2 * i] : lo_x;
+        hi_x = pts[2 * i] > hi_x ? pts[2 * i] : hi_x;
+        lo_y = pts[2 * i + 1] < lo_y ? pts[2 * i + 1] : lo_y;
+        hi_y = pts[2 * i + 1] > hi_y ? pts[2 * i + 1] : hi_y;
+    }
+    x0 = (int)floorf(lo_x * ppu - r - 1);
+    x1 = (int)ceilf(hi_x * ppu + r + 1);
+    y0 = (int)floorf(lo_y * ppu - r - 1);
+    y1 = (int)ceilf(hi_y * ppu + r + 1);
+    x0 = x0 < 0 ? 0 : x0;
+    y0 = y0 < 0 ? 0 : y0;
+    x1 = x1 > pw ? pw : x1;
+    y1 = y1 > ph ? ph : y1;
+    for(j = y0; j < y1; j++) {
+        for(i = x0; i < x1; i++) {
+            float best = 1e30f, cover, cx = (float)i + 0.5f, cy = (float)j + 0.5f;
+            unsigned char *px;
+
+            for(k = 0; k + 1 < n; k++) {
+                float ax = pts[2 * k] * ppu, ay = pts[2 * k + 1] * ppu, bx = pts[2 * k + 2] * ppu, by = pts[2 * k + 3] * ppu, d;
+
+                /* a long bar has a big box and few pixels near it, so most segmants are skipped by their own box */
+                if(cx < (ax < bx ? ax : bx) - r - 1 || cx > (ax > bx ? ax : bx) + r + 1 || cy < (ay < by ? ay : by) - r - 1 || cy > (ay > by ? ay : by) + r + 1)
+                    continue;
+                d = seg_dist2(cx, cy, ax, ay, bx, by);
+                best = d < best ? d : best;
+            }
+            cover = r - sqrtf(best) + 0.5f;
+            if(cover <= 0)
+                continue;
+            cover = cover > 1 ? 1 : cover;
+            px = FB(i, j);
+            for(k = 0; k < 3; k++)
+                px[k] = (unsigned char)((float)px[k] + ((float)now[k] - (float)px[k]) * cover + 0.5f);
+        }
+    }
+}
+
 static void pixel(int x, int y) {
     rect(PX(x), PX(y), PX(x + 1), PX(y + 1));
 }
