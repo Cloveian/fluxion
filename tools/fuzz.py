@@ -1,6 +1,6 @@
 # random expressions through build-pc/fluxion, checked numerically against sympy
-# usage: python3 tools/fuzz.py [count] [seed] [pos|any] [simplify|expand|factor|derivative|integral|solve|limit|critical|system|tangent|extrema|inflect|increasing|implicit] [-v]   (pos = letters only get positive test points)
-# the last five run the app itself (build-pc/fluxion-app, FLX_ANSWER prints what it says) and check that against sympy
+# usage: python3 tools/fuzz.py [count] [seed] [pos|any] [simplify|expand|factor|derivative|integral|solve|limit|critical|system|tangent|extrema|inflect|increasing|implicit|average|area|mvt|continuous] [-v]   (pos = letters only get positive test points)
+# the last nine run the app itself (build-pc/fluxion-app, FLX_ANSWER prints what it says) and check that against sympy
 import os, random, re, subprocess, sys, tempfile
 import sympy as sp
 from sympy.parsing.sympy_parser import parse_expr, standard_transformations, implicit_multiplication_application, convert_xor
@@ -267,7 +267,7 @@ def critical_check(f_str, roots):
         return f"missed or extra: want {tv}"
     return None
 
-APP = ("tangent", "extrema", "inflect", "increasing", "implicit")
+APP = ("tangent", "extrema", "inflect", "increasing", "implicit", "average", "area", "mvt", "continuous")
 
 def gen_implicit():
     a, b = nz(2, 9), nz(2, 9)
@@ -434,6 +434,92 @@ def implicit_check(eq, lines):
             return f"at ({x0:.3f}, {y0}) want {wv:.5g}, got {gv:.5g}"
     return None if checked else "skip"
 
+def gen_poly(deg):
+    # a polynomial in X with small whole coefficients, _ for a minus
+    out = ""
+    for p in range(deg, -1, -1):
+        c = nz(-4, 4) if p == deg else random.choice([0, 0, nz(-5, 5)])
+        if c:
+            x = "X^" + str(p) if p > 1 else "X" if p == 1 else ""
+            out += ("+" if c > 0 else "_") + str(abs(c)) + x
+    return out.lstrip("+")
+
+def poly_roots(d, lo=None, hi=None):
+    # real roots of the polynomial d, strictly between lo and hi when given
+    return sorted({round(float(r), 9) for r in sp.real_roots(sp.Poly(d, X)) if lo is None or lo < float(r) < hi})
+
+def area_pieces(d, lo, hi):
+    # sum of |d| between the edges, d a polynomial, numerically
+    roots = poly_roots(d, lo, hi)
+    edges = roots if lo is None else [lo] + roots + [hi]
+    total = 0.0
+    for l, h in zip(edges, edges[1:]):
+        total += abs(float(sp.integrate(d, (X, l, h))))
+    return total, len(edges)
+
+def average_check(f, a, b, lines):
+    if len(lines) != 1 or lines[0][0] != "answer":
+        return "skip"
+    m = re.match(r"(?i)^average\s*=(.*)$", lines[0][1])
+    if not m:
+        return f"can't read {lines[0][1]}"
+    gv = fval(to_sympy(m.group(1)), 0)
+    want = float(sp.Integral(f, (X, a, b)).evalf(15)) / (b - a)
+    return None if gv is not None and not far(gv, want, 1e-6) else f"want {want:.6g}, got {gv}"
+
+def area_check(f, g, bounds, lines):
+    if len(lines) != 1:
+        return "skip"
+    kind, text = lines[0]
+    lo, hi = bounds if bounds else (None, None)
+    want, edges = area_pieces(sp.expand(f - g), lo, hi)
+    if kind == "message":
+        return None if "cross fewer" in text and edges < 2 else f"said {text}, want {want:.6g}"
+    m = re.match(r"(?i)^area\s*=(.*)$", text)
+    gv = fval(to_sympy(m.group(1)), 0) if m else None
+    return None if gv is not None and not far(gv, want, 1e-6) else f"want {want:.6g}, got {text}"
+
+def mvt_check(f, a, b, lines):
+    d = sp.expand(sp.diff(f, X) - (f.subs(X, b) - f.subs(X, a)) / (b - a))
+    if d == 0:
+        return None if lines and "any c" in lines[0][1] else f"said {lines}"
+    want = poly_roots(d, a, b)
+    if lines and lines[0][0] == "message":
+        return None if not want and "no c" in lines[0][1] else f"said {lines[0][1]}, want {want}"
+    got = []
+    for kind, text in lines:
+        m = re.match(r"(?i)^c\s*=(.*)$", text)
+        if not m:
+            return f"can't read {text}"
+        got += [fval(to_sympy(p), 0) for p in top_split(m.group(1))]
+    if len(got) != len(want) or any(g is None or far(g, w) for g, w in zip(sorted(got), want)):
+        return f"want c = {want}, got {sorted(got)}"
+    return None
+
+def continuous_pair():
+    k = nz(-3, 3)
+    return random.choice([
+        (f"X^2_{k}X+{nz(1, 5)}", nz(-3, 3)), (f"(X^2_{k * k})/(X_{k})", k), (f"(X^2_{k * k})/(X_{k})", k + 1), ("abs(X)/X", 0), ("X/abs(X)", 0),
+        (f"1/(X_{k})", k), (f"1/(X_{k})^2", k), (f"abs(X_{k})", k), ("sin(X)/X", 0), ("e^(1/X)", 0), ("(1_cos(X))/X", 0), (f"(X^3_{k * k * k})/(X_{k})", k),
+    ])
+
+def continuous_check(f, a, lines):
+    if len(lines) != 4:
+        return "skip"
+    left, right = sp.limit(f, X, a, "-"), sp.limit(f, X, a, "+")
+    try:
+        val = f.subs(X, a)
+        val = None if val.has(sp.zoo, sp.nan, sp.oo, -sp.oo) else val
+    except Exception:
+        val = None
+    if left.is_finite and right.is_finite and left == right:
+        want = "continuous" if val is not None and sp.simplify(val - left) == 0 else "removable"
+    elif left.is_finite and right.is_finite:
+        want = "jump"
+    else:
+        want = "infinite"
+    return None if lines[3][1].lower().startswith(want) else f"want {want}, got {lines[3][1]}"
+
 def run(expr):
     if cmd == "limit":
         expr = f"limit({expr[0]},X,{expr[1]}{',' + expr[2] if len(expr) > 2 else ''})"
@@ -469,6 +555,31 @@ for i in range(count):
                 label = gen_implicit()
                 lines = app_answers(f"implicit({app_text(label)},y,x)")
                 problem = implicit_check(label, lines)
+            elif cmd in ("average", "mvt"):
+                label = gen_poly(random.choice([2, 3, 3, 4]))
+                f = to_sympy(label)
+                a = nz(-3, 2)
+                b = a + nz(1, 4)
+                lines = app_answers(f"{cmd}({app_text(label)},{a},{b},x)")
+                label = f"{label} from {a} to {b}"
+                problem = average_check(f, a, b, lines) if cmd == "average" else mvt_check(f, a, b, lines)
+            elif cmd == "area":
+                label, other = gen_poly(random.choice([2, 2, 3])), gen_poly(random.choice([1, 2]))
+                f, g = to_sympy(label), to_sympy(other)
+                bounds = None
+                call = f"area({app_text(label)},{app_text(other)})"
+                if random.random() < 0.5:
+                    bounds = (nz(-3, 0), nz(1, 4))
+                    call = f"area({app_text(label)},{app_text(other)},{bounds[0]},{bounds[1]})"
+                label = f"{label} and {other}" + (f" from {bounds[0]} to {bounds[1]}" if bounds else "")
+                lines = app_answers(call)
+                problem = area_check(f, g, bounds, lines)
+            elif cmd == "continuous":
+                label, a = continuous_pair()
+                f = to_sympy(label)
+                lines = app_answers(f"continuous({app_text(label)},{a},x)")
+                label = f"{label} at {a}"
+                problem = continuous_check(f, a, lines)
             else:
                 label = gen_fn()
                 f = to_sympy(label)
