@@ -130,6 +130,29 @@ static entry_t *push_slot(void) {
     return &history[history_len++];
 }
 
+#ifdef COMPILE_PC
+static void print_line(const box_t *b) {
+    ed_row_t *r = ed_from_box(b);
+    char *s = r != NULL ? ed_row_to_engine(r) : NULL;
+
+    printf("answer: %s\n", s != NULL ? s : "?");
+    free(s);
+    ed_row_free(r);
+}
+
+static void print_answer(const box_t *out, const char *message) {
+    const box_t *c;
+
+    if(out == NULL)
+        printf("message: %s\n", message != NULL ? message : "");
+    else if(out->kind == BOX_COL)
+        for(c = out->child; c != NULL; c = c->next)
+            print_line(c);
+    else
+        print_line(out);
+}
+#endif
+
 /* always called while the editor in running still has the line that was run */
 void push(box_t *in, box_t *out, const char *message, unsigned long ms) {
     entry_t *h = push_slot();
@@ -146,6 +169,10 @@ void push(box_t *in, box_t *out, const char *message, unsigned long ms) {
     /* a stacked answer (asym) has no one-line editor form, so it can't be
        browsed into or saved. it just goes when the app does */
     h->out_row = out != NULL && out->kind != BOX_COL ? ed_from_box(out) : NULL;
+#ifdef COMPILE_PC
+    if(getenv("FLX_ANSWER") != NULL) /* the answer as engine text, a line each, for tools/fuzz.py */
+        print_answer(out, message);
+#endif
 }
 
 /* an entry back from the store, just the two rows. the boxes get drawn from them

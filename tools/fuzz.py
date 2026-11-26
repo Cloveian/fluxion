@@ -1,6 +1,7 @@
 # random expressions through build-pc/fluxion, checked numerically against sympy
-# usage: python3 tools/fuzz.py [count] [seed] [pos|any] [simplify|expand|factor|derivative|integral|solve|limit|critical|system] [-v]   (pos = letters only get positive test points)
-import random, re, subprocess, sys
+# usage: python3 tools/fuzz.py [count] [seed] [pos|any] [simplify|expand|factor|derivative|integral|solve|limit|critical|system|tangent|extrema|inflect|increasing|implicit] [-v]   (pos = letters only get positive test points)
+# the last five run the app itself (build-pc/fluxion-app, FLX_ANSWER prints what it says) and check that against sympy
+import os, random, re, subprocess, sys, tempfile
 import sympy as sp
 from sympy.parsing.sympy_parser import parse_expr, standard_transformations, implicit_multiplication_application, convert_xor
 
@@ -266,6 +267,173 @@ def critical_check(f_str, roots):
         return f"missed or extra: want {tv}"
     return None
 
+APP = ("tangent", "extrema", "inflect", "increasing", "implicit")
+
+def gen_implicit():
+    a, b = nz(2, 9), nz(2, 9)
+    return random.choice([
+        "X^2+Y^2=25", f"X^2+XY+Y^2={a}", f"XY={a}", f"X^2/{a}+Y^2/{b}=1", f"Y^3+X^2Y={a}", f"X*Y^2+X^2*Y={a}", "e^(XY)=X+Y", f"X^2_Y^2={a}", f"Y^2=X^3+{a}", f"X^3+Y^3={a}XY",
+    ])
+
+def app_text(s):
+    # the pasted form the app reads, a minus for the _ and lower case
+    return s.replace("_", "-").lower()
+
+def app_answers(command):
+    # what the app says to a command, ("answer" | "message", text) a line each. FLX_ANSWER makes it print them (ui/app.c)
+    with tempfile.TemporaryDirectory(prefix="fz_") as d:
+        p = subprocess.run([os.path.abspath("build-pc/fluxion-app"), "--png", os.path.join(d, "o.png"), "--scale", "1", "clip:" + command, "on+v", "enter"],
+                           capture_output=True, text=True, timeout=30, cwd=d, env=dict(os.environ, FLX_ANSWER="1"))
+    return re.findall(r"^(answer|message): (.*)$", p.stdout, re.M)
+
+def top_split(s):
+    parts, depth, cur = [], 0, ""
+    for ch in s:
+        if ch == "," and depth == 0:
+            parts.append(cur); cur = ""; continue
+        depth += ch == "("
+        depth -= ch == ")"
+        cur += ch
+    return parts + [cur]
+
+def fval(f, x):
+    # f at X = x as a real number, None where it isnt one
+    try:
+        c = complex(f.subs(X, x).evalf())
+    except Exception:
+        return None
+    return c.real if abs(c.imag) < 1e-9 and c == c and abs(c) < 1e9 else None
+
+def far(a, b, tol=1e-6):
+    # relative past 1, absolute under it. a nan is never far
+    return abs(a - b) > tol * max(1, abs(b))
+
+def tangent_point(f):
+    d = sp.diff(f, X)
+    pts = [-2, -1, 0, 1, 2, 3]
+    random.shuffle(pts)
+    return next((a for a in pts if fval(f, a) is not None and fval(d, a) is not None), None)
+
+def tangent_check(f, a, lines):
+    if len(lines) != 1 or lines[0][0] != "answer":
+        return f"said {lines}"
+    m = re.match(r"^[Yy]\s*=(.*)$", lines[0][1])
+    if not m:
+        return f"no y = in {lines[0][1]}"
+    g, d = to_sympy(m.group(1)), sp.diff(f, X)
+    want = f.subs(X, a) + d.subs(X, a) * (X - a)
+    for px in (-3.1, -1.3, 0.7, 2.2):
+        gv, wv = fval(g, px), fval(want, px)
+        if gv is None or wv is None or far(gv, wv):
+            return f"at X={px}: want {wv}, got {gv}"
+    return None
+
+def turn_kind(d, x, inflection):
+    # what f' (f'' for an inflection) does at x, by its sign either side
+    s1, s2 = fval(d, x - 1e-3), fval(d, x + 1e-3)
+    if s1 is None or s2 is None:
+        return None
+    if s1 * s2 < 0:
+        return "inflection" if inflection else "max" if s1 > 0 else "min"
+    return None
+
+def turning_check(f, lines, inflection):
+    d = sp.diff(f, X, 2 if inflection else 1)
+    got = []
+    for kind, text in lines:
+        if kind == "message":
+            if "can't tell" in text:
+                return "skip"
+            continue
+        m = re.match(r"(?i)^(max|min|inflection)\((.*)\)$", text)
+        xy = top_split(m.group(2)) if m else []
+        if len(xy) != 2:
+            return f"can't read {text}"
+        xv, yv = fval(to_sympy(xy[0]), 0), fval(to_sympy(xy[1]), 0)
+        fx = dx = None
+        if xv is not None:
+            fx, dx = fval(f, xv), fval(d, xv)
+        if yv is None or fx is None or far(fx, yv):
+            return f"{text}: f there is {fx}"
+        if dx is None or abs(dx) > 1e-6:
+            return f"{text}: the slope there is {dx}"
+        if turn_kind(d, xv, inflection) != m.group(1).lower():
+            return f"{text}: it's {turn_kind(d, xv, inflection)} there"
+        got.append(round(xv, 6))
+    truth = sp.solveset(d, X, sp.S.Reals)
+    if not isinstance(truth, sp.FiniteSet):
+        return None
+    want = []
+    for t in truth:
+        tv = float(t)
+        if fval(f, tv) is not None and turn_kind(d, tv, inflection) is not None:
+            want.append(round(tv, 6))
+    if sorted(got) != sorted(want):
+        return f"want X = {sorted(want)}, got {sorted(got)}"
+    return None
+
+def intervals(text):
+    out = []
+    if text.strip().lower() == "false":  # what the app says for none
+        return out
+    for piece in re.split(r"(?i)or", text):
+        piece = piece.strip()
+        for pat, lo, hi in ((r"^X<(.+)$", None, 1), (r"^X>(.+)$", 1, None), (r"^(.+)<X<(.+)$", 1, 2)):
+            m = re.match(pat, piece)
+            if m:
+                out.append((-1e9 if lo is None else fval(to_sympy(m.group(lo)), 0), 1e9 if hi is None else fval(to_sympy(m.group(hi)), 0)))
+                break
+        else:
+            raise ValueError(f"can't read {piece}")
+    return out
+
+def increasing_check(f, lines):
+    d = sp.diff(f, X)
+    inc, dec = [], []
+    for kind, text in lines:
+        m = re.match(r"(?i)^(increasing|decreasing)(.*)$", text) if kind == "answer" else None
+        if not m:
+            return "skip"
+        (inc if m.group(1).lower() == "increasing" else dec).extend(intervals(m.group(2)))
+    edges = [e for iv in inc + dec for e in iv]
+    for _ in range(16):
+        px = random.uniform(-6, 6)
+        dv = fval(d, px)
+        if dv is None or any(abs(px - e) < 1e-2 for e in edges):
+            continue
+        up, down = any(lo < px < hi for lo, hi in inc), any(lo < px < hi for lo, hi in dec)
+        if up and down or up and dv < 0 or down and dv > 0 or not up and not down and abs(dv) > 1e-6:
+            said = ("increasing" if up else "") + ("decreasing" if down else "") or "nothing"
+            return f"at X={px:.3f} f' is {dv:.4g}, it says {said}"
+    return None
+
+def implicit_check(eq, lines):
+    if len(lines) != 1 or lines[0][0] != "answer":
+        return "skip"
+    m = re.match(r"(?i)^d(\w)/d(\w)\s*=(.*)$", lines[0][1])
+    if not m:
+        return f"can't read {lines[0][1]}"
+    num, den = sp.Symbol(m.group(1).upper()), sp.Symbol(m.group(2).upper())
+    left, right = eq.split("=")
+    F = to_sympy(left) - to_sympy(right)
+    g = to_sympy(m.group(3))
+    want = -sp.diff(F, den) / sp.diff(F, num)
+    checked = 0
+    for _ in range(6):
+        x0 = random.uniform(-3, 3)
+        try:  # a point on the curve, y found numerically from a few guesses
+            y0 = sp.nsolve(F.subs(X, x0), Y, random.uniform(-4, 4))
+        except Exception:
+            continue
+        at = {X: x0, Y: y0}
+        gv, wv = complex(g.subs(at).evalf()), complex(want.subs(at).evalf())
+        if abs(wv) > 1e6 or wv != wv:
+            continue
+        checked += 1
+        if far(gv, wv, 1e-5):
+            return f"at ({x0:.3f}, {y0}) want {wv:.5g}, got {gv:.5g}"
+    return None if checked else "skip"
+
 def run(expr):
     if cmd == "limit":
         expr = f"limit({expr[0]},X,{expr[1]}{',' + expr[2] if len(expr) > 2 else ''})"
@@ -294,6 +462,35 @@ def val(f, px, py):
 
 bad, why, fat, skipped, ok = [], [], [], 0, 0
 for i in range(count):
+    if cmd in APP:
+        label, lines = "?", []
+        try:
+            if cmd == "implicit":
+                label = gen_implicit()
+                lines = app_answers(f"implicit({app_text(label)},y,x)")
+                problem = implicit_check(label, lines)
+            else:
+                label = gen_fn()
+                f = to_sympy(label)
+                if cmd == "tangent":
+                    a = tangent_point(f)
+                    if a is None:
+                        skipped += 1; why.append((label, "no point to take it at")); continue
+                    lines = app_answers(f"tangent({app_text(label)},{a},x)")
+                    label = f"{label} at {a}"
+                    problem = tangent_check(f, a, lines)
+                else:
+                    lines = app_answers(f"{cmd}({app_text(label)},x)")
+                    problem = increasing_check(f, lines) if cmd == "increasing" else turning_check(f, lines, cmd == "inflect")
+        except subprocess.TimeoutExpired:
+            bad.append((label, "TIMEOUT", None)); continue
+        except Exception as ex:
+            skipped += 1; why.append((label, f"{lines} ({ex})")); continue
+        if problem == "skip":
+            skipped += 1; why.append((label, f"{lines}")); continue
+        if problem: bad.append((label, [t for _, t in lines], problem))
+        else: ok += 1
+        continue
     if cmd == "system":
         e1, e2 = gen_sys()
         try:
@@ -405,6 +602,6 @@ if fat:
 if "-v" in sys.argv:
     for expr, r in why: print(f"  skipped {expr} -> {r}")
 for expr, out, w in bad:
-    if cmd in ("solve", "limit", "critical", "system"):
+    if cmd in ("solve", "limit", "critical", "system") + APP:
         print(f"  {expr}\n    -> {out}\n    {w}"); continue
     print(f"  {expr}\n    -> {out}\n    at X={w[0]:.3f} Y={w[1]:.3f}: want {w[2]:.5g}, got {w[3]}" if w else f"  {expr} -> {out}")
