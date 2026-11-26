@@ -10,8 +10,6 @@ bool window_open(const char *title);
 void window_present(void);
 void window_close(void);
 void window_fullscreen_toggle(void);
-/* rounds the corners of the pixels (scale2x / 3x) at a pixel size of 2 or more. starts on for a high density screen */
-void window_smooth_toggle(void);
 /* window changed size, the framebuffer gets what fits at this scale */
 void window_sync(void);
 /* it went to a screen with a different display scale, keeps the size in points */

@@ -1,7 +1,7 @@
 #ifndef __TICE__
 
-/* PC version of screen.h. draws into a framebuffer of palette indexes, 320x240 unless the
-   window or --size changed it, which the SDL window shows or screen_save_png() writes out. */
+/* PC version of screen.h. the web page and the nspire get a 320x240 framebuffer of palette indexes, the desktop
+   one is RGB at any size (window or --size) so text can be blended. the SDL window shows it, screen_save_png() writes it out */
 
 #include "screen.h"
 #include "window_pc.h"
@@ -13,13 +13,14 @@
 #ifdef SCREEN_RESIZABLE
 int screen_w = 320, screen_h = 240;
 void (*screen_resized)(void);
-static unsigned char *fb;
-#define FB(x, y) fb[(y) * screen_w + (x)]
+static unsigned char *fb; /* 3 bytes a pixel */
+static unsigned char now[3]; /* rgb of current */
+#define FB(x, y) (&fb[((size_t)(y) * (size_t)screen_w + (size_t)(x)) * 3])
 
 /* blank framebuffer for the size now */
 static void fb_make(void) {
     free(fb);
-    fb = calloc((size_t)screen_w * (size_t)screen_h, 1);
+    fb = calloc((size_t)screen_w * (size_t)screen_h * 3, 1);
 }
 
 void screen_resize(int w, int h) {
@@ -44,7 +45,10 @@ void screen_show(void) { window_present(); }   /* does nothing unless a window i
 void screen_power(bool on) { (void)on; } /* no backlight to turn off here */
 void screen_brightness(int level) { brightness = level; }
 int screen_brightness_current(void) { return 2; } /* no OS level to start from, 2 is as good as any */
-void screen_palette(const unsigned char rgb[COL_COUNT][3]) { memcpy(palette, rgb, sizeof palette); }
+void screen_palette(const unsigned char rgb[COL_COUNT][3]) {
+    memcpy(palette, rgb, sizeof palette);
+    screen_color(current);
+}
 
 /* just the one framebuffer here, so drawing is always "direct", only needs showing */
 void screen_direct(bool on) {
@@ -54,18 +58,32 @@ void screen_direct(bool on) {
 
 void screen_clear(void) {
 #ifdef SCREEN_RESIZABLE
+    size_t i, n = (size_t)screen_w * (size_t)screen_h;
+
     if(fb == NULL)
         fb_make();
-    memset(fb, COL_BG, (size_t)screen_w * (size_t)screen_h);
+    for(i = 0; i < n; i++)
+        memcpy(&fb[i * 3], palette[COL_BG], 3);
 #else
     memset(fb, COL_BG, sizeof fb);
 #endif
 }
-void screen_color(unsigned char color) { current = color; }
+
+void screen_color(unsigned char color) {
+    current = color;
+#ifdef SCREEN_RESIZABLE
+    screen_rgb(color, now);
+#endif
+}
 
 static void pixel(int x, int y) {
-    if(x >= 0 && x < SCREEN_W && y >= 0 && y < SCREEN_H)
-        FB(x, y) = current;
+    if(x < 0 || x >= SCREEN_W || y < 0 || y >= SCREEN_H)
+        return;
+#ifdef SCREEN_RESIZABLE
+    memcpy(FB(x, y), now, 3);
+#else
+    FB(x, y) = current;
+#endif
 }
 
 void screen_fill(int x, int y, int w, int h) {
@@ -94,71 +112,20 @@ void screen_line(int x0, int y0, int x1, int y1) {
     }
 }
 
-const unsigned char *screen_pixels(void) {
 #ifdef SCREEN_RESIZABLE
+const unsigned char *screen_rgb_buffer(void) {
     if(fb == NULL)
         fb_make();
     return fb;
-#else
-    return &fb[0][0];
-#endif
 }
+#else
+const unsigned char *screen_pixels(void) {
+    return &fb[0][0];
+}
+#endif
 
 void screen_rgb(unsigned char color, unsigned char rgb[3]) {
     memcpy(rgb, palette[color < COL_COUNT ? color : COL_FG], 3);
-}
-
-bool screen_png_smooth;
-
-int screen_smooth_factor(int scale) {
-    return scale % 3 == 0 ? 3 : scale % 2 == 0 ? 2 : 1;
-}
-
-/* the index at x, y, the edges repeated */
-static unsigned char index_at(int x, int y) {
-    x = x < 0 ? 0 : x >= SCREEN_W ? SCREEN_W - 1 : x;
-    y = y < 0 ? 0 : y >= SCREEN_H ? SCREEN_H - 1 : y;
-    return FB(x, y);
-}
-
-/* scale2x and scale3x (AdvMAME): the corners that meet a same-coloured neighbour on two sides get rounded off. they only compare colours, which is all the palette has */
-void screen_expand(int f, unsigned char *rgb) {
-    unsigned char lut[COL_COUNT][3], out[9];
-    int x, y, k, i;
-
-    for(i = 0; i < COL_COUNT; i++)
-        screen_rgb((unsigned char)i, lut[i]);
-    for(y = 0; y < SCREEN_H; y++) {
-        for(x = 0; x < SCREEN_W; x++) {
-            unsigned char e = index_at(x, y), b = index_at(x, y - 1), d = index_at(x - 1, y);
-            unsigned char r = index_at(x + 1, y), h = index_at(x, y + 1);
-
-            if(f == 2) {
-                out[0] = d == b && d != h && b != r ? b : e;
-                out[1] = b == r && b != d && r != h ? r : e;
-                out[2] = h == d && h != r && d != b ? d : e;
-                out[3] = r == h && r != b && h != d ? h : e;
-            } else {
-                unsigned char a = index_at(x - 1, y - 1), c = index_at(x + 1, y - 1);
-                unsigned char g = index_at(x - 1, y + 1), n = index_at(x + 1, y + 1);
-
-                out[0] = d == b && b != r && d != h ? d : e;
-                out[1] = (d == b && b != r && d != h && e != c) || (b == r && b != d && r != h && e != a) ? b : e;
-                out[2] = b == r && b != d && r != h ? r : e;
-                out[3] = (d == b && b != r && d != h && e != g) || (d == h && d != b && h != r && e != a) ? d : e;
-                out[4] = e;
-                out[5] = (b == r && b != d && r != h && e != n) || (r == h && r != b && h != d && e != c) ? r : e;
-                out[6] = d == h && d != b && h != r ? d : e;
-                out[7] = (d == h && d != b && h != r && e != n) || (r == h && r != b && h != d && e != g) ? h : e;
-                out[8] = r == h && r != b && h != d ? r : e;
-            }
-            for(k = 0; k < f * f; k++) {
-                size_t at = ((size_t)y * (size_t)f + (size_t)(k / f)) * (size_t)SCREEN_W * (size_t)f + (size_t)x * (size_t)f + (size_t)(k % f);
-
-                memcpy(&rgb[at * 3], lut[out[k]], 3);
-            }
-        }
-    }
 }
 
 /* PNG, no libraries. just uncompressed deflate blocks so the files come out big, whatever */
@@ -212,8 +179,6 @@ int screen_save_png(const char *path, int scale) {
     unsigned char ihdr[13], *idat, *p;
     unsigned long a = 1, b = 0;   /* adler32 */
     FILE *f;
-    unsigned char *big = NULL;  /* smoothed pixels, fac by fac of them per framebuffer pixel */
-    int fac = 1;
 
     if(scale < 1) scale = 1;
     if(scale > 8) scale = 8;
@@ -222,27 +187,15 @@ int screen_save_png(const char *path, int scale) {
     row_len = 1 + w * 3;
 
     idat = malloc(2 + (size_t)h * (5 + row_len) + 4);
-    if(screen_png_smooth)
-        fac = screen_smooth_factor(scale);
-    if(fac > 1) /* each of those is scale / fac pixels wide in the file */
-        big = malloc((size_t)SCREEN_W * (size_t)SCREEN_H * (size_t)(fac * fac) * 3);
-    if(idat == NULL || (fac > 1 && big == NULL)) {
-        free(idat);
-        free(big);
+    if(idat == NULL)
         return -1;
-    }
-    if(big != NULL)
-        screen_expand(fac, big);
     p = idat;
 
     *p++ = 0x78;
     *p++ = 0x01;
     for(y = 0; y < h; y++) {
         unsigned char *row;
-        const unsigned char *src = NULL;
 
-        if(big != NULL)
-            src = big + (size_t)(y * fac / scale) * (size_t)SCREEN_W * (size_t)fac * 3;
         *p++ = y == h - 1;          /* last block */
         *p++ = row_len & 0xFF;  *p++ = (row_len >> 8) & 0xFF;
         *p++ = ~row_len & 0xFF; *p++ = (~row_len >> 8) & 0xFF;
@@ -250,10 +203,11 @@ int screen_save_png(const char *path, int scale) {
         row = p;
         *p++ = 0;                   /* no filter */
         for(x = 0; x < w; x++) {
-            if(src != NULL)
-                memcpy(p, src + (size_t)(x * fac / scale) * 3, 3);
-            else
-                screen_rgb(FB(x / scale, y / scale), p);
+#ifdef SCREEN_RESIZABLE
+            memcpy(p, FB(x / scale, y / scale), 3);
+#else
+            screen_rgb(FB(x / scale, y / scale), p);
+#endif
             p += 3;
         }
 
@@ -264,7 +218,6 @@ int screen_save_png(const char *path, int scale) {
     }
     put32(p, (b << 16) | a);
     p += 4;
-    free(big);
 
     put32(ihdr, (unsigned long)w);
     put32(ihdr + 4, (unsigned long)h);
