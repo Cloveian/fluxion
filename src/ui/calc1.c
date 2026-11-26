@@ -147,7 +147,12 @@ static box_t *turning_points(pcas_ast_t *f, Symbol var, bool inflection, const c
     return col;
 }
 
-/* where f' is over 0 and where it's under, one line each */
+/* what ineq_box says when no x does it */
+static bool never(const box_t *b) {
+    return b->kind == BOX_TEXT && b->text != NULL && strcmp(b->text, "false") == 0;
+}
+
+/* where f' is over 0 and where it's under, one line each, none for a side that never happens */
 static box_t *slopes(pcas_ast_t *f, Symbol var, char shown, const char **message) {
     pcas_ast_t *d = derive(f, var, 1);
     box_t *col = NULL, *up, *down;
@@ -164,9 +169,21 @@ static box_t *slopes(pcas_ast_t *f, Symbol var, char shown, const char **message
     down = up != NULL ? ineq_box(d, var, shown, '<', true, &why) : NULL;
     if(up != NULL && down != NULL) {
         col = layout_box(BOX_COL, 0);
-        layout_add(col, labelled("increasing", up));
-        layout_add(col, labelled("decreasing", down));
-        layout_finish(col, &draw_font);
+        if(never(up))
+            layout_free(up);
+        else
+            layout_add(col, labelled("increasing", up));
+        if(never(down))
+            layout_free(down);
+        else
+            layout_add(col, labelled("decreasing", down));
+        if(col->child == NULL) { /* both said no x at all */
+            layout_free(col);
+            col = NULL;
+            *message = "can't tell where it goes up or down";
+        } else {
+            layout_finish(col, &draw_font);
+        }
     } else {
         layout_free(up);
         layout_free(down);

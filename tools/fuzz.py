@@ -374,7 +374,9 @@ def turning_check(f, lines, inflection):
 
 def intervals(text):
     out = []
-    if text.strip().lower() == "false":  # what the app says for none
+    if text.strip().lower() == "true":  # everywhere
+        return [(-1e9, 1e9)]
+    if text.strip().lower() == "false":  # none
         return out
     for piece in re.split(r"(?i)or", text):
         piece = piece.strip()
