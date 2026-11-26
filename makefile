@@ -102,7 +102,7 @@ build-pc/editor-test: test/editor_test.c $(FLUX_OBJECTS) $(ENGINE_OBJECTS)
 EMCC ?= emcc
 WEB_FLAGS = -O2 -DCOMPILE_PC -Isrc/engine -Isrc -MMD -MP
 WEB_SOURCES := $(filter-out $(SRCDIR)/pc/%,$(SOURCES)) src/main_pc.c \
-               $(filter-out src/platform/keys_pc.c src/platform/window_pc.c,$(FLUX_SOURCES))
+               $(filter-out src/platform/keys_pc%.c src/platform/window_pc.c,$(FLUX_SOURCES))
 WEB_OBJECTS := $(WEB_SOURCES:src/%.c=build-web/%.o)
 
 build-web/engine/%.o: src/engine/%.c
@@ -169,7 +169,7 @@ else ifneq ($(filter $(NSPIRE_GOALS),$(MAKECMDGOALS)),)
 
 NSPIRE_FLAGS = -Os -Wall -Isrc/engine -Isrc -MMD -MP
 NSPIRE_SOURCES := $(filter-out src/engine/pc/%,$(wildcard src/engine/*.c src/engine/*/*.c)) src/main.c \
-                  $(filter-out src/platform/keys_pc.c src/platform/window_pc.c src/platform/web.c, \
+                  $(filter-out src/platform/keys_pc%.c src/platform/window_pc.c src/platform/web.c, \
                     $(wildcard src/render/*.c src/platform/*.c src/input/*.c src/editor/*.c src/ui/*.c))
 NSPIRE_OBJECTS := $(NSPIRE_SOURCES:src/%.c=build-nspire/%.o)
 

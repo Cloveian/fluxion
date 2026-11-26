@@ -4,7 +4,7 @@
 /*
     key presses, which key and nothing about what it does (that's input/bind_*.c):
       keys_ti.c      calculator: keypadc, with key repeat
-      keys_pc.c      PC: the SDL window's keyboard, standing in for the CE's keys
+      keys_pc.c      PC: the SDL window's keyboard, standing in for the CE's keys (keys_pc_script.c for scripted ones)
       keys_nspire.c  nspire: its own keypad
     one code per key, named off its label. a key both keypads have shares one.
     tapped modifiers are keys like any other, the app keeps them sticky.

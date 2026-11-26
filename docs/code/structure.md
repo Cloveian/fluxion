@@ -13,7 +13,7 @@ fluxion/
 │   │   ├── cas/   simplify, expand, factor, derivative, identities, solve (+ trig families, systems in system.c), integrate, limit, truth (true / false statements), evalfn (floor, mod, conj ...), asym, approx (decimal), degrees. the show-the-work lines are steps.c with a file a kind: polysteps, systemsteps, ineqsteps, exprsteps (expand, factor, simplify), cmdsteps (tangent, critical, extrema, inflect, implicit)
 │   │   ├── imath/  big-number + rational maths
 │   │   └── pc/  PC-only command line + test runner (empty on the calculator)
-│   ├── platform/  screen.h / keys.h / store.h: *_ti.c = graphx + keypadc + appvars, *_pc.c = framebuffer + SDL + files in build-pc/store. window_pc.c is the SDL window (resizable, Ctrl + / - / 0 zoom it in steps from 0.5 to 4, remembered in the FLXZOOM store slot), keys_pc.c turns the keyboard and the mouse into presses, clipboard.c is the system clipboard, web.c the browser build's keys and mouse
+│   ├── platform/  screen.h / keys.h / store.h: *_ti.c = graphx + keypadc + appvars, *_pc.c = framebuffer + SDL + files in build-pc/store. window_pc.c is the SDL window (resizable, Ctrl + / - / 0 zoom it in steps from 0.5 to 4, remembered in the FLXZOOM store slot), keys_pc.c turns the keyboard and the mouse into presses (keys_pc_script.c is the scripted ones the tests and renders use), clipboard.c is the system clipboard, web.c the browser build's keys and mouse
 │   ├── render/
 │   │   ├── layout.c    expression tree -> boxes with sizes + positions (no drawing)
 │   │   ├── draw.c  boxes -> lines and text, through screen.h

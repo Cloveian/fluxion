@@ -3,7 +3,7 @@
 /* the browser build, for the showcase page. stands in for keys_pc.c and window_pc.c
    (no SDL in there), screen_pc.c and store_pc.c work as is. the page hands keys in
    with web_press() and web_point() and gets the framebuffer back every window_present().
-   the key names up top are the PC's too, keys_pc.c's scripts read them */
+   the key names up top are the PC's too, keys_pc_script.c's scripts read them */
 
 #include <string.h>
 
