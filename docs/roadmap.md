@@ -73,7 +73,7 @@
 - [x] Ellipses and hyperbolas, equation to points and back. lined up with the axes only
 - [x] Piecewise functions. a command for now, no brace template
 - [x] Ghost parens, the fraction grabbing the last term, ans when a line starts with an operator
-- [x] Show-the-work steps. quadratics, radicals, exp / log / abs, rational equations, trig equations, inequalities, polynomials that factor, expand and factor, tangent / critical / extrema / inflect / implicit, *dih*rivatives, limits and integrals have them. linear systems, a line with a curve and cubics without a rational root (cardano) have them too. and simplify a phase at a time (cancel, multiply out, over one bottom)
+- [x] Show-the-work steps. quadratics, radicals, exp / log / abs, rational equations, trig equations, inequalities, polynomials that factor, expand and factor, tangent / critical / extrema / inflect / implicit, *dih*rivatives, limits and integrals have them. linear systems, a line with a curve and cubics without a rational root (cardano) have them too. and simplify a phase at a time (cancel, multiply out, over one bottom). a page too long for the screen starts with its working folded under the line it belongs to (a cursor line, right / enter opens it, left closes it), so far for the cardano *dih*scriminant, each quadratic factor of a polynomial and the *dih*rivative rule lines of the tangent / extrema family, more later
 
 ## more-later
 
