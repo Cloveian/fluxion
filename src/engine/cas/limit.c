@@ -480,6 +480,19 @@ static bool growth(pcas_ast_t *e, pcas_ast_t *var, deg_t *deg, pcas_ast_t **lead
     return false;
 }
 
+/*op somewhere in e*/
+static bool has_op(pcas_ast_t *e, OperatorType op) {
+    pcas_ast_t *c;
+
+    if(isoptype(e, op))
+        return true;
+    if(e->type == NODE_OPERATOR)
+        for(c = ast_ChildGet(e, 0); c != NULL; c = c->next)
+            if(has_op(c, op))
+                return true;
+    return false;
+}
+
 /*a root somewhere in e, the conjugate is for those*/
 static bool has_root(pcas_ast_t *e) {
     pcas_ast_t *c;
@@ -767,6 +780,24 @@ static int far_pow(pcas_ast_t *base, pcas_ast_t *ex, pcas_ast_t *var, pcas_ast_t
     return out;
 }
 
+/*tan, sec, cot or csc of u -> cv at a pole, up or down by the side u comes in from. FAR_NONE when a sign can't be told*/
+static int far_pole(OperatorType op, pcas_ast_t *u, pcas_ast_t *cv, pcas_ast_t *var) {
+    pcas_ast_t *slope, *off;
+    int sd = 1, sa; /*tan and cot have their slope as their top too, it squares away*/
+
+    if(op == OP_SEC || op == OP_CSC) {
+        slope = ast_MakeUnary(op == OP_SEC ? OP_SIN : OP_COS, ast_Copy(cv)); /*the bottom is about slope * (u - cv)*/
+        sd = slope != NULL ? sign_of(slope) : 2;
+        ast_Cleanup(slope);
+    }
+    off = ast_MakeBinary(OP_ADD, ast_Copy(u), ast_MakeBinary(OP_MULT, ast_MakeInt(-1), ast_Copy(cv)));
+    sa = off != NULL ? sign_far(off, var) : 2;
+    ast_Cleanup(off);
+    if(sd == 0 || sd == 2 || sa == 0 || sa == 2)
+        return FAR_NONE;
+    return (op == OP_TAN || op == OP_SEC ? -sd : sd) * sa; /*cos goes down where sin is up*/
+}
+
 /*e as var -> inf. tries is what's left for l'hopital and the rewrites*/
 static int far(pcas_ast_t *e, pcas_ast_t *var, pcas_ast_t **v, int tries) {
     pcas_ast_t *c, *cv, *g;
@@ -838,9 +869,10 @@ static int far(pcas_ast_t *e, pcas_ast_t *var, pcas_ast_t **v, int tries) {
             c = ast_MakeUnary(optype(e) == OP_TAN || optype(e) == OP_SEC ? OP_COS : OP_SIN, ast_Copy(ast_ChildGet(g, 0)));
             f = c != NULL ? sign_of(c) : 0;
             ast_Cleanup(c);
-            if(f == 0) {
+            if(f == 0) { /*a pole, up or down*/
+                out = far_pole(optype(e), ast_ChildGet(e, 0), ast_ChildGet(g, 0), var);
                 ast_Cleanup(g);
-                return FAR_NONE;
+                return out;
             }
         }
         if(g != NULL && !from_inside(optype(e), ast_ChildGet(e, 0), ast_ChildGet(g, 0), var)) {
@@ -1082,20 +1114,23 @@ static pcas_ast_t *sides(pcas_ast_t *f, pcas_ast_t *var, pcas_ast_t *a, int dir,
     return r;
 }
 
-/*sec, csc and cot as sin and cos in place, true if any changed*/
-static bool to_sincos(pcas_ast_t *e) {
+/*sec, csc and cot as sin and cos in place (tan too if asked, only wanted where f has no value), true if any changed*/
+static bool to_sincos(pcas_ast_t *e, bool tan) {
     pcas_ast_t *c, *u, *n;
     bool changed = false;
 
     if(e->type != NODE_OPERATOR)
         return false;
     for(c = ast_ChildGet(e, 0); c != NULL; c = c->next)
-        changed |= to_sincos(c);
-    if(!isoptype(e, OP_SEC) && !isoptype(e, OP_CSC) && !isoptype(e, OP_COT))
+        changed |= to_sincos(c, tan);
+    if(!isoptype(e, OP_SEC) && !isoptype(e, OP_CSC) && !isoptype(e, OP_COT) && !(tan && isoptype(e, OP_TAN)))
         return changed;
     u = ast_Copy(ast_ChildGet(e, 0));
-    n = isoptype(e, OP_COT) ? ast_MakeBinary(OP_DIV, ast_MakeUnary(OP_COS, u), ast_MakeUnary(OP_SIN, ast_Copy(u)))
-                            : ast_MakeBinary(OP_DIV, ast_MakeInt(1), ast_MakeUnary(isoptype(e, OP_SEC) ? OP_COS : OP_SIN, u));
+    if(isoptype(e, OP_TAN) || isoptype(e, OP_COT))
+        n = ast_MakeBinary(OP_DIV, ast_MakeUnary(isoptype(e, OP_TAN) ? OP_SIN : OP_COS, u),
+                           ast_MakeUnary(isoptype(e, OP_TAN) ? OP_COS : OP_SIN, ast_Copy(u)));
+    else
+        n = ast_MakeBinary(OP_DIV, ast_MakeInt(1), ast_MakeUnary(isoptype(e, OP_SEC) ? OP_COS : OP_SIN, u));
     if(n == NULL)
         return changed;
     replace_node(e, n);
@@ -1193,7 +1228,7 @@ static pcas_ast_t *limit_of(pcas_ast_t *f, pcas_ast_t *var, pcas_ast_t *a, steps
         step(s, l, "a cos or sin is between -1 and 1, so times something that goes to 0 it's 0", ast_Copy(out));
         return out;
     }
-    if((g = ast_Copy(f)) != NULL && to_sincos(g) && !pcas_cancelled) { /*cancelled leaves it unchagned, it'd go round forever*/
+    if((g = ast_Copy(f)) != NULL && to_sincos(g, has_op(f, OP_TAN) && !defined_at(f, var, a)) && !pcas_cancelled) { /*cancelled leaves it unchagned, it'd go round forever*/
         steps_rule(l, "sec, csc and cot as sin and cos"); /*the recursion starts its own line*/
         out = limit_of(g, var, a, s, root, dir);
         ast_Cleanup(g);
