@@ -21,6 +21,25 @@ float approx_int(mp_int z) {
     return MP_SIGN(z) == MP_NEG ? -v : v;
 }
 
+/*Fluxion: top 3 *dih*gits of z as a double, *skipped = how many digits were left off the bottom*/
+static double top_digits(mp_int z, int *skipped) {
+    mp_size used = MP_USED(z), low = used > 3 ? used - 3 : 0, i;
+    double v = 0;
+
+    for(i = used; i > low; i--)
+        v = ldexp(v, (int)MP_DIGIT_BIT) + (double)MP_DIGITS(z)[i - 1];
+    *skipped = (int)low;
+    return MP_SIGN(z) == MP_NEG ? -v : v;
+}
+
+/*Fluxion: a / b from the top digits of each plus a power of 2. approx_int is inf past 2^128 and a decimal like -4.7e-5 has a bottom that big*/
+double approx_ratio(mp_int a, mp_int b) {
+    int sa, sb;
+    double x = top_digits(a, &sa), y = top_digits(b, &sb);
+
+    return ldexp(x / y, (sa - sb) * (int)MP_DIGIT_BIT);
+}
+
 static bool is_whole(real x) {
     return x == floorf(x);
 }
@@ -33,7 +52,7 @@ static bool value(pcas_ast_t *e, real *x) {
     if(e == NULL) /*a child an oom left out*/
         return false;
     if(e->type == NODE_NUMBER) {
-        *x = approx_int(mp_rat_numer_ref(e->op.num)) / approx_int(mp_rat_denom_ref(e->op.num));
+        *x = (real)approx_ratio(mp_rat_numer_ref(e->op.num), mp_rat_denom_ref(e->op.num));
         return true;
     }
     if(e->type == NODE_SYMBOL) {

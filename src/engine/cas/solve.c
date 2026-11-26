@@ -1314,7 +1314,7 @@ bool approx_double(pcas_ast_t *e, double *v) {
 
     if(n == NULL)
         return false;
-    *v = (double)approx_int(mp_rat_numer_ref(n->op.num)) / approx_int(mp_rat_denom_ref(n->op.num));
+    *v = approx_ratio(mp_rat_numer_ref(n->op.num), mp_rat_denom_ref(n->op.num));
     ast_Cleanup(n);
     return true;
 }
