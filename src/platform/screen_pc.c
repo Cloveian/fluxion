@@ -110,6 +110,29 @@ static void rect(int x0, int y0, int x1, int y1) {
             memcpy(FB(x, y), now, 3);
 }
 
+int screen_real(float layout) {
+    return PX(layout);
+}
+
+void screen_mask(int x, int y, int w, int h, const unsigned char *alpha, int stride) {
+    int i, j, k;
+
+    for(j = 0; j < h; j++) {
+        if(y + j < 0 || y + j >= ph)
+            continue;
+        for(i = 0; i < w; i++) {
+            int a = alpha[j * stride + i];
+            unsigned char *px;
+
+            if(a == 0 || x + i < 0 || x + i >= pw)
+                continue;
+            px = FB(x + i, y + j);
+            for(k = 0; k < 3; k++)
+                px[k] = (unsigned char)((px[k] * (255 - a) + now[k] * a + 127) / 255);
+        }
+    }
+}
+
 static void pixel(int x, int y) {
     rect(PX(x), PX(y), PX(x + 1), PX(y + 1));
 }

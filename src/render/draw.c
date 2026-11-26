@@ -1,5 +1,8 @@
 #include "draw.h"
 #include "platform/screen.h"
+#ifdef SCREEN_RESIZABLE
+#include "vtext.h"
+#endif
 
 /* fonts */
 
@@ -18,6 +21,10 @@ const font_t *draw_label_font(void) {
 int draw_text_width_styled(const char *text, const font_t *font, font_style_t style) {
     int w = 0;
 
+#ifdef SCREEN_RESIZABLE
+    if(vtext_owns(font))
+        return vtext_width(text, font, style);
+#endif
     for(; *text != '\0'; text++)
         w += font->advance[(unsigned char)*text & 0x7F] + (style & STYLE_BOLD ? 1 : 0);
     if(style & STYLE_ITALIC)
@@ -55,6 +62,21 @@ void draw_set_ladder(const font_t *const *fonts, int count, int base) {
     draw_font.base = (unsigned char)(base < count ? base : count - 1);
 }
 
+#ifdef SCREEN_RESIZABLE
+bool draw_use_vector(void) {
+    const font_t *v[LAYOUT_MAX_SIZES];
+    int i, n = draw_font.sizes;
+
+    for(i = 0; i < n; i++) {
+        v[i] = vtext_font((float)(ladder[i]->ascent + ladder[i]->descent), ladder[i]->ascent, ladder[i]->descent);
+        if(v[i] == NULL)
+            return false;
+    }
+    draw_set_ladder(v, n, draw_font.base);
+    return true;
+}
+#endif
+
 void draw_text(int x, int top, const char *text, const font_t *font) {
     draw_text_styled(x, top, text, font, STYLE_NORMAL);
 }
@@ -67,6 +89,12 @@ void draw_text(int x, int top, const char *text, const font_t *font) {
 void draw_text_styled(int x, int top, const char *text, const font_t *font, font_style_t style) {
     int height = font->ascent + font->descent;
 
+#ifdef SCREEN_RESIZABLE
+    if(vtext_owns(font)) {
+        vtext_draw(x, top, text, font, style);
+        return;
+    }
+#endif
     for(; *text != '\0'; text++) {
         int code = (unsigned char)*text & 0x7F;
         const unsigned short *rows = &font->rows[code * height];

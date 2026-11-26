@@ -23,6 +23,10 @@ extern int screen_w, screen_h;
 void screen_set_view(int w, int h, float ppu);
 float screen_ppu(void);
 void screen_pixel_size(int *w, int *h);
+/* a length in layout pixels as real ones */
+int screen_real(float layout);
+/* alpha (0 to 255, w x h bytes, stride apart) blended in the current colour, its corner at real pixel x, y */
+void screen_mask(int x, int y, int w, int h, const unsigned char *alpha, int stride);
 extern void (*screen_resized)(void);
 #else
 #define SCREEN_W 320

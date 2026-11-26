@@ -11,6 +11,8 @@
 */
 void draw_set_ladder(const font_t *const *fonts, int count, int base);
 const font_t *draw_font_for(unsigned char size);
+/* desktop: the same sizes as DejaVu Sans outlines instead of the bitmap fonts. false when it couldn't (the ladder stays) */
+bool draw_use_vector(void);
 
 /* for labels like timings, one size below normal math */
 const font_t *draw_label_font(void);
