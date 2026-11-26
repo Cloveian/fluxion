@@ -238,6 +238,10 @@ bool menu_bar_click(int x, int y, action_t *a) {
     return true;
 }
 
+void menu_draw_keys(const char *const names[5], int lit, unsigned off) {
+    draw_softkeys(&areas.keys, names, lit, off, hover_cell(&areas.keys, 5));
+}
+
 void menu_draw_bar(void) {
     const char *names[FOLDER_COUNT];
     int i;

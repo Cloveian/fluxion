@@ -15,6 +15,10 @@ void areas_init(void) {
     areas.body = (rect_t){ 0, top_h, SCREEN_W, areas.keys.y - top_h };
 }
 
+int areas_page_bottom(bool keys) {
+    return keys ? areas.keys.y : areas.keys.y + areas.keys.h;
+}
+
 int areas_body_bottom(void) {
     return NSPIRE ? areas.keys.y + areas.keys.h : areas.body.y + areas.body.h;
 }

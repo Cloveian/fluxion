@@ -1,6 +1,6 @@
 #include "page.h"
 #include "areas.h"
-#include "hover.h"
+#include "menu.h"
 
 #include <string.h>
 
@@ -179,7 +179,7 @@ void page_draw(void) {
     int help_lines = pg->softkeys != NULL ? HELP_LINES - 1 : HELP_LINES;
     int help_h = help_lines * (font->ascent + font->descent + 1) + 4;
     int top = areas.body.y + 2, list_top = top + big->ascent + big->descent + 4;
-    int bottom = pg->softkeys != NULL ? areas.keys.y : areas.keys.y + areas.keys.h; /* no keys, it gets their row too */
+    int bottom = areas_page_bottom(pg->softkeys != NULL); /* no keys, it gets their row too */
     int list_bottom = bottom - help_h - 2;
     int rows, i, x0 = areas.body.x, w = areas.body.w;
     const char *help;
@@ -246,5 +246,5 @@ void page_draw(void) {
     }
 
     if(pg->softkeys != NULL)
-        draw_softkeys(&areas.keys, pg->softkeys, -1, 0, hover_cell(&areas.keys, 5));
+        menu_draw_keys(pg->softkeys, -1, 0);
 }

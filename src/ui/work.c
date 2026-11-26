@@ -3,7 +3,7 @@
 #include "work.h"
 #include "app.h"
 #include "areas.h"
-#include "hover.h"
+#include "menu.h"
 #include "settings.h"
 #include <string.h>
 #include "platform/screen.h"
@@ -236,7 +236,7 @@ static void move_sel(int dir) {
 
 /* a page that doesn't fit starts with its working folded, one that does shows all of it as it always did */
 static void fold_to_fit(void) {
-    int i, h = 0, room = areas.keys.y - GAP - (areas.body.y + GAP);
+    int i, h = 0, room = areas_page_bottom(true) - GAP - (areas.body.y + GAP);
 
     if(!tree)
         return;
@@ -493,7 +493,7 @@ static int visible(int upto) {
 }
 
 void work_draw(void) {
-    int x0 = areas.body.x, w = areas.body.w, y0 = areas.body.y + GAP, y = y0, bottom = areas.keys.y - GAP;
+    int x0 = areas.body.x, w = areas.body.w, y0 = areas.body.y + GAP, y = y0, bottom = areas_page_bottom(true) - GAP;
     int i, x, total, above, shown;
 
     if(tree)
@@ -533,7 +533,7 @@ void work_draw(void) {
         screen_vline(x0 + w - 2, y0 + (bottom - y0) * above / total, bar_h > 2 ? bar_h : 2);
     }
     if(has_methods())
-        draw_softkeys(&areas.keys, method_keys, (int)method, off, hover_cell(&areas.keys, 5));
+        menu_draw_keys(method_keys, (int)method, off);
 }
 
 const char *const *work_softkeys(void) {

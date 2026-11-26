@@ -1,6 +1,7 @@
 #ifndef FLUXION_AREAS_H
 #define FLUXION_AREAS_H
 
+#include <stdbool.h>
 #include "render/draw.h"
 
 /* the bands down the screen, where everything in ui/ gets its edges */
@@ -18,6 +19,9 @@ extern areas_t areas;
 #else
 #define NSPIRE 0
 #endif
+
+/* where a page's content ends, above the key row or past it when the page has no keys */
+int areas_page_bottom(bool keys);
 
 /* where the history's band ends, the nspire's main screen gets the bar's rows too */
 int areas_body_bottom(void);

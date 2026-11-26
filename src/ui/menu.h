@@ -34,6 +34,8 @@ bool menu_click(int x, int y, action_t *a);
 bool menu_bar_click(int x, int y, action_t *a);
 
 void menu_draw_bar(void);
+/* a page's own five keys on the bar, lit is the one picked (or -1), off a bit per greyed out one */
+void menu_draw_keys(const char *const names[5], int lit, unsigned off);
 void menu_draw(void);
 
 #endif
