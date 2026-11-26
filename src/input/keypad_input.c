@@ -94,6 +94,12 @@ const char *input_letter_keys(void) {
     return keypad.letters;
 }
 
+#ifdef COMPILE_PC
+void input_script(char *const *tokens, int n) {
+    keys_script(tokens, n);
+}
+#endif
+
 /* what the keys looked like at the last poll, for edges */
 static keycode_t poll_key;
 static unsigned poll_held;

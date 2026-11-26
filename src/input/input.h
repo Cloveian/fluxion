@@ -1,7 +1,7 @@
 #ifndef FLUXION_INPUT_H
 #define FLUXION_INPUT_H
 
-/* the keypad and mouse as the app sees them, ready made actions and no key codes */
+/* the keypad (or the desktop keyboard) and mouse as the app sees them, ready made actions and no key codes */
 
 #include <stdbool.h>
 #include "input/actions.h"
@@ -49,5 +49,10 @@ const char *input_letter_keys(void);
 bool input_poll(void);
 /* when the work starts */
 void input_poll_reset(void);
+
+#ifdef COMPILE_PC
+/* PC and web, for tests and renders: these tokens instead of the real input, then quit. which tokens depends on the input, keypad key names or the desktop's key: and type: */
+void input_script(char *const *tokens, int n);
+#endif
 
 #endif

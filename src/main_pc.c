@@ -14,7 +14,7 @@
 
 #include "render/draw.h"
 #include "ui/app.h"
-#include "platform/keys.h"
+#include "input/input.h"
 #include "platform/screen.h"
 #include "platform/window_pc.h"
 
@@ -48,7 +48,7 @@ int main(int argc, char **argv)
 #ifdef SCREEN_RESIZABLE /* the web page's is the one size */
         screen_set_view((int)((float)w * scale + 0.5f), (int)((float)h * scale + 0.5f), scale);
 #endif
-        keys_script(&argv[i], argc - i);
+        input_script(&argv[i], argc - i);
         app_run();
         return screen_save_png(png, (int)scale) == 0 ? 0 : 1;
     }

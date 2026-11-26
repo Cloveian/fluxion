@@ -1,7 +1,7 @@
 #ifndef FLUXION_EVENTS_PC_H
 #define FLUXION_EVENTS_PC_H
 
-/* PC only. what the SDL window sends, as plain data. keys_pc.c turns it into presses */
+/* PC only. what the SDL window sends, as plain data. keys_pc.c turns it into presses, pc_input.c into actions */
 
 #include <stdbool.h>
 
@@ -10,7 +10,7 @@ enum {
     PK_NONE,
     PK_BACKSPACE = 0x100, PK_DELETE, PK_ENTER, PK_ESCAPE, PK_TAB,
     PK_LEFT, PK_RIGHT, PK_UP, PK_DOWN, PK_HOME, PK_END,
-    PK_F1, PK_F2, PK_F3, PK_F4, PK_F5, PK_F11,
+    PK_F1, PK_F2, PK_F3, PK_F4, PK_F5, PK_F6, PK_F7, PK_F11,
     PK_KP_0, PK_KP_1, PK_KP_2, PK_KP_3, PK_KP_4, PK_KP_5, PK_KP_6, PK_KP_7, PK_KP_8, PK_KP_9, /* in a row */
     PK_KP_DOT, PK_KP_PLUS, PK_KP_MINUS, PK_KP_MUL, PK_KP_DIV, PK_KP_ENTER,
     PK_SHIFT, PK_ALT, PK_CTRL,  /* either side */

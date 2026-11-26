@@ -68,6 +68,9 @@ FLUX_CFLAGS = -std=c99 -g -DCOMPILE_PC -Wall -Wextra -Wno-missing-field-initiali
 FLUX_SOURCES := $(wildcard src/render/*.c) $(wildcard src/platform/*.c) $(wildcard src/input/*.c) \
                 $(wildcard src/editor/*.c) $(wildcard src/ui/*.c)
 FLUX_OBJECTS := $(FLUX_SOURCES:src/%.c=build-pc/obj-flux/%.o)
+# one input per program: the emulated keypad (fluxion-app, what the test scripts and the web page use) or the desktop's own (fluxion-desktop)
+FLUX_KEYPAD_OBJECTS := $(filter-out %/pc_input.o,$(FLUX_OBJECTS))
+FLUX_DESKTOP_OBJECTS := $(filter-out %/keypad_input.o,$(FLUX_OBJECTS))
 
 build-pc/obj-flux/%.o: src/%.c
 	@mkdir -p $(@D)
@@ -86,19 +89,23 @@ build-pc/layout-dump: test/layout_dump.c build-pc/obj-flux/render/layout.o $(ENG
 	$(CC) $(FLUX_CFLAGS) $^ $(LDLIBS) -o $@
 
 # draws expressions like the calculator: ./build-pc/view 'X^2/2'  (or --png out.png ...)
-build-pc/view: test/view.c $(FLUX_OBJECTS) $(ENGINE_OBJECTS)
+build-pc/view: test/view.c $(FLUX_KEYPAD_OBJECTS) $(ENGINE_OBJECTS)
 	$(CC) $(FLUX_CFLAGS) $^ $(LDLIBS) $(SDL_LIBS) -o $@
 
 # the whole app in a window, keyboard as the keypad: ./build-pc/fluxion-app
-build-pc/fluxion-app: src/main_pc.c $(FLUX_OBJECTS) $(ENGINE_OBJECTS)
+build-pc/fluxion-app: src/main_pc.c $(FLUX_KEYPAD_OBJECTS) $(ENGINE_OBJECTS)
+	$(CC) $(FLUX_CFLAGS) $^ $(LDLIBS) $(SDL_LIBS) -o $@
+
+# the same app with the desktop's input: any typed character, Shift / Ctrl as they are, Esc doesn't quit. ./build-pc/fluxion-desktop
+build-pc/fluxion-desktop: src/main_pc.c $(FLUX_DESKTOP_OBJECTS) $(ENGINE_OBJECTS)
 	$(CC) $(FLUX_CFLAGS) $^ $(LDLIBS) $(SDL_LIBS) -o $@
 
 # editor steps -> picture: ./build-pc/editor-test --png out.png t:2 frac t:1 D t:x
-build-pc/editor-test: test/editor_test.c $(FLUX_OBJECTS) $(ENGINE_OBJECTS)
+build-pc/editor-test: test/editor_test.c $(FLUX_KEYPAD_OBJECTS) $(ENGINE_OBJECTS)
 	$(CC) $(FLUX_CFLAGS) $^ $(LDLIBS) $(SDL_LIBS) -o $@
 
 # made up SDL events through the PC keys, prints the presses: ./build-pc/keys-pc-test k:lshift u:lshift t:a
-build-pc/keys-pc-test: test/keys_pc_test.c $(FLUX_OBJECTS) $(ENGINE_OBJECTS)
+build-pc/keys-pc-test: test/keys_pc_test.c $(FLUX_KEYPAD_OBJECTS) $(ENGINE_OBJECTS)
 	$(CC) $(FLUX_CFLAGS) $^ $(LDLIBS) $(SDL_LIBS) -o $@
 
 # the app in a browser, for the showcase page: make web -> web/build/
@@ -106,7 +113,7 @@ build-pc/keys-pc-test: test/keys_pc_test.c $(FLUX_OBJECTS) $(ENGINE_OBJECTS)
 EMCC ?= emcc
 WEB_FLAGS = -O2 -DCOMPILE_PC -Isrc/engine -Isrc -MMD -MP
 WEB_SOURCES := $(filter-out $(SRCDIR)/pc/%,$(SOURCES)) src/main_pc.c \
-               $(filter-out src/platform/keys_pc%.c src/platform/events_pc.c src/platform/window_pc.c,$(FLUX_SOURCES))
+               $(filter-out src/platform/keys_pc%.c src/platform/events_pc.c src/platform/window_pc.c src/input/pc_input.c,$(FLUX_SOURCES))
 WEB_OBJECTS := $(WEB_SOURCES:src/%.c=build-web/%.o)
 
 build-web/engine/%.o: src/engine/%.c
@@ -173,7 +180,7 @@ else ifneq ($(filter $(NSPIRE_GOALS),$(MAKECMDGOALS)),)
 
 NSPIRE_FLAGS = -Os -Wall -Isrc/engine -Isrc -MMD -MP
 NSPIRE_SOURCES := $(filter-out src/engine/pc/%,$(wildcard src/engine/*.c src/engine/*/*.c)) src/main.c \
-                  $(filter-out src/platform/keys_pc%.c src/platform/events_pc.c src/platform/window_pc.c src/platform/web.c, \
+                  $(filter-out src/platform/keys_pc%.c src/platform/events_pc.c src/platform/window_pc.c src/platform/web.c src/input/pc_input.c, \
                     $(wildcard src/render/*.c src/platform/*.c src/input/*.c src/editor/*.c src/ui/*.c))
 NSPIRE_OBJECTS := $(NSPIRE_SOURCES:src/%.c=build-nspire/%.o)
 

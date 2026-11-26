@@ -72,6 +72,8 @@ static int raw_key(SDL_Scancode sc, SDL_Keycode k) {
     case SDLK_F3:        return PK_F3;
     case SDLK_F4:        return PK_F4;
     case SDLK_F5:        return PK_F5;
+    case SDLK_F6:        return PK_F6;
+    case SDLK_F7:        return PK_F7;
     case SDLK_F11:       return PK_F11;
     case SDLK_LSHIFT:
     case SDLK_RSHIFT:    return PK_SHIFT;
