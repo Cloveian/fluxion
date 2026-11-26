@@ -1,5 +1,5 @@
 # random key and click scripts through the app's --png mode, looking for crashes and sanitizer reports
-# usage: python3 tools/uifuzz.py seed count [path to fluxion-app, an asan build finds the most]
+# usage: python3 tools/uifuzz.py seed count [path to fluxion-app or fluxion-desktop, an asan build finds the most]
 import random, subprocess, sys, os, tempfile
 from uikeys import script
 random.seed(int(sys.argv[1]))
@@ -7,7 +7,7 @@ n = int(sys.argv[2])
 app = os.path.abspath(sys.argv[3] if len(sys.argv) > 3 else 'build-pc/fluxion-app')
 bad = 0
 for i in range(n):
-    keys = script(5, 30, 0.25)
+    keys = script(5, 30, 0.25, 'desktop' in os.path.basename(app))
     env = dict(os.environ, ASAN_OPTIONS='detect_leaks=0', UBSAN_OPTIONS='print_stacktrace=1')
     with tempfile.TemporaryDirectory(prefix='uif_') as d:
         try:
