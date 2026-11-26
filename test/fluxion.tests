@@ -1496,6 +1496,9 @@ simplify; (X+1)/((X_1)(X^2+4)); 1/(X^3_X^2+4X_4)+X/(X^3_X^2+4X_4)
 simplify; (3X+1)/((X_1)(X^2+4)); 1/(X^3_X^2+4X_4)+(3X)/(X^3_X^2+4X_4)
 simplify; (6X+4)/((X_1)(X^2+4)); 4/(X^3_X^2+4X_4)+(6X)/(X^3_X^2+4X_4)
 simplify; (X^2+1)/((X_1)(X+2)); 1/(X^2+X_2)+X^2/(X^2+X_2)
+#a negative power of 0 is a 1/0
+simplify; 0^(0_1); 1/0
+simplify; 0^(0_2)+1; 1/0+1
 steps; inflect:X^3; X; deriv(X^3,X,X)|powerrule|3X^2|theslopeofthat|deriv(3X^2,X,X)|constantmultiple|3deriv(X^2,X,X)|powerrule|6X|setitto0|6X=0|/6|X=0
 steps; critical:X*e^(2X); X; deriv(Xe^(2X),X,X)|productrule|Xderiv(e^(2X),X,X)+e^(2X)|exprule,chainrule|2Xe^(2X)+e^(2X)|setitto0|2Xe^(2X)+e^(2X)=0|solve|X=-1/2
 steps; tangent:sin(X),0; X; deriv(sin(X),X,0)|trigrule|cos(X)|plugin|cos(0)|1|thepoint|sin(0)|0|point-slopeform|Y_0=(X_0)|solvefory|Y=X

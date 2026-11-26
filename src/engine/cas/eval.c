@@ -489,8 +489,8 @@ static bool eval_pow(pcas_ast_t *e, unsigned short flags) {
     if(flags & EVAL_BASIC_IDENTITIES) {
         /*If a == 0*/
         if(is_ast_int(a, 0)) {
-            /*If b != 0, e = 0*/
-            if(!is_ast_int(b, 0)) {
+            /*If b != 0, e = 0. Fluxion: not a negative number, 0^-1 is 1/0*/
+            if(!is_ast_int(b, 0) && !(b->type == NODE_NUMBER && mp_rat_compare_zero(b->op.num) < 0)) {
                 replace_node(e, ast_MakeNumber(num_FromInt(0)));
                 return true;
             }
