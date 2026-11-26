@@ -228,8 +228,12 @@ bool menu_click(int x, int y, action_t *a) {
     return true;
 }
 
+bool menu_on_bar(int y) {
+    return y >= areas.keys.y && y < areas.keys.y + areas.keys.h;
+}
+
 bool menu_bar_click(int x, int y, action_t *a) {
-    if(NSPIRE || y < areas.keys.y || y >= areas.keys.y + areas.keys.h)
+    if(NSPIRE || !menu_on_bar(y))
         return false;
     a->op = A_SOFT;
     a->n = x * FOLDER_COUNT / (areas.keys.w > 0 ? areas.keys.w : 1);

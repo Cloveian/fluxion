@@ -31,6 +31,8 @@ bool menu_act(action_t a);
 
 /* the pointer: a click on a row of the open menu as the action for its key, a click on the bar as A_SOFT */
 bool menu_click(int x, int y, action_t *a);
+/* y is in the bar's row, which the nspire has too but draws nothing in */
+bool menu_on_bar(int y);
 bool menu_bar_click(int x, int y, action_t *a);
 
 void menu_draw_bar(void);

@@ -2205,13 +2205,13 @@ static bool history_act(action_t a) {
 /* the mouse as an action: soft keys, an open menu's or popup's items, the input line. nothing for the rest yet */
 static action_t pointer_action(const input_t *p) {
     action_t a = { A_NONE, 0, NULL };
-    bool down = !p->drag, on_keys = p->y >= areas.keys.y && p->y < areas.keys.y + areas.keys.h;
+    bool down = !p->drag;
     int row;
 
     if(menu_is_open() && down) {
         if(menu_click(p->x, p->y, &a))
             return a;
-        if(!on_keys) {
+        if(!menu_on_bar(p->y)) {
             a.op = A_ESC; /* outside it */
             return a;
         }
@@ -2228,7 +2228,7 @@ static action_t pointer_action(const input_t *p) {
                 a.n = hits[row].id;
                 break;
             }
-    } else if(p->y >= in_top && p->y < areas.keys.y) {
+    } else if(p->y >= in_top && p->y < areas.body.y + areas.body.h) {
         a.op = p->drag || p->shift ? A_POINT_DRAG : A_POINT;
         a.n = p->x;
         a.m = p->y;
