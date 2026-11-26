@@ -24,6 +24,7 @@ typedef struct {
     bool (*header)(int i); /* section title rows the cursor hops over, NULL if none */
     const char *const *softkeys; /* five names for a bar along the bottom, NULL for no bar */
     int (*jump)(int k); /* soft key k (0-4) pressed, the row to go to or -1 */
+    bool (*adjust)(int i, int dir); /* left / right (-1, 1) on a row, true when it took it. NULL pages page a screen at a time */
 } page_t;
 
 void page_open(const page_t *page);

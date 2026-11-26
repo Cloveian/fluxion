@@ -100,9 +100,13 @@ bool page_act(action_t a) {
     case A_UP:    o->sel = step(o->page, o->sel, -1); break;
     case A_DOWN:  o->sel = step(o->page, o->sel, 1); break;
     case A_LEFT:  /* a page at a time */
+        if(o->page->adjust != NULL && !is_header(o->page, o->sel) && o->page->adjust(o->sel, -1))
+            break;
         o->sel = settle(o->page, o->sel > shown_rows ? o->sel - shown_rows : 0, -1);
         break;
     case A_RIGHT:
+        if(o->page->adjust != NULL && !is_header(o->page, o->sel) && o->page->adjust(o->sel, 1))
+            break;
         o->sel = settle(o->page, o->sel + shown_rows < n - 1 ? o->sel + shown_rows : n - 1, 1);
         break;
     case A_ENTER:

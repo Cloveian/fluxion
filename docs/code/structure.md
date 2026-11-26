@@ -34,7 +34,7 @@ fluxion/
 │       ├── vars.c   the [vars] page
 │       ├── mode.c  the [mode] page
 │       ├── settings.c  the angle mode, and saving the lot
-│       └── theme.c  the colour presets, three colours each and the other two mixed from them
+│       └── theme.c  the colour presets, three colours each and the other two mixed from them, and the custom one worked out from a bg and an accent
 ├── test/
 │   ├── pcas.tests   PineappleCAS's 256 engine tests
 │   ├── fluxion.tests   Fluxion's engine tests (factor, solve, cancel, roots, forms)

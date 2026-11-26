@@ -145,7 +145,8 @@ Everything Fluxion does right now, as tables. Yes / partly / no first, the other
 | Feature                            |     |
 | ---------------------------------- | --- |
 | Radians and degrees                | yes |
-| Themes (dark, light + 4 more)      | yes |
+| Themes (dark, light + 5 more)      | yes |
+| Your own theme (bg and accent)     | yes |
 | Remembers everything after closing | yes |
 
 ### Variables

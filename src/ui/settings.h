@@ -20,7 +20,7 @@ typedef enum { TRIG_GENERAL, TRIG_ONE_TURN } trig_t;
 extern trig_t setting_trig;
 
 /* the screen. brightness is [2nd] up/down, 0 brightest .. 7 darkest (screen.h),
-   theme indexes themes[] (theme.h) */
+   theme indexes themes[] (theme.h), one past the end is the custom one */
 extern int setting_brightness;
 extern int setting_theme;
 

@@ -100,7 +100,7 @@ basacally like typing on a computer, the cursor is a line and `[on]` is Ctrl. th
 | `[+]` `[-]` `[*]` `[÷]` `[^]` on an empty line | puts `ans` in front, the last answer (like the TI). `ans` is bold like a stored name and typing it out works too. not `[(-)]`, that's a new number. no answer yet = nothing gets added | |
 | `[sto→]` | the arrow. `value [sto→] name` stores, `[sto→] name` on its own deletes (see Names below) | |
 | `[vars]` | the stored names and their values, enter deletes one | |
-| `[mode]` | angle (radians / degrees), trig answers, what simplest means, rationalize, theme (dark, light, contrast, green, rose, paper). enter flips a row | |
+| `[mode]` | angle (radians / degrees), trig answers, what simplest means, rationalize, theme (dark, light, contrast, contrast light, green, rose, paper, custom, with six rows under it for its colours). enter flips a row, left / right steps the theme and the custom ones | |
 | `[on]` + `[sin]` `[cos]` `[tan]` | csc, sec, cot. real functions, they stay what you typed | |
 | `[2nd]` + `[alpha]` + `[on]` | screen off (the backlight). it goes off by itself after 2 min of nothing too. any key brings it back, and that key gets eaten | |
 | `[2nd]` + `↑` `↓` | brightness, 8 steps. saved, and the OS gets its own level back on the way out | |
