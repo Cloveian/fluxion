@@ -1570,6 +1570,8 @@ static void lcm_divide(pcas_ast_t *mult, pcas_ast_t *den) {
         pcas_ast_t *g = find_factor(mult, f);
         mp_small nf, ng;
 
+        if(g == NULL) /*oom*/
+            return;
         if(f->type == NODE_NUMBER) {
             mp_int_div(mp_rat_numer_ref(g->op.num), mp_rat_numer_ref(f->op.num), mp_rat_numer_ref(g->op.num), NULL);
         } else {
@@ -1613,6 +1615,8 @@ static void comdenom_sum(pcas_ast_t *e, bool factored) {
     simplify(lcm, SIMP_COMMUTATIVE | SIMP_EVAL);
 
     frac = ast_MakeBinary(OP_DIV, num, lcm);
+    if(frac == NULL) /*oom, it freed num and lcm*/
+        return;
     cancel_fraction(frac);
     if(!isoptype(frac, OP_DIV)) { /*Fluxion: it all cancelled, x/(x-1)-1/(x-1) is just 1. was a NULL deref*/
         replace_node(e, frac);
