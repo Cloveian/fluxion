@@ -1011,6 +1011,16 @@ simplify; integral(1/X^2,X,1,2); 1/2
 simplify; integral(sqrt(X),X,0,4); 16/3
 simplify; integral(1/X,X,-2,-1); -ln(2)
 simplify; integral(tan(X),X,0,1); ln(1/abs(cos(1)))
+#a constant like the e in e^x has no x to put the bound in, a tan next to it still gets checked
+simplify; integral(e^X+tan(X),X,0,1); e_1_ln(abs(cos(1)))
+simplify; integral(3^X+sec(X)tan(X),X,0,1); 2/ln(3)+sec(1)_1
+#from a to a is 0 whatever f is
+simplify; integral(sqrt(1+X^4),X,3,3); 0
+simplify; integral(1/X^2,X,2,2); 0
+#d/dx of an integral with x in a limit: f(upper)upper' - f(lower)lower'
+simplify; deriv(integral(T^2+1,T,0,X),X,X); X^2+1
+simplify; deriv(integral(sin(T),T,X,3),X,X); -sin(X)
+simplify; deriv(integral(sqrt(5+R^3),R,4,X^2),X,X); 2Xsqrt(X^6+5)
 #tan sec cot csc of ax+b, a pole in between or not. a root of a quadratic, under 0 in between or 0 at an end of a 1/sqrt
 simplify; integral(tan(X),X,0,2); integral(tan(X),X,0,2)
 simplify; integral(csc(X)^2,X,-1,1); integral(csc(X)^2,X,-1,1)

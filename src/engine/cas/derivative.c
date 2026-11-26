@@ -64,6 +64,27 @@ bool is_constant(pcas_ast_t *e, pcas_ast_t *respect_to) {
     return true;
 }
 
+/*Fluxion: deriv(f,x,at) as a new node*/
+static pcas_ast_t *deriv_of(pcas_ast_t *f, pcas_ast_t *x, pcas_ast_t *at) {
+    pcas_ast_t *d = ast_MakeOperator(OP_DERIV);
+
+    if(d == NULL) /*oom, the copies wolud leak*/
+        return NULL;
+    ast_ChildAppend(d, ast_Copy(f));
+    ast_ChildAppend(d, ast_Copy(x));
+    ast_ChildAppend(d, ast_Copy(at));
+    return d;
+}
+
+/*Fluxion: f(bound) bound' for an integral of f over t*/
+static pcas_ast_t *limit_term(pcas_ast_t *f, pcas_ast_t *t, pcas_ast_t *bound, pcas_ast_t *x, pcas_ast_t *at) {
+    pcas_ast_t *f_at = ast_Copy(f);
+
+    if(f_at != NULL)
+        substitute(f_at, t, bound);
+    return ast_MakeBinary(OP_MULT, f_at, deriv_of(bound, x, at));
+}
+
 bool eval_derivative_nodes(pcas_ast_t *e) {
     pcas_ast_t *expr, *respect_to, *at;
     pcas_ast_t *child;
@@ -115,12 +136,7 @@ bool eval_derivative_nodes(pcas_ast_t *e) {
         pcas_ast_t *n = ast_MakeOperator(OP_ADD);
 
         for(child = ast_ChildGet(expr, 0); child != NULL; child = child->next) {
-            pcas_ast_t *deriv = ast_MakeOperator(OP_DERIV);
-
-            ast_ChildAppend(deriv, ast_Copy(child));
-            ast_ChildAppend(deriv, ast_Copy(respect_to));
-            ast_ChildAppend(deriv, ast_Copy(at));
-            ast_ChildAppend(n, deriv);
+            ast_ChildAppend(n, deriv_of(child, respect_to, at));
         }
 
         replace_node(e, n);
@@ -129,6 +145,17 @@ bool eval_derivative_nodes(pcas_ast_t *e) {
     /*Hardcode power rule because we have to check if the power is a constant*/
     else if(isoptype(expr, OP_POW) && is_constant(ast_ChildGet(expr, 1), respect_to)) {
         changed |= id_Execute(e, &id_deriv_power_rule, false);
+    }
+    /*Fluxion: f(upper)upper' - f(lower)lower' for an integral with x in its limits and not in f*/
+    else if(isoptype(expr, OP_INTEGRAL) && ast_ChildLength(expr) == 4 && ast_ChildGet(expr, 1)->type == NODE_SYMBOL
+            && !ast_Compare(ast_ChildGet(expr, 1), respect_to) && is_constant(ast_ChildGet(expr, 0), respect_to)) {
+        pcas_ast_t *t = ast_ChildGet(expr, 1), *f = ast_ChildGet(expr, 0);
+        pcas_ast_t *n = ast_MakeBinary(OP_ADD, limit_term(f, t, ast_ChildGet(expr, 3), respect_to, at),
+                                       ast_MakeBinary(OP_MULT, ast_MakeInt(-1),
+                                                      limit_term(f, t, ast_ChildGet(expr, 2), respect_to, at)));
+
+        replace_node(e, n);
+        changed = true;
     } else {
         /*While is necessary because of power rules.*/
         while(!pcas_check() && id_ExecuteTable(e, id_derivative, ID_NUM_DERIV, false))

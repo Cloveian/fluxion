@@ -1871,8 +1871,12 @@ static pcas_ast_t *integral_of(pcas_ast_t *I, steps_t *s) {
 /*e with x = pt, as a float*/
 bool float_at(pcas_ast_t *e, pcas_ast_t *x, pcas_ast_t *pt, double *v) {
     pcas_ast_t *c = ast_Copy(e);
-    bool ok = c != NULL && substitute(c, x, pt) && approx_float(c, v);
+    bool ok = false;
 
+    if(c != NULL) {
+        substitute(c, x, pt); /*its true is just 'found an x', the e in e^x is fine without one*/
+        ok = approx_float(c, v);
+    }
     ast_Cleanup(c);
     return ok;
 }
@@ -2014,6 +2018,10 @@ bool eval_integral_nodes(pcas_ast_t *e) {
         return false;
     for(c = ast_ChildGet(e, 0); c != NULL; c = c->next)
         changed |= eval_integral_nodes(c);
+    if(isoptype(e, OP_INTEGRAL) && ast_ChildLength(e) == 4 && ast_Compare(ast_ChildGet(e, 2), ast_ChildGet(e, 3))) { /*from a to a, whatever f is*/
+        replace_node(e, ast_MakeInt(0));
+        return true;
+    }
     if(!isoptype(e, OP_INTEGRAL) || ast_ChildGet(e, 1)->type != NODE_SYMBOL
        || (ast_ChildLength(e) != 2 && ast_ChildLength(e) != 4) || (ast_ChildLength(e) == 4 && !defined_between(e))
        || (F = integral_of(e, NULL)) == NULL)
