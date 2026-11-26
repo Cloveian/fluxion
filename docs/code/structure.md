@@ -25,8 +25,9 @@ fluxion/
 │   │   ├── bind.c  bind_ce.c / bind_nspire.c: which key does which action
 │   │   └── sticky.c  [2nd] / [alpha] / [on]: tapped, on for the next key, a quick second tap locks it
 │   └── ui/
-│       ├── app.c    history, input line, soft-key folders, running the engine
+│       ├── app.c    history, input line, running the engine
 │       ├── areas.c  the top bar / body / soft-key bands, where the drawing gets its edges
+│       ├── menu.c  the folder bar under the screen and the menus that open from it, app.c just hands it hooks for picking, previews and the status line
 │       ├── args.c  cutting a command's line at its commas and parsing the pieces, for every command file
 │       ├── catalog.c  everything you can type or pick, and what the engine can do. its words are the name table too
 │       ├── work.c  the show-the-work page, and calc1.c / polyfn.c / series.c / ineq.c the commands behind it (derivative at a point, tangent, apart, sum(, inequalities ...)

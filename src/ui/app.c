@@ -5,6 +5,7 @@
 #include "names.h"
 #include "vars.h"
 #include "mode.h"
+#include "menu.h"
 #include "settings.h"
 #include "geom.h"
 #include "polyfn.h"
@@ -54,13 +55,6 @@
 #define GAP         4
 #define HISTORY_MAX 16          /* enough for now, old ones just scroll off the top */
 
-/* the nspire has no keys under its screen: no folder bar, [menu] drops a list of the five down from the top like its own */
-#ifdef _TINSPIRE
-#define NSPIRE 1
-#else
-#define NSPIRE 0
-#endif
-
 typedef struct {
     box_t *in, *out;    /* out == NULL means a message instead */
     const char *message;
@@ -86,15 +80,6 @@ static editor_t ed;
 static editor_t *running = &ed; /* the editor whose line is being run, for push(). the form keys run from view */
 static const char *status;     /* one-line message above the input, or NULL */
 
-static int menu = -1;           /* open folder, -1 = none */
-static const folder_t *menu_in; /* folders[menu] or one of its subfolders */
-static int menu_sel, menu_top;
-/* the folders above the one showing and the row picked in each, for going back up.
-   the nspire's [menu] starts a level higher, at the list of the five */
-#define MENU_DEPTH_MAX 4
-static const folder_t *menu_back[MENU_DEPTH_MAX];
-static int menu_back_sel[MENU_DEPTH_MAX], menu_depth;
-static int menu_x, menu_y, menu_w, menu_row_h, menu_rows; /* the open menu's box, where draw_menu put it, for clicks */
 #define HITS_MAX 24 /* history halves on screen at once, for clicks */
 static struct { int y0, y1, id; } hits[HITS_MAX];
 static int hit_n;
@@ -1311,10 +1296,6 @@ void app_set_form_index(int i) {
 
 /* -- menus -- */
 
-static const item_t *menu_item(int i) {
-    return menu_in->items[i];
-}
-
 /* Tools - which simp_flags bit each setting maps to, 0 if it isnt one */
 static unsigned short setting(const item_t *it) {
     static const struct { const char *label; unsigned short bit; } ids[] = {
@@ -1504,187 +1485,33 @@ static bool pick(const item_t *it, bool dry) {
 
 /* the rows drawn as whatever picking them would put in the line. goes through
    pick_into on a scratch editor so the preview cant drift from what enter
-   actually inserts, and one size under normal math so it still reads as a menu.
-   built on open, freed on close */
+   actually inserts */
 static editor_t preview;
-static box_t *menu_boxes[32];
-static int menu_box_count;
 
-static void menu_free_boxes(void) {
-    int i;
-
-    for(i = 0; i < menu_box_count; i++) {
-        layout_free(menu_boxes[i]);
-        menu_boxes[i] = NULL;
-    }
-    menu_box_count = 0;
-}
-
-static void menu_build_boxes(void) {
-    const folder_t *f = menu_in;
-    layout_font_t small = draw_font;
-    unsigned i;
-
-    if(small.base > 0)
-        small.base--;
+static box_t *menu_preview(const item_t *it, const layout_font_t *font) {
     if(preview.root == NULL && !ed_init(&preview))
-        return;
-    for(i = 0; i < f->count && i < sizeof menu_boxes / sizeof menu_boxes[0]; i++) {
-        const item_t *it = f->items[i];
-
-        menu_boxes[i] = NULL;
-        if(it->kind == ITEM_FOLDER || it->kind == ITEM_SETTING || it->kind == ITEM_SOFTKEY || !pick(it, true))
-            continue; /* subfolders, settings, keys and the greyed out ones stay text */
-        /* the power's base is whatever's left of it, so alone it's just a
-           floating slot. "x^n" says it better */
-        if(strcmp(it->engine, "($)^($)") == 0)
-            continue;
-        ed_clear(&preview);
-        if(pick_into(&preview, it, false))
-            menu_boxes[i] = ed_layout(&preview, &small, false);
-    }
-    menu_box_count = (int)i;
+        return NULL;
+    ed_clear(&preview);
+    return pick_into(&preview, it, false) ? ed_layout(&preview, font, false) : NULL;
 }
 
-static void menu_close(void) {
-    menu_free_boxes();
-    menu = -1;
+static void menu_will_edit(void) {
+    will_edit(false);
 }
 
-static void menu_show(const folder_t *f, int sel) {
-    menu_free_boxes();
-    menu_in = f;
-    menu_sel = sel;
-    menu_top = 0;
-    menu_build_boxes();
+static void menu_say(const char *message) {
+    status = message;
 }
 
-static void menu_open(int folder) {
-    menu = folder;
-    menu_depth = 0;
-    menu_show(&folders[folder], 0);
+static bool menu_said(void) {
+    return status != NULL;
 }
 
-/* nspire: the list of the five, its folders open like subfolders */
-static void menu_open_top(void) {
-    menu = 0;
-    menu_depth = 0;
-    menu_show(&menu_top_folder, 0);
+static int menu_checked(const item_t *it) {
+    return is_action(it) ? -1 : setting_on(it);
 }
 
-/* nspire: [menu] on a page with keys under the screen lists those five */
-static item_t soft_items[5];
-static const item_t *soft_list[5];
-static const folder_t soft_folder = { NULL, "keys", soft_list, 5 };
-
-static void menu_open_soft(const char *const *names) {
-    int i;
-
-    for(i = 0; i < 5; i++) {
-        soft_items[i].label = names[i];
-        soft_items[i].kind = ITEM_SOFTKEY;
-        soft_items[i].have = HAVE_YES;
-        soft_list[i] = &soft_items[i];
-    }
-    menu = 0;
-    menu_depth = 0;
-    menu_show(&soft_folder, 0);
-}
-
-/* back up one, false at the top already */
-static bool menu_up(void) {
-    if(menu_depth == 0)
-        return false;
-    menu_depth--;
-    menu_show(menu_back[menu_depth], menu_back_sel[menu_depth]);
-    return true;
-}
-
-static void menu_choose(int i) {
-    const item_t *it = menu_item(i);
-
-    if(it->kind == ITEM_FOLDER) {
-        if(menu_depth < MENU_DEPTH_MAX) {
-            menu_back[menu_depth] = menu_in;
-            menu_back_sel[menu_depth++] = i;
-        }
-        menu_show(it->sub, 0);
-        return;
-    }
-    if(it->kind == ITEM_SOFTKEY) {  /* as if it was pressed under the page */
-        action_t a = { A_SOFT, i, NULL };
-
-        menu_close();
-        if(page_is_open())
-            page_act(a);
-        else
-            work_act(a);
-        return;
-    }
-    if(it->kind != ITEM_SETTING && pick(it, true))
-        will_edit(false);
-    if(!pick(it, false)) {
-        status = "not in Fluxion yet";
-        return;
-    }
-    /* settings stay open so several can be toggled. show steps opened its page, hidden under it the menu ate the keys */
-    if(it->kind != ITEM_SETTING || work_is_open() || status != NULL) /* the menu sits over the status message */
-        menu_close();
-}
-
-/* left / right go round the five on the CE. the nspire has them in a list, and a page's keys aren't folders */
-static bool round_five(void) {
-    return !NSPIRE && menu_in == &folders[menu];
-}
-
-/* false if it means nothing in a menu. rows past 9 go A, B, C like the nspire */
-static bool menu_act(action_t a) {
-    int count = (int)menu_in->count, n = -1;
-
-    switch(a.op) {
-    case A_UP:    menu_sel = (menu_sel + count - 1) % count; break;
-    case A_DOWN:  menu_sel = (menu_sel + 1) % count; break;
-    case A_LEFT:
-        if(!menu_up() && round_five())
-            menu_open((menu + FOLDER_COUNT - 1) % FOLDER_COUNT);
-        break;
-    case A_RIGHT:
-        if(menu_item(menu_sel)->kind == ITEM_FOLDER)
-            menu_choose(menu_sel);
-        else if(round_five())
-            menu_open((menu + 1) % FOLDER_COUNT);
-        break;
-    case A_ENTER: menu_choose(menu_sel); break;
-    case A_CLEAR: case A_MENU: menu_close(); break;
-    case A_ESC:   /* one level up, out from the top */
-        if(!menu_up())
-            menu_close();
-        break;
-    case A_SOFT:
-        if(menu_in == &soft_folder)     /* a page's keys listed, so that one */
-            menu_choose(a.n);
-        else if(a.n == menu)
-            menu_close();
-        else
-            menu_open(a.n);
-        break;
-    case A_CHAR:
-        if(a.n >= '1' && a.n <= '9')
-            n = a.n - '1';
-        else if(a.n >= 'a' && a.n <= 'z')
-            n = 9 + (a.n - 'a');
-        else if(a.n >= 'A' && a.n <= 'Z')
-            n = 9 + (a.n - 'A');
-        else
-            return false;
-        if(n < count)
-            menu_choose(n);
-        break;
-    default:
-        return false;
-    }
-    return true;
-}
+static const menu_host_t menu_host = { pick, menu_preview, menu_will_edit, menu_say, menu_said, menu_checked };
 
 /* the Catalog page, [2nd][0] like the TI. everything you can type, under the
    same folders as the soft keys, then the plain keys a-z, then all of it a-z
@@ -2452,14 +2279,9 @@ static action_t pointer_action(const input_t *p) {
     bool down = !p->drag, on_keys = p->y >= areas.keys.y && p->y < areas.keys.y + areas.keys.h;
     int row;
 
-    if(menu >= 0 && down) {
-        row = (p->y - menu_y - 2) / (menu_row_h > 0 ? menu_row_h : 1);
-        if(p->x >= menu_x && p->x < menu_x + menu_w && p->y >= menu_y + 2 && row < menu_rows) {
-            row += menu_top; /* its key: 1 to 9, then a to z */
-            a.op = A_CHAR;
-            a.n = row < 9 ? '1' + row : 'a' + (row - 9);
+    if(menu_is_open() && down) {
+        if(menu_click(p->x, p->y, &a))
             return a;
-        }
         if(!on_keys) {
             a.op = A_ESC; /* outside it */
             return a;
@@ -2477,12 +2299,9 @@ static action_t pointer_action(const input_t *p) {
         return a;
     }
 
-    if(down && on_keys && !NSPIRE) {
-        a.op = A_SOFT;
-        a.n = p->x * FOLDER_COUNT / (areas.keys.w > 0 ? areas.keys.w : 1);
-        if(a.n >= FOLDER_COUNT)
-            a.n = FOLDER_COUNT - 1;
-    } else if(down && p->y < in_top) {
+    if(down && menu_bar_click(p->x, p->y, &a))
+        return a;
+    if(down && p->y < in_top) {
         for(row = 0; row < hit_n; row++)
             if(p->y >= hits[row].y0 && p->y < hits[row].y1) {
                 a.op = A_HIST_POINT;
@@ -2505,7 +2324,7 @@ static bool handle(const input_t *in) {
         return true;
     }
     status = NULL;
-    if(menu < 0)
+    if(!menu_is_open())
         menu_from = -1; /* [2nd][y=] and such open nothing */
 
     if(in->quit)
@@ -2523,7 +2342,7 @@ static bool handle(const input_t *in) {
     if(in->eaten)
         return true;
 
-    if(menu >= 0) {
+    if(menu_is_open()) {
         if(!menu_act(a))
             menu_act(plain);
         return true;
@@ -2607,117 +2426,6 @@ static int keep_cursor(const box_t *b, int x, int left, int right) {
     if(x + cx > right - 8)
         return right - 8 - cx;
     return x;
-}
-
-/* the nspire's main screen gets the bar's rows too */
-static int body_bottom(void) {
-    return NSPIRE ? areas.keys.y + areas.keys.h : areas.body.y + areas.body.h;
-}
-
-static void draw_bar(void) {
-    const char *names[FOLDER_COUNT];
-    int i;
-
-    for(i = 0; i < FOLDER_COUNT; i++)
-        names[i] = folders[i].name;
-    draw_softkeys(&areas.keys, names, menu, 0, hover_cell(&areas.keys, FOLDER_COUNT));
-}
-
-static void draw_menu(void) {
-    const font_t *font = draw_label_font();
-    const folder_t *f = menu_in;
-    int row_h = font->ascent + font->descent + 2;
-    int bottom = body_bottom() - 1;
-    int rows = (int)f->count, max_rows;
-    int width = 0, x, top, i;
-
-    /* rows are as wide and as tall as the biggest preview (a fraction makes the
-       whole folder taller, fine) */
-    for(i = 0; i < rows; i++) {
-        const box_t *b = i < menu_box_count ? menu_boxes[i] : NULL;
-        int w = b != NULL ? b->width : draw_text_width(f->items[i]->label, font);
-        int h = b != NULL ? b->ascent + b->descent + 2 : 0;
-
-        if(f->items[i]->kind == ITEM_SETTING)
-            w += draw_text_width("[x] ", font); /* its drawn with the box in front so measure that too */
-        if(w > width)
-            width = w;
-        if(h > row_h)
-            row_h = h;
-    }
-    width += 34;    /* for the "1:" plus room for a * or [x] */
-    max_rows = (bottom - areas.body.y - 4) / row_h;
-
-    if(rows > max_rows)
-        rows = max_rows;
-    if(menu_sel < menu_top)
-        menu_top = menu_sel;
-    if(menu_sel >= menu_top + rows)
-        menu_top = menu_sel - rows + 1;
-
-    if(NSPIRE) {   /* down from the top, a step right for each level like the nspire's own */
-        x = areas.body.x + 2 + menu_depth * 14;
-        top = areas.body.y + 1;
-        bottom = top + rows * row_h + 2;
-    } else {
-        x = areas.keys.x + menu * (areas.keys.w / FOLDER_COUNT); /* over its key */
-        top = bottom - rows * row_h - 2;
-    }
-    if(x + width > areas.body.x + areas.body.w - 1)
-        x = areas.body.x + areas.body.w - 1 - width;
-
-    menu_x = x;
-    menu_y = top;
-    menu_w = width;
-    menu_row_h = row_h;
-    menu_rows = rows;
-    screen_color(COL_BG);
-    screen_fill(x, top, width, bottom - top + 1);
-    screen_color(COL_DIM);
-    screen_hline(x, top, width);
-    if(NSPIRE) /* nothing under it to close it off */
-        screen_hline(x, bottom, width);
-    screen_vline(x, top, bottom - top + 1);
-    screen_vline(x + width - 1, top, bottom - top + 1);
-
-    for(i = 0; i < rows; i++) {
-        int n = menu_top + i, y = top + 2 + i * row_h;
-        int text_y = y + (row_h - 2 - font->ascent - font->descent) / 2;
-        const item_t *it = f->items[n];
-        bool can = it->kind == ITEM_FOLDER || it->kind == ITEM_SOFTKEY || pick(it, true);
-        char label[48];
-
-        if(it->kind == ITEM_SETTING && !is_action(it))
-            snprintf(label, sizeof label, "%s %s", setting_on(it) ? "[x]" : "[ ]", it->label);
-        else
-            snprintf(label, sizeof label, "%s%s", it->label, can ? "" : " *");
-
-        if(n == menu_sel) {
-            screen_color(COL_ACCENT);
-            screen_fill(x + 1, y - 1, width - 2, row_h);
-            screen_color(COL_BG);
-        } else {
-            if(hover_in(x + 1, y, width - 2, row_h)) {
-                screen_color(COL_SELECT);
-                screen_fill(x + 1, y - 1, width - 2, row_h);
-            }
-            screen_color(can ? COL_FG : COL_DIM);
-        }
-
-        if(n < 9 + 26) {
-            char num[3] = { (char)(n < 9 ? '1' + n : 'A' + (n - 9)), ':', '\0' };
-            draw_text(x + 3, text_y, num, font);
-        }
-        if(it->kind == ITEM_FOLDER)
-            draw_text(x + width - 3 - draw_text_width(">", font), text_y, ">", font);
-        if(n < menu_box_count && menu_boxes[n] != NULL) {
-            const box_t *b = menu_boxes[n];
-
-            draw_box(b, x + 18, y + (row_h - 2 - b->ascent - b->descent) / 2 + b->ascent);
-        } else {
-            draw_text(x + 18, text_y, label, font);
-        }
-    }
 }
 
 /* the [math] or [trig] grid, just above the cursor, each cell numbered in the corner */
@@ -2921,7 +2629,7 @@ static void draw_screen(void) {
     box_t *in = ed_layout(&ed, &draw_font, true);
     int left = areas.body.x + MARGIN, right = areas.body.x + areas.body.w - MARGIN;
     int line_y, y, i, avail = right - left, first;
-    int top = areas.body.y, bottom = body_bottom();
+    int top = areas.body.y, bottom = areas_body_bottom();
 
     screen_clear();
 
@@ -2931,15 +2639,15 @@ static void draw_screen(void) {
             page_draw();
         else
             work_draw();
-        if(menu >= 0)
-            draw_menu();
+        if(menu_is_open())
+            menu_draw();
         draw_top_bar();
         screen_show();
         return;
     }
 
     if(!NSPIRE)
-        draw_bar();
+        menu_draw_bar();
 
     /* input line, just above the soft keys. scrolls sideways to keep the cursor in view. */
     if(in != NULL) {
@@ -3051,8 +2759,8 @@ static void draw_screen(void) {
     }
     draw_top_bar();
 
-    if(menu >= 0)
-        draw_menu();
+    if(menu_is_open())
+        menu_draw();
     if(popup >= 0)
         draw_popup();
 
@@ -3161,6 +2869,7 @@ void app_run(void) {
     screen_begin();
     settings_load();    /* after, a first run starts from the OS brightness screen_begin read */
     input_begin(on_sleep);
+    menu_init(&menu_host);
     areas_init();
 #ifdef SCREEN_RESIZABLE
     screen_resized = areas_init; /* the window got a new size */
@@ -3169,9 +2878,9 @@ void app_run(void) {
     pcas_poll = busy_poll;
 
     for(;;) {
-        input_t in = input_wait(popup >= 0 ? IN_POPUP : menu >= 0 ? IN_MENU : IN_TYPING);
+        input_t in = input_wait(popup >= 0 ? IN_POPUP : menu_is_open() ? IN_MENU : IN_TYPING);
 
-        if(in.a.op == A_ENTER && menu < 0 && !ed_is_empty(&ed))
+        if(in.a.op == A_ENTER && !menu_is_open() && !ed_is_empty(&ed))
             busy_start(); /* the form keys start it themselves */
         if(!handle(&in))
             break;
@@ -3184,7 +2893,7 @@ void app_run(void) {
     names_save();
     settings_save();
     clear_history();
-    menu_free_boxes();
+    menu_free();
     ed_free(&ed);
     if(preview.root != NULL)
         ed_free(&preview);

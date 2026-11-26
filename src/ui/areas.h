@@ -12,6 +12,16 @@ typedef struct {
 
 extern areas_t areas;
 
+/* the nspire has no keys under its screen: no folder bar, [menu] drops a list of the five down from the top like its own */
+#ifdef _TINSPIRE
+#define NSPIRE 1
+#else
+#define NSPIRE 0
+#endif
+
+/* where the history's band ends, the nspire's main screen gets the bar's rows too */
+int areas_body_bottom(void);
+
 /* after the fonts, the top bar is as tall as the label font */
 void areas_init(void);
 
