@@ -14,8 +14,10 @@ void window_fullscreen_toggle(void);
 void window_sync(void);
 /* it went to a screen with a different display scale, keeps the size in points */
 void window_rescale(void);
-/* 1 or -1, bigger or smaller pixels */
+/* 1 or -1, a step in or out. 0 is back to no zoom */
 void window_zoom(int step);
+/* the bitmap fonts: the pixel size stays a whole number */
+void window_set_pixels(bool on);
 /* a mouse position from SDL (window units) as a layout pixel */
 void window_point(float wx, float wy, int *x, int *y);
 

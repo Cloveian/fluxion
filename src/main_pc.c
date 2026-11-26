@@ -21,14 +21,15 @@
 int main(int argc, char **argv)
 {
     const char *png = NULL;
-    int i = 1, scale = 2, w = 320, h = 240;
+    int i = 1, w = 320, h = 240;
+    float scale = 2; /* a fraction is fine for the outline text */
     bool pixels = false;
 
     for(; i + 1 < argc && strncmp(argv[i], "--", 2) == 0; i += 2) {
         if(strcmp(argv[i], "--png") == 0)
             png = argv[i + 1];
         else if(strcmp(argv[i], "--scale") == 0)
-            scale = atoi(argv[i + 1]);
+            scale = (float)atof(argv[i + 1]);
         else if(strcmp(argv[i], "--pixels") == 0)
             pixels = atoi(argv[i + 1]) != 0;
         else if(strcmp(argv[i], "--size") == 0) /* 640x480, layout pixels */
@@ -37,16 +38,19 @@ int main(int argc, char **argv)
 #ifdef SCREEN_RESIZABLE
     if(!pixels)
         draw_use_vector();
+    window_set_pixels(pixels);
 #endif
 
     if(png != NULL) {
         scale = scale < 1 ? 1 : scale > 8 ? 8 : scale;
+        if(pixels) /* bitmap fonts, same as the window */
+            scale = (float)(int)(scale + 0.5f);
 #ifdef SCREEN_RESIZABLE /* the web page's is the one size */
-        screen_set_view(w * scale, h * scale, (float)scale);
+        screen_set_view((int)((float)w * scale + 0.5f), (int)((float)h * scale + 0.5f), scale);
 #endif
         keys_script(&argv[i], argc - i);
         app_run();
-        return screen_save_png(png, scale) == 0 ? 0 : 1;
+        return screen_save_png(png, (int)scale) == 0 ? 0 : 1;
     }
 
     if(!window_open("Fluxion"))
