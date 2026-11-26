@@ -57,6 +57,7 @@ typedef enum _TokenType {
     TOK_OPEN_PAR, TOK_CLOSE_PAR, TOK_COMMA, TOK_PERIOD,
 
     TOK_INF, /*Fluxion. read_type takes the first match, so before the i*/
+    TOK_DNE, /*Fluxion*/
     TOK_IMAG,
 
     TOK_EULER, TOK_PI, TOK_THETA,

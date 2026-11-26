@@ -48,6 +48,7 @@ struct Identifier ti_table[AMOUNT_TOKENS] = {
     {1, {0x2B}}, {1, {0x3A}},   /*TOK_COMMA, TOK_PERIOD*/
 
     {2, {0xBB, 0xF6}},          /*TOK_INF. Fluxion: made up, like limit*/
+    {2, {0xBB, 0xFC}},          /*TOK_DNE. Fluxion: made up too*/
     {1, {0x2C}},                /*TOK_IMAG*/
 
     {2, {0xBB, 0x31}},          /*TOK_E*/
@@ -98,6 +99,7 @@ struct Identifier str_table[AMOUNT_TOKENS] = {
     {1, ","}, {1, "."},             /*TOK_COMMA, TOK_PERIOD*/
 
     {3, "inf"},                     /*TOK_INF*/
+    {3, "dne"},                     /*TOK_DNE*/
     {1, "i"},                       /*TOK_IMAG */
 
     {1, "e"},                       /*TOK_E*/
@@ -219,6 +221,7 @@ Symbol read_symbol(const uint8_t *equation, unsigned index, unsigned length, str
     case TOK_PI:    return SYM_PI;
     case TOK_THETA: return SYM_THETA;
     case TOK_INF:   return SYM_INF; /*Fluxion*/
+    case TOK_DNE:   return SYM_DNE; /*Fluxion*/
     default:        return SYM_INVALID;
     }
 

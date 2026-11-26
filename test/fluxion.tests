@@ -889,10 +889,10 @@ simplify; limit(sin(X)/X,X,0); 1
 simplify; limit((1_cos(X))/X^2,X,0); 1/2
 simplify; limit((sqrt(X)_2)/(X_4),X,4); 1/4
 simplify; limit((e^X_1)/X,X,0); 1
-simplify; limit(1/X,X,0); limit(1/X,X,0)
+simplify; limit(1/X,X,0); dne
 simplify; limit(X,X,3)+2; 5
 #not defined there and nothing to cancel, they stay. x e^(1/x) at 0 came out 0, the simplify ate the e^(1/0)
-simplify; limit(X*e^(1/X),X,0); limit(X*e^(1/X),X,0)
+simplify; limit(X*e^(1/X),X,0); dne
 simplify; limit(ln(X),X,0); limit(ln(X),X,0)
 simplify; limit(logb(2,X),X,1); limit(logb(2,X),X,1)
 #not real there, so not something to head to
@@ -956,7 +956,7 @@ simplify; limit((1+2/X)^X,X,inf); e^2
 simplify; limit(X*sin(1/X),X,inf); 1
 simplify; limit(2^X,X,inf); inf
 simplify; limit((1/2)^X,X,inf); 0
-simplify; limit(sin(X),X,inf); limit(sin(X),X,inf)
+simplify; limit(sin(X),X,inf); dne
 simplify; limit(ln(X)_X,X,inf); -inf
 simplify; limit(ln(X),X,inf); inf
 simplify; limit(sqrt(X)/(X+1),X,inf); 0
@@ -983,12 +983,12 @@ simplify; limit(e^(1/X),X,0,-1); 0
 simplify; limit(e^(1/X),X,0,1); inf
 simplify; limit(sqrt(X),X,0,1); 0
 simplify; limit(1/X^2,X,0); inf
-simplify; limit(1/X,X,0); limit(1/X,X,0)
+simplify; limit(1/X,X,0); dne
 simplify; limit(X^2,X,3,1); 9
 simplify; limit((X^2_1)/(X_1),X,1,-1); 2
 simplify; limit(ln(X),X,0,1); -inf
 simplify; limit(1/(X_2),X,2,-1); -inf
-simplify; limit(abs(X)/X,X,0); limit(abs(X)/X,X,0)
+simplify; limit(abs(X)/X,X,0); dne
 simplify; limit(X,X,0,2); limit(X,X,0,2)
 #abs(u) from one side is u or -u, so it comes off and the 0/0 works as usual
 simplify; limit(sin(X)/abs(X),X,0,1); 1
@@ -1004,12 +1004,21 @@ simplify; limit(sec(X),X,pi/2,1); -inf
 simplify; limit(csc(X)_1/X,X,0); 0
 simplify; limit(X csc(X),X,0); 1
 simplify; limit(sec(X),X,0); 1
-simplify; limit(cot(X),X,0); limit(cot(X),X,0)
+simplify; limit(cot(X),X,0); dne
 simplify; limit(sin(3X)csc(5X),X,0); 3/5
 simplify; limit(csc(X)_cot(X),X,0); 0
 simplify; limit(cot(X)_1/X,X,0); 0
 simplify; limit(e^(sec(X)),X,3pi/2,1); inf
 simplify; limit((5X+1)^(cot(X)),X,0,1); e^5
+#no limit: the two sides come to different things, or a trig function that keeps going round at inf. dne
+simplify; limit((X^2+7X+4)/(X_2),X,2); dne
+simplify; limit(8cos(X),X,inf); dne
+simplify; limit(cos(X)+3,X,inf); dne
+simplify; limit(sin(1/X),X,0); limit(sin(1/X),X,0)
+#sin or cos of something with no value there, times something that goes to 0
+simplify; limit(X^2cos(9/X),X,0); 0
+simplify; limit(Xsin(1/X),X,0); 0
+simplify; limit(Xcos(X),X,0); 0
 
 #integral(f, x) and integral(f, x, a, b): sum and constant multiple, then a table for f(ax+b). no +C on the answer, like the nspire
 simplify; integral(X^2,X); X^3/3
@@ -1326,7 +1335,9 @@ steps; limit((X^2_1)/(X_1),X,1); X; limit((X^2_1)/(X_1),X,1) | 0/0, factor and c
 steps; limit(sin(X)/X,X,0); X; limit(sin(X)/X,X,0) | 0/0, l'Hopital | limit(cos(X)/1,X,0) | plug in | cos(0)/1 | 1
 steps; limit((1_cos(X))/X^2,X,0); X; limit((1_cos(X))/X^2,X,0) | 0/0, l'Hopital | limit(sin(X)/(2X),X,0) | 0/0, l'Hopital | limit(cos(X)/2,X,0) | plug in | cos(0)/2 | 1/2
 steps; limit(1/X_1/(X(X+1)),X,0); X; limit(1/X_1/(X(X+1)),X,0) | one fraction | limit((1_1/(X+1))/X,X,0) | 0/0, l'Hopital | limit((1/(X+1)^2)/1,X,0) | plug in | (1/(0+1)^2)/1 | 1
-steps; limit(1/X,X,0); X; none
+steps; limit(1/X,X,0); X; limit(1/X,X,0) | from the right | inf | from the left | -inf | they aren't the same, no limit | dne
+steps; limit(cos(X),X,inf); X; limit(cos(X),X,inf) | keeps going round, no limit | dne
+steps; limit(X^2cos(9/X),X,0); X; limit(X^2cos(9/X),X,0) | a cos or sin is between -1 and 1, so times something that goes to 0 it's 0 | 0
 steps; limit(1/X,X,0,-1); X; limit(1/X,X,0,-1) | from the left | -inf
 steps; limit(csc(X),X,0,1); X; limit(csc(X),X,0,1) | sec, csc and cot as sin and cos | limit(1/sin(X),X,0,1) | from the right | inf
 steps; limit(1/X^2,X,0); X; limit(1/X^2,X,0) | both sides | inf

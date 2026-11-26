@@ -1046,13 +1046,33 @@ static pcas_ast_t *one_side(pcas_ast_t *f, pcas_ast_t *var, pcas_ast_t *a, int d
     return out;
 }
 
-/*when the usual way finds nothing: the side asked for, or both sides when they agree (1/x^2 at 0). l the line to put the rule on*/
+/*two ends that are provably not the same place: inf against -inf or a number, two numbers that aren't equal*/
+static bool ends_differ(pcas_ast_t *p, pcas_ast_t *q) {
+    pcas_ast_t *d;
+    int s;
+
+    if(inf_sign(p) != 0 || inf_sign(q) != 0)
+        return inf_sign(p) != inf_sign(q);
+    d = ast_MakeBinary(OP_ADD, ast_Copy(p), ast_MakeBinary(OP_MULT, ast_MakeInt(-1), ast_Copy(q)));
+    s = d != NULL ? sign_of(d) : 2;
+    ast_Cleanup(d);
+    return s == 1 || s == -1;
+}
+
+/*when the usual way finds nothing: the side asked for, or both sides when they agree (1/x^2 at 0), dne when they don't. l the line to put the rule on*/
 static pcas_ast_t *sides(pcas_ast_t *f, pcas_ast_t *var, pcas_ast_t *a, int dir, bool root, steps_t *s, step_t *l) {
     pcas_ast_t *r, *left = NULL;
 
     if(pcas_cancelled || (r = one_side(f, var, a, dir != 0 ? dir : 1, root)) == NULL)
         return NULL;
     if(dir == 0 && ((left = one_side(f, var, a, -1, root)) == NULL || !ast_Compare(r, left))) {
+        if(left != NULL && root && ends_differ(r, left)) { /*not when it's a piece of something bigger, a dne can't go in a sum*/
+            l = step(s, l, "from the right", r);
+            l = step(s, l, "from the left", left);
+            r = ast_MakeSymbol(SYM_DNE);
+            step(s, l, "they aren't the same, no limit", ast_Copy(r));
+            return r;
+        }
         ast_Cleanup(r);
         ast_Cleanup(left);
         return NULL;
@@ -1082,6 +1102,59 @@ static bool to_sincos(pcas_ast_t *e) {
     return true;
 }
 
+static pcas_ast_t *limit_of(pcas_ast_t *f, pcas_ast_t *var, pcas_ast_t *a, steps_t *s, bool root, int dir);
+
+/*cos(3x) times a number plus a number: a trig function of something that grows keeps going round, no limit at inf*/
+static bool keeps_going_round(pcas_ast_t *e, pcas_ast_t *var) {
+    pcas_ast_t *c, *rest = NULL, *k;
+    bool ok;
+
+    if(e->type != NODE_OPERATOR || !has_symbol(e, var->op.symbol))
+        return false;
+    switch(optype(e)) {
+    case OP_SIN: case OP_COS: case OP_TAN: case OP_SEC: case OP_CSC: case OP_COT:
+        k = slope_of(ast_ChildGet(e, 0), var);
+        ok = k != NULL && !has_symbol(k, var->op.symbol) && !is_ast_int(k, 0); /*3x+1 goes round at a steady rate, x^2 and sqrt(x) don't*/
+        ast_Cleanup(k);
+        return ok;
+    case OP_ADD: case OP_MULT:
+        for(c = ast_ChildGet(e, 0); c != NULL; c = c->next) {
+            if(!has_symbol(c, var->op.symbol))
+                continue;
+            if(rest != NULL)
+                return false;
+            rest = c;
+        }
+        return rest != NULL && keeps_going_round(rest, var);
+    default:
+        return false;
+    }
+}
+
+/*0 for a sin or cos with no value at a times something going to 0 (x^2 cos(9/x)), it's stuck between -1 and 1. new, NULL if not*/
+static pcas_ast_t *squeezed(pcas_ast_t *f, pcas_ast_t *var, pcas_ast_t *a, int dir) {
+    pcas_ast_t *c, *rest, *t, *out = NULL;
+
+    if(!isoptype(f, OP_MULT))
+        return NULL;
+    for(c = ast_ChildGet(f, 0); c != NULL && out == NULL; c = c->next) {
+        if((!isoptype(c, OP_SIN) && !isoptype(c, OP_COS)) || defined_at(c, var, a))
+            continue;
+        rest = others(f, c);
+        if(rest == NULL || pcas_cancelled) { /*oom, a copy short a factor would say 0 wrong*/
+            ast_Cleanup(rest);
+            return NULL;
+        }
+        t = limit_of(rest, var, a, NULL, false, dir);
+        if(t != NULL && is_ast_int(t, 0))
+            out = t;
+        else
+            ast_Cleanup(t);
+        ast_Cleanup(rest);
+    }
+    return out;
+}
+
 /*new, NULL when there isn't one or it gives up. s NULL for no steps, root when the limit is the whole input, dir 1 / -1 from one side*/
 static pcas_ast_t *limit_of(pcas_ast_t *f, pcas_ast_t *var, pcas_ast_t *a, steps_t *s, bool root, int dir) {
     pcas_ast_t *g, *top, *bottom, *t, *b, *out = NULL;
@@ -1108,11 +1181,18 @@ static pcas_ast_t *limit_of(pcas_ast_t *f, pcas_ast_t *var, pcas_ast_t *a, steps
                     last = "plug in inf";
             }
             step(s, l, l != before ? last : "plug in inf", ast_Copy(out));
+        } else if(root && !pcas_cancelled && keeps_going_round(f, var)) {
+            out = ast_MakeSymbol(SYM_DNE);
+            step(s, l, "keeps going round, no limit", ast_Copy(out));
         }
         return out;
     }
     if(has_symbol(a, SYM_INF)) /*inf+1, 2inf*/
         return NULL;
+    if((out = squeezed(f, var, a, dir)) != NULL) {
+        step(s, l, "a cos or sin is between -1 and 1, so times something that goes to 0 it's 0", ast_Copy(out));
+        return out;
+    }
     if((g = ast_Copy(f)) != NULL && to_sincos(g) && !pcas_cancelled) { /*cancelled leaves it unchagned, it'd go round forever*/
         steps_rule(l, "sec, csc and cot as sin and cos"); /*the recursion starts its own line*/
         out = limit_of(g, var, a, s, root, dir);

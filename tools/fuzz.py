@@ -216,7 +216,9 @@ def lim_check(expr, pt, out, side=None):
     dne = len(vals) == 2 and vals[0] != vals[1]
     gave_up = out.startswith("limit(")
     if dne:
-        return None if gave_up else f"sympy says no limit ({vals[0]} / {vals[1]}), got {out}"
+        return None if gave_up or out == "dne" else f"sympy says no limit ({vals[0]} / {vals[1]}), got {out}"
+    if out == "dne":
+        return f"sympy has a limit ({vals[0]}), got dne"
     if gave_up:
         return "skip"
     want = vals[0]

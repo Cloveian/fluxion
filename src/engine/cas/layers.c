@@ -19,17 +19,6 @@ static pcas_ast_t *var_child(pcas_ast_t *e, Symbol var) {
     return in;
 }
 
-/*the children of e that aren't in, under e's own operator. one left is just itself*/
-static pcas_ast_t *others(pcas_ast_t *e, pcas_ast_t *in) {
-    pcas_ast_t *out = rest_of(e, in, optype(e)), *only;
-
-    if(out == NULL || ast_ChildLength(out) != 1)
-        return out;
-    only = ast_ChildRemoveIndex(out, 0);
-    ast_Cleanup(out);
-    return only;
-}
-
 /*the k of x^(1/k), the way normalize leaves a root*/
 static bool root_index(pcas_ast_t *p, mp_small *k) {
     return isoptype(p, OP_DIV) && is_ast_int(ast_ChildGet(p, 0), 1) && whole_number(ast_ChildGet(p, 1), k) && *k >= 2;

@@ -40,6 +40,8 @@
 - [x] Increasing / decreasing intervals, increasing(f,x)
 - [x] One-sided limits, a 4th argument of 1 or -1, limit(abs(x)/x,x,0,1)
 - [x] Limits that need the conjugate, sqrt(x^2+x) - x is 1/2
+- [x] A limit that doesn't exist says DNE (the two sides *dih*fer, or sin / cos of something growing keeps going round), sec / csc / cot limits and poles from one side (1/sin(x) from the right is ∞), a sin or cos times something going to 0 (x^2 cos(9/x) is 0)
+- [x] d/dx of an integral with x in a limit (the fundamental theorem), and a definite integral from a to a is 0
 - [x] Steps for limits at inf the paper way (*dih*vide by the top power, the conjugate, l'Hopital for inf/inf)
 - [x] More integrals: sqrt(1-x^2) and sqrt(x^2+1) forms, 1/(x^2+bx+c) with irrational roots, e^x sin(x), x atan(x), x^5 e^x, abs(x), sec and csc, tan^n, sec^n, sin^2 cos^2. And x/(x^4+1), atan(x)/x^2, x^2 asin(x), x/sqrt(x+1), sqrt(x)/(1+x), sin(3x)cos(2x), 1/(1+sin(x)), 1/(2+cos(x)) and the rest of the fractions in sin and cos (t = tan(x/2)), tan^3 sec, (sin(x)+cos(x))^2, x/(x^2+2x+5)^2, x^2/(x^2+1)^2, sin(2x)/(1+cos(x)), e^x sin(x) cos(x), x e^x sin(x), cos(ln(x)). x^2/sqrt(x+1) and up, acos(x)^2. Left: atan(x)/x (no elementary answer).
 - [x] Integrals answer without the extra constants (ln(2abs(1+x^2))/2)

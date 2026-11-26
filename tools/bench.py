@@ -108,6 +108,10 @@ def score(item):
                 if kind == "limit" and limit_ends(chk)[0] != limit_ends(chk)[-1]:
                     return "gaveup", f"DNE, the CAS has no way to say it ({out})"
                 return "gaveup", out or "no output"
+            if kind == "limit" and out == "dne":
+                ends = limit_ends(chk)
+                none = ends[0] != ends[-1] or any(e.has(sp.AccumBounds) for e in ends)   # the sides *dih*fer, or it keeps going round
+                return ("right", out) if none else ("wrong", f"dne but the limit is {ends[0]}")
             got = sp.oo if out == "inf" else -sp.oo if out == "-inf" else from_cas(out)
             order = chk.get("order", 1)
             if kind in ("derivative", "integral"):

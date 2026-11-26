@@ -26,8 +26,8 @@ const char *operators[AMOUNT_OPS] = {
     "mod", "min", "max", "ceil", "round", "sign", "conj", "re", "im", "arg"
 };
 
-const char *symbols[SYM_INF - SYM_IMAG + 1] = {
-    "i", "pi", "e", "theta", "inf"
+const char *symbols[SYM_DNE - SYM_IMAG + 1] = {
+    "i", "pi", "e", "theta", "inf", "dne"
 };
 
 void _print_tree(pcas_ast_t *e, unsigned indent, unsigned index) {
@@ -46,7 +46,7 @@ void _print_tree(pcas_ast_t *e, unsigned indent, unsigned index) {
         free(num);
         break;
     } case NODE_SYMBOL:
-        if(e->op.symbol >= SYM_IMAG && e->op.symbol <= SYM_INF)
+        if(e->op.symbol >= SYM_IMAG && e->op.symbol <= SYM_DNE)
             DBG(("SYMBOL: %s\n", symbols[e->op.symbol - SYM_IMAG]));
         else
             DBG(("SYMBOL: %c\n", e->op.symbol));

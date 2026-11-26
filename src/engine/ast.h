@@ -62,7 +62,7 @@ typedef enum {
     AMOUNT_OPS
 } OperatorType;
 
-#define AMOUNT_SYMBOLS 31 /*Fluxion: 30 upstream, +inf*/
+#define AMOUNT_SYMBOLS 32 /*Fluxion: 30 upstream, +inf, +dne*/
 
 typedef enum {
     SYM_A = 'A',
@@ -76,6 +76,7 @@ typedef enum {
 
     SYM_PI, SYM_EULER, SYM_THETA,
     SYM_INF, /*Fluxion: only where a limit goes, limit(f,X,inf)*/
+    SYM_DNE, /*Fluxion: what a limit that doesn't exist comes to*/
 
     SYM_INVALID
 } Symbol;

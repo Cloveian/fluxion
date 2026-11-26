@@ -240,6 +240,8 @@ int solve_numeric(pcas_ast_t *e, Symbol var, double *out, int max);
 bool integral_numeric(pcas_ast_t *I, double *out);
 /*Fluxion: the other children of e, copied, as a sum or a product of op (solve.c, layers.c)*/
 pcas_ast_t *rest_of(pcas_ast_t *e, pcas_ast_t *skip, OperatorType op);
+/*Fluxion: rest_of under e's own operator, a lone one is just itself (solve.c)*/
+pcas_ast_t *others(pcas_ast_t *e, pcas_ast_t *in);
 /*Fluxion: e is a whole number that fits n*/
 bool whole_number(pcas_ast_t *e, mp_small *n);
 
@@ -287,7 +289,7 @@ double approx_ratio(mp_int a, mp_int b);
 
 /*Replaces all instances of from ast to to ast in e*/
 bool substitute(pcas_ast_t *e, pcas_ast_t *from, pcas_ast_t *to);
-/*Fluxion: every limit(f,x,a) node in e worked out, SIMP_DERIV runs it. one with no limit stays a limit*/
+/*Fluxion: every limit(f,x,a) node in e worked out, SIMP_DERIV runs it. one it can't do stays a limit, dne when the whole input has none*/
 bool eval_limit_nodes(pcas_ast_t *e);
 /*Fluxion: limit(f,x,a,1) / -1 is from the right / left. 0 for both, 2 for a 4th argument that isn't one of those*/
 int limit_side(pcas_ast_t *e);

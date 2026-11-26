@@ -1025,6 +1025,17 @@ pcas_ast_t *rest_of(pcas_ast_t *e, pcas_ast_t *skip, OperatorType op) {
     return r;
 }
 
+/*the children of e that aren't in, under e's own operator. one left is just itself*/
+pcas_ast_t *others(pcas_ast_t *e, pcas_ast_t *in) {
+    pcas_ast_t *out = rest_of(e, in, optype(e)), *only;
+
+    if(out == NULL || ast_ChildLength(out) != 1)
+        return out;
+    only = ast_ChildRemoveIndex(out, 0);
+    ast_Cleanup(out);
+    return only;
+}
+
 bool whole_number(pcas_ast_t *e, mp_small *n) {
     mp_small den;
 

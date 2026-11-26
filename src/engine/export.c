@@ -111,6 +111,7 @@ static unsigned _to_binary(pcas_ast_t *e, uint8_t *data, unsigned index, struct 
         case SYM_EULER: add_token(TOK_EULER);    break;
         case SYM_THETA: add_token(TOK_THETA);    break;
         case SYM_INF:   add_token(TOK_INF);      break; /*Fluxion*/
+        case SYM_DNE:   add_token(TOK_DNE);      break; /*Fluxion*/
         default:        add_byte(e->op.symbol);  break;
         }
 
