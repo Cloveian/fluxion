@@ -27,15 +27,15 @@ int main(int argc, char **argv)
             png = argv[i + 1];
         else if(strcmp(argv[i], "--scale") == 0)
             scale = atoi(argv[i + 1]);
-        else if(strcmp(argv[i], "--size") == 0) { /* 640x480, framebuffer pixels */
+        else if(strcmp(argv[i], "--size") == 0) /* 640x480, layout pixels */
             sscanf(argv[i + 1], "%dx%d", &w, &h);
-#ifdef SCREEN_RESIZABLE /* the web page's is the one size */
-            screen_resize(w, h);
-#endif
-        }
     }
 
     if(png != NULL) {
+        scale = scale < 1 ? 1 : scale > 8 ? 8 : scale;
+#ifdef SCREEN_RESIZABLE /* the web page's is the one size */
+        screen_set_view(w * scale, h * scale, (float)scale);
+#endif
         keys_script(&argv[i], argc - i);
         app_run();
         return screen_save_png(png, scale) == 0 ? 0 : 1;

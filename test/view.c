@@ -119,6 +119,8 @@ int main(int argc, char **argv) {
             return 1;
     }
 
+    if(png != NULL)
+        screen_set_view(SCREEN_W * scale, SCREEN_H * scale, (float)scale);
     screen_begin();
     theme_apply(0);
     screen_clear();

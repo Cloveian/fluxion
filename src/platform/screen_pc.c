@@ -1,11 +1,13 @@
 #ifndef __TICE__
 
 /* PC version of screen.h. the web page and the nspire get a 320x240 framebuffer of palette indexes, the desktop
-   one is RGB at any size (window or --size) so text can be blended. the SDL window shows it, screen_save_png() writes it out */
+   one is RGB at the window's real size (or --size times --scale) so text can be blended. drawing still takes layout
+   pixels, each one ppu real pixels across. the SDL window shows it, screen_save_png() writes it out */
 
 #include "screen.h"
 #include "window_pc.h"
 
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -13,22 +15,40 @@
 #ifdef SCREEN_RESIZABLE
 int screen_w = 320, screen_h = 240;
 void (*screen_resized)(void);
-static unsigned char *fb; /* 3 bytes a pixel */
+static unsigned char *fb; /* 3 bytes a pixel, pw x ph real pixels */
+static int pw = 320, ph = 240;
+static float ppu = 1; /* real pixels to a layout pixel */
 static unsigned char now[3]; /* rgb of current */
-#define FB(x, y) (&fb[((size_t)(y) * (size_t)screen_w + (size_t)(x)) * 3])
+#define FB(x, y) (&fb[((size_t)(y) * (size_t)pw + (size_t)(x)) * 3])
+#define PX(v) ((int)lroundf((float)(v) * ppu)) /* where a layout pixel edge lands */
 
 /* blank framebuffer for the size now */
 static void fb_make(void) {
     free(fb);
-    fb = calloc((size_t)screen_w * (size_t)screen_h * 3, 1);
+    fb = calloc((size_t)pw * (size_t)ph * 3, 1);
 }
 
-void screen_resize(int w, int h) {
-    screen_w = w < SCREEN_MIN_W ? SCREEN_MIN_W : w;
-    screen_h = h < SCREEN_MIN_H ? SCREEN_MIN_H : h;
+void screen_set_view(int w, int h, float per) {
+    pw = w < 1 ? 1 : w; /* 0 while minimzed */
+    ph = h < 1 ? 1 : h;
+    ppu = per < 0.1f ? 1 : per;
+    /* under the minimum layout the pixel gets smaller to fit it */
+    if((float)pw < (float)SCREEN_MIN_W * ppu)
+        ppu = (float)pw / SCREEN_MIN_W;
+    if((float)ph < (float)SCREEN_MIN_H * ppu)
+        ppu = (float)ph / SCREEN_MIN_H;
+    screen_w = (int)((float)pw / ppu + 0.001f);
+    screen_h = (int)((float)ph / ppu + 0.001f);
     fb_make();
     if(screen_resized != NULL)
         screen_resized();
+}
+
+float screen_ppu(void) { return ppu; }
+
+void screen_pixel_size(int *w, int *h) {
+    *w = pw;
+    *h = ph;
 }
 #else
 static unsigned char fb[SCREEN_H][SCREEN_W];
@@ -58,7 +78,7 @@ void screen_direct(bool on) {
 
 void screen_clear(void) {
 #ifdef SCREEN_RESIZABLE
-    size_t i, n = (size_t)screen_w * (size_t)screen_h;
+    size_t i, n = (size_t)pw * (size_t)ph;
 
     if(fb == NULL)
         fb_make();
@@ -76,14 +96,31 @@ void screen_color(unsigned char color) {
 #endif
 }
 
-static void pixel(int x, int y) {
-    if(x < 0 || x >= SCREEN_W || y < 0 || y >= SCREEN_H)
-        return;
 #ifdef SCREEN_RESIZABLE
-    memcpy(FB(x, y), now, 3);
+/* real pixels x0 to x1 and y0 to y1, cut to the framebuffer */
+static void rect(int x0, int y0, int x1, int y1) {
+    int x, y;
+
+    x0 = x0 < 0 ? 0 : x0;
+    y0 = y0 < 0 ? 0 : y0;
+    x1 = x1 > pw ? pw : x1;
+    y1 = y1 > ph ? ph : y1;
+    for(y = y0; y < y1; y++)
+        for(x = x0; x < x1; x++)
+            memcpy(FB(x, y), now, 3);
+}
+
+static void pixel(int x, int y) {
+    rect(PX(x), PX(y), PX(x + 1), PX(y + 1));
+}
+
+void screen_fill(int x, int y, int w, int h) {
+    rect(PX(x), PX(y), PX(x + w), PX(y + h));
+}
 #else
-    FB(x, y) = current;
-#endif
+static void pixel(int x, int y) {
+    if(x >= 0 && x < SCREEN_W && y >= 0 && y < SCREEN_H)
+        FB(x, y) = current;
 }
 
 void screen_fill(int x, int y, int w, int h) {
@@ -92,6 +129,7 @@ void screen_fill(int x, int y, int w, int h) {
         for(i = 0; i < w; i++)
             pixel(x + i, y + j);
 }
+#endif
 
 void screen_hline(int x, int y, int length) { screen_fill(x, y, length, 1); }
 void screen_vline(int x, int y, int length) { screen_fill(x, y, 1, length); }
@@ -180,10 +218,16 @@ int screen_save_png(const char *path, int scale) {
     unsigned long a = 1, b = 0;   /* adler32 */
     FILE *f;
 
+#ifdef SCREEN_RESIZABLE
+    (void)scale; /* the view has it already, main_pc.c set it */
+    w = pw;
+    h = ph;
+#else
     if(scale < 1) scale = 1;
     if(scale > 8) scale = 8;
     w = SCREEN_W * scale;
     h = SCREEN_H * scale;
+#endif
     row_len = 1 + w * 3;
 
     idat = malloc(2 + (size_t)h * (5 + row_len) + 4);
@@ -204,7 +248,7 @@ int screen_save_png(const char *path, int scale) {
         *p++ = 0;                   /* no filter */
         for(x = 0; x < w; x++) {
 #ifdef SCREEN_RESIZABLE
-            memcpy(p, FB(x / scale, y / scale), 3);
+            memcpy(p, FB(x, y), 3);
 #else
             screen_rgb(FB(x / scale, y / scale), p);
 #endif

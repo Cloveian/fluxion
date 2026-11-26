@@ -96,6 +96,8 @@ int main(int argc, char **argv) {
     engine = ed_to_engine(&ed);
     printf("%s\n", engine != NULL ? engine : "(unfinished)");
 
+    if(png != NULL)
+        screen_set_view(SCREEN_W * scale, SCREEN_H * scale, (float)scale);
     screen_begin();
     theme_apply(0);
     screen_clear();

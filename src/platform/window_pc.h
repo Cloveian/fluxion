@@ -1,7 +1,7 @@
 #ifndef FLUXION_WINDOW_PC_H
 #define FLUXION_WINDOW_PC_H
 
-/* PC only. an SDL3 window showing screen_pc.c's framebuffer, scaled up.
+/* PC only. an SDL3 window showing screen_pc.c's framebuffer 1:1.
    while it's open, screen_show() draws into it and keys_pc.c reads its keyboard. */
 
 #include <stdbool.h>
@@ -10,13 +10,13 @@ bool window_open(const char *title);
 void window_present(void);
 void window_close(void);
 void window_fullscreen_toggle(void);
-/* window changed size, the framebuffer gets what fits at this scale */
+/* window changed size, the framebuffer gets its pixels at this scale */
 void window_sync(void);
 /* it went to a screen with a different display scale, keeps the size in points */
 void window_rescale(void);
 /* 1 or -1, bigger or smaller pixels */
 void window_zoom(int step);
-/* a mouse position from SDL (window units) as a framebuffer pixel */
+/* a mouse position from SDL (window units) as a layout pixel */
 void window_point(float wx, float wy, int *x, int *y);
 
 /* open, show the framebuffer, wait for close (or Esc), close. 0 on success. */

@@ -19,8 +19,10 @@ extern int screen_w, screen_h;
 #define SCREEN_MIN_W 240 /* the soft key names stop fitting under that */
 #define SCREEN_MIN_H 160
 
-/* new size, clamped to the minumum. the framebuffer starts blank, then screen_resized runs */
-void screen_resize(int w, int h);
+/* framebuffer of w x h real pixels, drawing stays in SCREEN_W x SCREEN_H layout pixels of ppu real ones each. ppu shrinks if the window is under the minimum layout. starts blank, then screen_resized runs */
+void screen_set_view(int w, int h, float ppu);
+float screen_ppu(void);
+void screen_pixel_size(int *w, int *h);
 extern void (*screen_resized)(void);
 #else
 #define SCREEN_W 320
@@ -74,12 +76,12 @@ void screen_palette(const unsigned char rgb[COL_COUNT][3]);
 #ifndef __TICE__
 /* PC only */
 #ifdef SCREEN_RESIZABLE
-const unsigned char *screen_rgb_buffer(void);   /* SCREEN_W * SCREEN_H * 3 bytes of RGB */
+const unsigned char *screen_rgb_buffer(void);   /* screen_pixel_size() of RGB */
 #else
 const unsigned char *screen_pixels(void);       /* SCREEN_W * SCREEN_H palette indexes */
 #endif
 void screen_rgb(unsigned char color, unsigned char rgb[3]);
-int screen_save_png(const char *path, int scale);   /* scale 1-8, 0 on success */
+int screen_save_png(const char *path, int scale);   /* scale 1-8 (the desktop ignores it, the view has it), 0 on success */
 #endif
 
 #endif

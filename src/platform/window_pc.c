@@ -1,6 +1,6 @@
 #ifndef __TICE__
 
-/* PC only. shows screen_pc.c's framebuffer in an SDL3 window, scaled up by a whole number, black around what's left. the framebuffer follows the window size. F11 fullscreen, Ctrl + and - for the scale */
+/* PC only. shows screen_pc.c's framebuffer in an SDL3 window. the framebuffer is the window's real pixels, each layout pixel a whole number of them. F11 fullscreen, Ctrl + and - for that number */
 
 #include "window_pc.h"
 #include "screen.h"
@@ -14,7 +14,7 @@
 static SDL_Window *window;
 static SDL_Renderer *renderer;
 static SDL_Texture *texture;
-static int scale = SCALE_START; /* window pixels to a framebuffer pixel, whole numbers */
+static int scale = SCALE_START; /* window pixels to a layout pixel, whole numbers */
 static float density = 1; /* window pixels to a point, 1.5 at a 150% display scale */
 static int tex_w, tex_h; /* what the texture was made for */
 
@@ -22,25 +22,35 @@ static int tex_w, tex_h; /* what the texture was made for */
 static void make_texture(void) {
     if(texture != NULL)
         SDL_DestroyTexture(texture);
-    texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGB24, SDL_TEXTUREACCESS_STREAMING, SCREEN_W, SCREEN_H);
+    screen_pixel_size(&tex_w, &tex_h);
+    texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGB24, SDL_TEXTUREACCESS_STREAMING, tex_w, tex_h);
     SDL_SetTextureScaleMode(texture, SDL_SCALEMODE_NEAREST);
-    tex_w = SCREEN_W;
-    tex_h = SCREEN_H;
+}
+
+/* the framebuffer gets the window's pixels, at the scale now */
+static void apply_view(void) {
+    int px, py;
+
+    SDL_GetWindowSizeInPixels(window, &px, &py);
+    screen_set_view(px, py, (float)scale);
 }
 
 void window_sync(void) {
-    int px, py;
+    int px, py, w, h;
 
     if(window == NULL)
         return;
     SDL_GetWindowSizeInPixels(window, &px, &py);
-    if(px / scale != SCREEN_W || py / scale != SCREEN_H)
-        screen_resize(px / scale, py / scale);
+    screen_pixel_size(&w, &h);
+    if(px != w || py != h)
+        screen_set_view(px, py, (float)scale);
 }
 
 void window_point(float wx, float wy, int *x, int *y) {
-    *x = (int)(wx * density) / scale;
-    *y = (int)(wy * density) / scale;
+    float ppu = screen_ppu();
+
+    *x = (int)(wx * density / ppu);
+    *y = (int)(wy * density / ppu);
 }
 
 /* moved to a screen with another scale, same size in points */
@@ -56,14 +66,14 @@ void window_rescale(void) {
     fit = (int)SDL_lroundf((float)scale * now / density);
     scale = fit < 1 ? 1 : fit > SCALE_MAX ? SCALE_MAX : fit;
     density = now;
-    window_sync();
+    apply_view();
 }
 
 void window_zoom(int step) {
     if(scale + step < 1 || scale + step > SCALE_MAX)
         return;
     scale += step;
-    window_sync();
+    apply_view();
 }
 
 bool window_open(const char *title) {
@@ -89,24 +99,22 @@ bool window_open(const char *title) {
         scale = (int)SDL_lroundf((float)SCALE_START * density);
         SDL_SetWindowSize(window, (int)SDL_lroundf((float)(SCREEN_W * scale) / density), (int)SDL_lroundf((float)(SCREEN_H * scale) / density));
     }
+    apply_view(); /* the first frame at the real size, the resize events only fix it up */
     make_texture();
     SDL_StartTextInput(window);
     return true;
 }
 
 void window_present(void) {
-    SDL_FRect to = { 0, 0, 0, 0 };
+    int w, h;
 
     if(window == NULL)
         return;
-    if(tex_w != SCREEN_W || tex_h != SCREEN_H)
+    screen_pixel_size(&w, &h);
+    if(tex_w != w || tex_h != h)
         make_texture();
-    SDL_UpdateTexture(texture, NULL, screen_rgb_buffer(), SCREEN_W * 3);
-
-    to.w = (float)(SCREEN_W * scale); /* from the corner, the rest stays black */
-    to.h = (float)(SCREEN_H * scale);
-    SDL_RenderClear(renderer);
-    SDL_RenderTexture(renderer, texture, NULL, &to);
+    SDL_UpdateTexture(texture, NULL, screen_rgb_buffer(), w * 3);
+    SDL_RenderTexture(renderer, texture, NULL, NULL);
     SDL_RenderPresent(renderer);
 }
 
