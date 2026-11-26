@@ -94,12 +94,13 @@ make installer                # bin-installer/, the app + its installer (see ins
 make bundle                   # bin-bundle/, the installer as one .b84 (TI Connect CE) and one .tig (TiLP)
 make release                  # tests, both calculators, the bundles, and all the files to send in release/Fluxion-<version>/
 make test                     # PC build + engine tests
-./build-pc/fluxion-app        # run it in a window on the PC
+./build-pc/fluxion-app        # run it in a window on the PC, the keyboard standing in for the calculator's keys
+./build-pc/fluxion-desktop    # the same window with a desktop keyboard: what you type is what goes in, Esc just backs out (Ctrl+Q quits)
 make web                      # web/build/, the same thing for a browser (needs emscripten)
 make nspire                   # bin-nspire/Fluxion.tns, for Ndless on the TI-Nspire CX / CX II (needs the Ndless SDK, runs on a CX II, keys like its own OS)
 ```
 
-The PC build needs SDL3. On PC, Shift is `[alpha]`, Alt is `[2nd]`, and Ctrl is `[on]` (when you tap them by themselves).
+The PC build needs SDL3. In `fluxion-app`, Shift is `[alpha]`, Alt is `[2nd]`, and Ctrl is `[on]` (when you tap them by themselves). `fluxion-desktop` has none of that: Enter, Backspace and the arrows do what they say, Shift + left and right select, Ctrl + C, X, V, Z and A work as usual, F1 to F5 are the keys under the screen, F6 is the variables, F7 the mode page and Ctrl + K the catalog.
 
 ## LLM use
 
