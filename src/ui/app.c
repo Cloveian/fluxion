@@ -19,8 +19,6 @@
 #include "shapes.h"
 #include "range.h"
 #include "work.h"
-#include "bind.h"
-#include "sticky.h"
 #include "input.h"
 
 #include <ctype.h>
@@ -39,7 +37,6 @@
 #include "render/draw.h"
 #include "platform/screen.h"
 #include "platform/store.h"
-#include "platform/keys.h"
 #include "platform/power.h"
 #include "ui/catalog.h"
 #include "ui/page.h"
@@ -1750,11 +1747,13 @@ static size_t line_bytes(const editor_t *e, unsigned char *buf) {
 }
 
 static void cat_find_keys(void) {
-    struct { size_t n; unsigned char b[LINE_BYTES]; } *typed = malloc(keypad.count * sizeof *typed); /* ~5 KB, just while it looks */
+    unsigned count = input_binding_count();
+    struct { size_t n; unsigned char b[LINE_BYTES]; } *typed = malloc(count * sizeof *typed); /* ~5 KB, just while it looks */
     unsigned char want[LINE_BYTES];
     editor_t s;
     unsigned k, b;
     size_t n;
+    bool plain;
 
     memset(cat_key, NO_KEY, sizeof cat_key);
     if(typed == NULL || !ed_init(&s)) {
@@ -1762,10 +1761,10 @@ static void cat_find_keys(void) {
         return;
     }
     /* both sides start inside a ( so a ) has something to close */
-    for(b = 0; b < keypad.count; b++) {
+    for(b = 0; b < count; b++) {
         ed_clear(&s);
         ed_insert_char(&s, '(');
-        typed[b].n = type_action(&s, keypad.binds[b].a) ? line_bytes(&s, typed[b].b) : 0;
+        typed[b].n = type_action(&s, input_binding(b, &plain)) ? line_bytes(&s, typed[b].b) : 0;
     }
 
     for(k = 0; k < catalog_count && k < sizeof cat_key; k++) {
@@ -1777,11 +1776,11 @@ static void cat_find_keys(void) {
         ed_clear(&s);
         ed_insert_char(&s, '(');
         n = pick_into(&s, it, false) ? line_bytes(&s, want) : 0;
-        for(b = 0; b < keypad.count && b < NO_KEY; b++) {
-            const action_t *a = &keypad.binds[b].a;
+        for(b = 0; b < count && b < NO_KEY; b++) {
+            action_t a = input_binding(b, &plain);
 
-            if((a->op == A_ITEM && names_builtin(a->s, (int)strlen(a->s)) == it)
-               || (simplify && a->op == A_ENTER && keypad.binds[b].mods == 0)
+            if((a.op == A_ITEM && names_builtin(a.s, (int)strlen(a.s)) == it)
+               || (simplify && a.op == A_ENTER && plain)
                || (n > 0 && typed[b].n == n && memcmp(typed[b].b, want, n) == 0)) {
                 cat_key[k] = (unsigned char)b;
                 break;
@@ -1801,12 +1800,12 @@ static const char *cat_keys(int i) {
         return NULL;
     engine = cat_item(i)->engine;
     if(engine != NULL && strcmp(engine, "0-9") == 0)
-        return keypad.digits;
+        return input_digit_keys();
     if(engine != NULL && strcmp(engine, "A-Z") == 0)
-        return keypad.letters;
+        return input_letter_keys();
     if((b = cat_key[cat_order[i]]) == NO_KEY)
         return NULL;
-    return bind_text(keypad.binds[b].key, keypad.binds[b].mods, text, sizeof text) ? text : NULL;
+    return input_binding_text(b, text, sizeof text) ? text : NULL;
 }
 
 static bool cat_pick(int i) {
@@ -2521,23 +2520,10 @@ static bool handle(const input_t *in) {
             popup_act(plain);
         return true;
     }
-
-    /* [2nd][alpha][on] is lights out. both are already on by the time the on tap comes */
-    if(a.op == A_SCREEN_OFF) {
-        sticky_clear();
-        keys_sleep();
+    if(in->eaten)
         return true;
-    }
-    if(plain.op == A_MOD) {
-        sticky_tap((unsigned)plain.n);
-        return true;
-    }
-    sticky_used();
 
     if(menu >= 0) {
-        /* locked alpha leaves 1-9 as numbers in here, a tapped one still makes 7-9 o p q */
-        if((sticky_locked() & M_ALPHA) && plain.op == A_CHAR && plain.n >= '1' && plain.n <= '9')
-            a = plain;
         if(!menu_act(a))
             menu_act(plain);
         return true;
@@ -2820,8 +2806,8 @@ static const unsigned char lock_letters[4][5] = {
 /* 9 x 11, top left at x, y. a lock is the padlock with the letter punched out
    of it, a plain sticky press is just the letter on its own, bigger, so you can
    tell the two apart at a glance (the open-shackle version looked locked too) */
-static void draw_padlock(int x, int y, int letter, bool locked) {
-    int r, c;
+static void draw_padlock(int x, int y, char name, bool locked) {
+    int r, c, letter = (int)(strchr("2ACS", name) - "2ACS");
 
     screen_color(COL_ACCENT);
     if(!locked) {
@@ -2858,6 +2844,7 @@ static void draw_battery(int x, int y, int level) {
 static void draw_top_bar(void) {
     int h = areas.top.h, top = areas.top.y, y = top + (h - 1 - 11) / 2;
     int left = BAR_LEFT, right = BAR_RIGHT, i;
+    input_mod_t mods[3];
 
     if(battery < 0 || clock() >= battery_next) {
         battery = power_battery();
@@ -2870,13 +2857,10 @@ static void draw_top_bar(void) {
     screen_hline(left, top + h - 1, right - left);
     draw_battery(right - BATTERY_W, top + (h - 1 - 7) / 2, battery);
 
-    for(i = 0; i < 3; i++) {
-        unsigned m = keypad.shown[i];
-        int letter = m == M_2ND ? 0 : m == M_ALPHA ? 1 : m == M_SHIFT ? 3 : 2;    /* [on] and ctrl are both C */
-
-        if(m & sticky_on())
-            draw_padlock(left + i * LOCK_SLOT, y, letter, (m & sticky_locked()) != 0);
-    }
+    input_mods(mods);
+    for(i = 0; i < 3; i++)
+        if(mods[i].letter != '\0')
+            draw_padlock(left + i * LOCK_SLOT, y, mods[i].letter, mods[i].locked);
 
     /* the form, when it isn't the normal one, over by the battery */
     if(form != FORM_HAND) {
@@ -3110,7 +3094,7 @@ static void draw_busy_hint(unsigned long s) {
     int x = BAR_LEFT + 3 * LOCK_SLOT + 4;
     char t[32];
 
-    snprintf(t, sizeof t, "%lus, %s stops it", s, keypad.cancel);
+    snprintf(t, sizeof t, "%lus, %s stops it", s, input_cancel_hint());
     screen_direct(true);
     screen_color(COL_BG);
     screen_fill(x, areas.top.y, draw_text_width(t, small), areas.top.h - 1);
@@ -3176,17 +3160,16 @@ void app_run(void) {
     history_load();
     screen_begin();
     settings_load();    /* after, a first run starts from the OS brightness screen_begin read */
-    keys_begin();
+    input_begin(on_sleep);
     areas_init();
 #ifdef SCREEN_RESIZABLE
     screen_resized = areas_init; /* the window got a new size */
 #endif
     draw_screen();
     pcas_poll = busy_poll;
-    keys_on_sleep = on_sleep;
 
     for(;;) {
-        input_t in = input_wait();
+        input_t in = input_wait(popup >= 0 ? IN_POPUP : menu >= 0 ? IN_MENU : IN_TYPING);
 
         if(in.a.op == A_ENTER && menu < 0 && !ed_is_empty(&ed))
             busy_start(); /* the form keys start it themselves */
@@ -3195,7 +3178,7 @@ void app_run(void) {
         draw_screen();
     }
 
-    keys_end();
+    input_end();
     screen_end();
     history_save();
     names_save();
