@@ -98,12 +98,34 @@ unsigned pc_mods_now(void) {
     return mods_of(SDL_GetModState());
 }
 
+static bool is_resize(Uint32 type) {
+    return type == SDL_EVENT_WINDOW_RESIZED || type == SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED;
+}
+
+/* a run of moves, or of resizes, is just its last one. each was a full redraw */
+static void latest_of_burst(SDL_Event *ev) {
+    SDL_Event next;
+    bool motion = ev->type == SDL_EVENT_MOUSE_MOTION;
+
+    if(!motion && !is_resize(ev->type))
+        return;
+    SDL_PumpEvents();
+    while(SDL_PeepEvents(&next, 1, SDL_PEEKEVENT, SDL_EVENT_FIRST, SDL_EVENT_LAST) == 1) {
+        bool same = motion ? next.type == SDL_EVENT_MOUSE_MOTION && next.motion.state == ev->motion.state : is_resize(next.type);
+
+        if(!same || SDL_PeepEvents(&next, 1, SDL_GETEVENT, SDL_EVENT_FIRST, SDL_EVENT_LAST) != 1)
+            return;
+        *ev = next;
+    }
+}
+
 bool pc_event_wait(pc_event_t *out, int ms) {
     SDL_Event ev;
 
     memset(out, 0, sizeof *out);
     if(!SDL_WaitEventTimeout(&ev, ms))
         return false;
+    latest_of_burst(&ev);
 
     switch(ev.type) {
     case SDL_EVENT_QUIT:

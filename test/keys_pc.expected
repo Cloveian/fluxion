@@ -110,9 +110,7 @@ key 30 held 0 at 0,0
 key 129 held 0 at 0,0
 == m:down:10,20 m:move:30,40 m:move:31,41 m:drag:50,60 m:drag:51,61 m:move:5,5 m:leave
 key 125 held 0 at 10,20
-key 127 held 0 at 30,40
 key 127 held 0 at 31,41
-key 126 held 0 at 50,60
 key 126 held 0 at 51,61
 key 127 held 0 at 5,5
 key 127 held 0 at -1,-1

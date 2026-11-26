@@ -98,33 +98,11 @@ static action_t key_action(const pc_event_t *ev) {
     return none;
 }
 
-/* one event looked ahead while pileing up moves, handed out first next time */
-static pc_event_t held;
-static bool have_held;
-
 static void next_event(pc_event_t *ev) {
-    if(have_held) {
-        *ev = held;
-        have_held = false;
-    } else if(pc_script_on()) {
+    if(pc_script_on())
         pc_script_event(ev);
-    } else {
+    else
         pc_event_wait(ev, -1);
-    }
-}
-
-/* only where a drag or a move ended */
-static void latest_move(pc_event_t *ev) {
-    pc_event_t next;
-
-    while(!pc_script_on() && pc_event_wait(&next, 0)) {
-        if(next.kind != ev->kind) {
-            held = next;
-            have_held = true;
-            return;
-        }
-        *ev = next;
-    }
 }
 
 void input_begin(void (*on_sleep)(bool asleep)) {
@@ -170,11 +148,9 @@ input_t input_wait(in_ctx_t ctx) {
             }
             break;
 
+        case EV_MOUSE_DOWN:
         case EV_MOUSE_DRAG:
         case EV_MOUSE_MOVE:
-            latest_move(&ev);
-            /* fall through */
-        case EV_MOUSE_DOWN:
             in.pointer = true;
             in.drag = ev.kind == EV_MOUSE_DRAG;
             in.hover = ev.kind == EV_MOUSE_MOVE;
