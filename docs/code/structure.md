@@ -32,7 +32,7 @@ fluxion/
 │       ├── popup.c  the little grids that open at the cursor: [math]'s symbols, the nspire's [trig], pi and ?!> keys. app.c lends it the line to type into and where the cursor is
 │       ├── args.c  cutting a command's line at its commas and parsing the pieces, for every command file
 │       ├── catalog.c  everything you can type or pick, and what the engine can do. its words are the name table too
-│       ├── work.c  the show-the-work page, and calc1.c / polyfn.c / series.c / ineq.c the commands behind it (derivative at a point, tangent, apart, sum(, inequalities ...)
+│       ├── work.c  the show-the-work page (long ones fold the working lines behind a + on the line above them, steps.h's `level` says which), and calc1.c / polyfn.c / series.c / ineq.c the commands behind it (derivative at a point, tangent, apart, sum(, inequalities ...)
 │       ├── page.c  full screen list pages (catalog, vars, mode)
 │       ├── names.c  stored names and the typed-word lookup the editor asks
 │       ├── vars.c   the [vars] page
