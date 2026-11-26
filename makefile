@@ -157,10 +157,11 @@ web/build/%.md: docs/%.md
 
 web: web/build/fluxion.js web/build/fluxion-nspire.js web/build/features.md web/build/releases.md
 
-test: $(TARGET) build-pc/identity-masks build-pc/layout-dump build-pc/view build-pc/editor-test build-pc/fluxion-app build-pc/fluxion-desktop
+test: $(TARGET) build-pc/identity-masks build-pc/layout-dump build-pc/view build-pc/editor-test build-pc/fluxion-app build-pc/fluxion-desktop build-pc/keys-pc-test
 	./$(TARGET) test test/pcas.tests
 	./$(TARGET) test test/fluxion.tests
 	./build-pc/identity-masks
+	sh test/keys_pc_scenarios.sh build-pc/keys-pc-test 2>&1 | diff - test/keys_pc.expected
 
 budget: $(TARGET)
 	./$(TARGET) budget test/fluxion.tests

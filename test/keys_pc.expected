@@ -1,0 +1,164 @@
+== k:lshift u:lshift
+key 9 held 0 at 0,0
+key 129 held 0 at 0,0
+== k:lalt u:lalt
+key 6 held 0 at 0,0
+key 129 held 0 at 0,0
+== k:lctrl u:lctrl
+key 50 held 0 at 0,0
+key 129 held 0 at 0,0
+== k:lshift t:a u:lshift
+key 68 held 0 at 0,0
+key 129 held 0 at 0,0
+== mods:s k:a t:A u:a
+key 94 held 0 at 0,0
+key 129 held 0 at 0,0
+== mods:s k:9 t:( u:9
+key 24 held 0 at 0,0
+key 129 held 0 at 0,0
+== mods:s k:= t:+ u:=
+key 32 held 0 at 0,0
+key 129 held 0 at 0,0
+== k:lshift mods:s k:left u:left u:lshift
+key 9 held 0 at 0,0
+key 48 held 0 at 0,0
+key 129 held 0 at 0,0
+== mods:a k:x u:x
+key 6 held 0 at 0,0
+key 91 held 0 at 0,0
+key 129 held 0 at 0,0
+== mods:a k:= u:=
+key 6 held 0 at 0,0
+key 12 held 0 at 0,0
+key 129 held 0 at 0,0
+== mods:a k:enter u:enter
+key 6 held 0 at 0,0
+key 45 held 0 at 0,0
+key 129 held 0 at 0,0
+== mods:c k:c u:c k:x k:v k:z k:a
+key 70 held 4 at 0,0
+key 91 held 4 at 0,0
+key 89 held 4 at 0,0
+key 93 held 4 at 0,0
+key 68 held 4 at 0,0
+key 129 held 0 at 0,0
+== mods:c k:q t:q
+key 84 held 4 at 0,0
+key 129 held 0 at 0,0
+== mods:c k:enter
+key 45 held 4 at 0,0
+key 129 held 0 at 0,0
+== k:kp5 t:5 k:kp5 u:kp5 k:kpplus t:+ k:kpenter k:kpdot k:kpminus k:kpmul k:kpdiv
+key 38 held 0 at 0,0
+key 38 held 0 at 0,0
+key 32 held 0 at 0,0
+key 45 held 0 at 0,0
+key 43 held 0 at 0,0
+key 30 held 0 at 0,0
+key 28 held 0 at 0,0
+key 26 held 0 at 0,0
+key 129 held 0 at 0,0
+== mods:a k:kp7
+key 6 held 0 at 0,0
+key 40 held 0 at 0,0
+key 129 held 0 at 0,0
+== k:bs k:del k:enter k:left k:right k:up k:down k:tab k:home k:end
+key 16 held 0 at 0,0
+key 8 held 0 at 0,0
+key 45 held 0 at 0,0
+key 48 held 0 at 0,0
+key 49 held 0 at 0,0
+key 46 held 0 at 0,0
+key 47 held 0 at 0,0
+key 6 held 0 at 0,0
+key 55 held 0 at 0,0
+key 124 held 0 at 0,0
+key 129 held 0 at 0,0
+== k:f1 k:f2 k:f3 k:f4 k:f5
+key 1 held 0 at 0,0
+key 2 held 0 at 0,0
+key 3 held 0 at 0,0
+key 4 held 0 at 0,0
+key 5 held 0 at 0,0
+key 129 held 0 at 0,0
+== k:esc
+key 129 held 0 at 0,0
+== mods:c k:esc
+key 129 held 4 at 0,0
+== k:7 t:7 k:a t:a k:= t:= t:~ t:< t:> t:! t:% t:ö
+key 40 held 0 at 0,0
+key 68 held 0 at 0,0
+key 6 held 0 at 0,0
+key 12 held 0 at 0,0
+key 44 held 0 at 0,0
+key 120 held 0 at 0,0
+key 121 held 0 at 0,0
+key 122 held 0 at 0,0
+key 123 held 0 at 0,0
+key 129 held 0 at 0,0
+== t:x t:y t:( t:) t:, t:. t:^ t:* t:/ t:-
+key 91 held 0 at 0,0
+key 92 held 0 at 0,0
+key 24 held 0 at 0,0
+key 25 held 0 at 0,0
+key 23 held 0 at 0,0
+key 43 held 0 at 0,0
+key 21 held 0 at 0,0
+key 28 held 0 at 0,0
+key 26 held 0 at 0,0
+key 30 held 0 at 0,0
+key 129 held 0 at 0,0
+== m:down:10,20 m:move:30,40 m:move:31,41 m:drag:50,60 m:drag:51,61 m:move:5,5 m:leave
+key 125 held 0 at 10,20
+key 127 held 0 at 30,40
+key 127 held 0 at 31,41
+key 126 held 0 at 50,60
+key 126 held 0 at 51,61
+key 127 held 0 at 5,5
+key 127 held 0 at -1,-1
+key 129 held 0 at 0,0
+== mods:s m:down:10,20 m:drag:30,30
+key 125 held 2 at 10,20
+key 126 held 2 at 30,30
+key 129 held 0 at 0,0
+== wheel:1 wheel:-1 wheel:0
+key 46 held 0 at 0,0
+key 47 held 0 at 0,0
+key 129 held 0 at 0,0
+== focus k:lshift focus u:lshift
+key 129 held 0 at 0,0
+== k:lshift k:lshift u:lshift
+key 9 held 0 at 0,0
+key 129 held 0 at 0,0
+== k:lctrl mods:c k:c u:c u:lctrl
+key 70 held 4 at 0,0
+key 129 held 0 at 0,0
+== k:lalt mods:a t:x u:lalt
+key 91 held 0 at 0,0
+key 129 held 0 at 0,0
+== k:lshift t:A u:lshift
+key 94 held 0 at 0,0
+key 129 held 0 at 0,0
+== mods:a k:1 k:2 k:3 k:4 k:5 k:6
+key 6 held 0 at 0,0
+key 34 held 0 at 0,0
+key 6 held 0 at 0,0
+key 35 held 0 at 0,0
+key 6 held 0 at 0,0
+key 36 held 0 at 0,0
+key 6 held 0 at 0,0
+key 37 held 0 at 0,0
+key 6 held 0 at 0,0
+key 38 held 0 at 0,0
+key 6 held 0 at 0,0
+key 39 held 0 at 0,0
+key 129 held 0 at 0,0
+== k:caps u:caps k:lshift u:lshift
+key 9 held 0 at 0,0
+key 129 held 0 at 0,0
+== mods:a k:lalt mods:a k:enter u:enter u:lalt
+key 6 held 0 at 0,0
+key 45 held 0 at 0,0
+key 129 held 0 at 0,0
+== k:f11 u:f11
+key 129 held 0 at 0,0

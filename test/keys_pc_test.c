@@ -2,7 +2,7 @@
     the PC keyboard path without a keyboard: pushes made up SDL events at keys_wait() and prints the presses that come out. ./build-pc/keys-pc-test k:lshift u:lshift t:a mods:c k:c
 
       k:NAME u:NAME   key down / up. NAME is one character, or lshift lalt lctrl esc enter bs del
-                      left right up down tab home end f1-f5 kp0-kp9 kpplus kpminus kpmul kpdiv kpdot kpenter
+                      left right up down tab home end f1-f5 f11 kp0-kp9 kpplus kpminus kpmul kpdiv kpdot kpenter
       t:TEXT          typed text
       mods:cas        modifiers held from here on (c ctrl, a alt, s shift), mods: for none
       m:down|move|drag:x,y   the mouse (a button is down for drag), m:leave   wheel:1 wheel:-1
@@ -29,7 +29,7 @@ static const struct { const char *name; SDL_Keycode key; SDL_Scancode sc; } name
     { "down", SDLK_DOWN, SDL_SCANCODE_DOWN }, { "tab", SDLK_TAB, SDL_SCANCODE_TAB },
     { "home", SDLK_HOME, SDL_SCANCODE_HOME }, { "end", SDLK_END, SDL_SCANCODE_END },
     { "f1", SDLK_F1, SDL_SCANCODE_F1 }, { "f2", SDLK_F2, SDL_SCANCODE_F2 }, { "f3", SDLK_F3, SDL_SCANCODE_F3 },
-    { "f4", SDLK_F4, SDL_SCANCODE_F4 }, { "f5", SDLK_F5, SDL_SCANCODE_F5 },
+    { "f4", SDLK_F4, SDL_SCANCODE_F4 }, { "f5", SDLK_F5, SDL_SCANCODE_F5 }, { "f11", SDLK_F11, SDL_SCANCODE_F11 },
     { "kp0", SDLK_KP_0, SDL_SCANCODE_KP_0 }, { "kp1", SDLK_KP_1, SDL_SCANCODE_KP_1 },
     { "kp2", SDLK_KP_2, SDL_SCANCODE_KP_2 }, { "kp3", SDLK_KP_3, SDL_SCANCODE_KP_3 },
     { "kp4", SDLK_KP_4, SDL_SCANCODE_KP_4 }, { "kp5", SDLK_KP_5, SDL_SCANCODE_KP_5 },
