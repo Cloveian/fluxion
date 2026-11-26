@@ -322,7 +322,8 @@ bool applied_run(const char *cmd, char *src, box_t *in) {
     /* the ends and the point, not f and g: the full simplify splits (x^2-1)/(x-1) into a sum whose limits don't come out */
     for(i = c == P_AREA ? 2 : 1; i < parsed; i++)
         simplify(a[i], SIMP_ALL);
-    if(c == P_AVERAGE)
+    if(has_var && !has_symbol(a[0], var) && !(c == P_AREA && has_symbol(a[1], var)))        message = "that letter isn't in the function";
+    else if(c == P_AVERAGE)
         out = average(a[0], a[1], a[2], var, &message);
     else if(c == P_AREA)
         out = area(a[0], a[1], parsed > 3 ? a[2] : NULL, parsed > 3 ? a[3] : NULL, var, &message);
