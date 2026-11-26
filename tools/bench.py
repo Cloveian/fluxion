@@ -55,15 +55,78 @@ def limit_ends(chk):
     var, f, to = sp.Symbol(chk.get("var", "x")), sym(chk["expr"]), sym(chk["to"])
     return [sp.limit(f, var, to, s) for s in ([chk["side"]] if chk.get("side") else ["+", "-"])]
 
+fuzz.TOK = fuzz.make_tok("[A-Z]")    # any capital letter is a variable, the problems use a b t u
+
+def values_agree(a, b):
+    # the same function of whatever letters they have, at a few whole number points
+    letters = sorted(a.free_symbols | b.free_symbols, key=str)
+    rnd = random.Random(2)
+    compared = 0
+    for _ in range(4):
+        at = {s: rnd.randint(2, 9) for s in letters}
+        try:
+            x, y = complex(a.subs(at).evalf()), complex(b.subs(at).evalf())
+        except (TypeError, ValueError):
+            continue
+        if abs(x - y) > 1e-6 * max(1, abs(x)):
+            return False
+        compared += 1
+    if compared == 0:
+        raise ValueError("no point where both have a value")    # an unscored item, not a right one
+    return True
+
+def app_lines(command):
+    # (answer lines, None), or (None, why) when the app gave up
+    lines = fuzz.app_answers(fuzz.app_text(command))
+    if not lines:
+        return None, "no output"
+    if lines[0][0] == "message":
+        return None, lines[0][1]
+    return lines, None
+
+def sum_score(command, chk):
+    lines, why = app_lines(command)
+    if lines is None:
+        return "gaveup", why
+    got, want = lines[0][1], sym(chk["expr"]).doit()
+    return ("right", got) if values_agree(from_cas(got), want) else ("wrong", f"{got}, want {want}")
+
+def solve_score(command, chk):
+    # every root the app gives has to make the equation true, a numeric one close enough
+    lines, why = app_lines(command)
+    if lines is None:
+        return "gaveup", why
+    m = re.match(r"(?i)^[A-Z]\s*=\s*(.*?)(?:\s*\(numeric\))?$", lines[0][1])
+    if not m:
+        return "unscored", f"can't read {lines[0][1]}"
+    eq, var = sym(chk["eqs"][0]), sp.Symbol(chk["vars"][0])
+    for root in fuzz.top_split(m.group(1)):
+        r = from_cas(root)
+        gap = abs(complex((eq.lhs - eq.rhs).subs(var, r).evalf()))
+        if gap > (1e-3 if chk.get("numeric") else 1e-6) * (1 + abs(complex(r.evalf()))) ** 3:
+            return "wrong", f"{root} leaves {gap:.3g} in {chk['eqs'][0]}"
+    return "right", lines[0][1]
+
+def concave_score(command, chk):
+    # the command is increasing(f',x): where f' goes up is where f is concave up
+    lines, why = app_lines(command)
+    if lines is None:
+        return "gaveup", why
+    problem = fuzz.increasing_check(sp.diff(sym(chk["expr"]).subs(sp.Symbol(chk.get("var", "x")), fuzz.X), fuzz.X), lines)
+    text = " | ".join(t for _, t in lines)
+    if problem == "skip":
+        return "unscored", f"fuzz check skipped it: {text}"
+    return ("wrong", f"{text}: {problem}") if problem else ("right", text)
+
 APP_KINDS = {"tangent", "inflect", "increasing", "extrema", "implicit", "critical", "average", "mvt", "area"}
 
 def app_score(command):
     # the commands that live in the app, run through it and chekced with fuzz.py's own checks
     name = command.split("(")[0]
     args = fuzz.top_split(command[len(name) + 1:-1])
-    lines = fuzz.app_answers(fuzz.app_text(command))
-    if not lines or lines[0][0] == "message":
-        return "gaveup", lines[0][1] if lines else "no output"
+    lines, why = app_lines(command)
+    if lines is None:
+        return "gaveup", why
     f = fuzz.to_sympy(args[0]) if name != "implicit" else None
     num = lambda s: int(fuzz.to_sympy(s)) if fuzz.to_sympy(s).is_Integer else float(fuzz.to_sympy(s))
     if name == "tangent":
@@ -101,6 +164,12 @@ def score(item):
         return "unscored", item.get("reason") or "no check"
     kind = chk["type"]
     try:
+        if cmds[0].startswith(("sum(", "product(")):
+            return sum_score(cmds[0], chk)
+        if kind == "solve":
+            return solve_score(cmds[0], chk)
+        if kind == "concave":
+            return concave_score(cmds[0], chk)
         if kind in ("derivative", "derivative_at", "limit", "integral", "definite", "evaluate"):
             out = cli(re.sub(r"^eval\((.*)\)$", r"\1", cmds[0]))    # eval( is the app's word for a bare expression
             var = sp.Symbol(chk.get("var", "x"))
@@ -147,10 +216,7 @@ def score(item):
             out = cli(cmds[0])
             if out is None:
                 return "gaveup", "no output"
-            var = sp.Symbol("x")
-            want, got = sym(chk["expr"]), from_cas(out)
-            bad = [(x, w) for x, w in numbers(want, var) if not close(w, complex(got.subs(var, x).evalf()).real)]
-            return ("wrong", f"{out} at {bad[0]}") if bad else ("right", out)
+            return ("right", out) if values_agree(from_cas(out), sym(chk["expr"])) else ("wrong", f"{out}, want {sym(chk['expr'])}")
         return "unscored", f"no checker for {kind} yet"
     except subprocess.TimeoutExpired:
         return "timeout", cmds[0]

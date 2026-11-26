@@ -45,7 +45,10 @@ def gen(d):
     return f"cos({a})"
 
 FUNCS = ["sinh", "cosh", "tanh", "sqrt", "ln", "abs", "sign", "asin", "acos", "atan", "logb", "sec", "csc", "cot", "sin", "cos", "tan"]
-TOK = re.compile("(?:" + "|".join(FUNCS) + r"|root|pi|e|i|X|Y|N)|\d+(?:\.\d+)?|[-+*/^()_,]")
+def make_tok(letters):
+    return re.compile("(?:" + "|".join(FUNCS) + r"|root|pi|e|i|" + letters + r")|\d+(?:\.\d+)?|[-+*/^()_,]")
+
+TOK = make_tok("X|Y|N")
 ATOM = r"(?:[\w.]+(?:\((?:[^()]|\([^()]*\))*\))?|\((?:[^()]|\([^()]*\))*\))"
 
 def to_sympy(s):
