@@ -12,7 +12,7 @@
 */
 
 #include <stdbool.h>
-#include "ui/actions.h"
+#include "input/actions.h"
 
 typedef struct {
     const char *title;

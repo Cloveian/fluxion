@@ -4,7 +4,7 @@
 /* what a key does. one table per keypad: bind_ce.c (CE, PC, web) and bind_nspire.c */
 
 #include "platform/keys.h"
-#include "ui/actions.h"
+#include "input/actions.h"
 
 /* mods is everything on, held or sticky */
 action_t bind_key(keycode_t key, unsigned mods);

@@ -19,7 +19,7 @@
 #include "shapes.h"
 #include "range.h"
 #include "work.h"
-#include "input.h"
+#include "input/input.h"
 
 #include <ctype.h>
 #include <stdio.h>

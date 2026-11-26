@@ -4,7 +4,7 @@
 /* the keypad and mouse as the app sees them, ready made actions and no key codes */
 
 #include <stdbool.h>
-#include "ui/actions.h"
+#include "input/actions.h"
 
 typedef struct {
     action_t a; /* with the modifers that are on (tapped, locked or held) */

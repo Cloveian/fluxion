@@ -1,7 +1,7 @@
 #ifdef _TINSPIRE
 
 /*
-    nspire side of keys.h, its own keypad. what they do is ui/bind_nspire.c.
+    nspire side of keys.h, its own keypad. what they do is input/bind_nspire.c.
     polled every 10 ms, arrows and del repeat while held.
 */
 

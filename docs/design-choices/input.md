@@ -76,7 +76,7 @@ C - Nspire style, adapted for the difference in keys
 
 ## Keys
 
-basacally like typing on a computer, the cursor is a line and `[on]` is Ctrl. the other keys mean what they mean on the TI-84 (everything is in [`bind_ce.c`](https://github.com/Cloveian/fluxion/blob/main/src/ui/bind_ce.c))
+basically like typing on a computer, the cursor is a line and `[on]` is Ctrl. the other keys mean what they mean on the TI-84 (everything is in [`bind_ce.c`](https://github.com/Cloveian/fluxion/blob/main/src/input/bind_ce.c))
 
 ### Editing
 
@@ -122,7 +122,7 @@ with something selected: typing replaces it, `(` `÷` `√` `sin` etc go *around
 
 ### Not done yet
 
-- ~~the full key map (every key x plain / 2nd / alpha / 2nd+alpha / on)~~ it's a table now, `ui/bind_ce.c`, every key and modifier that does something is a row in it
+- ~~the full key map (every key x plain / 2nd / alpha / 2nd+alpha / on)~~ it's a table now, `input/bind_ce.c`, every key and modifier that does something is a row in it
 - ~~the catalog's key column is the CE's keys written out by hand, so the nspire leaves it blank (it said `[2nd][x^2]` for √)~~ it comes out of the tables now. the first time the catalog opens, every row of the keypad's table gets typed on a scratch line and so does every item, and the ones that match share a key. so the nspire's says ctrl+x^2, and θ found its `[alpha][3]` that the hand written ones never had
 
 ### Menus
@@ -159,7 +159,7 @@ one name table. stored = bold = substituted everywhere, single letters can be st
 
 the nspire build (`make nspire`, Ndless on the CX and CX II). no keys under the screen, and a whole keyboard of letters.
 
-keys don't stand in for other keys anymore, each keypad has a table of key + modifiers -> what it does (type π, the √ template, undo, quit, open the menu...), `ui/bind_ce.c` and `ui/bind_nspire.c`, and the app only ever sees the what. `platform/keys_*.c` just say which key. so the nspire's keys can do what they do in its own OS instead of whatever the CE key in the same spot does (ctrl + ^ was π, cuz that's `[2nd][^]` on a CE (￢ \_￢ ))
+keys don't stand in for other keys anymore, each keypad has a table of key + modifiers -> what it does (type π, the √ template, undo, quit, open the menu...), `input/bind_ce.c` and `input/bind_nspire.c`, and the app only ever sees the what. `platform/keys_*.c` just say which key. so the nspire's keys can do what they do in its own OS instead of whatever the CE key in the same spot does (ctrl + ^ was π, cuz that's `[2nd][^]` on a CE (￢ \_￢ ))
 
 ### Decision
 

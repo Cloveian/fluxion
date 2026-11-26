@@ -7,7 +7,7 @@
 */
 
 #include <stdbool.h>
-#include "ui/actions.h"
+#include "input/actions.h"
 #include "engine/ast.h"
 
 /* src is the line inside solve( ), it gets cut up. NULL when it opened, or what to say */

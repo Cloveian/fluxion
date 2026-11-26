@@ -65,7 +65,7 @@ SDL_LIBS   := $(shell pkg-config --libs sdl3)
 FLUX_CFLAGS = -std=c99 -g -DCOMPILE_PC -Wall -Wextra -Wno-missing-field-initializers \
               -Isrc/engine -Isrc -MMD -MP $(SDL_CFLAGS)
 
-FLUX_SOURCES := $(wildcard src/render/*.c) $(wildcard src/platform/*.c) \
+FLUX_SOURCES := $(wildcard src/render/*.c) $(wildcard src/platform/*.c) $(wildcard src/input/*.c) \
                 $(wildcard src/editor/*.c) $(wildcard src/ui/*.c)
 FLUX_OBJECTS := $(FLUX_SOURCES:src/%.c=build-pc/obj-flux/%.o)
 
@@ -170,7 +170,7 @@ else ifneq ($(filter $(NSPIRE_GOALS),$(MAKECMDGOALS)),)
 NSPIRE_FLAGS = -Os -Wall -Isrc/engine -Isrc -MMD -MP
 NSPIRE_SOURCES := $(filter-out src/engine/pc/%,$(wildcard src/engine/*.c src/engine/*/*.c)) src/main.c \
                   $(filter-out src/platform/keys_pc.c src/platform/window_pc.c src/platform/web.c, \
-                    $(wildcard src/render/*.c src/platform/*.c src/editor/*.c src/ui/*.c))
+                    $(wildcard src/render/*.c src/platform/*.c src/input/*.c src/editor/*.c src/ui/*.c))
 NSPIRE_OBJECTS := $(NSPIRE_SOURCES:src/%.c=build-nspire/%.o)
 
 build-nspire/engine/%.o: src/engine/%.c
