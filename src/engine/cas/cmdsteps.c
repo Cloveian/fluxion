@@ -6,7 +6,7 @@
 static pcas_ast_t *derive_lines(steps_t *out, pcas_ast_t *f, pcas_ast_t *at, Symbol var) {
     static steps_t t;
     pcas_ast_t *d = ast_MakeOperator(OP_DERIV), *slope;
-    int i;
+    int i, start = out->n;
     bool first = out->n == 0;
 
     if(d == NULL)
@@ -30,6 +30,8 @@ static pcas_ast_t *derive_lines(steps_t *out, pcas_ast_t *f, pcas_ast_t *at, Sym
         }
         t.n = 0;
     }
+    for(i = start + 1; i < out->n - 1; i++) /*the rule by rule lines between the d/dx and its answer are working*/
+        out->line[i].level++;
     slope = ast_Copy(out->line[out->n - 1].eq[0].left);
     return slope;
 }

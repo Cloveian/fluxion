@@ -371,10 +371,14 @@ bool steps_poly(pcas_ast_t *left, pcas_ast_t *right, Symbol var, steps_t *out) {
         if(steps_eq(out, ast_Copy(list[i]), ast_MakeInt(0)) == NULL)
             goto done;
         zero = ast_MakeInt(0);
+        steps_in(out); /*its own solving is working under the factor, the roots it ends on stay a main line*/
         if(!steps_solve(list[i], zero, var, METHOD_OPTIMAL, &t) || !steps_append(out, &t)) {
+            steps_out(out);
             ast_Cleanup(zero);
             goto done;
         }
+        steps_out(out);
+        out->line[out->n - 1].level = (unsigned char)out->depth;
         ast_Cleanup(zero);
     }
 
