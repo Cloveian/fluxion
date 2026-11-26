@@ -52,6 +52,8 @@ fluxion/
 
 only `src/platform/` is allowed to touch graphx, keypadc or SDL. everything else is the same code on the PC and the calculator, so i can test basically all of it on the PC without the emulator
 
+includes only point down: engine and platform include nothing outside themselves, then render (engine + platform/screen.h), editor (render), input (editor + the platform keys), ui (all of those). `python3 tools/layers.py` checks every `#include "..."` against that table and `make test` runs it, so a new include that points up or sideways fails there. the table is at the top of the script, a new layer is one line
+
 ## Testing
 
 - PC: engine + layout built with `gcc`, takes a few seconds

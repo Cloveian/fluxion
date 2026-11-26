@@ -161,6 +161,7 @@ test: $(TARGET) build-pc/identity-masks build-pc/layout-dump build-pc/view build
 	./$(TARGET) test test/pcas.tests
 	./$(TARGET) test test/fluxion.tests
 	./build-pc/identity-masks
+	python3 tools/layers.py
 	sh test/keys_pc_scenarios.sh build-pc/keys-pc-test 2>&1 | diff - test/keys_pc.expected
 
 budget: $(TARGET)
