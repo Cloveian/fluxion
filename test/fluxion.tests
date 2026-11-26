@@ -996,6 +996,21 @@ simplify; limit(sin(X)/abs(X),X,0,-1); -1
 simplify; limit((X^2_9)/abs(X_3),X,3,-1); -6
 simplify; limit(abs(X)/X,X,0,-1); -1
 
+#sec, csc and cot go to sin and cos, and something over a bottom that dies away is up or down by its side
+simplify; limit(1/sin(X),X,0,1); inf
+simplify; limit(csc(X),X,0,-1); -inf
+simplify; limit(cot(X),X,0,1); inf
+simplify; limit(sec(X),X,pi/2,1); -inf
+simplify; limit(csc(X)_1/X,X,0); 0
+simplify; limit(X csc(X),X,0); 1
+simplify; limit(sec(X),X,0); 1
+simplify; limit(cot(X),X,0); limit(cot(X),X,0)
+simplify; limit(sin(3X)csc(5X),X,0); 3/5
+simplify; limit(csc(X)_cot(X),X,0); 0
+simplify; limit(cot(X)_1/X,X,0); 0
+simplify; limit(e^(sec(X)),X,3pi/2,1); inf
+simplify; limit((5X+1)^(cot(X)),X,0,1); e^5
+
 #integral(f, x) and integral(f, x, a, b): sum and constant multiple, then a table for f(ax+b). no +C on the answer, like the nspire
 simplify; integral(X^2,X); X^3/3
 simplify; integral(3X^2+2X+1,X); X^3+X^2+X
@@ -1313,6 +1328,7 @@ steps; limit((1_cos(X))/X^2,X,0); X; limit((1_cos(X))/X^2,X,0) | 0/0, l'Hopital 
 steps; limit(1/X_1/(X(X+1)),X,0); X; limit(1/X_1/(X(X+1)),X,0) | one fraction | limit((1_1/(X+1))/X,X,0) | 0/0, l'Hopital | limit((1/(X+1)^2)/1,X,0) | plug in | (1/(0+1)^2)/1 | 1
 steps; limit(1/X,X,0); X; none
 steps; limit(1/X,X,0,-1); X; limit(1/X,X,0,-1) | from the left | -inf
+steps; limit(csc(X),X,0,1); X; limit(csc(X),X,0,1) | sec, csc and cot as sin and cos | limit(1/sin(X),X,0,1) | from the right | inf
 steps; limit(1/X^2,X,0); X; limit(1/X^2,X,0) | both sides | inf
 #at inf a polynomial over a polynomial gets the paper way, over the bottom's top power then 1/x -> 0
 steps; limit((3X^2+X)/(2X^2_5),X,inf); X; limit((3X^2+X)/(2X^2_5),X,inf) | divide by the top power | limit((1/X+3)/(2_5/X^2),X,inf) | 1/x -> 0 | 3/2

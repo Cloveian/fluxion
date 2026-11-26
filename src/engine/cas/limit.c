@@ -499,7 +499,7 @@ static int far_pow(pcas_ast_t *base, pcas_ast_t *ex, pcas_ast_t *var, pcas_ast_t
 static int far_ratio(pcas_ast_t *top, pcas_ast_t *bottom, pcas_ast_t *var, pcas_ast_t **v, int tries) {
     pcas_ast_t *t = NULL, *b = NULL, *lt = NULL, *lb = NULL;
     deg_t dt, db;
-    int ft, fb, out = FAR_NONE, s;
+    int ft, fb, out = FAR_NONE, s, sf;
     long c;
 
     *v = NULL;
@@ -520,8 +520,15 @@ static int far_ratio(pcas_ast_t *top, pcas_ast_t *bottom, pcas_ast_t *var, pcas_
         if(s == 1 || s == -1) {
             out = fin(v, ast_MakeBinary(OP_DIV, t, b));
             t = b = NULL;
-        } else if(s == 0 && sign_of(t) == 0) {
-            out = lhopital(top, bottom, var, v, tries);
+        } else if(s == 0) {
+            s = sign_of(t);
+            if(s == 0) {
+                out = lhopital(top, bottom, var, v, tries);
+            } else if(s != 2) { /*something over a bottom that dies away, up or down by the side it comes in from*/
+                sf = sign_far(bottom, var);
+                if(sf == 1 || sf == -1)
+                    out = s * sf;
+            }
         }
     } else if(ft == FAR_FIN) {
         out = fin(v, ast_MakeInt(0));
@@ -1055,6 +1062,26 @@ static pcas_ast_t *sides(pcas_ast_t *f, pcas_ast_t *var, pcas_ast_t *a, int dir,
     return r;
 }
 
+/*sec, csc and cot as sin and cos in place, true if any changed*/
+static bool to_sincos(pcas_ast_t *e) {
+    pcas_ast_t *c, *u, *n;
+    bool changed = false;
+
+    if(e->type != NODE_OPERATOR)
+        return false;
+    for(c = ast_ChildGet(e, 0); c != NULL; c = c->next)
+        changed |= to_sincos(c);
+    if(!isoptype(e, OP_SEC) && !isoptype(e, OP_CSC) && !isoptype(e, OP_COT))
+        return changed;
+    u = ast_Copy(ast_ChildGet(e, 0));
+    n = isoptype(e, OP_COT) ? ast_MakeBinary(OP_DIV, ast_MakeUnary(OP_COS, u), ast_MakeUnary(OP_SIN, ast_Copy(u)))
+                            : ast_MakeBinary(OP_DIV, ast_MakeInt(1), ast_MakeUnary(isoptype(e, OP_SEC) ? OP_COS : OP_SIN, u));
+    if(n == NULL)
+        return changed;
+    replace_node(e, n);
+    return true;
+}
+
 /*new, NULL when there isn't one or it gives up. s NULL for no steps, root when the limit is the whole input, dir 1 / -1 from one side*/
 static pcas_ast_t *limit_of(pcas_ast_t *f, pcas_ast_t *var, pcas_ast_t *a, steps_t *s, bool root, int dir) {
     pcas_ast_t *g, *top, *bottom, *t, *b, *out = NULL;
@@ -1086,6 +1113,13 @@ static pcas_ast_t *limit_of(pcas_ast_t *f, pcas_ast_t *var, pcas_ast_t *a, steps
     }
     if(has_symbol(a, SYM_INF)) /*inf+1, 2inf*/
         return NULL;
+    if((g = ast_Copy(f)) != NULL && to_sincos(g) && !pcas_cancelled) { /*cancelled leaves it unchagned, it'd go round forever*/
+        steps_rule(l, "sec, csc and cot as sin and cos"); /*the recursion starts its own line*/
+        out = limit_of(g, var, a, s, root, dir);
+        ast_Cleanup(g);
+        return out;
+    }
+    ast_Cleanup(g);
     if(dir != 0 && (g = ast_Copy(f)) != NULL) { /*abs(x-3) from the right is x-3*/
         if(drop_abs(g, var, a, dir) > 0) {
             steps_rule(l, dir > 0 ? "abs from the right" : "abs from the left");
