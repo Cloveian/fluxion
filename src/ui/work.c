@@ -439,7 +439,7 @@ bool work_act(action_t a) {
         if(kids[sel])
             folded[sel] = a.op == A_ENTER ? !folded[sel] : false;
         break;
-    case A_LEFT: /* close it, from inside the working that goes to the line above it */
+    case A_LEFT: /* close it, on a working line go up to the line above and close that */
         if(!tree)
             return false;
         if(kids[sel] && !folded[sel]) {
