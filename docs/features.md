@@ -21,6 +21,7 @@ Everything Fluxion does right now, as tables. Yes / partly / no first, the other
 | Solve steps                              | yes\*  |
 | Steps for expand, factor, simplify       | yes\*  |
 | Steps for derivatives, limits, integrals | yes\*  |
+| Working folds away on long step pages    | yes\*  |
 
 ### Simplifying
 
@@ -147,6 +148,7 @@ Everything Fluxion does right now, as tables. Yes / partly / no first, the other
 | Radians and degrees                | yes |
 | Themes (dark, light + 5 more)      | yes |
 | Your own theme (bg and accent)     | yes |
+| Zoom the window (PC), remembered   | yes |
 | Remembers everything after closing | yes |
 
 ### Variables
