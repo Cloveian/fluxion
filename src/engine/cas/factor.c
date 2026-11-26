@@ -677,6 +677,11 @@ static pcas_ast_t *gcd_same_bottom(pcas_ast_t *a, pcas_ast_t *b) {
     return ast_MakeBinary(OP_DIV, top, ast_Copy(ast_ChildGet(a, 1)));
 }
 
+/*Fluxion: a fraction with something other than a number on the bottom*/
+static bool letter_div(pcas_ast_t *p) {
+    return isoptype(p, OP_DIV) && ast_ChildGet(p, 1)->type != NODE_NUMBER;
+}
+
 bool factor_addition(pcas_ast_t *e, unsigned char flags) {
     pcas_ast_t *child;
     bool changed = false;
@@ -775,6 +780,10 @@ bool factor_addition(pcas_ast_t *e, unsigned char flags) {
                         can_factor = flags & FAC_SIMPLE_ADDITION_NONEVALUATEABLE;
                     num_Cleanup(fv);
                     num_Cleanup(sv);
+
+                    /*Fluxion: g that leaves a fraction on a letter stays in the sum, (X_3) in 2X^2+4X_30. solve read the 3 as a zero of that bottom*/
+                    if(can_factor && !isoptype(a, OP_DIV) && !isoptype(b, OP_DIV) && (letter_div(first) || letter_div(second)))
+                        can_factor = false;
 
                     if(can_factor) {
                         simplify(append, SIMP_NORMALIZE | SIMP_RATIONAL | SIMP_EVAL);

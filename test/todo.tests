@@ -16,3 +16,5 @@ simplify; integral(sqrt(X^2),X,-1,1); 1
 decimal; pi^2; 9.8696
 #gives 0: like terms take lim-lim before the limits run. inf - inf has no answer, it should stay
 simplify; limit(X,X,inf)_limit(X,X,inf); limit(X,X,inf)-limit(X,X,inf)
+#a factor times a sum of fractions over that same factor doesn't cancel, it comes back as it was
+simplify; (X_3)^2+(X_3)((4X)/(X_3)_30/(X_3)+(2X^2)/(X_3)); (X_3)^2+2X^2+4X_30
