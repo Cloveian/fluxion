@@ -6,6 +6,7 @@
 #include "vars.h"
 #include "mode.h"
 #include "menu.h"
+#include "topbar.h"
 #include "settings.h"
 #include "geom.h"
 #include "polyfn.h"
@@ -38,7 +39,6 @@
 #include "render/draw.h"
 #include "platform/screen.h"
 #include "platform/store.h"
-#include "platform/power.h"
 #include "ui/catalog.h"
 #include "ui/page.h"
 
@@ -51,7 +51,6 @@
     a folder opens as a list above its soft key. keys: docs/design-choices/input.md
 */
 
-#define MARGIN      4
 #define GAP         4
 #define HISTORY_MAX 16          /* enough for now, old ones just scroll off the top */
 
@@ -94,7 +93,7 @@ static unsigned char canon_flags = CANONICAL_ALL;
    everything after comes out that way too */
 typedef enum { FORM_HAND, FORM_EXPANDED, FORM_FACTORED, FORM_DECIMAL, FORM_COUNT } form_t;
 static form_t form = FORM_HAND;
-static const char *const form_names[FORM_COUNT] = { "", "expanded", "factored", "decimal" };
+static const char *const form_names[FORM_COUNT] = { NULL, "expanded", "factored", "decimal" };
 
 /* history */
 
@@ -2488,98 +2487,6 @@ static void draw_popup(void) {
     }
 }
 
-/* the status bar */
-
-/* along the top: a padlock each for 2nd / alpha / ctl, the working dots,
-   the battery */
-
-#define BATTERY_W   13
-#define BATTERY_READ (CLOCKS_PER_SEC * 10)     /* the level is read this often (reading every frame was slow) */
-#define LOCK_SLOT   13 /* per padlock, fixed so one turning on doesn't shove the others along */
-#define BAR_LEFT    (areas.top.x + MARGIN)
-#define BAR_RIGHT   (areas.top.x + areas.top.w - MARGIN)
-#define BAR_BEFORE_BATTERY (BAR_RIGHT - BATTERY_W - 6) /* right edge of the form name and the busy dot */
-
-static int battery = -1;
-static clock_t battery_next;
-
-/* 3x5 letters punched out of the padlocks, top bit on the left: 2, A, C, S */
-static const unsigned char lock_letters[4][5] = {
-    { 6, 1, 2, 4, 7 },
-    { 2, 5, 7, 5, 5 },
-    { 3, 4, 4, 4, 3 },
-    { 3, 4, 2, 1, 6 }
-};
-
-/* 9 x 11, top left at x, y. a lock is the padlock with the letter punched out
-   of it, a plain sticky press is just the letter on its own, bigger, so you can
-   tell the two apart at a glance (the open-shackle version looked locked too) */
-static void draw_padlock(int x, int y, char name, bool locked) {
-    int r, c, letter = (int)(strchr("2ACS", name) - "2ACS");
-
-    screen_color(COL_ACCENT);
-    if(!locked) {
-        for(r = 0; r < 5; r++)
-            for(c = 0; c < 3; c++)
-                if(lock_letters[letter][r] & (4 >> c))
-                    screen_fill(x + 1 + 2 * c, y + 1 + 2 * r, 2, 2);
-        return;
-    }
-    screen_hline(x + 3, y, 3);
-    screen_vline(x + 2, y + 1, 3);
-    screen_vline(x + 6, y + 1, 3);
-    screen_fill(x, y + 4, 9, 7);
-
-    /* the letter is just holes in the body, it still reads at 1x */
-    screen_color(COL_BG);
-    for(r = 0; r < 5; r++)
-        for(c = 0; c < 3; c++)
-            if(lock_letters[letter][r] & (4 >> c))
-                screen_hline(x + 3 + c, y + 5 + r, 1);
-}
-
-/* BATTERY_W x 7, top left at x, y, two columns of fill per bar (0-4) */
-static void draw_battery(int x, int y, int level) {
-    screen_hline(x, y, 12);
-    screen_hline(x, y + 6, 12);
-    screen_vline(x, y, 7);
-    screen_vline(x + 11, y, 7);
-    screen_vline(x + 12, y + 2, 3);
-    if(level > 0)
-        screen_fill(x + 2, y + 2, level * 2, 3);
-}
-
-static void draw_top_bar(void) {
-    int h = areas.top.h, top = areas.top.y, y = top + (h - 1 - 11) / 2;
-    int left = BAR_LEFT, right = BAR_RIGHT, i;
-    input_mod_t mods[3];
-
-    if(battery < 0 || clock() >= battery_next) {
-        battery = power_battery();
-        battery_next = clock() + BATTERY_READ;
-    }
-
-    screen_color(COL_BG);
-    screen_fill(areas.top.x, top, areas.top.w, h);
-    screen_color(COL_DIM);
-    screen_hline(left, top + h - 1, right - left);
-    draw_battery(right - BATTERY_W, top + (h - 1 - 7) / 2, battery);
-
-    input_mods(mods);
-    for(i = 0; i < 3; i++)
-        if(mods[i].letter != '\0')
-            draw_padlock(left + i * LOCK_SLOT, y, mods[i].letter, mods[i].locked);
-
-    /* the form, when it isn't the normal one, over by the battery */
-    if(form != FORM_HAND) {
-        const font_t *small = draw_label_font();
-
-        screen_color(COL_DIM);
-        draw_text(BAR_BEFORE_BATTERY - draw_text_width(form_names[form], small), top + 1,
-                  form_names[form], small);
-    }
-}
-
 /* behind the highlighted half of a history entry. browsing gets just an outline,
    the selection inside it is the highlight then */
 static void highlight(int x, int base, const box_t *b) {
@@ -2641,7 +2548,7 @@ static void draw_screen(void) {
             work_draw();
         if(menu_is_open())
             menu_draw();
-        draw_top_bar();
+        topbar_draw(form_names[form]);
         screen_show();
         return;
     }
@@ -2757,7 +2664,7 @@ static void draw_screen(void) {
         screen_hline(left + 20, y + 1, right - left - 40);
         y -= GAP;
     }
-    draw_top_bar();
+    topbar_draw(form_names[form]);
 
     if(menu_is_open())
         menu_draw();
@@ -2774,43 +2681,6 @@ static unsigned busy_frame;
 static clock_t busy_started;
 static unsigned long busy_shown; /* seconds the hint says, 0 = not up yet */
 
-/* a dot going round in the status bar (left of the battery) while the engine
-   runs, so a slow simplify doesn't look frozen. drawn straight onto the screen,
-   swapping buffers made the cursor flash */
-static void draw_working(void) {
-    /* 2x2 dots round an 8x8 box, clockwise from the top */
-    static const unsigned char dots[8][2] = {
-        { 3, 0 }, { 5, 1 }, { 6, 3 }, { 5, 5 }, { 3, 6 }, { 1, 5 }, { 0, 3 }, { 1, 1 }
-    };
-    int x = BAR_BEFORE_BATTERY - 8, y = areas.top.y + (areas.top.h - 1 - 8) / 2;
-    unsigned i;
-
-    /* a head and two dimmer dots behind it, going round */
-    screen_direct(true);
-    for(i = 0; i < 8; i++) {
-        unsigned behind = (busy_frame - i) % 8;
-
-        screen_color(behind == 0 ? COL_ACCENT : behind <= 2 ? COL_DIM : COL_BG);
-        screen_fill(x + dots[i][0], y + dots[i][1], 2, 2);
-    }
-    screen_direct(false);
-}
-
-/* "12s, [on]+[mode] stops it" after the padlocks. no guess at the total, 1/x+1/(x+1)=1 is one short line and ~17 s on the calc */
-static void draw_busy_hint(unsigned long s) {
-    const font_t *small = draw_label_font();
-    int x = BAR_LEFT + 3 * LOCK_SLOT + 4;
-    char t[32];
-
-    snprintf(t, sizeof t, "%lus, %s stops it", s, input_cancel_hint());
-    screen_direct(true);
-    screen_color(COL_BG);
-    screen_fill(x, areas.top.y, draw_text_width(t, small), areas.top.h - 1);
-    screen_color(COL_DIM);
-    draw_text(x, areas.top.y + 1, t, small);
-    screen_direct(false);
-}
-
 static clock_t busy_keys_next;
 
 /* pcas_poll, the engine calls this constantly, so check the clock and only read
@@ -2825,11 +2695,11 @@ static bool busy_poll(void) {
     if(clock() >= busy_next) {
         busy_next = clock() + CLOCKS_PER_SEC / 10;
         busy_frame++;
-        draw_working();
+        topbar_working(busy_frame);
         s = (unsigned long)((clock() - busy_started) / CLOCKS_PER_SEC);
         if(s >= BUSY_HINT && s != busy_shown) {
             busy_shown = s;
-            draw_busy_hint(s);
+            topbar_hint(s);
         }
     }
 
@@ -2846,7 +2716,7 @@ static void busy_start(void) {
     busy_next = busy_started + CLOCKS_PER_SEC / 10;
     busy_keys_next = busy_next;
     input_poll_reset();
-    draw_working();
+    topbar_working(busy_frame);
 }
 
 /* keys_wait calls this when it goes dark or wakes up. the waking key already got

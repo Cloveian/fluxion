@@ -13,6 +13,8 @@ typedef struct {
 
 extern areas_t areas;
 
+#define MARGIN 4 /* from the screen's edge to the bars and the history */
+
 /* the nspire has no keys under its screen: no folder bar, [menu] drops a list of the five down from the top like its own */
 #ifdef _TINSPIRE
 #define NSPIRE 1

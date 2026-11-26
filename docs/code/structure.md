@@ -28,6 +28,7 @@ fluxion/
 │       ├── app.c    history, input line, running the engine
 │       ├── areas.c  the top bar / body / soft-key bands, where the drawing gets its edges
 │       ├── menu.c  the folder bar under the screen, the menus that open from it and the five keys a page draws on that bar, app.c just hands it hooks for picking, previews and the status line
+│       ├── topbar.c  the bar along the top: a padlock each for 2nd / alpha / ctl, the battery, the form name and the working dot with its busy hint. app.c just hands it the form name
 │       ├── args.c  cutting a command's line at its commas and parsing the pieces, for every command file
 │       ├── catalog.c  everything you can type or pick, and what the engine can do. its words are the name table too
 │       ├── work.c  the show-the-work page, and calc1.c / polyfn.c / series.c / ineq.c the commands behind it (derivative at a point, tangent, apart, sum(, inequalities ...)
