@@ -249,6 +249,8 @@ static int degree(pcas_ast_t *e) {
     pcas_ast_t *k;
     int d = 0;
 
+    if(e == NULL) /* child never made (oom) */
+        return 0;
     switch(e->type) {
     case NODE_SYMBOL:
         /* pi, e, i, theta are constants */
@@ -277,7 +279,7 @@ static int degree(pcas_ast_t *e) {
 
         mp_small num, den;
 
-        if(exp->type == NODE_NUMBER && mp_rat_to_ints(exp->op.num, &num, &den) == MP_OK && den == 1)
+        if(exp != NULL && exp->type == NODE_NUMBER && mp_rat_to_ints(exp->op.num, &num, &den) == MP_OK && den == 1)
             return base * (int)num;
         return base;
     }

@@ -1970,7 +1970,7 @@ static bool swap_atom(pcas_ast_t *e, pcas_ast_t *g, Symbol var, Symbol u) {
     }
     if(e->type != NODE_OPERATOR)
         return true;
-    if(isoptype(g, OP_POW) && isoptype(e, OP_POW) && (k = power_of_base(ast_ChildGet(e, 0), ast_ChildGet(g, 0))) > 0
+    if(isoptype(g, OP_POW) && isoptype(e, OP_POW) && ast_ChildGet(e, 1) != NULL /*oom*/ && (k = power_of_base(ast_ChildGet(e, 0), ast_ChildGet(g, 0))) > 0
        && has_symbol(ast_ChildGet(e, 1), var)) {
         q = ast_MakeBinary(OP_MULT, ast_MakeInt(k), ast_MakeBinary(OP_DIV, ast_Copy(ast_ChildGet(e, 1)), ast_Copy(ast_ChildGet(g, 1))));
         if(q == NULL)
