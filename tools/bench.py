@@ -1,6 +1,6 @@
 # scores the CAS on a converted problem set (tools/bench_import.py's problems.jsonl): right / wrong / gave up per item, answers checked with sympy
 # usage: python3 tools/bench.py problems.jsonl [kind ...] [-v] [-j 8]    (run from the repo root, build-pc/fluxion and fluxion-app have to be built, per-item verdicts go to /tmp/bench-results.jsonl)
-import concurrent.futures, contextlib, glob, io, json, multiprocessing, os, random, re, subprocess, sys
+import concurrent.futures, contextlib, glob, io, json, multiprocessing, os, random, re, signal, subprocess, sys
 import sympy as sp
 from sympy.parsing.sympy_parser import parse_expr
 
@@ -141,6 +141,43 @@ def has_score(command, chk):
                 return "right", text
     return "unscored", "MISMATCH " + " | ".join(t for _, t in lines) + f", want {want:.8g}"
 
+def values_of(text):
+    # the numbers after the = of an answer line, sorted
+    return sorted(float(fuzz.fval(fuzz.to_sympy(p), 0)) for p in fuzz.top_split(text[text.index("=") + 1:]))
+
+def region_score(command):
+    # asym( and domain( against sympy's singularities and limits at +-oo. the answer lines start with their label (VERTICAL, HOLE, EXCEPT ...)
+    name = command.split("(")[0]
+    args = fuzz.top_split(command[len(name) + 1:-1])
+    if "deriv(" in command:
+        return "unscored", "domain of a derivative, commands don't nest"
+    lines, why = app_lines(command)
+    if lines is None:
+        return "gaveup", why
+    f = fuzz.to_sympy(args[0])
+    got = {}
+    for _, text in lines:
+        low = text.lower()
+        if low.startswith(("all real", "none")):
+            continue
+        if "and maybe more" in low or low.startswith("slant") or "=" not in text:
+            return "unscored", f"the app's answer isn't a list of points: {text}"
+        got[next(k for k in ("vertical", "horizontal", "hole", "except") if low.startswith(k))] = values_of(text)
+    sing = [s for s in sp.singularities(f, fuzz.X) if s.is_real]
+    sides = {s: [sp.limit(f, fuzz.X, s, d) for d in ("-", "+")] for s in sing}
+    vert = sorted(float(s) for s, ends in sides.items() if any(v.is_infinite for v in ends))
+    hole = sorted(float(s) for s, ends in sides.items() if not any(v.is_infinite for v in ends))
+    if name == "asym":
+        hor = sorted({float(v) for v in (sp.limit(f, fuzz.X, sp.oo), sp.limit(f, fuzz.X, -sp.oo)) if v.is_finite})
+        want = {"vertical": vert, "horizontal": hor, "hole": hole}
+    else:
+        want = {"except": sorted(vert + hole)}
+    text = " | ".join(t for _, t in lines)
+    for key, vals in want.items():
+        if len(vals) != len(got.get(key, [])) or any(abs(a - b) > 1e-5 for a, b in zip(vals, got.get(key, []))):
+            return "wrong", f"{key}: want {vals}, got {got.get(key, [])} ({text})"
+    return "right", text
+
 def volume_score(command, chk):
     # the V = line against the book's value
     lines, why = app_lines(command)
@@ -190,14 +227,22 @@ def app_score(command):
         return "unscored", f"fuzz check skipped it: {text}"
     return ("wrong", f"{text}: {problem}") if problem else ("right", text)
 
+def on_alarm(*_):
+    raise subprocess.TimeoutExpired("sympy", 60)
+signal.signal(signal.SIGALRM, on_alarm)    # set in the parent, the forked workers have it too
+
 def score(item):
     # (verdict, detail). verdict: right wrong gaveup timeout unscored
     random.seed(item["id"])     # fuzz.py's checks pick random points, the same ones every run
     chk, cmds = item.get("check") or {}, item.get("fluxion")
-    if not item.get("convertible") or not cmds or chk.get("type") in (None, "none"):
+    region = bool(cmds) and cmds[0].startswith(("asym(", "domain("))
+    if not item.get("convertible") or not cmds or (chk.get("type") in (None, "none") and not region):
         return "unscored", item.get("reason") or "no check"
-    kind = chk["type"]
+    kind = chk.get("type")
     try:
+        if region:
+            signal.alarm(60)    # sympy's limit can run forever
+            return region_score(cmds[0])
         if cmds[0].startswith(("sum(", "product(")):
             return sum_score(cmds[0], chk)
         if kind == "solve":
@@ -260,6 +305,8 @@ def score(item):
         return "timeout", cmds[0]
     except Exception as ex:
         return "unscored", f"checker: {ex}"
+    finally:
+        signal.alarm(0)
 
 items = [json.loads(line) for line in open(path)]
 mine = {}     # items written by hand (hand*.jsonl next to the problems), replacing the importer's for the same id
