@@ -763,6 +763,14 @@ simplify; csc(-9pi/2); -1
 simplify; sec(-pi); -1
 simplify; cot(-pi/4); -1
 simplify; sec(7pi/3); 2
+#1 + tan^2 is sec^2 and the cot one, the number in front stays out (sec^3 + sec tan^2 is not a sec^3)
+simplify; 1+tan(X)^2; sec(X)^2
+simplify; 1+cot(X)^2; csc(X)^2
+simplify; sec(X)^2_tan(X)^2; 1
+simplify; csc(X)^2_cot(X)^2_4; -3
+simplify; sec(X)^3+sec(X)tan(X)^2; sec(X)^3+tan(X)^2sec(X)
+simplify; Y+2tan(X)^2; Y+2tan(X)^2
+simplify; deriv(deriv(sec(X),X,X),X,pi/4); 3sqrt(2)
 
 #solve for a letter when the others stay letters, the quadratic formula as a tree
 solve; Y=X^2+3; X; -(-3+Y)^(1/2), (-3+Y)^(1/2)

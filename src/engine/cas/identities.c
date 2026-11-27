@@ -71,6 +71,11 @@ pcas_id_t id_trig_identities[ID_NUM_TRIG_IDENTITIES] = {
     {"1_2sin(X)^2+C", "cos(2X)+C"},
 
     {"sin(X)^2+cos(X)^2+C", "1+C"},
+    /*Fluxion: no number in front (A+Atan(X)^2), a repeated A doesn't have to match itself*/
+    {"1+tan(X)^2+C", "sec(X)^2+C"},
+    {"1+cot(X)^2+C", "csc(X)^2+C"},
+    {"sec(X)^2_tan(X)^2+C", "1+C"},
+    {"csc(X)^2_cot(X)^2+C", "1+C"},
 
     /*tan identities*/
     {"Asin(X)/(Bcos(X", "Atan(X)/B"},

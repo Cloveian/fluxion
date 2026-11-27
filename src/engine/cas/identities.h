@@ -19,7 +19,7 @@ typedef struct {
 } pcas_id_t;
 
 #define ID_NUM_GENERAL 17
-#define ID_NUM_TRIG_IDENTITIES 32
+#define ID_NUM_TRIG_IDENTITIES 36
 #define ID_NUM_TRIG_INV_CONSTANTS 31
 #define ID_NUM_TRIG_CONSTANTS 75
 #define ID_NUM_HYPERBOLIC 9
