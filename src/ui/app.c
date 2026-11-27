@@ -1826,6 +1826,13 @@ static ed_row_t *row_from_text(const char *text) {
     engine[n] = '\0';
     e = n > 0 ? parse((const uint8_t *)engine, n, str_table, &err) : NULL;
     free(engine);
+    if(e != NULL && err == E_SUCCESS) {
+        pcas_ast_t *found[STEPS_FOUND_MAX];
+
+        /* integral( and limit( are typed out like a command, laid out as math they'd lose their bounds */
+        if(steps_find(e, OP_INTEGRAL, found, 0) > 0 || steps_find(e, OP_LIMIT, found, 0) > 0)
+            err = E_GENERIC;
+    }
     if(e == NULL || err != E_SUCCESS) {
         ast_Cleanup(e);
         return NULL;
@@ -1870,7 +1877,7 @@ static bool paste_command(const char *text) {
     const char *p = text, *start, *end, *piece;
     size_t len;
     int n = 0, depth = 0, i;
-    bool ok = false;
+    bool ok = false, typed;
 
     memset(items, 0, sizeof items);
     while(isspace((unsigned char)*p))
@@ -1878,7 +1885,8 @@ static bool paste_command(const char *text) {
     for(len = 0; isalpha((unsigned char)p[len]) && len < sizeof name - 1; len++)
         name[len] = (char)tolower((unsigned char)p[len]);
     name[len] = '\0';
-    if(len == 0 || p[len] != '(' || !ed_is_command(name))
+    typed = ed_is_command(name) || strcmp(name, "integral") == 0 || strcmp(name, "limit") == 0; /* the two templates are typed out too */
+    if(len == 0 || p[len] != '(' || !typed)
         return false;
     start = p + len + 1;
     end = start + strlen(start);

@@ -120,7 +120,12 @@ def concave_score(command, chk):
 
 def has_score(command, chk):
     # hand set up word problem: the book's value has to be one of the numbers the app says, a miss stays unscored (MISMATCH) since it could be the setup
-    lines, why = app_lines(command)
+    if command.startswith("deriv("):
+        # d/dx at a point can't be pasted into the app, the cli takes it with capital variables
+        out = cli(re.sub(r"(?<![a-z])(?!pi|e)([a-z])(?![a-z(])", lambda m: m.group(1).upper(), command))
+        lines, why = (None, out or "no output") if gave_up(out) else ([("answer", out)], None)
+    else:
+        lines, why = app_lines(command)
     if lines is None:
         return "gaveup", why
     want, tol = float(sym(chk["want"]).evalf()), chk.get("tol", 1e-6)
