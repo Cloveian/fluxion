@@ -397,11 +397,28 @@ static bool exponent(pcas_ast_t *e, long *n, long *d) {
     return *n <= DEG_MAX && *n >= -DEG_MAX && *d <= DEG_MAX;
 }
 
+/*sin(x), 3cos(2x), 1+sin(x): x only inside sin / cos, so stuck between two numbers*/
+static bool bounded(pcas_ast_t *e, pcas_ast_t *var) {
+    pcas_ast_t *c;
+
+    if(!has_symbol(e, var->op.symbol))
+        return false;
+    if(isoptype(e, OP_SIN) || isoptype(e, OP_COS))
+        return true;
+    if(!isoptype(e, OP_MULT) && !isoptype(e, OP_ADD))
+        return false;
+    for(c = ast_ChildGet(e, 0); c != NULL; c = c->next)
+        if(has_symbol(c, var->op.symbol) && !bounded(c, var))
+            return false;
+    return true;
+}
+
 /*e as x -> inf grows like lead * x^deg, lead new. false when it can't say: sin(x), e^x, ln(x), a sum whose top terms cancel*/
 static bool growth(pcas_ast_t *e, pcas_ast_t *var, deg_t *deg, pcas_ast_t **lead) {
     pcas_ast_t *c, *l;
     deg_t cd;
     long n, d;
+    bool skipped = false;
 
     *lead = NULL;
     deg->n = 0;
@@ -459,9 +476,13 @@ static bool growth(pcas_ast_t *e, pcas_ast_t *var, deg_t *deg, pcas_ast_t **lead
         return (*lead = ast_MakeUnary(OP_ABS, l)) != NULL;
     case OP_ADD: /*the leads with the top degree, a higher one starts them over*/
         for(c = ast_ChildGet(e, 0); c != NULL; c = c->next) {
+            if(bounded(c, var)) { /*2x + sin(x) still grows like 2x*/
+                skipped = true;
+                continue;
+            }
             if(!growth(c, var, &cd, &l))
                 break;
-            if(c == ast_ChildGet(e, 0) || deg_cmp(cd, *deg) > 0) {
+            if(*lead == NULL || deg_cmp(cd, *deg) > 0) {
                 ast_Cleanup(*lead);
                 *lead = ast_MakeOperator(OP_ADD);
                 *deg = cd;
@@ -469,7 +490,7 @@ static bool growth(pcas_ast_t *e, pcas_ast_t *var, deg_t *deg, pcas_ast_t **lead
             if(deg_cmp(cd, *deg) < 0 || ast_ChildAppend(*lead, l) != E_SUCCESS)
                 ast_Cleanup(l);
         }
-        if(c == NULL && !pcas_cancelled && sign_of(*lead) != 0) /*0 is the top terms cancelling, sqrt(x^2+x) - x*/
+        if(c == NULL && !pcas_cancelled && *lead != NULL && (!skipped || deg->n > 0) && sign_of(*lead) != 0) /*0 is the top terms cancelling, sqrt(x^2+x) - x*/
             return true;
         break;
     default:
@@ -509,11 +530,26 @@ static bool has_root(pcas_ast_t *e) {
 
 static int far_pow(pcas_ast_t *base, pcas_ast_t *ex, pcas_ast_t *var, pcas_ast_t **v, int tries);
 
+/*top over bottom from their degrees and leads, which it takes over (NULLed when used)*/
+static int growth_ratio(deg_t dt, deg_t db, pcas_ast_t **lt, pcas_ast_t **lb, pcas_ast_t **v) {
+    long c = deg_cmp(dt, db);
+    int s;
+
+    if(c < 0)
+        return fin(v, ast_MakeInt(0));
+    if(c == 0) {
+        s = fin(v, ast_MakeBinary(OP_DIV, *lt, *lb));
+        *lt = *lb = NULL;
+        return s;
+    }
+    s = sign_of(*lt) * sign_of(*lb);
+    return s == 1 || s == -1 ? s : FAR_NONE;
+}
+
 static int far_ratio(pcas_ast_t *top, pcas_ast_t *bottom, pcas_ast_t *var, pcas_ast_t **v, int tries) {
     pcas_ast_t *t = NULL, *b = NULL, *lt = NULL, *lb = NULL;
     deg_t dt, db;
     int ft, fb, out = FAR_NONE, s, sf;
-    long c;
 
     *v = NULL;
     /*x^(1/3)/(x+1)^(1/3) is (x/(x+1))^(1/3), l'hopital on two roots only makes more roots*/
@@ -526,8 +562,9 @@ static int far_ratio(pcas_ast_t *top, pcas_ast_t *bottom, pcas_ast_t *var, pcas_
     }
     ft = far(top, var, &t, tries);
     fb = far(bottom, var, &b, tries);
-    if(ft == FAR_NONE || fb == FAR_NONE) {
-        out = FAR_NONE;
+    if(ft == FAR_NONE || fb == FAR_NONE) { /*(2x + sin(x))/(x - cos(x)), both still grow*/
+        if(growth(top, var, &dt, &lt) && growth(bottom, var, &db, &lb) && dt.n > 0 && db.n > 0)
+            out = growth_ratio(dt, db, &lt, &lb, v);
     } else if(ft == FAR_FIN && fb == FAR_FIN) {
         s = sign_of(b);
         if(s == 1 || s == -1) {
@@ -552,17 +589,7 @@ static int far_ratio(pcas_ast_t *top, pcas_ast_t *bottom, pcas_ast_t *var, pcas_
     } else {
         /*by top terms when both have a degree (polynomials, roots of them), anything else l'hopital*/
         if(growth(top, var, &dt, &lt) && growth(bottom, var, &db, &lb)) {
-            c = deg_cmp(dt, db);
-            if(c < 0) {
-                out = fin(v, ast_MakeInt(0));
-            } else if(c == 0) {
-                out = fin(v, ast_MakeBinary(OP_DIV, lt, lb));
-                lt = lb = NULL;
-            } else {
-                s = sign_of(lt) * sign_of(lb);
-                if(s == 1 || s == -1)
-                    out = s;
-            }
+            out = growth_ratio(dt, db, &lt, &lb, v);
         } else {
             out = lhopital(top, bottom, var, v, tries);
         }

@@ -196,6 +196,7 @@ def gen_lim():
         ("X^2/e^X", "inf"), ("X*e^(0_X)", "inf"), (f"sqrt(X^2+{a}X)_X", "inf"), (f"(1+{a}/X)^X", "inf"), ("ln(X)/X", "inf"),
         (f"{a}X*sin(1/X)", "inf"), (f"1/(X_{a})", str(a)), (f"1/(X_{a})^2", str(a)), (f"abs(X_{a})/(X_{a})", str(a)),
         (f"({a}X+{b})/(X_{c})", str(c)), (f"(sqrt(X+{a * a})_{a})/(X+{b})", "0"),
+        (f"({a}X+{b}sin(X))/({abs(c)}X+cos({a}X))", "inf"), (f"({a}X^2+sin(X))/({abs(c)}X+cos(X))", "inf"), (f"(X+sin(X))/({abs(c)}X^2+cos(X))", "inf"),
     ] + one_sided(a))
 
 def one_sided(a):
