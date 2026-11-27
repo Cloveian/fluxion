@@ -215,6 +215,9 @@ ITEM(it_volume, "volume", "volume", ITEM_COMMAND, "volume($)", HAVE_PARTLY,
 ITEM(it_absolute, "absolute", "absolute", ITEM_COMMAND, "absolute($)", HAVE_PARTLY,
      "absolute(f,a,b,x): the biggest and smallest f gets on [a,b], checked at the ends, where f' is 0 and where f' isn't there. f has to be defined all the way across. the x is optional",
      "the closed interval method. absolute(x^3-3x,-2,3) -> absolute max (3, 18), absolute min (-2, -2) and (1, -2)")
+ITEM(it_initial, "initial", "initial", ITEM_COMMAND, "initial($)", HAVE_PARTLY,
+     "initial(f',1,a,A,x): f from its slope and f(a) = A. initial(f'',2,a,A,B,x): from f(a) = A and f'(a) = B, or initial(f'',2,a,A,b,B,x) from f(a) = A and f(b) = B. the x is optional",
+     "an antiderivative with the constants pinned down. initial(12/(1+t^2),1,1,0,t) -> f = 12atan(t) - 3pi")
 ITEM(it_continuous, "continuous", "continuous", ITEM_COMMAND, "continuous($)", HAVE_PARTLY,
      "continuous(f,a,x): the limit from each side against f(a), and whether it's continuous, removable, a jump or infinite",
      "whether the curve breaks at x = a. continuous(abs(x)/x,0) -> a jump discontinuity")
@@ -366,7 +369,7 @@ const item_t *const catalog[] = {
     &it_cube, &it_box, &it_polygon, &it_pand, &it_por,
     &it_ellipse, &it_hyperbola,
     &it_deriv, &it_deriv_at, &it_integral, &it_limit, &it_tangent, &it_critical, &it_extrema, &it_inflect, &it_implicit, &it_increasing, &it_taylor,
-    &it_average, &it_area, &it_mvt, &it_continuous, &it_volume, &it_absolute,
+    &it_average, &it_area, &it_mvt, &it_continuous, &it_volume, &it_absolute, &it_initial,
     &it_id_basic, &it_id_trig, &it_id_hyp, &it_id_cplx, &it_id_tconst, &it_id_iconst, &it_clear, &it_steps
 };
 const unsigned catalog_count = sizeof catalog / sizeof catalog[0];
@@ -382,7 +385,7 @@ static const item_t *const shapes[] = { &it_triangle, &it_circle, &it_rect, &it_
 static const item_t *const solids[] = { &it_sphere, &it_cyl, &it_cone, &it_cube, &it_box };
 static const item_t *const conics[] = { &it_ellipse, &it_hyperbola };
 static const item_t *const prob[] = { &it_pand, &it_por };
-static const item_t *const applied[] = { &it_average, &it_area, &it_mvt, &it_continuous, &it_volume, &it_absolute };
+static const item_t *const applied[] = { &it_average, &it_area, &it_mvt, &it_continuous, &it_volume, &it_absolute, &it_initial };
 
 SUBFOLDER(it_fn_info, fn_info_folder, "Function info", fn_info)
 SUBFOLDER(it_lines, lines_folder, "Lines", lines)

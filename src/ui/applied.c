@@ -16,9 +16,9 @@
 
 /* a first course's uses of the integral, *dih*rivative and limit, cut at the commas like calc1's */
 
-#define ARGS_MAX 6
+#define ARGS_MAX 7
 
-enum { P_AVERAGE, P_AREA, P_MVT, P_CONTINUOUS, P_VOLUME, P_ABSOLUTE, P_COUNT };
+enum { P_AVERAGE, P_AREA, P_MVT, P_CONTINUOUS, P_VOLUME, P_ABSOLUTE, P_INITIAL, P_COUNT };
 
 static const struct {
     const char *name, *usage;
@@ -30,6 +30,7 @@ static const struct {
     { "continuous", "continuous(f, a, x)", 2, 3 },
     { "volume", "volume(f, g, a, b, y=c, x)", 5, 6 },
     { "absolute", "absolute(f, a, b, x)", 3, 4 },
+    { "initial", "initial(f', 1, a, A, x) or (f'', 2, a, A, B, x) or (f'', 2, a, A, b, B, x)", 4, 7 },
 };
 
 static bool same(double a, double b) {
@@ -221,6 +222,58 @@ static bool edges_from(pcas_ast_t *d, Symbol var, double lo, double hi, pcas_ast
     for(i = 0; i < found; i++)
         edge[(*n)++] = roots[i];
     return true;
+}
+
+/* the antiderivitive of e, worked out, no constant. NULL when it stays an integral */
+static pcas_ast_t *antiderivative_of(pcas_ast_t *e, Symbol var) {
+    pcas_ast_t *i = ast_MakeOperator(OP_INTEGRAL);
+
+    ast_ChildAppend(i, ast_Copy(e));
+    ast_ChildAppend(i, ast_MakeSymbol((char)var));
+    simplify(i, SIMP_ALL);
+    if(pcas_cancelled || has_op(i, OP_INTEGRAL)) {
+        ast_Cleanup(i);
+        return NULL;
+    }
+    return i;
+}
+
+/* f from f' or f'' (order 1 or 2). c has a, A for f(a) = A, then for order 2 B for f'(a) = B or b, B for f(b) = B */
+static box_t *initial(pcas_ast_t *g, int order, pcas_ast_t **c, int nc, Symbol var, const char **message) {
+    pcas_ast_t *g1 = antiderivative_of(g, var), *g2 = NULL, *slope = NULL, *f = NULL, *level;
+    box_t *out = NULL;
+
+    if(g1 != NULL && order == 2)
+        g2 = antiderivative_of(g1, var);
+    if(g1 == NULL || (order == 2 && g2 == NULL)) {
+        if(!pcas_cancelled)
+            *message = "can't integrate that";
+        ast_Cleanup(g1);
+        return NULL;
+    }
+    if(order == 1) {
+        f = ast_MakeBinary(OP_ADD, g1, minus(ast_Copy(c[1]), value_at(g1, var, c[0])));
+    } else {
+        if(nc == 3)
+            slope = minus(ast_Copy(c[2]), value_at(g1, var, c[0]));
+        else if(ast_Compare(c[0], c[2]))
+            *message = "the two points are the same";
+        else /* (B - A - (G(b) - G(a))) / (b - a) */
+            slope = ast_MakeBinary(OP_DIV, minus(minus(ast_Copy(c[3]), ast_Copy(c[1])), minus(value_at(g2, var, c[2]), value_at(g2, var, c[0]))),
+                                   minus(ast_Copy(c[2]), ast_Copy(c[0])));
+        if(slope != NULL) {
+            level = minus(minus(ast_Copy(c[1]), value_at(g2, var, c[0])), ast_MakeBinary(OP_MULT, ast_Copy(slope), ast_Copy(c[0])));
+            f = ast_MakeBinary(OP_ADD, ast_MakeBinary(OP_ADD, g2, ast_MakeBinary(OP_MULT, slope, ast_MakeSymbol((char)var))), level);
+            g2 = NULL;
+        }
+        ast_Cleanup(g1);
+        ast_Cleanup(g2);
+    }
+    if(f != NULL) {
+        out = integral_answer("f =", f, message);
+        ast_Cleanup(f);
+    }
+    return out;
 }
 
 /* the biggest and smallest f gets on [a, b]: at the ends, where f' is 0 and where f' isn't there (a corner). a line each, every point that gets there */
@@ -496,7 +549,7 @@ bool applied_run(const char *cmd, char *src, box_t *in) {
         return true;
     }
     /* a letter on the end is the variable, when there's room for one. area has two forms, f g x and f g a b x */
-    has_var = c == P_AREA ? n == 3 || n == 5 : n == cmds[c].most;
+    has_var = c == P_AREA ? n == 3 || n == 5 : c == P_INITIAL ? args_var(piece[n - 1], &var, &shown) : n == cmds[c].most;
     parsed = has_var ? n - 1 : n;
     if(has_var && !args_var(piece[n - 1], &var, &shown))
         message = cmds[c].usage;
@@ -531,7 +584,15 @@ bool applied_run(const char *cmd, char *src, box_t *in) {
         out = volume(a[0], a[1], a[2], a[3], a[4], var, axis, &message);
     else if(c == P_ABSOLUTE)
         out = absolute(a[0], a[1], a[2], var, &message);
-    else if(c == P_MVT)
+    else if(c == P_INITIAL) {
+        double order;
+
+        /* f' takes a, A. f'' takes a, A, B or a, A, b, B */
+        if(!approx_double(a[1], &order) || !((order == 1 && parsed == 4) || (order == 2 && (parsed == 5 || parsed == 6))))
+            message = cmds[c].usage;
+        else
+            out = initial(a[0], (int)order, a + 2, parsed - 2, var, &message);
+    } else if(c == P_MVT)
         out = mean_value(a[0], a[1], a[2], var, &message);
     else
         out = continuity(a[0], a[1], var, &message);

@@ -191,6 +191,20 @@ def absolute_score(command):
     text = " | ".join(t for _, t in lines)
     return ("wrong", f"{text}: {problem}") if problem else ("right", text)
 
+def initial_score(command, chk):
+    # the F = line against the book's function, at a few points where both are defined (t > 0 for the roots and logs)
+    lines, why = app_lines(command)
+    if lines is None:
+        return "gaveup", why
+    m = re.match(r"(?i)^f\s*=(.*)$", lines[0][1])
+    if len(lines) != 1 or not m:
+        return "gaveup", " | ".join(t for _, t in lines)
+    got, want = fuzz.to_sympy(m.group(1)), sym(chk["want"]).subs(sp.Symbol("t"), sp.Symbol("x"))
+    for px in (0.5, 1.5, 2.5, 3.5):
+        if not close(float(want.subs(sp.Symbol("x"), px)), complex(got.subs(fuzz.X, px)).real):
+            return "wrong", f"{lines[0][1]}, want {want} at {px}"
+    return "right", lines[0][1]
+
 def volume_score(command, chk):
     # the V = line against the book's value
     lines, why = app_lines(command)
@@ -308,6 +322,8 @@ def score(item):
             return volume_score(cmds[0], chk)
         if kind == "absolute":
             return absolute_score(cmds[0])
+        if kind == "initial":
+            return initial_score(cmds[0], chk)
         if kind in APP_KINDS:
             return app_score(cmds[0])
         if kind == "simplify":

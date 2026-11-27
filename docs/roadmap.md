@@ -46,6 +46,7 @@
 - [x] More integrals: sqrt(1-x^2) and sqrt(x^2+1) forms, 1/(x^2+bx+c) with irrational roots, e^x sin(x), x atan(x), x^5 e^x, abs(x), sec and csc, tan^n, sec^n, sin^2 cos^2. And x/(x^4+1), atan(x)/x^2, x^2 asin(x), x/sqrt(x+1), sqrt(x)/(1+x), sin(3x)cos(2x), 1/(1+sin(x)), 1/(2+cos(x)) and the rest of the fractions in sin and cos (t = tan(x/2)), tan^3 sec, (sin(x)+cos(x))^2, x/(x^2+2x+5)^2, x^2/(x^2+1)^2, sin(2x)/(1+cos(x)), e^x sin(x) cos(x), x e^x sin(x), cos(ln(x)). x^2/sqrt(x+1) and up, acos(x)^2. Left: atan(x)/x (no elementary answer).
 - [x] Integrals answer without the extra constants (ln(2abs(1+x^2))/2)
 - [x] Average value, area between curves, the mean value theorem (and Rolle's) and continuity at a point, average(, area(, mvt( and continuous(
+- [x] Finding f from f' or f'' and its starting values, initial(
 - [x] Absolute maximum and minimum on a closed interval, the ends plus where f' is 0 or isn't there, absolute(
 - [x] Volume of a solid of revolution, discs, washers and shells about y=c or x=c, with the integral set up above the answer, volume(
 - [ ] Newton's method, the limit definition of the *dih*rivative and Riemann sums

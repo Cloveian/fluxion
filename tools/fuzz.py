@@ -1,6 +1,6 @@
 # random expressions through build-pc/fluxion, checked numerically against sympy
-# usage: python3 tools/fuzz.py [count] [seed] [pos|any] [simplify|expand|factor|derivative|integral|solve|limit|critical|system|tangent|extrema|inflect|increasing|implicit|average|area|mvt|continuous|volume|absolute] [-v]   (pos = letters only get positive test points)
-# the last eleven run the app itself (build-pc/fluxion-app, FLX_ANSWER prints what it says) and check that against sympy
+# usage: python3 tools/fuzz.py [count] [seed] [pos|any] [simplify|expand|factor|derivative|integral|solve|limit|critical|system|tangent|extrema|inflect|increasing|implicit|average|area|mvt|continuous|volume|absolute|initial] [-v]   (pos = letters only get positive test points)
+# the last twelve run the app itself (build-pc/fluxion-app, FLX_ANSWER prints what it says) and check that against sympy
 import os, random, re, subprocess, sys, tempfile
 import sympy as sp
 from sympy.parsing.sympy_parser import parse_expr, standard_transformations, implicit_multiplication_application, convert_xor
@@ -272,7 +272,7 @@ def critical_check(f_str, roots):
         return f"missed or extra: want {tv}"
     return None
 
-APP = ("tangent", "extrema", "inflect", "increasing", "implicit", "average", "area", "mvt", "continuous", "volume", "absolute")
+APP = ("tangent", "extrema", "inflect", "increasing", "implicit", "average", "area", "mvt", "continuous", "volume", "absolute", "initial")
 
 def gen_implicit():
     a, b = nz(2, 9), nz(2, 9)
@@ -508,6 +508,30 @@ def absolute_check(f, a, b, lines, roots=None):
             return f"{kind} should be at {ends}, got {got[kind]}"
     return None
 
+def initial_check(g, order, conds, lines):
+    # f from f' or f'' and its conditions, sympy solves for the constants and the two are compared at a few points
+    C0, C1 = sp.symbols("C0 C1")
+    G1 = sp.integrate(g, X)
+    if order == 1:
+        F = G1 + C0
+        eqs = [F.subs(X, conds[0]) - conds[1]]
+    else:
+        F = sp.integrate(G1, X) + C1 * X + C0
+        a, A = conds[0], conds[1]
+        eqs = [F.subs(X, a) - A, (sp.diff(F, X).subs(X, a) - conds[2]) if len(conds) == 3 else (F.subs(X, conds[2]) - conds[3])]
+    sol = sp.solve(eqs, [C0, C1] if order == 2 else [C0], dict=True)[0]
+    want = F.subs(sol)
+    if len(lines) != 1:
+        return f"said {lines}"
+    m = re.match(r"(?i)^f\s*=(.*)$", lines[0][1])
+    if not m:
+        return f"can't read {lines[0][1]}"
+    got = to_sympy(m.group(1))
+    for px in (-2.5, 0.5, 1.5, 3.25):
+        if far(complex(got.subs(X, px)).real, float(want.subs(X, px)), 1e-6):
+            return f"want {want}, got {m.group(1)}"
+    return None
+
 def volume_want(f, g, a, b, c, shells):
     # exact, a polynomial integrand a gap at a time (gaps cut at the crossings), the radius on top read off in the middle
     ds = [f - g] if shells else [f - g, f - c, g - c]
@@ -631,6 +655,17 @@ for i in range(count):
                 label = f"{label} and {other}" + (f" from {bounds[0]} to {bounds[1]}" if bounds else "")
                 lines = app_answers(call)
                 problem = area_check(f, g, bounds, lines)
+            elif cmd == "initial":
+                label = gen_poly(random.choice([1, 2, 3]))
+                g = to_sympy(label)
+                order = random.choice([1, 2, 2, 2])
+                a = nz(-3, 3)
+                conds = [a, nz(-9, 9)]
+                if order == 2:
+                    conds += [nz(-9, 9)] if random.random() < 0.5 else [a + nz(1, 3), nz(-9, 9)]
+                lines = app_answers(f"initial({app_text(label)},{order},{','.join(str(c) for c in conds)})")
+                label = f"f{chr(39) * order} = {label}, {conds}"
+                problem = initial_check(g, order, conds, lines)
             elif cmd == "absolute":
                 label = gen_poly(random.choice([2, 3, 3, 4]))
                 f = to_sympy(label)
