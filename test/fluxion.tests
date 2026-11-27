@@ -1120,6 +1120,10 @@ simplify; integral(1/(1+cos(X)),X,-4,4); integral(1/(cos(X)+1),X,-4,4)
 simplify; integral(1/(2+cos(X)),X,-2pi,2pi); integral(1/(cos(X)+2),X,-2pi,2pi)
 simplify; integral(1/(3+sin(X)),X,-6,-2); integral(1/(sin(X)+3),X,-6,-2)
 simplify; integral(1/(2+cos(X)),X,0,3); (2sqrt(3)atan(sqrt(3)tan(3/2)/3))/3
+#sin(x)^2 + cos(x)^2 is 1, it was picked as the u of a substitution and its slope 0 went under the integrand (1/0)
+simplify; integral(1/(sin(X)^2+cos(X)^2),X); X
+simplify; integral(1/(sin(X)^2+cos(X)^2+1),X,0,1); 1/2
+simplify; integral(X/(sin(X)^2+cos(X)^2),X,0,2); 2
 #tan(x) - sec(x) has holes at pi/2 and no jump there, so it still comes out
 simplify; integral(1/(1+sin(X)),X,1,2); tan(2)+sec(1)_sec(2)_tan(1)
 simplify; integral(1/(1+cos(X)),X,-1,1); 2csc(1)_2cot(1)

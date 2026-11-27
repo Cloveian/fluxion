@@ -444,7 +444,7 @@ static bool high_even_power(pcas_ast_t *e, pcas_ast_t *x) {
 
 /*u = some piece g where f/g' is all g, 2x cos(x^2) is cos(u) with u = x^2. the integral of f dx becomes the one of f/g' du*/
 static const char *usub(pcas_ast_t *e, subs_t *subs) {
-    pcas_ast_t *f = ast_ChildGet(e, 0), *x = ast_ChildGet(e, 1), *cand[CANDS_MAX], *g, *q, *u, *sq = NULL;
+    pcas_ast_t *f = ast_ChildGet(e, 0), *x = ast_ChildGet(e, 1), *cand[CANDS_MAX], *g, *q, *u, *d, *sq = NULL;
     unsigned short how = SIMP_ALL; /*the identity passes were most of the time on a plain fraction, nothing in it for them*/
     int n, i;
 
@@ -457,7 +457,12 @@ static const char *usub(pcas_ast_t *e, subs_t *subs) {
     if(n < CANDS_MAX && high_even_power(f, x) && (sq = ast_MakeBinary(OP_POW, ast_Copy(x), ast_MakeInt(2))) != NULL)
         cand[n++] = sq; /*tried last*/
     for(i = 0; i < n && !pcas_cancelled; i++) {
-        q = ast_MakeBinary(OP_DIV, ast_Copy(f), slope_of(cand[i], x));
+        d = slope_of(cand[i], x);
+        if(d != NULL && is_ast_int(d, 0)) { /*sin(x)^2 + cos(x)^2 never moves, dividing by its slope is 1/0*/
+            ast_Cleanup(d);
+            continue;
+        }
+        q = ast_MakeBinary(OP_DIV, ast_Copy(f), d);
         g = ast_Copy(cand[i]);
         simplify(q, how);
         simplify(g, how); /*how it looks in q now, x^2+1 or 1+x^2*/
