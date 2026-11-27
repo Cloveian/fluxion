@@ -63,6 +63,7 @@ Everything Fluxion does right now, as tables. Yes / partly / no first, the other
 | Average value                | yes\* |
 | Area between curves          | yes\* |
 | Volume of revolution         | yes\* |
+| Riemann sums (n up to 50)    | yes\* |
 | f from f' or f''             | yes\* |
 | Mean value theorem, Rolle    | yes\* |
 | Continuity at a point        | yes\* |

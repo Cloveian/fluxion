@@ -1,6 +1,6 @@
 # random expressions through build-pc/fluxion, checked numerically against sympy
-# usage: python3 tools/fuzz.py [count] [seed] [pos|any] [simplify|expand|factor|derivative|integral|solve|limit|critical|system|tangent|extrema|inflect|increasing|implicit|average|area|mvt|continuous|volume|absolute|initial|normal] [-v]   (pos = letters only get positive test points)
-# the last thirteen run the app itself (build-pc/fluxion-app, FLX_ANSWER prints what it says) and check that against sympy
+# usage: python3 tools/fuzz.py [count] [seed] [pos|any] [simplify|expand|factor|derivative|integral|solve|limit|critical|system|tangent|extrema|inflect|increasing|implicit|average|area|mvt|continuous|volume|absolute|initial|normal|riemann] [-v]   (pos = letters only get positive test points)
+# the last fourteen run the app itself (build-pc/fluxion-app, FLX_ANSWER prints what it says) and check that against sympy
 import os, random, re, subprocess, sys, tempfile
 import sympy as sp
 from sympy.parsing.sympy_parser import parse_expr, standard_transformations, implicit_multiplication_application, convert_xor
@@ -272,7 +272,7 @@ def critical_check(f_str, roots):
         return f"missed or extra: want {tv}"
     return None
 
-APP = ("tangent", "extrema", "inflect", "increasing", "implicit", "average", "area", "mvt", "continuous", "volume", "absolute", "initial", "normal")
+APP = ("tangent", "extrema", "inflect", "increasing", "implicit", "average", "area", "mvt", "continuous", "volume", "absolute", "initial", "normal", "riemann")
 
 def gen_implicit():
     a, b = nz(2, 9), nz(2, 9)
@@ -537,6 +537,14 @@ def initial_check(g, order, conds, lines):
             return f"want {want}, got {m.group(1)}"
     return None
 
+def riemann_check(f, a, b, n, side, lines):
+    # n rectangles, heights from the left ends, middles or right ends, summed exactly
+    w = sp.Rational(b - a, n)
+    want = sum(f.subs(X, a + (i + sp.Rational(side + 1, 2)) * w) for i in range(n)) * w
+    m = re.match(r"(?i)^sum\s*=(.*)$", lines[0][1]) if len(lines) == 1 else None
+    gv = fval(to_sympy(m.group(1)), 0) if m else None
+    return None if gv is not None and not far(gv, float(want), 1e-9) else f"want {want}, got {lines}"
+
 def volume_want(f, g, a, b, c, shells):
     # exact, a polynomial integrand a gap at a time (gaps cut at the crossings), the radius on top read off in the middle
     ds = [f - g] if shells else [f - g, f - c, g - c]
@@ -671,6 +679,15 @@ for i in range(count):
                 lines = app_answers(f"initial({app_text(label)},{order},{','.join(str(c) for c in conds)})")
                 label = f"f{chr(39) * order} = {label}, {conds}"
                 problem = initial_check(g, order, conds, lines)
+            elif cmd == "riemann":
+                label = gen_poly(random.choice([1, 2, 3]))
+                f = to_sympy(label)
+                a = nz(-3, 1)
+                b = a + nz(1, 4)
+                n, side = random.randint(1, 8), random.choice([-1, 0, 1])
+                lines = app_answers(f"riemann({app_text(label)},{a},{b},{n},{side})")
+                label = f"{label} on [{a}, {b}], {n} rectangles, side {side}"
+                problem = riemann_check(f, a, b, n, side, lines)
             elif cmd == "absolute":
                 label = gen_poly(random.choice([2, 3, 3, 4]))
                 f = to_sympy(label)

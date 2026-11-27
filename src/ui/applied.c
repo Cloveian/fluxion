@@ -18,7 +18,7 @@
 
 #define ARGS_MAX 7
 
-enum { P_AVERAGE, P_AREA, P_MVT, P_CONTINUOUS, P_VOLUME, P_ABSOLUTE, P_INITIAL, P_COUNT };
+enum { P_AVERAGE, P_AREA, P_MVT, P_CONTINUOUS, P_VOLUME, P_ABSOLUTE, P_INITIAL, P_RIEMANN, P_COUNT };
 
 static const struct {
     const char *name, *usage;
@@ -31,6 +31,7 @@ static const struct {
     { "volume", "volume(f, g, a, b, y=c, x)", 5, 6 },
     { "absolute", "absolute(f, a, b, x)", 3, 4 },
     { "initial", "initial(f', 1, a, A, x) or (f'', 2, a, A, B, x) or (f'', 2, a, A, b, B, x)", 4, 7 },
+    { "riemann", "riemann(f, a, b, n, -1 left | 0 middle | 1 right, x)", 5, 6 },
 };
 
 /* is there an op node anywere in e, an integral the engine couldn't do or a limit it couldn't finish */
@@ -208,7 +209,51 @@ static bool edges_from(pcas_ast_t *d, Symbol var, double lo, double hi, pcas_ast
     return true;
 }
 
-/* the antiderivitive of e, worked out, no constant. NULL when it stays an integral */
+#define RIEMANN_MAX 50
+
+/* n rectanlges under f from a to b, heights from the left end (side -1), the middle (0) or the right end (1) of each. the sum worked out */
+static box_t *riemann(pcas_ast_t *f, pcas_ast_t *a, pcas_ast_t *b, pcas_ast_t *count, pcas_ast_t *side, Symbol var, const char **message) {
+    pcas_ast_t *width, *sum, *at, *k, *y;
+    double n, s, lo, hi;
+    box_t *out = NULL;
+    int i;
+
+    if(!approx_double(count, &n) || n < 1 || n > RIEMANN_MAX || n != floor(n) || !approx_double(side, &s) || (s != -1 && s != 0 && s != 1)) {
+        *message = "n is a whole number up to 50, the side -1 for left ends, 0 for middles, 1 for right ends";
+        return NULL;
+    }
+    if(!approx_double(a, &lo) || !approx_double(b, &hi)) {
+        *message = "the ends have to be numbers";
+        return NULL;
+    }
+    if(lo >= hi) {
+        *message = "a has to be less than b";
+        return NULL;
+    }
+    width = ast_MakeBinary(OP_DIV, minus(ast_Copy(b), ast_Copy(a)), ast_Copy(count));
+    sum = ast_MakeOperator(OP_ADD);
+    for(i = 0; i < (int)n && !pcas_cancelled; i++) {
+        /* a + (i + 0, 1/2 or 1) width */
+        k = ast_MakeBinary(OP_DIV, ast_MakeInt(2 * i + (int)s + 1), ast_MakeInt(2));
+        at = ast_MakeBinary(OP_ADD, ast_Copy(a), ast_MakeBinary(OP_MULT, k, ast_Copy(width)));
+        simplify(at, SIMP_ALL);
+        y = value_at(f, var, at);
+        ast_Cleanup(at);
+        ast_ChildAppend(sum, y);
+    }
+    if(!pcas_cancelled) {
+        sum = ast_MakeBinary(OP_MULT, sum, width);
+        width = NULL;
+        simplify(sum, SIMP_ALL);
+        out = labelled("sum =", value_box(sum));
+        layout_finish(out, &draw_font);
+    }
+    ast_Cleanup(width);
+    ast_Cleanup(sum);
+    return out;
+}
+
+/* the antiderivative of e, worked out, no constant. NULL when it stays an integral */
 static pcas_ast_t *antiderivative_of(pcas_ast_t *e, Symbol var) {
     pcas_ast_t *i = ast_MakeOperator(OP_INTEGRAL);
 
@@ -560,6 +605,8 @@ bool applied_run(const char *cmd, char *src, box_t *in) {
         out = volume(a[0], a[1], a[2], a[3], a[4], var, axis, &message);
     else if(c == P_ABSOLUTE)
         out = absolute(a[0], a[1], a[2], var, &message);
+    else if(c == P_RIEMANN)
+        out = riemann(a[0], a[1], a[2], a[3], a[4], var, &message);
     else if(c == P_INITIAL) {
         double order;
 
