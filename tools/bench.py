@@ -125,7 +125,9 @@ def has_score(command, chk):
         return "gaveup", why
     want, tol = float(sym(chk["want"]).evalf()), chk.get("tol", 1e-6)
     for _, text in lines:
-        for part in fuzz.top_split(re.sub(r"^[^=<>(]*=", "", text)):
+        # max(a, b) lines from extrema count as their parts
+        value = re.sub(r"^(max|min)\((.*)\)$", r"\2", re.sub(r"^[^=<>(]*=", "", text))
+        for part in fuzz.top_split(value):
             try:
                 v = fuzz.fval(fuzz.to_sympy(part), 0)
             except Exception:
