@@ -53,14 +53,17 @@ Everything Fluxion does right now, as tables. Yes / partly / no first, the other
 | Integrals                    | yes\* |
 | Numeric integrals (6 digits) | yes\* |
 | Limits                       | yes\* |
-| Tangent line                 | yes   |
+| Tangent line, normal line    | yes   |
 | Implicit derivatives         | yes\* |
 | Critical points              | yes\* |
 | Max, min, inflections        | yes\* |
+| Absolute max, min on [a, b]  | yes\* |
 | Up and down intervals        | yes   |
 | Taylor polynomials           | yes   |
 | Average value                | yes\* |
 | Area between curves          | yes\* |
+| Volume of revolution         | yes\* |
+| f from f' or f''             | yes\* |
 | Mean value theorem, Rolle    | yes\* |
 | Continuity at a point        | yes\* |
 | Sums and products            | yes\* |
