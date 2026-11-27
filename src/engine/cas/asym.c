@@ -88,6 +88,56 @@ int asym_ends(const asym_t *a, pcas_ast_t **out) {
     return n;
 }
 
+/*f at x + h as a number, false when it isn't one*/
+static bool value_near(pcas_ast_t *f, Symbol var, pcas_ast_t *x, int h, double *v) {
+    pcas_ast_t *e = ast_Copy(f), *s = ast_MakeSymbol(var);
+    pcas_ast_t *at = ast_MakeBinary(OP_ADD, ast_Copy(x), ast_MakeBinary(OP_DIV, ast_MakeInt(h), ast_MakeInt(1000)));
+    bool ok = false;
+
+    if(e != NULL && s != NULL && at != NULL) {
+        substitute(e, s, at);
+        ok = !pcas_cancelled && approx_double(e, v);
+    }
+    ast_Cleanup(e);
+    ast_Cleanup(s);
+    ast_Cleanup(at);
+    return ok;
+}
+
+/*domain's families of holes (tan's pi/2 + pi n): vertical where f is far off just beside the first one (n = 0), holes where it isn't*/
+static void family_holes(pcas_ast_t *f, Symbol var, asym_t *out) {
+    domain_t d;
+    pcas_ast_t *n0, *first, *nv;
+    double lo, hi;
+    int i;
+
+    if(!domain(f, var, &d)) {
+        domain_free(&d);
+        return;
+    }
+    for(i = 0; i < d.nholes && !pcas_cancelled; i++) {
+        if(!has_symbol(d.holes[i], SYM_N))
+            continue;
+        first = ast_Copy(d.holes[i]);
+        n0 = ast_MakeInt(0);
+        nv = ast_MakeSymbol(SYM_N);
+        if(first != NULL && n0 != NULL && nv != NULL)
+            substitute(first, nv, n0);
+        ast_Cleanup(n0);
+        ast_Cleanup(nv);
+        if(first != NULL && value_near(f, var, first, 1, &lo) && value_near(f, var, first, -1, &hi)) {
+            if(lo > 100 || lo < -100 || hi > 100 || hi < -100) {
+                if(out->nvert < SOLVE_MAX)
+                    out->vert[out->nvert++] = ast_Copy(d.holes[i]);
+            } else if(out->nholes < SOLVE_MAX) {
+                out->holes[out->nholes++] = ast_Copy(d.holes[i]);
+            }
+        }
+        ast_Cleanup(first);
+    }
+    domain_free(&d);
+}
+
 void asym_free(asym_t *a) {
     int i;
 
@@ -106,7 +156,7 @@ bool asym(pcas_ast_t *f, Symbol var, asym_t *out) {
     pcas_ast_t *top, *bot, *lead_t = NULL, *lead_b = NULL;
     pcas_ast_t *zeros[SOLVE_MAX];
     int n, i, dt, db;
-    bool exact;
+    bool exact, families = false;
 
     memset(out, 0, sizeof *out);
     for(i = 0; i < SOLVE_MAX; i++)
@@ -148,12 +198,18 @@ bool asym(pcas_ast_t *f, Symbol var, asym_t *out) {
         return false;
     }
     for(i = 0; i < n; i++) {
-        if(mult_at(top, var, zeros[i]) >= mult_at(bot, var, zeros[i]))
+        if(has_symbol(zeros[i], SYM_N)) { /*a whole family, family_holes judges those*/
+            ast_Cleanup(zeros[i]);
+            families = true;
+        } else if(mult_at(top, var, zeros[i]) >= mult_at(bot, var, zeros[i])) {
             out->holes[out->nholes++] = zeros[i];
-        else
+        } else {
             out->vert[out->nvert++] = zeros[i];
+        }
         zeros[i] = NULL;
     }
+    if(families || has_operator(f, OP_TAN) || has_operator(f, OP_SEC) || has_operator(f, OP_CSC) || has_operator(f, OP_COT))
+        family_holes(f, var, out);
 
     dt = poly_degree(top, var, &lead_t);
     db = poly_degree(bot, var, &lead_b);

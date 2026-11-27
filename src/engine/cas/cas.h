@@ -261,6 +261,8 @@ bool approx_double(pcas_ast_t *e, double *v);
 void fold_fraction(pcas_ast_t *e);
 /*Fluxion: is the symbol s anywhere in e*/
 bool has_symbol(const pcas_ast_t *e, Symbol s);
+/*Fluxion: the operator op anywhere in e (limit.c)*/
+bool has_operator(pcas_ast_t *e, OperatorType op);
 /*Fluxion: some bottom in e (a/b or b^-k with var in it) is 0 at root, any bottom with var in it when root is NULL (solve.c)*/
 bool bottom_zero(pcas_ast_t *e, Symbol var, pcas_ast_t *root);
 /*Fluxion: out[0..n) smallest first by the decimal, ones without one stay put (solve.c)*/

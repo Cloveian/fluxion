@@ -370,6 +370,11 @@ asym; e^X/(e^X+1); X; holes - | vert - | horiz 0,1 | slant -
 asym; sin(X)/X; X; holes 0 | vert - | horiz 0 | slant -
 asym; e^X/X; X; holes - | vert 0 | horiz 0 | slant -
 asym; e^(-X); X; holes - | vert - | horiz 0 | slant -
+#tan and friends: a whole family, vertical when f blows up beside the first one and a hole when it doesn't
+asym; tan(X); X; holes - | vert pi/2+Npi | horiz - | slant -
+asym; 1/cos(X); X; holes - | vert pi/2+Npi | horiz - | slant -
+asym; cos(X)tan(X); X; holes pi/2+Npi | vert - | horiz - | slant -
+asym; 1/sin(X); X; holes - | vert piN | horiz - | slant -
 
 #domain (domain; expression; variable; lower <x> | upper <x> | holes <x list>, o after a bound for open, - for none)
 domain; sqrt(X_2); X; lower 2 | upper - | holes -

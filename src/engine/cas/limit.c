@@ -481,14 +481,14 @@ static bool growth(pcas_ast_t *e, pcas_ast_t *var, deg_t *deg, pcas_ast_t **lead
 }
 
 /*op somewhere in e*/
-static bool has_op(pcas_ast_t *e, OperatorType op) {
+bool has_operator(pcas_ast_t *e, OperatorType op) {
     pcas_ast_t *c;
 
     if(isoptype(e, op))
         return true;
     if(e->type == NODE_OPERATOR)
         for(c = ast_ChildGet(e, 0); c != NULL; c = c->next)
-            if(has_op(c, op))
+            if(has_operator(c, op))
                 return true;
     return false;
 }
@@ -1243,7 +1243,7 @@ static pcas_ast_t *limit_of(pcas_ast_t *f, pcas_ast_t *var, pcas_ast_t *a, steps
         step(s, l, "a cos or sin is between -1 and 1, so times something that goes to 0 it's 0", ast_Copy(out));
         return out;
     }
-    if((g = ast_Copy(f)) != NULL && to_sincos(g, has_op(f, OP_TAN) && !defined_at(f, var, a)) && !pcas_cancelled) { /*cancelled leaves it unchagned, it'd go round forever*/
+    if((g = ast_Copy(f)) != NULL && to_sincos(g, has_operator(f, OP_TAN) && !defined_at(f, var, a)) && !pcas_cancelled) { /*cancelled leaves it unchagned, it'd go round forever*/
         steps_rule(l, "sec, csc and cot as sin and cos"); /*the recursion starts its own line*/
         out = limit_of(g, var, a, s, root, dir);
         ast_Cleanup(g);
