@@ -1959,10 +1959,10 @@ static bool fine_between(pcas_ast_t *e, pcas_ast_t *x, pcas_ast_t *pa, pcas_ast_
     }
 }
 
-/*a hole family h(N), pi/2 + pi N, has none in a to b. straight line in N or it's not trusted*/
-static bool family_clear(pcas_ast_t *h, double a, double b) {
+/*h(N) as v0 + per N, false when it isn't a straight line in N*/
+static bool family_line(pcas_ast_t *h, double *v0, double *per) {
     pcas_ast_t *n = ast_MakeSymbol(SYM_N), *k[3];
-    double v[3], per, first, lo;
+    double v[3];
     bool ok = n != NULL;
     int i;
 
@@ -1972,14 +1972,27 @@ static bool family_clear(pcas_ast_t *h, double a, double b) {
         ast_Cleanup(k[i]);
     }
     ast_Cleanup(n);
-    per = ok ? v[1] - v[0] : 0;
-    if(!ok || fabs(per) < 1e-9 || fabs(v[2] - 2 * v[1] + v[0]) > 1e-5 * (fabs(v[2]) + fabs(per)))
+    if(!ok)
         return false;
-    if(per < 0)
-        per = -per;
-    lo = a < b ? a : b;
-    first = v[0] + ceil((lo - v[0]) / per - 1e-6) * per;
-    return first > (a < b ? b : a) + 1e-6 * (fabs(first) + per); /*floats, so the slack scales with the numbers*/
+    *v0 = v[0];
+    *per = v[1] - v[0];
+    return fabs(*per) >= 1e-9 && fabs(v[2] - 2 * v[1] + v[0]) <= 1e-5 * (fabs(v[2]) + fabs(*per));
+}
+
+/*first member at or past the lower of a and b, and the spacing*/
+static void family_first(double v0, double per, double a, double b, double *first, double *gap) {
+    *gap = fabs(per);
+    *first = v0 + ceil(((a < b ? a : b) - v0) / *gap - 1e-6) * *gap;
+}
+
+/*a hole family h(N), pi/2 + pi N, has none in a to b. straight line in N or it's not trusted*/
+static bool family_clear(pcas_ast_t *h, double a, double b) {
+    double v0, per, first, gap;
+
+    if(!family_line(h, &v0, &per))
+        return false;
+    family_first(v0, per, a, b, &first, &gap);
+    return first > (a < b ? b : a) + 1e-6 * (fabs(first) + gap); /*floats, so the slack scales with the numbers*/
 }
 
 /*f defined the whole way from a to b, so F(b) - F(a) is the area. 1/x^2 from -1 to 1 would come out -2.
@@ -2017,6 +2030,62 @@ static bool defined_between(pcas_ast_t *I) {
     }
     domain_free(&d);
     return ok;
+}
+
+/*F at the kth member of h(N), moved 1/100 to a side (-1 or 1)*/
+static bool beside_hole(pcas_ast_t *F, pcas_ast_t *x, pcas_ast_t *h, int k, int side, double *v) {
+    pcas_ast_t *n = ast_MakeSymbol(SYM_N), *at = ast_Copy(h), *kn = ast_MakeInt(k), *p;
+    bool ok = false;
+
+    if(n != NULL && at != NULL && kn != NULL) {
+        substitute(at, n, kn);
+        p = ast_MakeBinary(OP_ADD, at, ast_MakeBinary(OP_DIV, ast_MakeInt(side), ast_MakeInt(100)));
+        at = NULL; /*p has it*/
+        ok = p != NULL && float_at(F, x, p, v) && fabs(*v) < 1e30;
+        ast_Cleanup(p);
+    }
+    ast_Cleanup(n);
+    ast_Cleanup(at);
+    ast_Cleanup(kn);
+    return ok;
+}
+
+/*F's two sides of the kth member of h(N) come out close. 1/100 away cuz the floats go bad closer in, tan(x) - sec(x) was off by 8e-3 at 1/100000*/
+static bool continuous_at(pcas_ast_t *F, pcas_ast_t *x, pcas_ast_t *h, int k) {
+    double l, r;
+
+    return beside_hole(F, x, h, k, -1, &l) && beside_hole(F, x, h, k, 1, &r) && fabs(r - l) <= 5e-2 * (1 + fabs(l));
+}
+
+/*F has a hole family of its own (tan(x/2) from 1/(2+cos(x))) and jumps at a member between a and b, so F(b) - F(a) isn't the area. tan(x) - sec(x) has holes too but no jump. a memeber right at a or b counts as one, F isnt there*/
+static bool jumps_between(pcas_ast_t *I, pcas_ast_t *F) {
+    pcas_ast_t *x = ast_ChildGet(I, 1);
+    domain_t d;
+    double a, b, v0, per, m, gap, lo, hi, slack;
+    bool jump = false;
+    int i, j, k;
+
+    if(!approx_double(ast_ChildGet(I, 2), &a) || !approx_double(ast_ChildGet(I, 3), &b)
+       || !domain(F, x->op.symbol, &d))
+        return false;
+    lo = a < b ? a : b;
+    hi = a < b ? b : a;
+    for(i = 0; i < d.nholes && !jump; i++) {
+        if(!has_symbol(d.holes[i], SYM_N) || family_clear(d.holes[i], a, b))
+            continue;
+        if(!family_line(d.holes[i], &v0, &per)) {
+            jump = true;
+            continue;
+        }
+        family_first(v0, per, a, b, &m, &gap);
+        for(j = 0; m <= hi + 1e-6 * (fabs(m) + gap) && !jump; j++, m += gap) {
+            slack = 1e-6 * (fabs(m) + gap);
+            k = (int)floor((m - v0) / per + 0.5); /*which N it is, 8 members is as many as it looks at*/
+            jump = j == 8 || fabs(m - lo) < slack || fabs(m - hi) < slack || !continuous_at(F, x, d.holes[i], k);
+        }
+    }
+    domain_free(&d);
+    return jump;
 }
 
 /*F(b) - F(a), F taken. the pluged in line, then what it comes to*/
@@ -2131,6 +2200,10 @@ bool eval_integral_nodes(pcas_ast_t *e) {
     }
     if((F = integral_of(e, NULL)) == NULL)
         return changed;
+    if(ast_ChildLength(e) == 4 && jumps_between(e, F)) {
+        ast_Cleanup(F);
+        return changed;
+    }
     if(ast_ChildLength(e) == 4 && (F = between(e, F, NULL)) == NULL)
         return changed;
     simplify(F, SIMP_ALL);
@@ -2146,6 +2219,11 @@ bool steps_integral(pcas_ast_t *I, steps_t *out) {
     out->n = 0;
     if(!isoptype(I, OP_INTEGRAL) || ast_ChildGet(I, 1)->type != NODE_SYMBOL || (k != 2 && k != 4)
        || (k == 4 && !defined_between(I)) || (F = integral_of(I, out)) == NULL) {
+        steps_free(out);
+        return false;
+    }
+    if(k == 4 && jumps_between(I, F)) {
+        ast_Cleanup(F);
         steps_free(out);
         return false;
     }
