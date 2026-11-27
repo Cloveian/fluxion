@@ -1,6 +1,6 @@
 # random expressions through build-pc/fluxion, checked numerically against sympy
-# usage: python3 tools/fuzz.py [count] [seed] [pos|any] [simplify|expand|factor|derivative|integral|solve|limit|critical|system|tangent|extrema|inflect|increasing|implicit|average|area|mvt|continuous|volume] [-v]   (pos = letters only get positive test points)
-# the last ten run the app itself (build-pc/fluxion-app, FLX_ANSWER prints what it says) and check that against sympy
+# usage: python3 tools/fuzz.py [count] [seed] [pos|any] [simplify|expand|factor|derivative|integral|solve|limit|critical|system|tangent|extrema|inflect|increasing|implicit|average|area|mvt|continuous|volume|absolute] [-v]   (pos = letters only get positive test points)
+# the last eleven run the app itself (build-pc/fluxion-app, FLX_ANSWER prints what it says) and check that against sympy
 import os, random, re, subprocess, sys, tempfile
 import sympy as sp
 from sympy.parsing.sympy_parser import parse_expr, standard_transformations, implicit_multiplication_application, convert_xor
@@ -272,7 +272,7 @@ def critical_check(f_str, roots):
         return f"missed or extra: want {tv}"
     return None
 
-APP = ("tangent", "extrema", "inflect", "increasing", "implicit", "average", "area", "mvt", "continuous", "volume")
+APP = ("tangent", "extrema", "inflect", "increasing", "implicit", "average", "area", "mvt", "continuous", "volume", "absolute")
 
 def gen_implicit():
     a, b = nz(2, 9), nz(2, 9)
@@ -486,6 +486,28 @@ def area_check(f, g, bounds, lines):
     gv = fval(to_sympy(m.group(1)), 0) if m else None
     return None if gv is not None and not far(gv, want, 1e-6) else f"want {want:.6g}, got {text}"
 
+def absolute_check(f, a, b, lines, roots=None):
+    # the ends and the real roots of f' in between (roots when the caller has them, f a polynimial otherwise), the biggest and smallest of f at those, and every point that gets there
+    pts = [a, b] + (poly_roots(sp.expand(sp.diff(f, X)), a, b) if roots is None else roots)
+    vals = [float(f.subs(X, p)) for p in pts]
+    top, bottom = max(vals), min(vals)
+    got = {"max": [], "min": []}
+    for _, text in lines:
+        m = re.match(r"(?i)^absolute (max|min)\((.*)\)$", text)
+        if not m:
+            return f"can't read {text}"
+        x, y = (fval(to_sympy(p), 0) for p in top_split(m.group(2)))
+        if x is None or y is None:
+            return f"can't read {text}"
+        got[m.group(1).lower()].append((x, y))
+    for kind, want in (("max", top), ("min", bottom)):
+        ends = [p for p, v in zip(pts, vals) if not far(v, want, 1e-9)]
+        if not got[kind] or any(far(y, want, 1e-6) for _, y in got[kind]):
+            return f"{kind} should be {want:.6g}, got {got[kind]}"
+        if len({round(float(p), 6) for p in ends}) != len({round(x, 6) for x, _ in got[kind]}) and top != bottom:
+            return f"{kind} should be at {ends}, got {got[kind]}"
+    return None
+
 def volume_want(f, g, a, b, c, shells):
     # exact, a polynomial integrand a gap at a time (gaps cut at the crossings), the radius on top read off in the middle
     ds = [f - g] if shells else [f - g, f - c, g - c]
@@ -609,6 +631,14 @@ for i in range(count):
                 label = f"{label} and {other}" + (f" from {bounds[0]} to {bounds[1]}" if bounds else "")
                 lines = app_answers(call)
                 problem = area_check(f, g, bounds, lines)
+            elif cmd == "absolute":
+                label = gen_poly(random.choice([2, 3, 3, 4]))
+                f = to_sympy(label)
+                a = nz(-3, 1)
+                b = a + nz(1, 4)
+                lines = app_answers(f"absolute({app_text(label)},{a},{b})")
+                label = f"{label} on [{a}, {b}]"
+                problem = absolute_check(f, a, b, lines)
             elif cmd == "volume":
                 # no cubics, their crossings are Cardano roots and the answer swells like area's does
                 label, other = gen_poly(random.choice([1, 2, 2])), random.choice(["0", gen_poly(random.choice([1, 2]))])

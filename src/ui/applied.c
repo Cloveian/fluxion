@@ -18,7 +18,7 @@
 
 #define ARGS_MAX 6
 
-enum { P_AVERAGE, P_AREA, P_MVT, P_CONTINUOUS, P_VOLUME, P_COUNT };
+enum { P_AVERAGE, P_AREA, P_MVT, P_CONTINUOUS, P_VOLUME, P_ABSOLUTE, P_COUNT };
 
 static const struct {
     const char *name, *usage;
@@ -29,6 +29,7 @@ static const struct {
     { "mvt", "mvt(f, a, b, x)", 3, 4 },
     { "continuous", "continuous(f, a, x)", 2, 3 },
     { "volume", "volume(f, g, a, b, y=c, x)", 5, 6 },
+    { "absolute", "absolute(f, a, b, x)", 3, 4 },
 };
 
 static bool same(double a, double b) {
@@ -220,6 +221,83 @@ static bool edges_from(pcas_ast_t *d, Symbol var, double lo, double hi, pcas_ast
     for(i = 0; i < found; i++)
         edge[(*n)++] = roots[i];
     return true;
+}
+
+/* the biggest and smallest f gets on [a, b]: at the ends, where f' is 0 and where f' isn't there (a corner). a line each, every point that gets there */
+static box_t *absolute(pcas_ast_t *f, pcas_ast_t *a, pcas_ast_t *b, Symbol var, const char **message) {
+    pcas_ast_t *d, *x, *cand[2 * SOLVE_MAX + 2], *y[2 * SOLVE_MAX + 2], *roots[SOLVE_MAX] = { NULL };
+    double lo, hi, t, v[2 * SOLVE_MAX + 2], top, bottom, at[2];
+    const char *name[2] = { "absolute max", "absolute min" };
+    int n = 0, made = 0, found, i, k;
+    domain_t corners;
+    bool ok;
+    box_t *col = NULL;
+
+    if(!approx_double(a, &lo) || !approx_double(b, &hi)) {
+        *message = "the ends have to be numbers";
+        return NULL;
+    }
+    if(lo >= hi) {
+        *message = "a has to be less than b";
+        return NULL;
+    }
+    x = ast_MakeSymbol((char)var);
+    ok = x != NULL && defined_across(f, x, a, b);
+    ast_Cleanup(x);
+    if(!ok) {
+        *message = "f has a break in there, it has to be defined all the way from a to b";
+        return NULL;
+    }
+    d = derive(f, var, 1);
+    if(d == NULL)
+        return NULL;
+    found = roots_between(d, var, true, lo, hi, roots);
+    if(found < 0 && found != SOLVE_ALL) {
+        *message = "can't solve where the slope is 0";
+        ast_Cleanup(d);
+        return NULL;
+    }
+    cand[n++] = ast_Copy(a);
+    cand[n++] = ast_Copy(b);
+    for(i = 0; i < found; i++)
+        cand[n++] = roots[i];
+    if(domain(d, var, &corners)) { /* where f' isn't there, |x| at 0 */
+        for(i = 0; i < corners.nholes && n < 2 * SOLVE_MAX + 2; i++)
+            if(approx_double(corners.holes[i], &t) && between(t, lo, hi))
+                cand[n++] = ast_Copy(corners.holes[i]);
+    }
+    domain_free(&corners);
+    for(i = 0, ok = true; i < n && ok; i++) {
+        y[i] = value_at(f, var, cand[i]);
+        made = i + 1;
+        ok = !pcas_cancelled && approx_double(y[i], &v[i]);
+    }
+    if(!ok) {
+        *message = "can't work out f at one of the points";
+    } else {
+        top = bottom = v[0];
+        for(i = 1; i < n; i++) {
+            top = v[i] > top ? v[i] : top;
+            bottom = v[i] < bottom ? v[i] : bottom;
+        }
+        at[0] = top;
+        at[1] = bottom;
+        col = layout_box(BOX_COL, 0);
+        for(k = 0; k < 2; k++)
+            for(i = 0; i < n; i++)
+                if(same(v[i], at[k])) {
+                    layout_add(col, labelled(name[k], point_box(cand[i], y[i])));
+                    if(same(top, bottom))
+                        break; /* level everywhere, the max and the min are the same lines */
+                }
+        layout_finish(col, &draw_font);
+    }
+    for(i = 0; i < n; i++)
+        ast_Cleanup(cand[i]);
+    for(i = 0; i < made; i++)
+        ast_Cleanup(y[i]);
+    ast_Cleanup(d);
+    return col;
 }
 
 /* a shell's |x - c| |f - g|. right is x past c, flip is f under g there */
@@ -451,6 +529,8 @@ bool applied_run(const char *cmd, char *src, box_t *in) {
         out = area(a[0], a[1], parsed > 3 ? a[2] : NULL, parsed > 3 ? a[3] : NULL, var, &message);
     else if(c == P_VOLUME)
         out = volume(a[0], a[1], a[2], a[3], a[4], var, axis, &message);
+    else if(c == P_ABSOLUTE)
+        out = absolute(a[0], a[1], a[2], var, &message);
     else if(c == P_MVT)
         out = mean_value(a[0], a[1], a[2], var, &message);
     else

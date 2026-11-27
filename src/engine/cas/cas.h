@@ -279,6 +279,8 @@ bool approx(pcas_ast_t *e);
 bool approx_float(pcas_ast_t *e, double *x);
 /*Fluxion: e with x = pt as a float (integrate.c, numsolve.c)*/
 bool float_at(pcas_ast_t *e, pcas_ast_t *x, pcas_ast_t *pt, double *v);
+/*Fluxion: f in the letter x defined the whole way from pa to pb (integrate.c). false for a hole or a bound in between, or when that can't be told*/
+bool defined_across(pcas_ast_t *f, pcas_ast_t *x, pcas_ast_t *pa, pcas_ast_t *pb);
 /*Fluxion: the same over the complex numbers, principal powers and roots. for checking a complex root*/
 bool approx_complex(pcas_ast_t *e, double *re, double *im);
 

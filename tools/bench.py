@@ -178,6 +178,19 @@ def region_score(command):
             return "wrong", f"{key}: want {vals}, got {got.get(key, [])} ({text})"
     return "right", text
 
+def absolute_score(command):
+    # absolute(f, a, b): sympy's critical points of f in the open interval, then fuzz.py's check of the lines
+    args = fuzz.top_split(command[len("absolute("):-1])
+    f, a, b = fuzz.to_sympy(args[0]), int(fuzz.to_sympy(args[1])), int(fuzz.to_sympy(args[2]))
+    lines, why = app_lines(command)
+    if lines is None:
+        return "gaveup", why
+    inner = sp.Interval.open(a, b)
+    roots = [float(r) for r in sp.solveset(sp.diff(f, fuzz.X), fuzz.X, inner) if r.is_real]
+    problem = fuzz.absolute_check(f, a, b, lines, roots)
+    text = " | ".join(t for _, t in lines)
+    return ("wrong", f"{text}: {problem}") if problem else ("right", text)
+
 def volume_score(command, chk):
     # the V = line against the book's value
     lines, why = app_lines(command)
@@ -293,6 +306,8 @@ def score(item):
             return has_score(cmds[0], chk)
         if kind == "volume":
             return volume_score(cmds[0], chk)
+        if kind == "absolute":
+            return absolute_score(cmds[0])
         if kind in APP_KINDS:
             return app_score(cmds[0])
         if kind == "simplify":

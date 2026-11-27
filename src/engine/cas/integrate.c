@@ -1997,14 +1997,13 @@ static bool family_clear(pcas_ast_t *h, double a, double b) {
 
 /*f defined the whole way from a to b, so F(b) - F(a) is the area. 1/x^2 from -1 to 1 would come out -2.
 false for a hole or a bound in between, or anything domain can't pin down that fine_between can't either*/
-static bool defined_between(pcas_ast_t *I) {
+bool defined_across(pcas_ast_t *f, pcas_ast_t *x, pcas_ast_t *pa, pcas_ast_t *pb) {
     domain_t d;
     double a, b, t, h;
     bool ok;
     int i;
 
-    if(!approx_double(ast_ChildGet(I, 2), &a) || !approx_double(ast_ChildGet(I, 3), &b)
-       || !domain(ast_ChildGet(I, 0), ast_ChildGet(I, 1)->op.symbol, &d))
+    if(!approx_double(pa, &a) || !approx_double(pb, &b) || !domain(f, x->op.symbol, &d))
         return false;
     if(a > b) {
         t = a;
@@ -2012,12 +2011,8 @@ static bool defined_between(pcas_ast_t *I) {
         b = t;
     }
     ok = !d.empty;
-    if(ok && d.partial) { /*and f there at both ends, 1/sqrt(9-x^2) at 3 isn't*/
-        pcas_ast_t *f = ast_ChildGet(I, 0), *x = ast_ChildGet(I, 1);
-
-        ok = fine_between(f, x, ast_ChildGet(I, 2), ast_ChildGet(I, 3))
-             && float_at(f, x, ast_ChildGet(I, 2), &h) && float_at(f, x, ast_ChildGet(I, 3), &h);
-    }
+    if(ok && d.partial) /*and f there at both ends, 1/sqrt(9-x^2) at 3 isn't*/
+        ok = fine_between(f, x, pa, pb) && float_at(f, x, pa, &h) && float_at(f, x, pb, &h);
     if(ok && d.lower != NULL)
         ok = approx_double(d.lower, &h) && (d.lower_open ? a > h : a >= h);
     if(ok && d.upper != NULL)
@@ -2030,6 +2025,10 @@ static bool defined_between(pcas_ast_t *I) {
     }
     domain_free(&d);
     return ok;
+}
+
+static bool defined_between(pcas_ast_t *I) {
+    return defined_across(ast_ChildGet(I, 0), ast_ChildGet(I, 1), ast_ChildGet(I, 2), ast_ChildGet(I, 3));
 }
 
 /*F at the kth member of h(N), moved 1/100 to a side (-1 or 1)*/
