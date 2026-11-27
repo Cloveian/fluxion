@@ -1810,13 +1810,13 @@ static ed_row_t *row_from_text(const char *text) {
         if(*text == ' ' || *text == '\t' || *text == '\n' || *text == '\r')
             continue;
         if(isalpha((unsigned char)*text)) {
-            /* a function name (2+ letters, ( after), pi, e and i stay lowercase, any other letter is a variable, capital in the engine. x(x+68) is x times the bracket */
+            /* a function name (2+ letters, ( after), pi, inf, e and i stay lowercase, any other letter is a variable, capital in the engine. x(x+68) is x times the bracket */
             const char *end = text;
             bool lower;
 
             while(isalpha((unsigned char)*end))
                 end++;
-            lower = (*end == '(' && end - text > 1) || (end - text == 2 && strncmp(text, "pi", 2) == 0) || (end - text == 1 && (*text == 'e' || *text == 'i'));
+            lower = (*end == '(' && end - text > 1) || (end - text == 2 && strncmp(text, "pi", 2) == 0) || (end - text == 3 && strncmp(text, "inf", 3) == 0) || (end - text == 1 && (*text == 'e' || *text == 'i'));
             for(; text < end; text++)
                 engine[n++] = lower ? *text : (char)toupper((unsigned char)*text);
             text--;
