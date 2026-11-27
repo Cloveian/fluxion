@@ -1,6 +1,6 @@
 # random expressions through build-pc/fluxion, checked numerically against sympy
-# usage: python3 tools/fuzz.py [count] [seed] [pos|any] [simplify|expand|factor|derivative|integral|solve|limit|critical|system|tangent|extrema|inflect|increasing|implicit|average|area|mvt|continuous|volume|absolute|initial] [-v]   (pos = letters only get positive test points)
-# the last twelve run the app itself (build-pc/fluxion-app, FLX_ANSWER prints what it says) and check that against sympy
+# usage: python3 tools/fuzz.py [count] [seed] [pos|any] [simplify|expand|factor|derivative|integral|solve|limit|critical|system|tangent|extrema|inflect|increasing|implicit|average|area|mvt|continuous|volume|absolute|initial|normal] [-v]   (pos = letters only get positive test points)
+# the last thirteen run the app itself (build-pc/fluxion-app, FLX_ANSWER prints what it says) and check that against sympy
 import os, random, re, subprocess, sys, tempfile
 import sympy as sp
 from sympy.parsing.sympy_parser import parse_expr, standard_transformations, implicit_multiplication_application, convert_xor
@@ -272,7 +272,7 @@ def critical_check(f_str, roots):
         return f"missed or extra: want {tv}"
     return None
 
-APP = ("tangent", "extrema", "inflect", "increasing", "implicit", "average", "area", "mvt", "continuous", "volume", "absolute", "initial")
+APP = ("tangent", "extrema", "inflect", "increasing", "implicit", "average", "area", "mvt", "continuous", "volume", "absolute", "initial", "normal")
 
 def gen_implicit():
     a, b = nz(2, 9), nz(2, 9)
@@ -319,14 +319,19 @@ def tangent_point(f):
     random.shuffle(pts)
     return next((a for a in pts if fval(f, a) is not None and fval(d, a) is not None), None)
 
-def tangent_check(f, a, lines):
+def tangent_check(f, a, lines, normal=False):
     if len(lines) != 1 or lines[0][0] != "answer":
         return f"said {lines}"
+    slope = sp.diff(f, X).subs(X, a)
+    if normal and slope == 0:    # straight up
+        got = re.match(r"^[Xx]\s*=(.*)$", lines[0][1])
+        gv = fval(to_sympy(got.group(1)), 0) if got else None
+        return None if gv is not None and not far(gv, float(a), 1e-9) else f"want x = {a}, got {lines[0][1]}"
     m = re.match(r"^[Yy]\s*=(.*)$", lines[0][1])
     if not m:
         return f"no y = in {lines[0][1]}"
-    g, d = to_sympy(m.group(1)), sp.diff(f, X)
-    want = f.subs(X, a) + d.subs(X, a) * (X - a)
+    g = to_sympy(m.group(1))
+    want = f.subs(X, a) - (X - a) / slope if normal else f.subs(X, a) + slope * (X - a)
     for px in (-3.1, -1.3, 0.7, 2.2):
         gv, wv = fval(g, px), fval(want, px)
         if gv is None or wv is None or far(gv, wv):
@@ -695,13 +700,13 @@ for i in range(count):
             else:
                 label = gen_fn()
                 f = to_sympy(label)
-                if cmd == "tangent":
+                if cmd in ("tangent", "normal"):
                     a = tangent_point(f)
                     if a is None:
                         skipped += 1; why.append((label, "no point to take it at")); continue
-                    lines = app_answers(f"tangent({app_text(label)},{a},x)")
+                    lines = app_answers(f"{cmd}({app_text(label)},{a},x)")
                     label = f"{label} at {a}"
-                    problem = tangent_check(f, a, lines)
+                    problem = tangent_check(f, a, lines, cmd == "normal")
                 else:
                     lines = app_answers(f"{cmd}({app_text(label)},x)")
                     problem = increasing_check(f, lines) if cmd == "increasing" else turning_check(f, lines, cmd == "inflect")

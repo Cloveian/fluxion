@@ -15,7 +15,7 @@
 
 #define ARGS_MAX 4
 
-enum { C_TANGENT, C_CRITICAL, C_EXTREMA, C_INFLECT, C_IMPLICIT, C_INCREASING, C_TAYLOR, C_COUNT };
+enum { C_TANGENT, C_CRITICAL, C_EXTREMA, C_INFLECT, C_IMPLICIT, C_INCREASING, C_TAYLOR, C_NORMAL, C_COUNT };
 
 static const struct {
     const char *name, *usage;
@@ -28,6 +28,7 @@ static const struct {
     { "implicit", "implicit(equation, y, x)", 1, 3 },
     { "increasing", "increasing(f, x)", 1, 2 },
     { "taylor", "taylor(f, a, n, x)", 3, 4 },
+    { "normal", "normal(f, a, x)", 2, 3 },
 };
 
 pcas_ast_t *derive(pcas_ast_t *f, Symbol var, int times) {
@@ -87,15 +88,26 @@ static int zeros_of(pcas_ast_t *f, Symbol var, pcas_ast_t **roots, const char **
     return n;
 }
 
-/* y = f'(a)x + b */
-static box_t *tangent(pcas_ast_t *f, pcas_ast_t *a, Symbol var) {
+/* y = f'(a)x + b, or the line across it (slope -1 / f'(a), x = a where f' is 0) when normal */
+static box_t *tangent(pcas_ast_t *f, pcas_ast_t *a, Symbol var, bool normal) {
     pcas_ast_t *d = derive(f, var, 1), *m, *fa, *line;
     box_t *out = NULL;
+    double v;
 
     if(d == NULL)
         return NULL;
     m = value_at(d, var, a);
     fa = value_at(f, var, a);
+    if(normal && approx_double(m, &v) && v == 0) { /* flat there, the normal is straight up */
+        out = labelled("x =", value_box(a));
+        layout_finish(out, &draw_font);
+        ast_Cleanup(m);
+        ast_Cleanup(fa);
+        ast_Cleanup(d);
+        return out;
+    }
+    if(normal)
+        m = ast_MakeBinary(OP_DIV, ast_MakeInt(-1), m);
     /* fa - m a + m x */
     line = ast_MakeBinary(OP_ADD, ast_MakeBinary(OP_ADD, fa, ast_MakeBinary(OP_MULT, ast_MakeInt(-1),
                           ast_MakeBinary(OP_MULT, ast_Copy(m), ast_Copy(a)))),
@@ -310,7 +322,7 @@ static void implicit(char **piece, int n, box_t *in) {
    what's wrong with them, or NULL. a[] is the caller's to free either way */
 static const char *read_command(int c, char **piece, int n, pcas_ast_t **a, Symbol *var, char *shown) {
     pcas_error_t err = E_SUCCESS;
-    int i, parsed = c == C_TAYLOR ? 3 : c == C_TANGENT ? 2 : 1;
+    int i, parsed = c == C_TAYLOR ? 3 : c == C_TANGENT || c == C_NORMAL ? 2 : 1;
 
     *var = SYM_X;
     *shown = 'x';
@@ -359,9 +371,9 @@ bool calc1_run(const char *cmd, char *src, box_t *in) {
 
     start = clock();
     simplify(a[0], SIMP_ALL);
-    if(c == C_TANGENT) {
+    if(c == C_TANGENT || c == C_NORMAL) {
         simplify(a[1], SIMP_ALL);
-        out = tangent(a[0], a[1], var);
+        out = tangent(a[0], a[1], var, c == C_NORMAL);
     } else if(c == C_CRITICAL) {
         d = derive(a[0], var, 1);
         k = d != NULL ? zeros_of(d, var, roots, &message) : 0;
@@ -399,7 +411,7 @@ const char *calc1_work(const char *cmd, char *src) {
 
     for(c = 0; c < C_COUNT && strcmp(cmd, cmds[c].name) != 0; c++)
         ;
-    if(c == C_COUNT || c == C_INCREASING || c == C_TAYLOR)
+    if(c == C_COUNT || c == C_INCREASING || c == C_TAYLOR || c == C_NORMAL)
         return "no steps for that one yet";
     n = args_split(src, piece, ARGS_MAX);
     if(n < cmds[c].least || n > cmds[c].most)

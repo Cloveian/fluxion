@@ -1280,7 +1280,7 @@ static const char *const commands[] = { "expand", "factor", "eval", "solve", "as
                                         "ellipse", "hyperbola", "piecewise",
                                         "circle", "rect", "square", "trap", "sphere", "cyl", "cone", "cube",
                                         "box", "polygon",
-                                        "tangent", "critical", "extrema", "inflect", "implicit", "increasing", "taylor", "apart", "divide", "sum", "product",
+                                        "tangent", "normal", "critical", "extrema", "inflect", "implicit", "increasing", "taylor", "apart", "divide", "sum", "product",
                                         "average", "area", "mvt", "continuous", "volume", "absolute", "initial" };
 
 const char *ed_command(const editor_t *ed) {

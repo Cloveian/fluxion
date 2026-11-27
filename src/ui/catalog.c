@@ -181,6 +181,9 @@ ITEM(it_amplitude, "amplitude", "amplitude", ITEM_COMMAND, "amplitude($)", HAVE_
 ITEM(it_tangent, "tangent", "tangent", ITEM_COMMAND, "tangent($)", HAVE_YES,
      "tangent(f,a,x): y = f'(a)(x-a)+f(a). the x is optional",
      "the tangent line to f at x = a. tangent(x^2,3) -> y = 6x-9")
+ITEM(it_normal, "normal", "normal", ITEM_COMMAND, "normal($)", HAVE_YES,
+     "normal(f,a,x): the line across the tangent at x = a, slope -1/f'(a), or x = a where f' is 0. the x is optional",
+     "the normal line to f at x = a. normal(x^2,3) -> y = (-x+57)/6")
 ITEM(it_critical, "critical", "critical", ITEM_COMMAND, "critical($)", HAVE_PARTLY,
      "critical(f,x): where f' = 0, real ones. as far as solve gets",
      "where the slope is 0. critical(x^3-3x,x) -> x = -1, 1")
@@ -368,7 +371,7 @@ const item_t *const catalog[] = {
     &it_triangle, &it_circle, &it_rect, &it_squareshape, &it_trap, &it_sphere, &it_cyl, &it_cone,
     &it_cube, &it_box, &it_polygon, &it_pand, &it_por,
     &it_ellipse, &it_hyperbola,
-    &it_deriv, &it_deriv_at, &it_integral, &it_limit, &it_tangent, &it_critical, &it_extrema, &it_inflect, &it_implicit, &it_increasing, &it_taylor,
+    &it_deriv, &it_deriv_at, &it_integral, &it_limit, &it_tangent, &it_normal, &it_critical, &it_extrema, &it_inflect, &it_implicit, &it_increasing, &it_taylor,
     &it_average, &it_area, &it_mvt, &it_continuous, &it_volume, &it_absolute, &it_initial,
     &it_id_basic, &it_id_trig, &it_id_hyp, &it_id_cplx, &it_id_tconst, &it_id_iconst, &it_clear, &it_steps
 };
@@ -400,7 +403,7 @@ static const item_t *const algebra[] = {
     &it_fn_info, &it_lines, &it_shapes, &it_solids, &it_conics, &it_prob
 };
 static const item_t *const calculus[] = {
-    &it_deriv, &it_deriv_at, &it_integral, &it_limit, &it_tangent, &it_critical, &it_extrema, &it_inflect, &it_implicit, &it_increasing, &it_taylor,
+    &it_deriv, &it_deriv_at, &it_integral, &it_limit, &it_tangent, &it_normal, &it_critical, &it_extrema, &it_inflect, &it_implicit, &it_increasing, &it_taylor,
     &it_applied
 };
 static const item_t *const functions[] = {

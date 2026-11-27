@@ -192,11 +192,11 @@ def absolute_score(command):
     return ("wrong", f"{text}: {problem}") if problem else ("right", text)
 
 def initial_score(command, chk):
-    # the F = line against the book's function, at a few points where both are defined (t > 0 for the roots and logs)
+    # the F = (or Y =, a line) answer against the book's function, at a few points where both are defined (t > 0 for the roots and logs)
     lines, why = app_lines(command)
     if lines is None:
         return "gaveup", why
-    m = re.match(r"(?i)^f\s*=(.*)$", lines[0][1])
+    m = re.match(r"(?i)^[fy]\s*=(.*)$", lines[0][1])
     if len(lines) != 1 or not m:
         return "gaveup", " | ".join(t for _, t in lines)
     got, want = fuzz.to_sympy(m.group(1)), sym(chk["want"]).subs(sp.Symbol("t"), sp.Symbol("x"))
