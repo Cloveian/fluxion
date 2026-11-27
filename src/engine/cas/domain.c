@@ -241,7 +241,10 @@ static void walk(walk_t *w, pcas_ast_t *e) {
         }
         if(has_symbol(b, w->var) || !read_ratio(b, &p, &q)) /*x^x, x^pi*/
             w->d->partial = true;
-        else if(q % 2 == 0) /*x^(1/2) is sqrt(x), x^(-1/2) is 1/sqrt(x)*/
+        else if(isoptype(a, OP_ABS)) { /*|u| is never under 0, a negative power only goes wrong where u is 0*/
+            if(p < 0)
+                zeros(w, ast_ChildGet(a, 0));
+        } else if(q % 2 == 0) /*x^(1/2) is sqrt(x), x^(-1/2) is 1/sqrt(x)*/
             bound(w, a, p < 0);
         else if(p < 0)
             zeros(w, a);
@@ -251,7 +254,7 @@ static void walk(walk_t *w, pcas_ast_t *e) {
             break;
         if(has_symbol(a, w->var) || !read_ratio(a, &p, &q) || q != 1 || p <= 0)
             w->d->partial = true;
-        else if(p % 2 == 0)
+        else if(p % 2 == 0 && !isoptype(b, OP_ABS)) /*an even root of |u| is real*/
             bound(w, b, false);
         break;
     case OP_LOG:

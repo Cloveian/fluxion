@@ -1054,6 +1054,17 @@ simplify; integral(3^X+sec(X)tan(X),X,0,1); 2/ln(3)+sec(1)_1
 #from a to a is 0 whatever f is
 simplify; integral(sqrt(1+X^4),X,3,3); 0
 simplify; integral(1/X^2,X,2,2); 0
+#from -a to a an odd term (x^3, x^8 tan(x)) comes to 0, the rest is worked out as usual. a pole inside still stops it
+simplify; integral(X^3+X^8tan(X),X,-pi/4,pi/4); 0
+simplify; integral(X^3+X^2,X,-1,1); 2/3
+simplify; integral(Xsin(X),X,-pi,pi); 2pi
+simplify; integral(X^2e^X,X,-1,1); e_5/e
+simplify; integral(1/X,X,-1,1); integral(1/X,X,-1,1)
+#|u| to a power: u|u|^n/(n+1), on both sides of 0. a negative power with a pole inside stays an integral
+simplify; integral(abs(X)^(2/3),X); 3Xabs(X)^(2/3)/5
+simplify; integral(abs(X)^(3/2),X,-1,1); 4/5
+simplify; integral(sqrt(abs(X)),X,-4,4); 32/3
+simplify; integral(abs(X)^(-1/2),X,-1,1); integral(sqrt(abs(X))/abs(X),X,-1,1)
 #d/dx of an integral with x in a limit: f(upper)upper' - f(lower)lower'
 simplify; deriv(integral(T^2+1,T,0,X),X,X); X^2+1
 simplify; deriv(integral(sin(T),T,X,3),X,X); -sin(X)

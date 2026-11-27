@@ -157,6 +157,12 @@ static const char *table_pow(pcas_ast_t *f, pcas_ast_t *x, pcas_ast_t **F) {
         return "exp rule";
     }
 
+    /*|u|^n with u = ax+b is u|u|^n/(n+1) over a, on both sides of 0. x^(2/3) is |x|^(2/3) once simplify has it*/
+    if(isoptype(b, OP_ABS) && !has_symbol(n, s) && !is_value(n, -1, 1) && (a = linear(u = ast_ChildGet(b, 0), x)) != NULL) {
+        *F = over(ast_MakeBinary(OP_DIV, ast_MakeBinary(OP_MULT, ast_Copy(u), ast_Copy(f)), ast_MakeBinary(OP_ADD, ast_Copy(n), ast_MakeInt(1))), a);
+        return "abs rule";
+    }
+
     /*sec^2 as 1/cos^2 and the rest*/
     if(b->type == NODE_OPERATOR && ast_ChildLength(b) == 1 && (a = linear(u = ast_ChildGet(b, 0), x)) != NULL) {
         op = optype(b);
@@ -1911,6 +1917,8 @@ static bool fine_between(pcas_ast_t *e, pcas_ast_t *x, pcas_ast_t *pa, pcas_ast_
         c = isoptype(e, OP_POW) ? ast_ChildGet(e, 1) : NULL;
         if(c != NULL && c->type == NODE_NUMBER && mp_rat_is_integer(c->op.num))
             return true;    /*a whole power, real anywhere*/
+        if(isoptype(u, OP_ABS) && (c == NULL || (c->type == NODE_NUMBER && mp_rat_compare_zero(c->op.num) > 0)))
+            return true;    /*|u| to a power over 0 or a root of it too*/
         if(!has_symbol(u, x->op.symbol)) /*a^x, real only for a over 0*/
             return float_at(u, x, pa, &v) && v > 0;
         /*A x^2 + B x + C off its values at -1 0 1, and 2 to make sure that's all it is*/
@@ -2010,8 +2018,72 @@ static pcas_ast_t *between(pcas_ast_t *I, pcas_ast_t *F, steps_t *s) {
     return d;
 }
 
+/*bounds that are each other's negative, -pi/4 and pi/4*/
+static bool symmetric_bounds(pcas_ast_t *I) {
+    pcas_ast_t *s;
+    double a, b;
+    bool ok;
+
+    if(approx_double(ast_ChildGet(I, 2), &a) && approx_double(ast_ChildGet(I, 3), &b) && fabs(a + b) > 1e-9 * (fabs(a) + fabs(b)))
+        return false; /*most aren't, and the simplify below isn't free*/
+    s = ast_MakeBinary(OP_ADD, ast_Copy(ast_ChildGet(I, 2)), ast_Copy(ast_ChildGet(I, 3)));
+    if(s == NULL)
+        return false;
+    simplify(s, SIMP_ALL);
+    ok = is_ast_int(s, 0);
+    ast_Cleanup(s);
+    return ok;
+}
+
+/*from -a to a an odd term (x^3, x^8 tan(x)) comes to 0. f without them, new. NULL when none is odd*/
+static pcas_ast_t *without_odd_terms(pcas_ast_t *f, pcas_ast_t *x) {
+    pcas_ast_t *rest = ast_MakeOperator(OP_ADD), *flip = ast_MakeBinary(OP_MULT, ast_MakeInt(-1), ast_Copy(x)), *t, *g, *out;
+    pcas_ast_t *pt = ast_MakeBinary(OP_DIV, ast_MakeInt(7), ast_MakeInt(10));
+    double v;
+    bool dropped = false, skip;
+
+    if(rest == NULL || flip == NULL || pt == NULL) { /*oom*/
+        ast_Cleanup(rest);
+        ast_Cleanup(flip);
+        ast_Cleanup(pt);
+        return NULL;
+    }
+    for(t = isoptype(f, OP_ADD) ? ast_ChildGet(f, 0) : f; t != NULL; t = t == f ? NULL : t->next) {
+        g = ast_Copy(t);
+        if(g != NULL)
+            substitute(g, x, flip);
+        g = ast_MakeBinary(OP_ADD, g, ast_Copy(t)); /*f(-x) + f(x)*/
+        if(g == NULL) { /*oom*/
+            ast_Cleanup(rest);
+            ast_Cleanup(flip);
+            ast_Cleanup(pt);
+            return NULL;
+        }
+        skip = float_at(g, x, pt, &v) && fabs(v) > 1e-6; /*plainly not odd at 0.7, no simplify needed*/
+        if(!skip)
+            simplify(g, SIMP_ALL);
+        if(!skip && is_ast_int(g, 0))
+            dropped = true;
+        else
+            ast_ChildAppend(rest, ast_Copy(t));
+        ast_Cleanup(g);
+    }
+    ast_Cleanup(flip);
+    ast_Cleanup(pt);
+    if(!dropped || pcas_cancelled) {
+        ast_Cleanup(rest);
+        return NULL;
+    }
+    if(ast_ChildLength(rest) <= 1) { /*a lone one or none*/
+        out = ast_ChildLength(rest) == 1 ? ast_Copy(ast_ChildGet(rest, 0)) : ast_MakeInt(0);
+        ast_Cleanup(rest);
+        return out;
+    }
+    return rest;
+}
+
 bool eval_integral_nodes(pcas_ast_t *e) {
-    pcas_ast_t *c, *F;
+    pcas_ast_t *c, *F, *G;
     bool changed = false;
 
     if(pcas_cancelled || e->type != NODE_OPERATOR)
@@ -2023,8 +2095,18 @@ bool eval_integral_nodes(pcas_ast_t *e) {
         return true;
     }
     if(!isoptype(e, OP_INTEGRAL) || ast_ChildGet(e, 1)->type != NODE_SYMBOL
-       || (ast_ChildLength(e) != 2 && ast_ChildLength(e) != 4) || (ast_ChildLength(e) == 4 && !defined_between(e))
-       || (F = integral_of(e, NULL)) == NULL)
+       || (ast_ChildLength(e) != 2 && ast_ChildLength(e) != 4) || (ast_ChildLength(e) == 4 && !defined_between(e)))
+        return changed;
+    if(ast_ChildLength(e) == 4 && symmetric_bounds(e) && (G = without_odd_terms(ast_ChildGet(e, 0), ast_ChildGet(e, 1))) != NULL) {
+        if(is_ast_int(G, 0)) { /*all of it was odd*/
+            ast_Cleanup(G);
+            replace_node(e, ast_MakeInt(0));
+            return true;
+        }
+        replace_node(ast_ChildGet(e, 0), G);
+        changed = true;
+    }
+    if((F = integral_of(e, NULL)) == NULL)
         return changed;
     if(ast_ChildLength(e) == 4 && (F = between(e, F, NULL)) == NULL)
         return changed;
