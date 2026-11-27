@@ -1,0 +1,46 @@
+# commands only the app knows (ui/), with what it says. one per line, # is a comment
+# volume: discs, washers, shells, about x or y, the set up line first
+volume(x,0,0,1,y=0)
+volume(ln(x),0,1,2,y=0)
+volume(x^2,4x,0,4,x=0)
+volume(x^2,sqrt(x),0,1,y=1)
+volume(x^3,1,1,2,y=-4)
+volume(2sqrt(3y),0,0,5,x=0,y)
+volume(x^3,8,0,2,x=3)
+volume(x^2,0,-1,2,x=0)
+# absolute max and min on [a, b]
+absolute(x^3-3x,-2,3)
+absolute(3x^4-4x^3-12x^2+1,-2,3)
+absolute(abs(x),-1,2)
+absolute(sin(x),0,2pi)
+absolute(1/x,-1,1)
+absolute(5,0,1)
+# f from f' or f'' and its starting values
+initial(12/(1+t^2),1,1,0,t)
+initial(-2+12x-12x^2,2,0,2,18)
+initial(4+6x+36x^2,2,0,5,1,13)
+initial(4cos(t)+7sin(t),1,0,2,t)
+# tangent and normal, and the places with no slope
+tangent(x^2,3)
+normal(x^2,3)
+normal(x^2,0)
+tangent(sqrt(x),0)
+tangent(abs(x),0)
+tangent(1/x,0)
+# asymptotes and domains, exp and trig ones
+asym(9e^x/(e^x-5),x)
+asym(sin(x)/x,x)
+asym(tan(x),x)
+asym(1/cos(x),x)
+domain(x^2/sqrt(x^4+7),x)
+# a piecewise one where the piece changes: the limits from each side and what kind of break it is
+piecewise(1-x^2,x<=0,2x+1,x>0,x=-6)
+piecewise(x^2+3,x<1,(x-2)^2,x>=1,x=1)
+piecewise(x,x<1,2,x=1,2-x^2,1<x<=2,x-5,x>2,x=1)
+piecewise(x,x<1,2,x=1,2-x^2,1<x<=2,x-5,x>2,x=2)
+piecewise(6x^2,x<-1,6x,-1<=x<1,6/x,x>=1,x=1)
+piecewise(1/x,x<0,x,x>0,x=0)
+# what pasting does with a letter before a bracket and with bounds
+critical(x(x+68),x)
+integral(x^2,x,0,3)
+limit(sin(x)/x+2,x,inf)

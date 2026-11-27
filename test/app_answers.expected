@@ -1,0 +1,106 @@
+== volume(x,0,0,1,y=0)
+answer: SeT UPpi?10(X^(2)_0^(2))DX
+answer: V =((pi)/(3))
+== volume(ln(x),0,1,2,y=0)
+answer: SeT UPpi?21(ln(X)^(2)_0^(2))DX
+answer: V =2piln(2)^(2)+2pi_4piln(2)
+== volume(x^2,4x,0,4,x=0)
+answer: SeT UP2pi?40(X_0)(-X^(2)+4X)DX
+answer: V =((128pi)/(3))
+== volume(x^2,sqrt(x),0,1,y=1)
+answer: SeT UPpi?10((X^(2)_1)^(2)_(sqrt(X)_1)^(2))DX
+answer: V =((11pi)/(30))
+== volume(x^3,1,1,2,y=-4)
+answer: SeT UPpi?21((X^(3)+4)^(2)_5^(2))DX
+answer: V =((274pi)/(7))
+== volume(2sqrt(3y),0,0,5,x=0,y)
+answer: SeT UPpi?50((2sqrt(3Y))^(2)_0^(2))DY
+answer: V =150pi
+== volume(x^3,8,0,2,x=3)
+answer: SeT UP2pi?20(-X+3)(-X^(3)+8)DX
+answer: V =((264pi)/(5))
+== volume(x^2,0,-1,2,x=0)
+message: the axis goes through the region
+== absolute(x^3-3x,-2,3)
+answer: absolute max(3,18)
+answer: absolute min(-2,-2)
+answer: absolute min(1,-2)
+== absolute(3x^4-4x^3-12x^2+1,-2,3)
+answer: absolute max(-2,33)
+answer: absolute min(2,-31)
+== absolute(abs(x),-1,2)
+answer: absolute max(2,2)
+answer: absolute min(0,0)
+== absolute(sin(x),0,2pi)
+answer: absolute max(((pi)/(2)),1)
+answer: absolute min(((3pi)/(2)),-1)
+== absolute(1/x,-1,1)
+message: f has a break in there, it has to be defined all the way from a to b
+== absolute(5,0,1)
+answer: absolute max(0,5)
+answer: absolute min(0,5)
+== initial(12/(1+t^2),1,1,0,t)
+answer: F =12atan(T)_3pi
+== initial(-2+12x-12x^2,2,0,2,18)
+answer: F =-X^(4)+2X^(3)_X^(2)+18X+2
+== initial(4+6x+36x^2,2,0,5,1,13)
+answer: F =3X^(4)+X^(3)+2X^(2)+2X+5
+== initial(4cos(t)+7sin(t),1,0,2,t)
+answer: F =9+4sin(T)_7cos(T)
+== tangent(x^2,3)
+answer: Y =6X_9
+== normal(x^2,3)
+answer: Y =((-X+57)/(6))
+== normal(x^2,0)
+answer: X =0
+== tangent(sqrt(x),0)
+message: f isn't defined there, or has no slope there
+== tangent(abs(x),0)
+message: f isn't defined there, or has no slope there
+== tangent(1/x,0)
+message: f isn't defined there, or has no slope there
+== asym(9e^x/(e^x-5),x)
+answer: VeRTiCALX=ln(5)
+answer: HORiZONTALY=0,9
+== asym(sin(x)/x,x)
+answer: HOLeX=0
+answer: HORiZONTALY=0
+== asym(tan(x),x)
+answer: VeRTiCALX=Npi+((pi)/(2))
+== asym(1/cos(x),x)
+answer: VeRTiCALX=Npi+((pi)/(2))
+== domain(x^2/sqrt(x^4+7),x)
+answer: ALL reALS
+== piecewise(1-x^2,x<=0,2x+1,x>0,x=-6)
+answer: -35
+== piecewise(x^2+3,x<1,(x-2)^2,x>=1,x=1)
+answer: FROM THe LeFT4
+answer: FROM THe RiGHT1
+answer: F(A)1
+answer: JUMP, continuous FROM THe RiGHT
+== piecewise(x,x<1,2,x=1,2-x^2,1<x<=2,x-5,x>2,x=1)
+answer: FROM THe LeFT1
+answer: FROM THe RiGHT1
+answer: F(A)2
+answer: reMOVABLe DiSCONTiNUiTY
+== piecewise(x,x<1,2,x=1,2-x^2,1<x<=2,x-5,x>2,x=2)
+answer: FROM THe LeFT-2
+answer: FROM THe RiGHT-3
+answer: F(A)-2
+answer: JUMP, continuous FROM THe LeFT
+== piecewise(6x^2,x<-1,6x,-1<=x<1,6/x,x>=1,x=1)
+answer: FROM THe LeFT6
+answer: FROM THe RiGHT6
+answer: F(A)6
+answer: continuous
+== piecewise(1/x,x<0,x,x>0,x=0)
+answer: FROM THe LeFT-inf
+answer: FROM THe RiGHT0
+answer: F(A) iS UNDeFiNeD
+answer: iNFiNiTe DiSCONTiNUiTY
+== critical(x(x+68),x)
+answer: X=-34
+== integral(x^2,x,0,3)
+answer: 9
+== limit(sin(x)/x+2,x,inf)
+answer: 2

@@ -163,6 +163,7 @@ test: $(TARGET) build-pc/identity-masks build-pc/layout-dump build-pc/view build
 	./build-pc/identity-masks
 	python3 tools/layers.py
 	sh test/keys_pc_scenarios.sh build-pc/keys-pc-test 2>&1 | diff - test/keys_pc.expected
+	sh test/app_answers.sh build-pc/fluxion-app 2>&1 | diff - test/app_answers.expected
 
 budget: $(TARGET)
 	./$(TARGET) budget test/fluxion.tests
