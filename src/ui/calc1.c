@@ -89,13 +89,18 @@ static int zeros_of(pcas_ast_t *f, Symbol var, pcas_ast_t **roots, const char **
 }
 
 /* y = f'(a)x + b, or the line across it (slope -1 / f'(a), x = a where f' is 0) when normal */
-static box_t *tangent(pcas_ast_t *f, pcas_ast_t *a, Symbol var, bool normal) {
+static box_t *tangent(pcas_ast_t *f, pcas_ast_t *a, Symbol var, bool normal, const char **message) {
     pcas_ast_t *d = derive(f, var, 1), *m, *fa, *line;
     box_t *out = NULL;
     double v;
 
     if(d == NULL)
         return NULL;
+    if(bottom_zero(f, var, a) || bottom_zero(d, var, a)) { /* simplify says 0/0 is 1, |x| at 0 would get a slope */
+        *message = "f isn't defined there, or has no slope there";
+        ast_Cleanup(d);
+        return NULL;
+    }
     m = value_at(d, var, a);
     fa = value_at(f, var, a);
     if(normal && approx_double(m, &v) && v == 0) { /* flat there, the normal is straight up */
@@ -373,7 +378,7 @@ bool calc1_run(const char *cmd, char *src, box_t *in) {
     simplify(a[0], SIMP_ALL);
     if(c == C_TANGENT || c == C_NORMAL) {
         simplify(a[1], SIMP_ALL);
-        out = tangent(a[0], a[1], var, c == C_NORMAL);
+        out = tangent(a[0], a[1], var, c == C_NORMAL, &message);
     } else if(c == C_CRITICAL) {
         d = derive(a[0], var, 1);
         k = d != NULL ? zeros_of(d, var, roots, &message) : 0;
