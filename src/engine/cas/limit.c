@@ -1203,6 +1203,35 @@ static pcas_ast_t *squeezed(pcas_ast_t *f, pcas_ast_t *var, pcas_ast_t *a, int d
     return out;
 }
 
+/*sum of the limits of a sum's terms, or of (a + b)/c as a/c + b/c, when each is a number. at inf a whole sum doesn't go through limit_far (sin(x)/x + 2). new, NULL if not*/
+static pcas_ast_t *sum_of_limits(pcas_ast_t *f, pcas_ast_t *var, pcas_ast_t *a, int dir) {
+    pcas_ast_t *top = NULL, *bottom = NULL, *c, *t, *lt, *total;
+    double v;
+
+    if(isoptype(f, OP_ADD))
+        top = f;
+    else if(isoptype(f, OP_DIV) && isoptype(ast_ChildGet(f, 0), OP_ADD)) {
+        top = ast_ChildGet(f, 0);
+        bottom = ast_ChildGet(f, 1);
+    }
+    if(top == NULL || (total = ast_MakeOperator(OP_ADD)) == NULL)
+        return NULL;
+    for(c = ast_ChildGet(top, 0); c != NULL; c = c->next) {
+        t = bottom != NULL ? ast_MakeBinary(OP_DIV, ast_Copy(c), ast_Copy(bottom)) : c;
+        lt = t != NULL && !pcas_cancelled ? limit_of(t, var, a, NULL, false, dir) : NULL; /*oom leaves t short a child*/
+        if(t != c)
+            ast_Cleanup(t);
+        if(lt == NULL || !approx_double(lt, &v) || pcas_cancelled) { /*one that is inf, dne or won't come out says nothing about the sum*/
+            ast_Cleanup(lt);
+            ast_Cleanup(total);
+            return NULL;
+        }
+        ast_ChildAppend(total, lt);
+    }
+    simplify(total, SIMP_ALL);
+    return total;
+}
+
 /*new, NULL when there isn't one or it gives up. s NULL for no steps, root when the limit is the whole input, dir 1 / -1 from one side*/
 static pcas_ast_t *limit_of(pcas_ast_t *f, pcas_ast_t *var, pcas_ast_t *a, steps_t *s, bool root, int dir) {
     pcas_ast_t *g, *top, *bottom, *t, *b, *out = NULL;
@@ -1231,6 +1260,8 @@ static pcas_ast_t *limit_of(pcas_ast_t *f, pcas_ast_t *var, pcas_ast_t *a, steps
             step(s, l, l != before ? last : "plug in inf", ast_Copy(out));
         } else if(!pcas_cancelled && (out = squeezed(f, var, a, dir)) != NULL) {
             step(s, l, "a cos or sin is between -1 and 1, so over something that goes to inf it's 0", ast_Copy(out));
+        } else if(!pcas_cancelled && (out = sum_of_limits(f, var, a, dir)) != NULL) {
+            step(s, l, "a limit for each term, then add them", ast_Copy(out));
         } else if(root && !pcas_cancelled && keeps_going_round(f, var)) {
             out = ast_MakeSymbol(SYM_DNE);
             step(s, l, "keeps going round, no limit", ast_Copy(out));
