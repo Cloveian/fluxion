@@ -1095,9 +1095,9 @@ static bool run(editor_t *line) {
        piecewise( for its x=v (and x = 0 as a condition), implicit( for the equation */
     if(strchr(src, '=') != NULL
        && (strcmp(cmd, "ellipse") != 0 && strcmp(cmd, "hyperbola") != 0
-           && strcmp(cmd, "piecewise") != 0 && strcmp(cmd, "implicit") != 0)) {
+           && strcmp(cmd, "piecewise") != 0 && strcmp(cmd, "implicit") != 0 && strcmp(cmd, "volume") != 0)) {
         free(src);
-        status = "= goes in solve(, system(, piecewise(, implicit( or a conic";
+        status = "= goes in solve(, system(, piecewise(, implicit(, volume( or a conic";
         return false;
     }
     in = ed_layout(line, &draw_font, false);

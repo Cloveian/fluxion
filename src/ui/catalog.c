@@ -209,6 +209,9 @@ ITEM(it_area, "area", "area", ITEM_COMMAND, "area($)", HAVE_PARTLY,
 ITEM(it_mvt, "mvt", "mvt", ITEM_COMMAND, "mvt($)", HAVE_PARTLY,
      "mvt(f,a,b,x): the c between a and b where f'(c) is the slope from a to b. a level f is Rolle's theorem",
      "where the curve's slope matches the line between its ends. mvt(x^2,0,2) -> c = 1")
+ITEM(it_volume, "volume", "volume", ITEM_COMMAND, "volume($)", HAVE_PARTLY,
+     "volume(f,g,a,b,y=c,x): the solid from turning the region between f and g, a to b, about the line y=c or x=c. discs and washers, shells for a line of x's own letter. the x is optional",
+     "volume of a solid of revolution, with the integral set up above the answer. volume(x,0,0,1,y=0) -> V = pi/3")
 ITEM(it_continuous, "continuous", "continuous", ITEM_COMMAND, "continuous($)", HAVE_PARTLY,
      "continuous(f,a,x): the limit from each side against f(a), and whether it's continuous, removable, a jump or infinite",
      "whether the curve breaks at x = a. continuous(abs(x)/x,0) -> a jump discontinuity")
@@ -360,7 +363,7 @@ const item_t *const catalog[] = {
     &it_cube, &it_box, &it_polygon, &it_pand, &it_por,
     &it_ellipse, &it_hyperbola,
     &it_deriv, &it_deriv_at, &it_integral, &it_limit, &it_tangent, &it_critical, &it_extrema, &it_inflect, &it_implicit, &it_increasing, &it_taylor,
-    &it_average, &it_area, &it_mvt, &it_continuous,
+    &it_average, &it_area, &it_mvt, &it_continuous, &it_volume,
     &it_id_basic, &it_id_trig, &it_id_hyp, &it_id_cplx, &it_id_tconst, &it_id_iconst, &it_clear, &it_steps
 };
 const unsigned catalog_count = sizeof catalog / sizeof catalog[0];
@@ -376,7 +379,7 @@ static const item_t *const shapes[] = { &it_triangle, &it_circle, &it_rect, &it_
 static const item_t *const solids[] = { &it_sphere, &it_cyl, &it_cone, &it_cube, &it_box };
 static const item_t *const conics[] = { &it_ellipse, &it_hyperbola };
 static const item_t *const prob[] = { &it_pand, &it_por };
-static const item_t *const applied[] = { &it_average, &it_area, &it_mvt, &it_continuous };
+static const item_t *const applied[] = { &it_average, &it_area, &it_mvt, &it_continuous, &it_volume };
 
 SUBFOLDER(it_fn_info, fn_info_folder, "Function info", fn_info)
 SUBFOLDER(it_lines, lines_folder, "Lines", lines)

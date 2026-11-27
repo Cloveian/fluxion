@@ -16,9 +16,9 @@
 
 /* a first course's uses of the integral, *dih*rivative and limit, cut at the commas like calc1's */
 
-#define ARGS_MAX 5
+#define ARGS_MAX 6
 
-enum { P_AVERAGE, P_AREA, P_MVT, P_CONTINUOUS, P_COUNT };
+enum { P_AVERAGE, P_AREA, P_MVT, P_CONTINUOUS, P_VOLUME, P_COUNT };
 
 static const struct {
     const char *name, *usage;
@@ -28,6 +28,7 @@ static const struct {
     { "area", "area(f, g, a, b, x)", 2, 5 },
     { "mvt", "mvt(f, a, b, x)", 3, 4 },
     { "continuous", "continuous(f, a, x)", 2, 3 },
+    { "volume", "volume(f, g, a, b, y=c, x)", 5, 6 },
 };
 
 static bool same(double a, double b) {
@@ -137,6 +138,10 @@ static box_t *average(pcas_ast_t *f, pcas_ast_t *a, pcas_ast_t *b, Symbol var, c
     return out;
 }
 
+static pcas_ast_t *midpoint(pcas_ast_t *p, pcas_ast_t *q) {
+    return ast_MakeBinary(OP_DIV, ast_MakeBinary(OP_ADD, ast_Copy(p), ast_Copy(q)), ast_MakeInt(2));
+}
+
 /* integral of |d| a gap at a time, the sign from d in the gap's middle. NULL and a message when that isn't a number */
 static pcas_ast_t *area_sum(pcas_ast_t *d, Symbol var, pcas_ast_t **edge, int edges, const char **message) {
     pcas_ast_t *mid, *piece, *total = NULL;
@@ -144,7 +149,7 @@ static pcas_ast_t *area_sum(pcas_ast_t *d, Symbol var, pcas_ast_t **edge, int ed
     int i;
 
     for(i = 0; i + 1 < edges && !pcas_cancelled; i++) {
-        mid = ast_MakeBinary(OP_DIV, ast_MakeBinary(OP_ADD, ast_Copy(edge[i]), ast_Copy(edge[i + 1])), ast_MakeInt(2));
+        mid = midpoint(edge[i], edge[i + 1]);
         piece = value_at(d, var, mid);
         ast_Cleanup(mid);
         if(!approx_double(piece, &v)) {
@@ -201,6 +206,115 @@ static box_t *area(pcas_ast_t *f, pcas_ast_t *g, pcas_ast_t *a, pcas_ast_t *b, S
         ast_Cleanup(roots[i]);
     ast_Cleanup(d);
     return out;
+}
+
+/* the roots of d strictly between lo and hi go on edge[*n..], taken over. false and a message when it can't. an identically 0 d adds none */
+static bool edges_from(pcas_ast_t *d, Symbol var, double lo, double hi, pcas_ast_t **edge, int *n, const char **message) {
+    pcas_ast_t *roots[SOLVE_MAX] = { NULL };
+    int found = roots_between(d, var, true, lo, hi, roots), i;
+
+    if(found < 0 && found != SOLVE_ALL) {
+        *message = "can't solve where they cross";
+        return false;
+    }
+    for(i = 0; i < found; i++)
+        edge[(*n)++] = roots[i];
+    return true;
+}
+
+/* a shell's |x - c| |f - g|. right is x past c, flip is f under g there */
+static pcas_ast_t *shell_piece(pcas_ast_t *f, pcas_ast_t *g, pcas_ast_t *c, Symbol var, bool right, bool flip) {
+    pcas_ast_t *x = ast_MakeSymbol((char)var);
+
+    return ast_MakeBinary(OP_MULT, right ? minus(x, ast_Copy(c)) : minus(ast_Copy(c), x),
+                          flip ? minus(ast_Copy(g), ast_Copy(f)) : minus(ast_Copy(f), ast_Copy(g)));
+}
+
+/* R^2 - r^2 for u = f - c and w = g - c. a curve each side of the axis is a disk of the bigger one */
+static pcas_ast_t *washer_piece(pcas_ast_t *u, pcas_ast_t *w, double uv, double wv) {
+    pcas_ast_t *uu = ast_MakeBinary(OP_POW, ast_Copy(u), ast_MakeInt(2)), *ww = ast_MakeBinary(OP_POW, ast_Copy(w), ast_MakeInt(2));
+
+    if(uv * wv < 0) {
+        ast_Cleanup(uv * uv > wv * wv ? ww : uu);
+        return uv * uv > wv * wv ? uu : ww;
+    }
+    return fabs(uv) > fabs(wv) ? minus(uu, ww) : minus(ww, uu);
+}
+
+/* f and g from a to b turned about axis = c (X or Y). the same letter as var is shells, the other washers. NULL and a message when it can't */
+static box_t *volume(pcas_ast_t *f, pcas_ast_t *g, pcas_ast_t *a, pcas_ast_t *b, pcas_ast_t *c, Symbol var, char axis, const char **message) {
+    pcas_ast_t *d[3], *edge[3 * SOLVE_MAX + 2], *mid, *u, *w, *piece, *total = NULL, *setup;
+    double lo, hi, cv, from, to, uv, wv, mv;
+    bool shells = axis == (char)var, ok = true;
+    int kinds = shells ? 1 : 3, n = 1, roots, i;
+    box_t *col = NULL, *out;
+
+    if(!approx_double(a, &lo) || !approx_double(b, &hi) || !approx_double(c, &cv)) {
+        *message = "the limits and the axis have to be numbers";
+        return NULL;
+    }
+    if(lo >= hi) {
+        *message = "a has to be less than b";
+        return NULL;
+    }
+    if(shells && cv > lo + 1e-9 && cv < hi - 1e-9) {
+        *message = "the axis goes through the region";
+        return NULL;
+    }
+    d[0] = minus(ast_Copy(f), ast_Copy(g));
+    if(!shells) {
+        d[1] = minus(ast_Copy(f), ast_Copy(c));
+        d[2] = minus(ast_Copy(g), ast_Copy(c));
+    }
+    edge[0] = a;
+    for(i = 0; i < kinds && ok; i++) {
+        simplify(d[i], SIMP_ALL);
+        ok = edges_from(d[i], var, lo, hi, edge, &n, message);
+    }
+    roots = n;
+    if(ok) {
+        sort_roots(edge + 1, roots - 1);
+        edge[n++] = b;
+    }
+    /* a gap at a time, the sings read off in the middle of it */
+    for(i = 0; ok && i + 1 < n && !pcas_cancelled; i++) {
+        if(!approx_double(edge[i], &from) || !approx_double(edge[i + 1], &to) || to - from < 1e-12)
+            continue;
+        mid = midpoint(edge[i], edge[i + 1]);
+        u = value_at(d[shells ? 0 : 1], var, mid);
+        w = shells ? NULL : value_at(d[2], var, mid);
+        if(!approx_double(u, &uv) || (w != NULL && !approx_double(w, &wv)) || !approx_double(mid, &mv)) {
+            *message = "can't tell which one is on top";
+            ok = false;
+        } else {
+            piece = shells ? shell_piece(f, g, c, var, mv > cv, uv < 0) : washer_piece(d[1], d[2], uv, wv);
+            piece = integral_of(piece, var, edge[i], edge[i + 1]);
+            total = total == NULL ? piece : ast_MakeBinary(OP_ADD, total, piece);
+        }
+        ast_Cleanup(mid);
+        ast_Cleanup(u);
+        ast_Cleanup(w);
+    }
+    for(i = 1; i < roots; i++)
+        ast_Cleanup(edge[i]);
+    for(i = 0; i < kinds; i++)
+        ast_Cleanup(d[i]);
+    if(!ok || total == NULL) {
+        ast_Cleanup(total);
+        return NULL;
+    }
+    total = ast_MakeBinary(OP_MULT, shells ? ast_MakeBinary(OP_MULT, ast_MakeInt(2), ast_MakeSymbol(SYM_PI)) : ast_MakeSymbol(SYM_PI), total);
+    setup = ast_Copy(total);
+    out = integral_answer("V =", total, message);
+    if(out != NULL) {
+        col = layout_box(BOX_COL, 0);
+        layout_add(col, labelled("set up", value_box(setup)));
+        layout_add(col, out);
+        layout_finish(col, &draw_font);
+    }
+    ast_Cleanup(setup);
+    ast_Cleanup(total);
+    return col;
 }
 
 /* the c in (a, b) where f'(c) is the slope from a to b. Rolle's theorem when the two ends of f are level */
@@ -286,7 +400,7 @@ bool applied_run(const char *cmd, char *src, box_t *in) {
     box_t *out = NULL;
     clock_t start;
     Symbol var = SYM_X;
-    char shown = 'x';
+    char shown = 'x', axis = 'X';
     int c, n, parsed, i;
     bool has_var;
 
@@ -308,6 +422,14 @@ bool applied_run(const char *cmd, char *src, box_t *in) {
     parsed = has_var ? n - 1 : n;
     if(has_var && !args_var(piece[n - 1], &var, &shown))
         message = cmds[c].usage;
+    if(c == P_VOLUME && message == NULL) {
+        /* axis typed y=3 or x=0, cut at the = */
+        axis = piece[4][0];
+        if((axis != 'X' && axis != 'Y') || piece[4][1] != '=' || (var != SYM_X && var != SYM_Y))
+            message = cmds[c].usage;
+        else
+            piece[4] += 2;
+    }
     for(i = 0; i < parsed && message == NULL; i++)
         if((a[i] = args_parse(piece[i], &err)) == NULL)
             message = error_text[err];
@@ -320,13 +442,15 @@ bool applied_run(const char *cmd, char *src, box_t *in) {
 
     start = clock();
     /* the ends and the point, not f and g: the full simplify splits (x^2-1)/(x-1) into a sum whose limits don't come out */
-    for(i = c == P_AREA ? 2 : 1; i < parsed; i++)
+    for(i = c == P_AREA || c == P_VOLUME ? 2 : 1; i < parsed; i++)
         simplify(a[i], SIMP_ALL);
-    if(has_var && !has_symbol(a[0], var) && !(c == P_AREA && has_symbol(a[1], var)))        message = "that letter isn't in the function";
+    if(has_var && !has_symbol(a[0], var) && !((c == P_AREA || c == P_VOLUME) && has_symbol(a[1], var)))        message = "that letter isn't in the function";
     else if(c == P_AVERAGE)
         out = average(a[0], a[1], a[2], var, &message);
     else if(c == P_AREA)
         out = area(a[0], a[1], parsed > 3 ? a[2] : NULL, parsed > 3 ? a[3] : NULL, var, &message);
+    else if(c == P_VOLUME)
+        out = volume(a[0], a[1], a[2], a[3], a[4], var, axis, &message);
     else if(c == P_MVT)
         out = mean_value(a[0], a[1], a[2], var, &message);
     else

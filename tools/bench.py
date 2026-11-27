@@ -118,6 +118,17 @@ def concave_score(command, chk):
         return "unscored", f"fuzz check skipped it: {text}"
     return ("wrong", f"{text}: {problem}") if problem else ("right", text)
 
+def volume_score(command, chk):
+    # the V = line against the book's value
+    lines, why = app_lines(command)
+    if lines is None:
+        return "gaveup", why
+    m = re.match(r"(?i)^v\s*=(.*)$", lines[-1][1])
+    if len(lines) < 2 or not m:
+        return "gaveup", " | ".join(t for _, t in lines)
+    got, want = fuzz.fval(fuzz.to_sympy(m.group(1)), 0), float(sym(chk["want"]).evalf())
+    return ("right", lines[-1][1]) if got is not None and not fuzz.far(got, want, 1e-6) else ("wrong", f"{lines[-1][1]}, want {want:.8g}")
+
 APP_KINDS = {"tangent", "inflect", "increasing", "extrema", "implicit", "critical", "average", "mvt", "area"}
 
 def app_score(command):
@@ -210,6 +221,8 @@ def score(item):
             else:
                 want = float(sp.diff(sym(chk["expr"]), var, order).subs(var, sym(chk["at"])).evalf())
             return ("right", out) if close(want, float(got.evalf())) else ("wrong", f"{out}, want {want}")
+        if kind == "volume":
+            return volume_score(cmds[0], chk)
         if kind in APP_KINDS:
             return app_score(cmds[0])
         if kind == "simplify":
@@ -224,6 +237,10 @@ def score(item):
         return "unscored", f"checker: {ex}"
 
 items = [json.loads(line) for line in open(path)]
+hand = os.path.join(os.path.dirname(path), "hand.jsonl")     # items written by hand, replacing the importer's for the same id
+if os.path.exists(hand):
+    mine = {i["id"]: i for i in map(json.loads, open(hand))}
+    items = [mine.pop(i["id"], i) for i in items] + list(mine.values())
 items = [i for i in items if not kinds or i["kind"] in kinds]
 with concurrent.futures.ProcessPoolExecutor(workers, mp_context=multiprocessing.get_context("fork")) as pool:  # processes, so every item has its own random state
     results = list(pool.map(score, items))

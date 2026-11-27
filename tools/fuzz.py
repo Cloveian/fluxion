@@ -1,6 +1,6 @@
 # random expressions through build-pc/fluxion, checked numerically against sympy
-# usage: python3 tools/fuzz.py [count] [seed] [pos|any] [simplify|expand|factor|derivative|integral|solve|limit|critical|system|tangent|extrema|inflect|increasing|implicit|average|area|mvt|continuous] [-v]   (pos = letters only get positive test points)
-# the last nine run the app itself (build-pc/fluxion-app, FLX_ANSWER prints what it says) and check that against sympy
+# usage: python3 tools/fuzz.py [count] [seed] [pos|any] [simplify|expand|factor|derivative|integral|solve|limit|critical|system|tangent|extrema|inflect|increasing|implicit|average|area|mvt|continuous|volume] [-v]   (pos = letters only get positive test points)
+# the last ten run the app itself (build-pc/fluxion-app, FLX_ANSWER prints what it says) and check that against sympy
 import os, random, re, subprocess, sys, tempfile
 import sympy as sp
 from sympy.parsing.sympy_parser import parse_expr, standard_transformations, implicit_multiplication_application, convert_xor
@@ -272,7 +272,7 @@ def critical_check(f_str, roots):
         return f"missed or extra: want {tv}"
     return None
 
-APP = ("tangent", "extrema", "inflect", "increasing", "implicit", "average", "area", "mvt", "continuous")
+APP = ("tangent", "extrema", "inflect", "increasing", "implicit", "average", "area", "mvt", "continuous", "volume")
 
 def gen_implicit():
     a, b = nz(2, 9), nz(2, 9)
@@ -486,6 +486,34 @@ def area_check(f, g, bounds, lines):
     gv = fval(to_sympy(m.group(1)), 0) if m else None
     return None if gv is not None and not far(gv, want, 1e-6) else f"want {want:.6g}, got {text}"
 
+def volume_want(f, g, a, b, c, shells):
+    # exact, a polynomial integrand a gap at a time (gaps cut at the crossings), the radius on top read off in the middle
+    ds = [f - g] if shells else [f - g, f - c, g - c]
+    edges = sorted({a, b} | {r for d in ds if sp.expand(d) != 0 for r in poly_roots(d, a, b)})
+    total = 0
+    for l, h in zip(edges, edges[1:]):
+        m = sp.Rational(str(l)) / 2 + sp.Rational(str(h)) / 2
+        if shells:
+            p = sp.expand((X - c) * (f - g))
+            piece = p if p.subs(X, m) > 0 else -p
+        else:
+            u, w = sp.expand(f - c), sp.expand(g - c)
+            um, wm = u.subs(X, m), w.subs(X, m)
+            if um * wm < 0:
+                piece = u ** 2 if um ** 2 > wm ** 2 else w ** 2
+            else:
+                piece = u ** 2 - w ** 2 if abs(um) > abs(wm) else w ** 2 - u ** 2
+        total += sp.integrate(sp.expand(piece), (X, l, h))
+    return float((2 if shells else 1) * sp.pi * total)
+
+def volume_check(f, g, a, b, c, shells, lines):
+    if len(lines) != 2:
+        return "skip"
+    m = re.match(r"(?i)^v\s*=(.*)$", lines[1][1])
+    gv = fval(to_sympy(m.group(1)), 0) if m else None
+    want = volume_want(f, g, a, b, c, shells)
+    return None if gv is not None and not far(gv, want, 1e-6) else f"want {want:.6g}, got {lines[1][1]}"
+
 def mvt_check(f, a, b, lines):
     d = sp.expand(sp.diff(f, X) - (f.subs(X, b) - f.subs(X, a)) / (b - a))
     if d == 0:
@@ -581,6 +609,18 @@ for i in range(count):
                 label = f"{label} and {other}" + (f" from {bounds[0]} to {bounds[1]}" if bounds else "")
                 lines = app_answers(call)
                 problem = area_check(f, g, bounds, lines)
+            elif cmd == "volume":
+                # no cubics, their crossings are Cardano roots and the answer swells like area's does
+                label, other = gen_poly(random.choice([1, 2, 2])), random.choice(["0", gen_poly(random.choice([1, 2]))])
+                f, g = to_sympy(label), to_sympy(other)
+                a = nz(-3, 0)
+                b = nz(1, 4)
+                shells = random.random() < 0.5
+                c = random.choice([a - nz(1, 3), b + nz(1, 3)]) if shells else nz(-4, 4)
+                call = f"volume({app_text(label)},{app_text(other)},{a},{b},{'x' if shells else 'y'}={c})"
+                label = f"{label} and {other} from {a} to {b} about {'x' if shells else 'y'} = {c}"
+                lines = app_answers(call)
+                problem = volume_check(f, g, a, b, c, shells, lines)
             elif cmd == "continuous":
                 label, a = continuous_pair()
                 f = to_sympy(label)
