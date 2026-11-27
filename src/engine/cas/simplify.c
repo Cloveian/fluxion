@@ -887,18 +887,24 @@ bool simplify_like_terms_multiplication(pcas_ast_t *e) {
     return changed;
 }
 
+static bool periodic_op(pcas_ast_t *e) {
+    return isoptype(e, OP_SIN) || isoptype(e, OP_COS) || isoptype(e, OP_TAN)
+        || isoptype(e, OP_SEC) || isoptype(e, OP_CSC) || isoptype(e, OP_COT);
+}
+
 /*
     Simplifies sin(9pi/4) to sin(pi/4)
 
-    Works on sin, cos, and tan
+    Works on sin, cos, and tan (Fluxion: and sec, csc, cot)
 */
 bool simplify_periodic(pcas_ast_t *e) {
     pcas_ast_t *copy;
     mp_int a, b, c, d;
-    bool is_negative, changed = false;
+    bool is_negative, changed = false, half_turn;
 
-    if(!isoptype(e, OP_SIN) && !isoptype(e, OP_COS) && !isoptype(e, OP_TAN))
+    if(!periodic_op(e))
         return false;
+    half_turn = isoptype(e, OP_TAN) || isoptype(e, OP_COT); /*period pi, the rest 2pi*/
 
     copy = ast_MakeBinary(OP_DIV, ast_Copy(ast_ChildGet(e, 0)), ast_MakeSymbol(SYM_PI));
     simplify(copy, SIMP_NORMALIZE | SIMP_COMMUTATIVE | SIMP_RATIONAL | SIMP_EVAL);
@@ -946,8 +952,8 @@ bool simplify_periodic(pcas_ast_t *e) {
     c = mp_int_alloc();
     mp_int_init(c);
 
-    /*c = 2b for sin and cos, c = b for tan*/
-    if(isoptype(e, OP_TAN))
+    /*c = 2b for sin cos sec csc, c = b for tan and cot*/
+    if(half_turn)
         mp_int_copy(b, c);
     else
         mp_int_mul_value(b, 2, c);
@@ -1064,7 +1070,7 @@ static bool periodic_tree(pcas_ast_t *e) {
         return false;
     for(c = ast_ChildGet(e, 0); c != NULL; c = c->next)
         changed |= periodic_tree(c);
-    if((isoptype(e, OP_SIN) || isoptype(e, OP_COS) || isoptype(e, OP_TAN)) && pi_and_numbers(ast_ChildGet(e, 0)))
+    if(periodic_op(e) && pi_and_numbers(ast_ChildGet(e, 0)))
         while(!pcas_check() && simplify_periodic(e))
             changed = true;
     return changed;
