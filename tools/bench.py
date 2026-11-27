@@ -1,6 +1,6 @@
 # scores the CAS on a converted problem set (tools/bench_import.py's problems.jsonl): right / wrong / gave up per item, answers checked with sympy
 # usage: python3 tools/bench.py problems.jsonl [kind ...] [-v] [-j 8]    (run from the repo root, build-pc/fluxion and fluxion-app have to be built, per-item verdicts go to /tmp/bench-results.jsonl)
-import concurrent.futures, contextlib, io, json, multiprocessing, os, random, re, subprocess, sys
+import concurrent.futures, contextlib, glob, io, json, multiprocessing, os, random, re, subprocess, sys
 import sympy as sp
 from sympy.parsing.sympy_parser import parse_expr
 
@@ -118,6 +118,22 @@ def concave_score(command, chk):
         return "unscored", f"fuzz check skipped it: {text}"
     return ("wrong", f"{text}: {problem}") if problem else ("right", text)
 
+def has_score(command, chk):
+    # hand set up word problem: the book's value has to be one of the numbers the app says, a miss stays unscored (MISMATCH) since it could be the setup
+    lines, why = app_lines(command)
+    if lines is None:
+        return "gaveup", why
+    want, tol = float(sym(chk["want"]).evalf()), chk.get("tol", 1e-6)
+    for _, text in lines:
+        for part in fuzz.top_split(re.sub(r"^[^=<>(]*=", "", text)):
+            try:
+                v = fuzz.fval(fuzz.to_sympy(part), 0)
+            except Exception:
+                continue
+            if v is not None and not fuzz.far(v, want, tol):
+                return "right", text
+    return "unscored", "MISMATCH " + " | ".join(t for _, t in lines) + f", want {want:.8g}"
+
 def volume_score(command, chk):
     # the V = line against the book's value
     lines, why = app_lines(command)
@@ -221,6 +237,8 @@ def score(item):
             else:
                 want = float(sp.diff(sym(chk["expr"]), var, order).subs(var, sym(chk["at"])).evalf())
             return ("right", out) if close(want, float(got.evalf())) else ("wrong", f"{out}, want {want}")
+        if kind == "has":
+            return has_score(cmds[0], chk)
         if kind == "volume":
             return volume_score(cmds[0], chk)
         if kind in APP_KINDS:
@@ -237,10 +255,10 @@ def score(item):
         return "unscored", f"checker: {ex}"
 
 items = [json.loads(line) for line in open(path)]
-hand = os.path.join(os.path.dirname(path), "hand.jsonl")     # items written by hand, replacing the importer's for the same id
-if os.path.exists(hand):
-    mine = {i["id"]: i for i in map(json.loads, open(hand))}
-    items = [mine.pop(i["id"], i) for i in items] + list(mine.values())
+mine = {}     # items written by hand (hand*.jsonl next to the problems), replacing the importer's for the same id
+for hand in sorted(glob.glob(os.path.join(os.path.dirname(path), "hand*.jsonl"))):
+    mine.update({i["id"]: i for i in map(json.loads, open(hand))})
+items = [mine.pop(i["id"], i) for i in items] + list(mine.values())
 items = [i for i in items if not kinds or i["kind"] in kinds]
 with concurrent.futures.ProcessPoolExecutor(workers, mp_context=multiprocessing.get_context("fork")) as pool:  # processes, so every item has its own random state
     results = list(pool.map(score, items))
