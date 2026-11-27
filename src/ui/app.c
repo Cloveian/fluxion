@@ -2239,10 +2239,6 @@ static action_t pointer_action(const input_t *p) {
 static bool handle(const input_t *in) {
     action_t a = in->a, plain = in->plain;
 
-    if(in->pointer && in->hover) { /* just redraws, the status and the modifiers stay */
-        hover_set(in->x, in->y);
-        return true;
-    }
     status = NULL;
     if(!menu_is_open())
         menu_from = -1; /* [2nd][y=] and such open nothing */
@@ -2399,6 +2395,7 @@ static void draw_screen(void) {
     int line_y, y, i, avail = right - left, first;
     int top = areas.body.y, bottom = areas_body_bottom();
 
+    hover_frame();
     screen_clear();
 
     if(page_is_open() || work_is_open()) {
@@ -2612,6 +2609,11 @@ void app_run(void) {
     for(;;) {
         input_t in = input_wait(popup_is_open() ? IN_POPUP : menu_is_open() ? IN_MENU : IN_TYPING);
 
+        if(in.pointer && in.hover) { /* the status and the modifiers stay, and so does the screen unless something under the mouse lit up or went out */
+            if(hover_set(in.x, in.y))
+                draw_screen();
+            continue;
+        }
         if(in.a.op == A_ENTER && !menu_is_open() && !ed_is_empty(&ed))
             busy_start(); /* the form keys start it themselves */
         if(!handle(&in))
