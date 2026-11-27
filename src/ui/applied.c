@@ -33,10 +33,6 @@ static const struct {
     { "initial", "initial(f', 1, a, A, x) or (f'', 2, a, A, B, x) or (f'', 2, a, A, b, B, x)", 4, 7 },
 };
 
-static bool same(double a, double b) {
-    return fabs(a - b) <= 1e-9 * (fabs(b) > 1 ? fabs(b) : 1);
-}
-
 /* is there an op node anywere in e, an integral the engine couldn't do or a limit it couldn't finish */
 static bool has_op(pcas_ast_t *e, OperatorType op) {
     pcas_ast_t *found[STEPS_FOUND_MAX];
@@ -52,18 +48,6 @@ static pcas_ast_t *integral_of(pcas_ast_t *f, Symbol var, pcas_ast_t *a, pcas_as
     ast_ChildAppend(e, ast_MakeSymbol((char)var));
     ast_ChildAppend(e, ast_Copy(a));
     ast_ChildAppend(e, ast_Copy(b));
-    return e;
-}
-
-/* var -> a from one side (-1 or 1), worked out */
-static pcas_ast_t *limit_of(pcas_ast_t *f, Symbol var, pcas_ast_t *a, int side) {
-    pcas_ast_t *e = ast_MakeOperator(OP_LIMIT);
-
-    ast_ChildAppend(e, ast_Copy(f));
-    ast_ChildAppend(e, ast_MakeSymbol((char)var));
-    ast_ChildAppend(e, ast_Copy(a));
-    ast_ChildAppend(e, ast_MakeInt(side));
-    simplify(e, SIMP_ALL);
     return e;
 }
 
@@ -338,9 +322,9 @@ static box_t *absolute(pcas_ast_t *f, pcas_ast_t *a, pcas_ast_t *b, Symbol var, 
         col = layout_box(BOX_COL, 0);
         for(k = 0; k < 2; k++)
             for(i = 0; i < n; i++)
-                if(same(v[i], at[k])) {
+                if(numbers_same(v[i], at[k])) {
                     layout_add(col, labelled(name[k], point_box(cand[i], y[i])));
-                    if(same(top, bottom))
+                    if(numbers_same(top, bottom))
                         break; /* level everywhere, the max and the min are the same lines */
                 }
         layout_finish(col, &draw_font);
@@ -487,7 +471,7 @@ static box_t *mean_value(pcas_ast_t *f, pcas_ast_t *a, pcas_ast_t *b, Symbol var
 /* both sides of the limit against the value, and which of the four things it is */
 static box_t *continuity(pcas_ast_t *f, pcas_ast_t *a, Symbol var, const char **message) {
     /* no f(a) when a bottom is 0 there, simplify says 0/0 is 1 */
-    pcas_ast_t *left = limit_of(f, var, a, -1), *right = limit_of(f, var, a, 1), *at = bottom_zero(f, var, a) ? NULL : value_at(f, var, a);
+    pcas_ast_t *left = limit_at(f, var, a, -1), *right = limit_at(f, var, a, 1), *at = bottom_zero(f, var, a) ? NULL : value_at(f, var, a);
     double l = 0, r = 0, v = 0;
     bool left_ok, right_ok, at_ok;
     const char *verdict;
@@ -501,21 +485,13 @@ static box_t *continuity(pcas_ast_t *f, pcas_ast_t *a, Symbol var, const char **
         left_ok = approx_double(left, &l);
         right_ok = approx_double(right, &r);
         at_ok = at != NULL && approx_double(at, &v);
-        if(left_ok && right_ok && same(l, r))
-            verdict = at_ok && same(v, l) ? "continuous" : "removable discontinuity";
+        if(left_ok && right_ok && numbers_same(l, r))
+            verdict = at_ok && numbers_same(v, l) ? "continuous" : "removable discontinuity";
         else if(left_ok && right_ok)
             verdict = "jump discontinuity";
         else
             verdict = "infinite discontinuity";
-        col = layout_box(BOX_COL, 0);
-        layout_add(col, labelled("from the left", value_box(left)));
-        layout_add(col, labelled("from the right", value_box(right)));
-        if(at_ok)
-            layout_add(col, labelled("f(a)", value_box(at)));
-        else
-            layout_add(col, layout_text("f(a) is undefined", 0));
-        layout_add(col, layout_text(verdict, 0));
-        layout_finish(col, &draw_font);
+        col = limits_box(left, right, at_ok ? at : NULL, verdict);
     }
     ast_Cleanup(left);
     ast_Cleanup(right);

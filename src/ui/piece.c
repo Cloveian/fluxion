@@ -2,6 +2,7 @@
 
 #include "app.h"
 #include "args.h"
+#include "calc1.h"
 #include "numval.h"
 #include "settings.h"
 
@@ -136,6 +137,8 @@ static int holds(const cond_t *c, pcas_ast_t *var, pcas_ast_t *v) {
         pcas_ast_t *e = ast_Copy(c->side[k]);
         bool ok;
 
+        if(e == NULL) /* oom */
+            return -1;
         substitute(e, var, v);
         simplify(e, SIMP_ALL);
         approx(e);
@@ -198,6 +201,53 @@ static box_t *pieces_box(pcas_ast_t **f, cond_t *c, int pieces) {
         layout_add(col, row);
     }
     layout_finish(col, &draw_font);
+    return col;
+}
+
+/* the first piece whose condition holds at var = v, -1 for none (or one that can't be told) */
+static int piece_at(const cond_t *c, int pieces, pcas_ast_t *var, pcas_ast_t *v) {
+    int i;
+
+    for(i = 0; i < pieces; i++)
+        if(holds(&c[i], var, v) == 1)
+            return i;
+    return -1;
+}
+
+/* where a piece ends: the limit from each side (pieces lp and rp, -1 for none there) and f(a) from piece mid, then what kind of break it is */
+static box_t *edge_box(pcas_ast_t **f, int lp, int rp, int mid, Symbol sym, pcas_ast_t *v, const char **message) {
+    pcas_ast_t *left = lp >= 0 ? limit_at(f[lp], sym, v, -1) : NULL, *right = rp >= 0 ? limit_at(f[rp], sym, v, 1) : NULL, *at = NULL;
+    pcas_ast_t *var = ast_MakeSymbol((char)sym);
+    const char *verdict;
+    double l, r, a;
+    box_t *col = NULL;
+
+    if(mid >= 0 && (at = ast_Copy(f[mid])) != NULL) {
+        substitute(at, var, v);
+        exact(at);
+    }
+    if(pcas_cancelled) {
+        /* nothing to say, piece_run reads pcas_cancelled */
+    } else if((left != NULL && has_operator(left, OP_LIMIT)) || (right != NULL && has_operator(right, OP_LIMIT))) {
+        *message = "can't work that limit out";
+    } else {
+        if(left != NULL && right != NULL && approx_double(left, &l) && approx_double(right, &r)) {
+            bool have = at != NULL && approx_double(at, &a);
+
+            if(numbers_same(l, r))
+                verdict = have && numbers_same(a, l) ? "continuous" : "removable discontinuity";
+            else /* which side f(a) belogns to, if either */
+                verdict = have && numbers_same(a, l) ? "jump, continuous from the left" : have && numbers_same(a, r) ? "jump, continuous from the right" : "jump discontinuity";
+        } else if(left != NULL && right != NULL)
+            verdict = "infinite discontinuity";
+        else
+            verdict = "defined on one side only";
+        col = limits_box(left, right, at, verdict);
+    }
+    ast_Cleanup(left);
+    ast_Cleanup(right);
+    ast_Cleanup(at);
+    ast_Cleanup(var);
     return col;
 }
 
@@ -271,21 +321,35 @@ bool piece_run(const char *cmd, char *src, box_t *in) {
         /* the conditions only get the float of v, the piece gets v itself */
         var = ast_MakeSymbol((char)sym);
         vn = ast_Copy(v);
-        simplify(vn, SIMP_ALL);
-        approx(vn);
-        for(i = 0; i < pieces; i++) {
+        if(vn == NULL) {
+            r = -1; /* oom */
+        } else {
+            simplify(vn, SIMP_ALL);
+            approx(vn);
+        }
+        for(i = 0; i < pieces && vn != NULL; i++) {
             r = holds(&c[i], var, vn);
             if(r != 0 || pcas_cancelled)
                 break;
         }
-        if(r < 0)
+        if(r < 0 || pcas_cancelled) {
             message = "a condition isn't a number there";
-        else if(r == 0)
-            message = "undefined there";
-        else {
-            e = ast_Copy(f[i]);
-            substitute(e, var, v);
-            exact(e);
+        } else {
+            pcas_ast_t *pl = beside(vn, -1), *pr = beside(vn, 1);
+            int lp = piece_at(c, pieces, var, pl), rp = piece_at(c, pieces, var, pr);
+
+            ast_Cleanup(pl);
+            ast_Cleanup(pr);
+            if(r == 0 && lp < 0 && rp < 0) {
+                message = "undefined there";
+            } else if(r != 0 && lp == i && rp == i) {
+                if((e = ast_Copy(f[i])) != NULL) {
+                    substitute(e, var, v);
+                    exact(e);
+                }
+            } else { /* the piece changes here, so the limits from each side are the question */
+                out = edge_box(f, lp, rp, r != 0 ? i : -1, sym, v, &message);
+            }
         }
     }
 

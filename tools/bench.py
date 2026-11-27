@@ -133,12 +133,13 @@ def has_score(command, chk):
         # max(a, b) lines from extrema count as their parts
         value = re.sub(r"^(max|min)\((.*)\)$", r"\2", re.sub(r"^[^=<>(]*=", "", text))
         for part in fuzz.top_split(value):
-            try:
-                v = fuzz.fval(fuzz.to_sympy(part), 0)
-            except Exception:
-                continue
-            if v is not None and not fuzz.far(v, want, tol):
-                return "right", text
+            for number in (part, re.sub(r"^[A-Za-z() ]*?(?=-?\d)", "", part)):    # a label like "FROM THe LeFT" runs into its value
+                try:
+                    v = fuzz.fval(fuzz.to_sympy(number), 0)
+                except Exception:
+                    continue
+                if v is not None and not fuzz.far(v, want, tol):
+                    return "right", text
     return "unscored", "MISMATCH " + " | ".join(t for _, t in lines) + f", want {want:.8g}"
 
 def values_of(text):

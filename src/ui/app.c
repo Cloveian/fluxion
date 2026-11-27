@@ -1851,7 +1851,7 @@ static ed_row_t *row_from_text(const char *text) {
 }
 
 /* "expand((x+1)^9)" from another program, args read as math, = < > between two of them. false and nothing typed if it isn't a command */
-#define PASTE_ITEMS_MAX 16
+#define PASTE_ITEMS_MAX 32 /* piecewise( with 4 pieces is about 26 */
 typedef struct {
     ed_row_t *row; /* NULL for a plain character */
     char ch;

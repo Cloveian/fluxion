@@ -6,6 +6,7 @@
 #include "work.h"
 #include "engine/cas/steps.h"
 
+#include <math.h>
 #include <string.h>
 #include <time.h>
 
@@ -62,10 +63,42 @@ pcas_ast_t *value_at(pcas_ast_t *f, Symbol var, pcas_ast_t *v) {
     return e;
 }
 
+/* var -> a from one side (-1 or 1), worked out */
+pcas_ast_t *limit_at(pcas_ast_t *f, Symbol var, pcas_ast_t *a, int side) {
+    pcas_ast_t *e = ast_MakeOperator(OP_LIMIT);
+
+    ast_ChildAppend(e, ast_Copy(f));
+    ast_ChildAppend(e, ast_MakeSymbol((char)var));
+    ast_ChildAppend(e, ast_Copy(a));
+    ast_ChildAppend(e, ast_MakeInt(side));
+    simplify(e, SIMP_ALL);
+    return e;
+}
+
+/* r a thousandth to one side (side is -1 or 1), not worked out */
+pcas_ast_t *beside(pcas_ast_t *r, int side) {
+    return ast_MakeBinary(OP_ADD, ast_Copy(r), ast_MakeBinary(OP_DIV, ast_MakeInt(side), ast_MakeInt(1000)));
+}
+
+bool numbers_same(double a, double b) {
+    return fabs(a - b) <= 1e-9 * (fabs(b) > 1 ? fabs(b) : 1);
+}
+
+/* the limit from each side and f(a), each NULL when there isn't one, with the verdict under them */
+box_t *limits_box(pcas_ast_t *left, pcas_ast_t *right, pcas_ast_t *at, const char *verdict) {
+    box_t *col = layout_box(BOX_COL, 0);
+
+    layout_add(col, labelled("from the left", left != NULL ? value_box(left) : layout_text("undefined", 0)));
+    layout_add(col, labelled("from the right", right != NULL ? value_box(right) : layout_text("undefined", 0)));
+    layout_add(col, at != NULL ? labelled("f(a)", value_box(at)) : layout_text("f(a) is undefined", 0));
+    layout_add(col, layout_text(verdict, 0));
+    layout_finish(col, &draw_font);
+    return col;
+}
+
 /* the sign of f a thousanth to one side of r (side is -1 or 1), 0 if it's 0, 2 if it isn't a number (a root with an n in it) */
 static int sign_beside(pcas_ast_t *f, Symbol var, pcas_ast_t *r, int side) {
-    pcas_ast_t *p = ast_MakeBinary(OP_ADD, ast_Copy(r),
-                                   ast_MakeBinary(OP_DIV, ast_MakeInt(side), ast_MakeInt(1000)));
+    pcas_ast_t *p = beside(r, side);
     pcas_ast_t *e = value_at(f, var, p);
     double v;
     int s = 2;
