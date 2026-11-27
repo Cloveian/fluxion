@@ -450,6 +450,15 @@ static bool small_fraction(pcas_ast_t *power, mp_small *p, mp_small *q) {
     return *p > 0 && *q > 0 && *p <= 64 && *q <= 64;
 }
 
+/*Fluxion: new, what to multiply a root below by to leave a plain base, root(n, b)^(n-1) makes b. just the root for a square root*/
+static pcas_ast_t *root_cofactor(pcas_ast_t *root) {
+    mp_small p, q;
+
+    if(small_fraction(ast_ChildGet(root, 0), &p, &q) && q == 1 && p > 2)
+        return ast_MakeBinary(OP_POW, ast_Copy(root), ast_MakeInt((long)p - 1));
+    return ast_Copy(root);
+}
+
 /*Fluxion: a whole number below against the number on top, (-2sqrt(2))/2 -> -sqrt(2)*/
 static void cancel_numbers(pcas_ast_t *e) {
     pcas_ast_t *num = ast_ChildGet(e, 0), *den = ast_ChildGet(e, 1), *k = num;
@@ -658,11 +667,11 @@ bool simplify_canonical_form(pcas_ast_t *e, unsigned char flags) {
 
                 replace_node(num, ast_MakeBinary(OP_MULT,
                                     ast_Copy(num),
-                                    ast_Copy(den)
+                                    root_cofactor(den)
                                 ));
                 replace_node(den, ast_MakeBinary(OP_MULT,
                                     ast_Copy(den),
-                                    ast_Copy(den)
+                                    root_cofactor(den)
                                 ));
 
                 simplify(num, SIMP_NORMALIZE | SIMP_COMMUTATIVE | SIMP_EVAL | SIMP_RATIONAL | SIMP_LIKE_TERMS);
@@ -676,11 +685,11 @@ bool simplify_canonical_form(pcas_ast_t *e, unsigned char flags) {
                     if(isoptype(child, OP_ROOT)) {
                         replace_node(num, ast_MakeBinary(OP_MULT,
                                             ast_Copy(num),
-                                            ast_Copy(child)
+                                            root_cofactor(child)
                                         ));
                         replace_node(den, ast_MakeBinary(OP_MULT,
                                             ast_Copy(den),
-                                            ast_Copy(child)
+                                            root_cofactor(child)
                                         ));
 
                         simplify(num, SIMP_NORMALIZE | SIMP_COMMUTATIVE | SIMP_EVAL | SIMP_RATIONAL | SIMP_LIKE_TERMS);
