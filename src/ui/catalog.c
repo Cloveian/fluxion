@@ -224,6 +224,9 @@ ITEM(it_initial, "initial", "initial", ITEM_COMMAND, "initial($)", HAVE_PARTLY,
 ITEM(it_riemann, "riemann", "riemann", ITEM_COMMAND, "riemann($)", HAVE_PARTLY,
      "riemann(f,a,b,n,s,x): the sum of n rectangles under f from a to b, heights at the left ends (s = -1), middles (0) or right ends (1). n up to 50, the x is optional",
      "an estimate of the area. riemann(3/x,1,3,4,1) -> sum = 57/20 with right ends")
+ITEM(it_linear, "linear", "linear", ITEM_COMMAND, "linear($)", HAVE_PARTLY,
+     "linear(f,a,x0,x): the tangent line at x = a, its value at x0 (the estimate) and f(x0). the x is optional",
+     "the linear approximation. linear(sqrt(x),100,100.2) -> line = (x+100)/20, estimate = 1001/100")
 ITEM(it_continuous, "continuous", "continuous", ITEM_COMMAND, "continuous($)", HAVE_PARTLY,
      "continuous(f,a,x): the limit from each side against f(a), and whether it's continuous, removable, a jump or infinite",
      "whether the curve breaks at x = a. continuous(abs(x)/x,0) -> a jump discontinuity")
@@ -375,7 +378,7 @@ const item_t *const catalog[] = {
     &it_cube, &it_box, &it_polygon, &it_pand, &it_por,
     &it_ellipse, &it_hyperbola,
     &it_deriv, &it_deriv_at, &it_integral, &it_limit, &it_tangent, &it_normal, &it_critical, &it_extrema, &it_inflect, &it_implicit, &it_increasing, &it_taylor,
-    &it_average, &it_area, &it_mvt, &it_continuous, &it_volume, &it_absolute, &it_initial, &it_riemann,
+    &it_average, &it_area, &it_mvt, &it_continuous, &it_volume, &it_absolute, &it_initial, &it_riemann, &it_linear,
     &it_id_basic, &it_id_trig, &it_id_hyp, &it_id_cplx, &it_id_tconst, &it_id_iconst, &it_clear, &it_steps
 };
 const unsigned catalog_count = sizeof catalog / sizeof catalog[0];
@@ -391,7 +394,7 @@ static const item_t *const shapes[] = { &it_triangle, &it_circle, &it_rect, &it_
 static const item_t *const solids[] = { &it_sphere, &it_cyl, &it_cone, &it_cube, &it_box };
 static const item_t *const conics[] = { &it_ellipse, &it_hyperbola };
 static const item_t *const prob[] = { &it_pand, &it_por };
-static const item_t *const applied[] = { &it_average, &it_area, &it_mvt, &it_continuous, &it_volume, &it_absolute, &it_initial, &it_riemann };
+static const item_t *const applied[] = { &it_average, &it_area, &it_mvt, &it_continuous, &it_volume, &it_absolute, &it_initial, &it_riemann, &it_linear };
 
 SUBFOLDER(it_fn_info, fn_info_folder, "Function info", fn_info)
 SUBFOLDER(it_lines, lines_folder, "Lines", lines)

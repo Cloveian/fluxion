@@ -450,7 +450,7 @@ static bool small_fraction(pcas_ast_t *power, mp_small *p, mp_small *q) {
     return *p > 0 && *q > 0 && *p <= 64 && *q <= 64;
 }
 
-/*Fluxion: new, what to multiply a root below by to leave a plain base, root(n, b)^(n-1) makes b. just the root for a square root*/
+/*Fluxion: what a root below gets multiplied by to leave its base, root(n, b)^(n-1). a square root is just itself*/
 static pcas_ast_t *root_cofactor(pcas_ast_t *root) {
     mp_small p, q;
 

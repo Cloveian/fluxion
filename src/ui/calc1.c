@@ -121,11 +121,9 @@ static int zeros_of(pcas_ast_t *f, Symbol var, pcas_ast_t **roots, const char **
     return n;
 }
 
-/* y = f'(a)x + b, or the line across it (slope -1 / f'(a), x = a where f' is 0) when normal */
-static box_t *tangent(pcas_ast_t *f, pcas_ast_t *a, Symbol var, bool normal, const char **message) {
-    pcas_ast_t *d = derive(f, var, 1), *m, *fa, *line;
-    box_t *out = NULL;
-    double v;
+/* f'(a) worked out. NULL on oom, or with a message when f or f' is undefined at a */
+pcas_ast_t *slope_at(pcas_ast_t *f, Symbol var, pcas_ast_t *a, const char **message) {
+    pcas_ast_t *d = derive(f, var, 1), *m;
 
     if(d == NULL)
         return NULL;
@@ -135,13 +133,24 @@ static box_t *tangent(pcas_ast_t *f, pcas_ast_t *a, Symbol var, bool normal, con
         return NULL;
     }
     m = value_at(d, var, a);
+    ast_Cleanup(d);
+    return m;
+}
+
+/* y = f'(a)x + b, or the line across it (slope -1 / f'(a), x = a where f' is 0) when normal */
+static box_t *tangent(pcas_ast_t *f, pcas_ast_t *a, Symbol var, bool normal, const char **message) {
+    pcas_ast_t *m = slope_at(f, var, a, message), *fa, *line;
+    box_t *out = NULL;
+    double v;
+
+    if(m == NULL)
+        return NULL;
     fa = value_at(f, var, a);
     if(normal && approx_double(m, &v) && v == 0) { /* flat there, the normal is straight up */
         out = labelled("x =", value_box(a));
         layout_finish(out, &draw_font);
         ast_Cleanup(m);
         ast_Cleanup(fa);
-        ast_Cleanup(d);
         return out;
     }
     if(normal)
@@ -156,7 +165,6 @@ static box_t *tangent(pcas_ast_t *f, pcas_ast_t *a, Symbol var, bool normal, con
         layout_finish(out, &draw_font); /* no column around it to finish it */
     }
     ast_Cleanup(line);
-    ast_Cleanup(d);
     return out;
 }
 

@@ -49,6 +49,7 @@
 - [x] Finding f from f' or f'' and its starting values, initial(
 - [x] Absolute maximum and minimum on a closed interval, the ends plus where f' is 0 or isn't there, absolute(
 - [x] Volume of a solid of revolution, discs, washers and shells about y=c or x=c, with the integral set up above the answer, volume(
+- [x] Linear approximation, the tangent line at a, its value at the number being estimated and the real f there, linear(
 - [ ] Newton's method, the limit definition of the *dih*rivative and Riemann sums
 
 ## later

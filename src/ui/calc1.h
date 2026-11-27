@@ -12,6 +12,9 @@ bool calc1_run(const char *cmd, char *src, box_t *in);
 /* d/dvar of f, times over. NULL on oom or cancelled */
 pcas_ast_t *derive(pcas_ast_t *f, Symbol var, int times);
 
+/* f'(a) worked out. NULL on oom, or with a message when f or f' is undefined at a */
+pcas_ast_t *slope_at(pcas_ast_t *f, Symbol var, pcas_ast_t *a, const char **message);
+
 /* f with v put in for var, worked out */
 pcas_ast_t *value_at(pcas_ast_t *f, Symbol var, pcas_ast_t *v);
 

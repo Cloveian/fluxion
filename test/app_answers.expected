@@ -55,6 +55,24 @@ answer: sum =((77)/(20))
 answer: sum =((21)/(8))
 == riemann(x,0,1,100,1)
 message: n is a whole number up to 50, the side -1 for left ends, 0 for middles, 1 for right ends
+== linear(sqrt(1-x),0,0.1)
+answer: LiNe =((-X+2)/(2))
+answer: eSTimATe =((19)/(20))
+answer: ACTUAL =((3sqrt(10))/(10))
+== linear(sqrt(x),100,100.2)
+answer: LiNe =((X+100)/(20))
+answer: eSTimATe =((1001)/(100))
+answer: ACTUAL =((sqrt(2505))/(5))
+== linear(x^5,2,1.999)
+answer: LiNe =80X_128
+answer: eSTimATe =((798)/(25))
+answer: ACTUAL =((31920079960009999)/(1000000000000000))
+== linear(e^x,0,-0.01)
+answer: LiNe =X+1
+answer: eSTimATe =((99)/(100))
+answer: ACTUAL =((e^(((99)/(100))))/(e))
+== linear(1/x,0,1)
+message: f isn't defined there, or has no slope there
 == tangent(x^2,3)
 answer: Y =6X_9
 == normal(x^2,3)

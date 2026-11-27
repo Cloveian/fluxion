@@ -54,6 +54,7 @@ Everything Fluxion does right now, as tables. Yes / partly / no first, the other
 | Numeric integrals (6 digits) | yes\* |
 | Limits                       | yes\* |
 | Tangent line, normal line    | yes   |
+| Linear approximation         | yes\* |
 | Implicit derivatives         | yes\* |
 | Critical points              | yes\* |
 | Max, min, inflections        | yes\* |

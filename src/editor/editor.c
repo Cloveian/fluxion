@@ -1281,7 +1281,7 @@ static const char *const commands[] = { "expand", "factor", "eval", "solve", "as
                                         "circle", "rect", "square", "trap", "sphere", "cyl", "cone", "cube",
                                         "box", "polygon",
                                         "tangent", "normal", "critical", "extrema", "inflect", "implicit", "increasing", "taylor", "apart", "divide", "sum", "product",
-                                        "average", "area", "mvt", "continuous", "volume", "absolute", "initial", "riemann" };
+                                        "average", "area", "mvt", "continuous", "volume", "absolute", "initial", "riemann", "linear" };
 
 const char *ed_command(const editor_t *ed) {
     const ed_node_t *n;

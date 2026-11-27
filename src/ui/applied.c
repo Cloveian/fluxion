@@ -18,7 +18,7 @@
 
 #define ARGS_MAX 7
 
-enum { P_AVERAGE, P_AREA, P_MVT, P_CONTINUOUS, P_VOLUME, P_ABSOLUTE, P_INITIAL, P_RIEMANN, P_COUNT };
+enum { P_AVERAGE, P_AREA, P_MVT, P_CONTINUOUS, P_VOLUME, P_ABSOLUTE, P_INITIAL, P_RIEMANN, P_LINEAR, P_COUNT };
 
 static const struct {
     const char *name, *usage;
@@ -32,6 +32,7 @@ static const struct {
     { "absolute", "absolute(f, a, b, x)", 3, 4 },
     { "initial", "initial(f', 1, a, A, x) or (f'', 2, a, A, B, x) or (f'', 2, a, A, b, B, x)", 4, 7 },
     { "riemann", "riemann(f, a, b, n, -1 left | 0 middle | 1 right, x)", 5, 6 },
+    { "linear", "linear(f, a, x0, x)", 3, 4 },
 };
 
 /* is there an op node anywere in e, an integral the engine couldn't do or a limit it couldn't finish */
@@ -251,6 +252,32 @@ static box_t *riemann(pcas_ast_t *f, pcas_ast_t *a, pcas_ast_t *b, pcas_ast_t *c
     ast_Cleanup(width);
     ast_Cleanup(sum);
     return out;
+}
+
+/* the tangent line at a, what it says at x0 and what f really is there */
+static box_t *linear(pcas_ast_t *f, pcas_ast_t *a, pcas_ast_t *x0, Symbol var, const char **message) {
+    pcas_ast_t *m = slope_at(f, var, a, message), *line, *est, *real;
+    box_t *col = NULL;
+
+    if(m == NULL)
+        return NULL;
+    line = ast_MakeBinary(OP_ADD, value_at(f, var, a), ast_MakeBinary(OP_MULT, m, minus(ast_MakeSymbol((char)var), ast_Copy(a))));
+    est = value_at(line, var, x0);
+    real = bottom_zero(f, var, x0) ? NULL : value_at(f, var, x0);
+    simplify(line, SIMP_ALL);
+    if(real == NULL) {
+        *message = "f isn't defined at the number being estimated";
+    } else if(!pcas_cancelled) {
+        col = layout_box(BOX_COL, 0);
+        layout_add(col, labelled("line =", value_box(line)));
+        layout_add(col, labelled("estimate =", value_box(est)));
+        layout_add(col, labelled("actual =", value_box(real)));
+        layout_finish(col, &draw_font);
+    }
+    ast_Cleanup(line);
+    ast_Cleanup(est);
+    ast_Cleanup(real);
+    return col;
 }
 
 /* the antiderivative of e, worked out, no constant. NULL when it stays an integral */
@@ -607,6 +634,8 @@ bool applied_run(const char *cmd, char *src, box_t *in) {
         out = absolute(a[0], a[1], a[2], var, &message);
     else if(c == P_RIEMANN)
         out = riemann(a[0], a[1], a[2], a[3], a[4], var, &message);
+    else if(c == P_LINEAR)
+        out = linear(a[0], a[1], a[2], var, &message);
     else if(c == P_INITIAL) {
         double order;
 
