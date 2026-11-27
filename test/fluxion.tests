@@ -363,6 +363,13 @@ asym; (X^2+3X+2)/(X_1); X; holes - | vert 1 | horiz - | slant 4+X
 asym; (2X^3+1)/(X^2); X; holes - | vert 0 | horiz - | slant 2X
 asym; (X^3)/(X^2+1); X; holes - | vert - | horiz - | slant X
 asym; (X^2+X)/X; X; holes 0 | vert - | horiz - | slant -
+#not polynomials: the ends come from limits, left one first when they differ. e^ln(5) - 5 is a zero, not a hole
+asym; 9e^X/(e^X_5); X; holes - | vert ln(5) | horiz 0,9 | slant -
+asym; 1/(1+e^X); X; holes - | vert - | horiz 1,0 | slant -
+asym; e^X/(e^X+1); X; holes - | vert - | horiz 0,1 | slant -
+asym; sin(X)/X; X; holes 0 | vert - | horiz 0 | slant -
+asym; e^X/X; X; holes - | vert 0 | horiz 0 | slant -
+asym; e^(-X); X; holes - | vert - | horiz 0 | slant -
 
 #domain (domain; expression; variable; lower <x> | upper <x> | holes <x list>, o after a bound for open, - for none)
 domain; sqrt(X_2); X; lower 2 | upper - | holes -
@@ -371,6 +378,10 @@ domain; ln(X); X; lower 0o | upper - | holes -
 domain; sqrt(4_X)/(X+1); X; lower - | upper 4 | holes -1
 domain; X^2+1; X; lower - | upper - | holes -
 domain; 1/(X^2_4); X; lower - | upper - | holes -2,2
+#a polynomial under a root or log with no real zero and over 0 is nothing out, sqrt(x^4+7) is 0 only at complex x
+domain; X^2/sqrt(X^4+7); X; lower - | upper - | holes -
+domain; sqrt(X^2+1); X; lower - | upper - | holes -
+domain; ln(X^2+X+1); X; lower - | upper - | holes -
 domain; sqrt(X)/X; X; lower 0o | upper - | holes -
 domain; sqrt(X_2)/(X_1); X; lower 2 | upper - | holes -
 domain; sqrt(X_2)+sqrt(5_X); X; lower 2 | upper 5 | holes -
@@ -951,6 +962,14 @@ simplify; limit(asec(X+2),X,-1,-1); limit(asec(2+X),X,-1,-1)
 simplify; limit(asec(X+2),X,-1,1); 0
 #an odd root of something heading to -inf heads there too, an even one isn't real
 simplify; limit((3X_1)^(1/3),X,-inf); -inf
+#a sin or cos over something that goes to infinity is 0, at inf it never has to be undefined first
+simplify; limit(sin(X)/X,X,inf); 0
+simplify; limit(sin(X)/X,X,-inf); 0
+simplify; limit(cos(X)/X^2,X,-inf); 0
+simplify; limit(3sin(2X)/(X+1),X,inf); 0
+simplify; limit(sin(X)/sqrt(X),X,inf); 0
+simplify; limit(sin(X)/sin(X),X,inf); 1
+simplify; limit(sin(X),X,inf); dne
 simplify; limit((1_X)^(1/3),X,inf); -inf
 simplify; limit((X+1)*(-X/2_2)^(1/3),X,inf); -inf
 simplify; limit((X_1)^(2/3),X,-inf); inf

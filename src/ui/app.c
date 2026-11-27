@@ -688,10 +688,12 @@ pcas_ast_t *read_f(char *src, box_t *in, const char *usage, Symbol *var, char *s
 static void run_asym(char *src, box_t *in) {
     pcas_ast_t *e;
     asym_t a;
+    pcas_ast_t *ends[2];
     char shown;
     Symbol var;
     clock_t start;
     unsigned long ms;
+    int ne;
     bool ok;
     box_t *col;
 
@@ -712,7 +714,8 @@ static void run_asym(char *src, box_t *in) {
         push(in, NULL, "can't solve where the bottom is 0", ms);
         return;
     }
-    if(a.nholes == 0 && a.nvert == 0 && a.horiz == NULL && a.slant == NULL) {
+    ne = asym_ends(&a, ends);
+    if(a.nholes == 0 && a.nvert == 0 && ne == 0 && a.slant == NULL) {
         push(in, word_box("none"), NULL, ms);
         return;
     }
@@ -722,8 +725,8 @@ static void run_asym(char *src, box_t *in) {
         layout_add(col, labelled(a.nholes > 1 ? "holes" : "hole", solutions_box(shown, a.holes, a.nholes)));
     if(a.nvert > 0)
         layout_add(col, labelled("vertical", solutions_box(shown, a.vert, a.nvert)));
-    if(a.horiz != NULL)
-        layout_add(col, labelled("horizontal", solutions_box('y', &a.horiz, 1)));
+    if(ne > 0) /* one when both ends match, else the left then the right */
+        layout_add(col, labelled("horizontal", solutions_box('y', ends, ne)));
     if(a.slant != NULL)
         layout_add(col, labelled("slant", solutions_box('y', &a.slant, 1)));
     layout_finish(col, &draw_font);

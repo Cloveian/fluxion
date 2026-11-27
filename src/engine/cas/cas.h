@@ -352,13 +352,18 @@ void degrees_out(pcas_ast_t *e);
 /*Fluxion: holes and asymptotes of f in var (cas/asym.c). holes and vert are the
   x values, sorted, horiz is the y of the horizontal one or NULL for none. false
   when a zero of the bottom couldn't be found, then out is empty. slant is the y
-  of the slant one (top one degree higher), NULL for none, horiz is NULL then*/
+  of the slant one (top one degree higher), NULL for none, horiz is NULL then.
+  a function that isn't a polynomial fraction (9e^x/(e^x-5)) can head somewhere else
+  at each end: horiz when they match, else left (x to -inf) and right, NULL for an end
+  that goes nowhere or didn't come out*/
 typedef struct {
-    pcas_ast_t *holes[SOLVE_MAX], *vert[SOLVE_MAX], *horiz, *slant;
+    pcas_ast_t *holes[SOLVE_MAX], *vert[SOLVE_MAX], *horiz, *slant, *left, *right;
     int nholes, nvert;
 } asym_t;
 bool asym(pcas_ast_t *f, Symbol var, asym_t *out);
 void asym_free(asym_t *a);
+/*Fluxion: the horizontal ends as a list, horiz or left then right. out has room for 2, gives how many*/
+int asym_ends(const asym_t *a, pcas_ast_t **out);
 
 /*Fluxion: where f is defined in var, over the reals (cas/domain.c). lower and
   upper are the bounds (NULL for none, open = the bound itself is out), holes are

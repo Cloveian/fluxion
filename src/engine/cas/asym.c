@@ -19,10 +19,11 @@
 
 #define SIMP_ASYM (SIMP_NORMALIZE | SIMP_COMMUTATIVE | SIMP_RATIONAL | SIMP_EVAL | SIMP_LIKE_TERMS)
 
-/*p with var = x, is it 0. no identity passes, so sqrt(2)^2 - 2 might slip through
-  as not zero (hole missed, shows as vertical). rare enough for now*/
+/*p with var = x, is it 0. no identity passes, so e^ln(5) - 5 comes out as a number
+  that is 0 and nothing else says so, that's what the second look is for*/
 static bool zero_at(pcas_ast_t *p, Symbol var, pcas_ast_t *x) {
     pcas_ast_t *e = ast_Copy(p), *v = ast_MakeSymbol(var);
+    double d;
     bool zero;
 
     if(e == NULL || v == NULL) {
@@ -32,7 +33,7 @@ static bool zero_at(pcas_ast_t *p, Symbol var, pcas_ast_t *x) {
     }
     substitute(e, v, x);
     simplify(e, SIMP_ASYM);
-    zero = is_ast_int(e, 0);
+    zero = is_ast_int(e, 0) || (approx_double(e, &d) && d > -1e-5 && d < 1e-5); /*float *dih*gits*/
     ast_Cleanup(e);
     ast_Cleanup(v);
     return zero;
@@ -59,6 +60,34 @@ static int mult_at(pcas_ast_t *p, Symbol var, pcas_ast_t *x) {
     return m;
 }
 
+/*the y f heads to as var goes to inf or -inf. NULL when that isn't a number*/
+static pcas_ast_t *toward_inf(pcas_ast_t *f, Symbol var, bool negative) {
+    pcas_ast_t *e = ast_MakeOperator(OP_LIMIT), *inf = ast_MakeSymbol(SYM_INF);
+    double v;
+
+    ast_ChildAppend(e, ast_Copy(f));
+    ast_ChildAppend(e, ast_MakeSymbol(var));
+    ast_ChildAppend(e, negative ? ast_MakeBinary(OP_MULT, ast_MakeInt(-1), inf) : inf);
+    simplify(e, SIMP_ALL);
+    if(pcas_cancelled || !approx_double(e, &v)) {
+        ast_Cleanup(e);
+        return NULL;
+    }
+    return e;
+}
+
+int asym_ends(const asym_t *a, pcas_ast_t **out) {
+    int n = 0;
+
+    if(a->horiz != NULL)
+        out[n++] = a->horiz;
+    if(a->left != NULL)
+        out[n++] = a->left;
+    if(a->right != NULL)
+        out[n++] = a->right;
+    return n;
+}
+
 void asym_free(asym_t *a) {
     int i;
 
@@ -66,6 +95,8 @@ void asym_free(asym_t *a) {
         ast_Cleanup(a->holes[i]);
     for(i = 0; i < a->nvert; i++)
         ast_Cleanup(a->vert[i]);
+    ast_Cleanup(a->left);
+    ast_Cleanup(a->right);
     ast_Cleanup(a->horiz);
     ast_Cleanup(a->slant);
     memset(a, 0, sizeof *a);
@@ -126,13 +157,22 @@ bool asym(pcas_ast_t *f, Symbol var, asym_t *out) {
 
     dt = poly_degree(top, var, &lead_t);
     db = poly_degree(bot, var, &lead_b);
-    if(dt >= 0 && db >= 0 && dt < db) {
+    if(dt < 0 || db < 0) { /*not a polynomial fraction, the ends have to come from limits*/
+        out->left = toward_inf(f, var, true);
+        out->right = toward_inf(f, var, false);
+        if(out->left != NULL && out->right != NULL && ast_Compare(out->left, out->right)) {
+            out->horiz = out->left;
+            out->left = NULL;
+            ast_Cleanup(out->right);
+            out->right = NULL;
+        }
+    } else if(dt < db) {
         out->horiz = ast_MakeInt(0);
-    } else if(dt >= 0 && dt == db) {
+    } else if(dt == db) {
         out->horiz = ast_MakeBinary(OP_DIV, lead_t, lead_b);
         lead_t = lead_b = NULL;
         simplify(out->horiz, SIMP_ASYM);
-    } else if(dt >= 0 && db >= 0 && dt == db + 1) {
+    } else if(dt == db + 1) {
         /*the remainder over the bottom goes to 0 out there, the quotient is what's left.
           NULL from poly_quotient (a letter that isn't var) just means no line shown.
           no remainder means f is that line with holes in it, nothing to approach*/

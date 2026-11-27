@@ -128,8 +128,12 @@ static void zeros(walk_t *w, pcas_ast_t *e) {
         w->dead = true;
     else if(n == SOLVE_UNKNOWN)
         w->d->partial = true;
-    for(i = 0; i < n; i++)
-        add_hole(w, r[i]);
+    for(i = 0; i < n; i++) {
+        if(has_symbol(r[i], SYM_IMAG)) /*sqrt(x^4+7) is 0 only at complex x, over the reals nothing is out*/
+            ast_Cleanup(r[i]);
+        else
+            add_hole(w, r[i]);
+    }
 }
 
 /*takes x. dir 1 for a lower bound, where bigger is tighter, -1 for an upper one*/
@@ -155,6 +159,30 @@ static void tighten(domain_t *d, pcas_ast_t **b, bool *b_open, pcas_ast_t *x, bo
     ast_Cleanup(x);
 }
 
+/*a polynomial with no real zero that is over 0 at x = 0, x^4 + 7. false when unsure*/
+static bool always_positive(pcas_ast_t *u, Symbol var) {
+    pcas_ast_t *r[SOLVE_MAX], *x, *zero;
+    int n, i, real = 0;
+    double v;
+    bool positive;
+
+    for(i = 0; i < SOLVE_MAX; i++)
+        r[i] = NULL;
+    n = solve(u, var, r);
+    for(i = 0; i < n; i++) {
+        real += !has_symbol(r[i], SYM_IMAG);
+        ast_Cleanup(r[i]);
+    }
+    if(n < 0 || real > 0)
+        return false;
+    x = ast_MakeSymbol(var);
+    zero = ast_MakeInt(0);
+    positive = float_at(u, x, zero, &v) && !pcas_cancelled && v > 0;
+    ast_Cleanup(x);
+    ast_Cleanup(zero);
+    return positive;
+}
+
 /*u >= 0, or u > 0 when open, as a bound on var. only when u is a x + b and the
   sign of a is known, a quadratic in there is the "and maybe more" case*/
 static void bound(walk_t *w, pcas_ast_t *u, bool open) {
@@ -169,6 +197,8 @@ static void bound(walk_t *w, pcas_ast_t *u, bool open) {
         s = sign_of(lead);
     ast_Cleanup(lead);
     if(deg == 0) /*x - x + 1, the x went*/
+        return;
+    if(deg >= 2 && always_positive(u, w->var))
         return;
     if(s != 1 && s != -1) {
         d->partial = true;

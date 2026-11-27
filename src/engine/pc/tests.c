@@ -822,8 +822,10 @@ static bool test_asym(test_t *t) {
     pcas_error_t err;
     pcas_ast_t *e = parse((uint8_t*)t->arg1, strlen(t->arg1), str_table, &err);
     asym_t a;
+    pcas_ast_t *ends[2];
     char got[MAX_LINE] = "";
     char *trimmed;
+    int ne;
     bool passed;
 
     if(err != E_SUCCESS || e == NULL) {
@@ -837,7 +839,8 @@ static bool test_asym(test_t *t) {
         strncat(got, " | vert", sizeof(got) - strlen(got) - 1);
         asym_list(got, sizeof(got), a.vert, a.nvert);
         strncat(got, " | horiz", sizeof(got) - strlen(got) - 1);
-        asym_list(got, sizeof(got), &a.horiz, a.horiz != NULL);
+        ne = asym_ends(&a, ends);
+        asym_list(got, sizeof(got), ends, ne);
         strncat(got, " | slant", sizeof(got) - strlen(got) - 1);
         asym_list(got, sizeof(got), &a.slant, a.slant != NULL);
         asym_free(&a);

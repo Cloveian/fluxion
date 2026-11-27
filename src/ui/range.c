@@ -131,7 +131,7 @@ static bool end_of(pcas_ast_t *f, pcas_ast_t *flat, Symbol var, const asym_t *a,
         } else if(!isnan(p) && !isnan(q) && !isnan(r) && d1 > 0 && d2 >= d1 / 2 && (r > 0) == (q > 0)) {
             y->inf = r > 0 ? 1 : -1;
         } else if(!isnan(r) && fabsf(r) < 1e-4F && fabsf(r) < fabsf(q) && fabsf(q) < fabsf(p)) {
-            /* dying off to 0, e^x on the left. asym only finds the rational kind of asymptote */
+            /* dying off to 0, e^x on the left. asym has these as left / right, only horiz is read here */
             y->v = ast_MakeInt(0);
             y->y = 0;
         } else {

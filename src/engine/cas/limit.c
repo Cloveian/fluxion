@@ -1166,16 +1166,29 @@ static bool keeps_going_round(pcas_ast_t *e, pcas_ast_t *var) {
     }
 }
 
-/*0 for a sin or cos with no value at a times something going to 0 (x^2 cos(9/x)), it's stuck between -1 and 1. new, NULL if not*/
+/*0 for a sin or cos with no value at a times something going to 0 (x^2 cos(9/x)), it's stuck between -1 and 1. at inf one always is, over somthing going there too (sin(x)/x). new, NULL if not*/
 static pcas_ast_t *squeezed(pcas_ast_t *f, pcas_ast_t *var, pcas_ast_t *a, int dir) {
-    pcas_ast_t *c, *rest, *t, *out = NULL;
+    pcas_ast_t *c, *rest, *t, *top, *out = NULL;
+    bool far = inf_sign(a) != 0, over = far && isoptype(f, OP_DIV);
 
-    if(!isoptype(f, OP_MULT))
+    top = over ? ast_ChildGet(f, 0) : f;
+    if(over && (isoptype(top, OP_SIN) || isoptype(top, OP_COS))) {
+        rest = ast_MakeBinary(OP_DIV, ast_MakeInt(1), ast_Copy(ast_ChildGet(f, 1)));
+        t = limit_of(rest, var, a, NULL, false, dir);
+        ast_Cleanup(rest);
+        if(t != NULL && is_ast_int(t, 0))
+            return t;
+        ast_Cleanup(t);
         return NULL;
-    for(c = ast_ChildGet(f, 0); c != NULL && out == NULL; c = c->next) {
-        if((!isoptype(c, OP_SIN) && !isoptype(c, OP_COS)) || defined_at(c, var, a))
+    }
+    if(!isoptype(top, OP_MULT))
+        return NULL;
+    for(c = ast_ChildGet(top, 0); c != NULL && out == NULL; c = c->next) {
+        if((!isoptype(c, OP_SIN) && !isoptype(c, OP_COS)) || (!far && defined_at(c, var, a)))
             continue;
-        rest = others(f, c);
+        rest = others(top, c);
+        if(rest != NULL && over)
+            rest = ast_MakeBinary(OP_DIV, rest, ast_Copy(ast_ChildGet(f, 1)));
         if(rest == NULL || pcas_cancelled) { /*oom, a copy short a factor would say 0 wrong*/
             ast_Cleanup(rest);
             return NULL;
@@ -1216,6 +1229,8 @@ static pcas_ast_t *limit_of(pcas_ast_t *f, pcas_ast_t *var, pcas_ast_t *a, steps
                     last = "plug in inf";
             }
             step(s, l, l != before ? last : "plug in inf", ast_Copy(out));
+        } else if(!pcas_cancelled && (out = squeezed(f, var, a, dir)) != NULL) {
+            step(s, l, "a cos or sin is between -1 and 1, so over something that goes to inf it's 0", ast_Copy(out));
         } else if(root && !pcas_cancelled && keeps_going_round(f, var)) {
             out = ast_MakeSymbol(SYM_DNE);
             step(s, l, "keeps going round, no limit", ast_Copy(out));
