@@ -527,7 +527,7 @@ static int liate(pcas_ast_t *p, pcas_ast_t *x) {
 /*integral u dv = u v - integral v du. u is the higest of LIATE in a product, or the whole of a log or inverse trig with dv = 1. v has to come out whole (no integral left in it), the new integral goes round the rules again*/
 static const char *by_parts_of(pcas_ast_t *e, pcas_ast_t *f, subs_t *subs) {
     static int depth; /*v is worked out by integral_of, which can want its own parts*/
-    pcas_ast_t *x = ast_ChildGet(e, 1), *u = NULL, *dv, *c, *v, *du, *I;
+    pcas_ast_t *x = ast_ChildGet(e, 1), *u = NULL, *dv, *c, *v, *du, *I, *uv;
     int rank = 0, best = 0, tie = 0;
 
     if(subs->parts >= PARTS_MAX || depth > 1)
@@ -575,8 +575,8 @@ static const char *by_parts_of(pcas_ast_t *e, pcas_ast_t *f, subs_t *subs) {
         return NULL;
     }
     subs->parts++;
-    replace_node(e, ast_MakeBinary(OP_ADD,
-        ast_MakeBinary(OP_MULT, ast_Copy(u), ast_Copy(v)),
+    uv = ast_MakeBinary(OP_MULT, ast_Copy(u), ast_Copy(v)); /*uv first, v is handed on below*/
+    replace_node(e, ast_MakeBinary(OP_ADD, uv,
         ast_MakeBinary(OP_MULT, ast_MakeInt(-1), integral(ast_MakeBinary(OP_MULT, v, du), x))));
     return "integration by parts";
 }
@@ -1959,6 +1959,29 @@ static bool fine_between(pcas_ast_t *e, pcas_ast_t *x, pcas_ast_t *pa, pcas_ast_
     }
 }
 
+/*a hole family h(N), pi/2 + pi N, has none in a to b. straight line in N or it's not trusted*/
+static bool family_clear(pcas_ast_t *h, double a, double b) {
+    pcas_ast_t *n = ast_MakeSymbol(SYM_N), *k[3];
+    double v[3], per, first, lo;
+    bool ok = n != NULL;
+    int i;
+
+    for(i = 0; i < 3; i++) {
+        k[i] = ast_MakeInt(i);
+        ok = ok && k[i] != NULL && float_at(h, n, k[i], &v[i]);
+        ast_Cleanup(k[i]);
+    }
+    ast_Cleanup(n);
+    per = ok ? v[1] - v[0] : 0;
+    if(!ok || fabs(per) < 1e-9 || fabs(v[2] - 2 * v[1] + v[0]) > 1e-5 * (fabs(v[2]) + fabs(per)))
+        return false;
+    if(per < 0)
+        per = -per;
+    lo = a < b ? a : b;
+    first = v[0] + ceil((lo - v[0]) / per - 1e-6) * per;
+    return first > (a < b ? b : a) + 1e-6 * (fabs(first) + per); /*floats, so the slack scales with the numbers*/
+}
+
 /*f defined the whole way from a to b, so F(b) - F(a) is the area. 1/x^2 from -1 to 1 would come out -2.
 false for a hole or a bound in between, or anything domain can't pin down that fine_between can't either*/
 static bool defined_between(pcas_ast_t *I) {
@@ -1988,7 +2011,7 @@ static bool defined_between(pcas_ast_t *I) {
         ok = approx_double(d.upper, &h) && (d.upper_open ? b < h : b <= h);
     for(i = 0; i < d.nholes && ok; i++) {
         if(has_symbol(d.holes[i], SYM_N)) /*a family, tan's pi/2 + pi n*/
-            ok = fine_between(ast_ChildGet(I, 0), ast_ChildGet(I, 1), ast_ChildGet(I, 2), ast_ChildGet(I, 3));
+            ok = family_clear(d.holes[i], a, b);
         else
             ok = approx_double(d.holes[i], &h) && (h < a || h > b);
     }

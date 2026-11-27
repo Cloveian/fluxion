@@ -1060,6 +1060,12 @@ simplify; integral(X^3+X^2,X,-1,1); 2/3
 simplify; integral(Xsin(X),X,-pi,pi); 2pi
 simplify; integral(X^2e^X,X,-1,1); e_5/e
 simplify; integral(1/X,X,-1,1); integral(1/X,X,-1,1)
+#poles from a sin or cos on the bottom, the family pi n or pi/2 + pi n has none inside a to b or it stays an integral
+simplify; integral(X/cos(X),X,-2,2); integral(X/cos(X),X,-2,2)
+simplify; integral(X^2/sin(X),X,-5,5); integral(X^2/sin(X),X,-5,5)
+simplify; integral(1/sin(X),X,-1,1); integral(1/sin(X),X,-1,1)
+simplify; integral(1/(1+cos(X)),X,-4,4); integral(1/(cos(X)+1),X,-4,4)
+simplify; integral(tan(1000X),X,0,0.00157); (-ln(abs(cos(157/100))))/1000
 #|u| to a power: u|u|^n/(n+1), on both sides of 0. a negative power with a pole inside stays an integral
 simplify; integral(abs(X)^(2/3),X); 3Xabs(X)^(2/3)/5
 simplify; integral(abs(X)^(3/2),X,-1,1); 4/5
